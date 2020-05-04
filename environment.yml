@@ -7,3 +7,4 @@ dependencies:
   - pip
   - pip:
     - Django==3.0
+    - django-allauth==0.41

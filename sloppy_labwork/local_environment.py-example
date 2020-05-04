@@ -1,0 +1,19 @@
+"""
+Setting environment variables for local development.
+
+Rename this file to `local_setting.py` and update the values below.
+
+Note that this file is excluded from version control. The production Will use
+different values for the variables below.
+"""
+
+import os
+
+os.environ['SECRET_KEY'] = '@$1xls%3gshxbx7a3q6#ojkvdg(8t2#m)#075^nzen=(2rtmjr'
+
+# To login with Discord locally, you'll need to create an app with Discord and
+# add your client ID and secret below.
+os.environ['DISCORD_CLIENT_ID'] = '##################'
+os.environ['DISCORD_SECRET'] = '################################'
+
+print('Local environment loaded...')

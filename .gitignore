@@ -119,3 +119,5 @@ dmypy.json
 .pyre/
 
 # End of https://www.gitignore.io/api/django
+
+local_environment.py
