@@ -32,7 +32,7 @@ DEBUG = os.environ['DEBUG'] == 'True'
 
 ALLOWED_HOSTS = []
 if not DEBUG:
-    ALLOWED_HOSTS = ['.sloppylabwork.com']
+    ALLOWED_HOSTS = ['.sloppylabwork.com', 'sloppy-labwork.herokuapp.com']
 
 SITE_ID = int(os.environ['SITE_ID'])
 
