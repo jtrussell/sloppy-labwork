@@ -31,6 +31,8 @@ SECRET_KEY = os.environ['SECRET_KEY']
 DEBUG = os.environ['DEBUG'] == 'True'
 
 ALLOWED_HOSTS = []
+if not DEBUG:
+    ALLOWED_HOSTS = ['.sloppylabwork.com']
 
 SITE_ID = int(os.environ['SITE_ID'])
 
