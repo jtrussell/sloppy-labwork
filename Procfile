@@ -1,0 +1,1 @@
+web: gunicorn sloppy_labwork.wsgi
