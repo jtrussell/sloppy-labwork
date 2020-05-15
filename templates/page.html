@@ -13,6 +13,7 @@
   <link rel="apple-touch-icon" href="icon.png">
   -->
 
+  <link href='//fonts.googleapis.com/css?family=Raleway:400,300,600' rel='stylesheet' type='text/css'>
   <link rel="stylesheet" href="{% static 'css/vendor/skeleton-2.0.4/normalize.css' %}">
   <link rel="stylesheet" href="{% static 'css/vendor/skeleton-2.0.4/skeleton.css' %}">
   <link rel="stylesheet" href="{% static 'css/main.css' %}">
@@ -28,11 +29,13 @@
   <![endif]-->
 
   <!-- Add your site or application content here -->
-  <main role="main" class="container">
+  <main role="main" class="container stack">
     {% include 'nav-top.html' %}
-
     {% block content %}
+      <!-- Silence is golden -->
     {% endblock %}
+    <div class="stack__spacer"></div>
+    {% include 'footer.html' %}
   </main>
 
   <!-- Google Analytics: change UA-XXXXX-Y to be your site's ID. -->
