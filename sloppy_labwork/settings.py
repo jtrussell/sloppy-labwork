@@ -80,6 +80,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.request',
+                'sloppy_labwork.context_processors.feature_flags',
             ],
         },
     },
@@ -157,4 +158,9 @@ STATICFILES_DIRS = [
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static_build')
 
+# Feature Flags
+FT_USE_REGISTER = os.environ['FT_USE_REGISTER'] = 'True'
+FT_USE_RATINGS = os.environ['FT_USE_RATINGS'] == 'True'
+
+# Bootstrap Heroku settings
 django_heroku.settings(locals())

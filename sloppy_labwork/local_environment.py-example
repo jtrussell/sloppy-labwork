@@ -19,3 +19,5 @@ os.environ['SITE_ID'] = '2'
 # add your client ID and secret below.
 os.environ['DISCORD_CLIENT_ID'] = '##################'
 os.environ['DISCORD_SECRET'] = '################################'
+os.environ['FT_USE_REGISTER'] = 'True'
+os.environ['FT_USE_RATINGS'] = 'True'
