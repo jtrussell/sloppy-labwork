@@ -1,10 +1,4 @@
 <ul class="nav nav-top">
-  <li class="nav__item">
-    <a href="{% url 'home' %}" class="nav__link">
-      Home
-    </a>
-  </li>
-
   {% if ft_use_ratings %}
   <li class="nav__item">
     <a href="{% url 'home-ratings' %}" class="nav__link">
@@ -17,6 +11,14 @@
   <li class="nav__item">
     <a href="{% url 'home-register' %}" class="nav__link">
       Register
+    </a>
+  </li>
+  {% endif %}
+
+  {% if ft_use_posts %}
+  <li class="nav__item">
+    <a href="{%url 'posts-list' %}" class="nav__link">
+      Articles
     </a>
   </li>
   {% endif %}

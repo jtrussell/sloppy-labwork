@@ -1,0 +1,15 @@
+{% extends "page.html" %}
+{% load static %}
+{% load posts_extras %}
+
+{% block head %}
+<link rel="stylesheet" href="{% static 'posts/detail.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1 class="posts-detail__title">{% block title %} {{ object.title }} {% endblock title %}</h1>
+  <div class="posts-detail__item-meta">By {{ post.author }} on {{ post.published_on | date:'M j, Y' }}</div>
+  <div class="posts-detail__content">
+    {{ object.content | markdown | safe }}
+  </div>
+{% endblock %}

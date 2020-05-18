@@ -1,0 +1,11 @@
+.posts-detail__title {
+  margin-bottom: .5rem;
+}
+
+.posts-detail__item-meta {
+  color: #ccc;
+}
+
+.posts-detail__content {
+  margin-top: 2.5rem;
+}

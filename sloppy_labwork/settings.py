@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.discord',
     'register',
     'ratings',
+    'posts',
 ]
 
 MIDDLEWARE = [
@@ -161,6 +162,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static_build')
 # Feature Flags
 FT_USE_REGISTER = os.environ['FT_USE_REGISTER'] == 'True'
 FT_USE_RATINGS = os.environ['FT_USE_RATINGS'] == 'True'
+FT_USE_POSTS = os.environ['FT_USE_POSTS'] == 'True'
 
 # Bootstrap Heroku settings
 django_heroku.settings(locals())

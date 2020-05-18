@@ -1,0 +1,21 @@
+
+ul.posts-list {
+  list-style-type: none;
+}
+
+li.posts-list__item {
+  margin-bottom: 2rem;
+}
+
+.posts-list__item-title {
+  margin: 0 0 0.5rem 0;
+}
+
+.posts-list__item-meta {
+  color: #ccc;
+  margin-bottom: 0.5rem;
+}
+
+.posts-list__content {
+  margin-bottom: 0.5rem;
+}

@@ -11,4 +11,5 @@ def feature_flags(request):
   return {
     'ft_use_register': settings.FT_USE_REGISTER,
     'ft_use_ratings': settings.FT_USE_RATINGS,
+    'ft_use_posts': settings.FT_USE_POSTS,
   }
