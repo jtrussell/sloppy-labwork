@@ -1,2 +1,2 @@
-release: python migrate.py migrate
+release: python manage.py migrate
 web: gunicorn sloppy_labwork.wsgi
