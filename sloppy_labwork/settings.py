@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
-import django_heroku
 
 # Prime our environment if we've got a file to do so.
 try:
@@ -165,4 +164,10 @@ FT_USE_RATINGS = os.environ['FT_USE_RATINGS'] == 'True'
 FT_USE_POSTS = os.environ['FT_USE_POSTS'] == 'True'
 
 # Bootstrap Heroku settings
-django_heroku.settings(locals())
+# Note that this env variable should NOT be present in your local environment
+# config.
+if 'IS_HEROKU' in os.environ:
+    import django_heroku
+    import dj_database_url
+    django_heroku.settings(locals())
+    DATABASES['default'] = dj_database_url.config(conn_max_age=600, ssl_require=True)
