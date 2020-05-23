@@ -11,6 +11,10 @@ main {
   text-transform: uppercase;
 }
 
+section + section {
+  margin-top: 2rem 0;
+}
+
 /* A slimmer container */
 .container { max-width: 600px; }
 
@@ -47,10 +51,6 @@ li.nav__spacer { flex-grow: 1; }
   line-height: 6.5rem;
   text-transform: uppercase;
   text-decoration: none;
-}
-
-.nav__brand {
-  font-weight: 600;
 }
 
 /* Footer */

@@ -1,0 +1,51 @@
+{% extends "page.html" %}
+
+{% block content %}
+  <h1>User Profile</h1>
+  <p>Welcome, {{ user.get_username }}.</p>
+  <form action="{% url 'account_logout' %}" method="POST">
+    {% csrf_token %}
+    <button type="submit">
+      Sign Out
+    </button>
+  </form>
+
+  <section>
+    <h2>Registered Decks</h2>
+    <ul>
+      <li>...</li>
+    </ul>
+
+    <form action="#" method="POST">
+      {% csrf_token %}
+      <label for="deck_url">
+        Add Deck by URL
+      </label>
+      <input class="u-full-width" id="deck_url" name="deck_url" type="text" placeholder="Master Vault or DoKF URL" />
+
+      <button type="submit">
+        Add Deck
+      </button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Linked Accounts</h2>
+    <ul>
+      <li>Discord</li>
+      <li>Challonge</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Danger Zone</h2>
+    <p>Deleting your account is a permanent action that cannot be undone.</p>
+    <form action="#">
+      <a href="javascript:alert('Not yet implemented')" class="button">
+        Delete Account
+      </a>
+    </form>
+  </section>
+{% endblock %}
+
+

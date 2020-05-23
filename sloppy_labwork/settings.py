@@ -100,6 +100,9 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+
+LOGIN_REDIRECT_URL = '/profile/'
+
 WSGI_APPLICATION = 'sloppy_labwork.wsgi.application'
 
 
@@ -170,4 +173,5 @@ if 'IS_HEROKU' in os.environ:
     import django_heroku
     import dj_database_url
     django_heroku.settings(locals())
-    DATABASES['default'] = dj_database_url.config(conn_max_age=600, ssl_require=True)
+    DATABASES['default'] = dj_database_url.config(
+        conn_max_age=600, ssl_require=True)
