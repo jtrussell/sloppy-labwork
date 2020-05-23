@@ -1,0 +1,36 @@
+{% extends "page.html" %}
+
+{% block content %}
+  <h1>Register a Deck</h1>
+  <form method="POST">
+    {% csrf_token %}
+    <label for="deck_url">
+      Master Vault Link
+    </label>
+    <input class="u-full-width" id="deck_url" name="deck_url" type="text" placeholder="https://www.keyforgegame.com/deck-details/2dea0ea6-e371-4b9a-826c-28f6620ef550" />
+
+    <label for="deck_verification_photo">
+      Verification Photo
+    </label>
+    <input class="u-full-width" type="file" />
+    <div class="note">
+      <b>Heads up!</b>
+      Your verification photo should clearly show the back of your deck's
+      archon card as well as a handwritten that clearly lists:
+      <ul class="note__list">
+        <!-- Should include only the  -->
+        <li>Your username on <b>Discord</b>, e.g. Archonite#5132 </li>
+        <li>Your username on <b>Challonge</b></li>
+        <li>Your username on <b>The Crucible Online</b></li>
+        <li>Today's date</li>
+      </ul>
+      The example below demonstrates a valid registration photo. Read more about deck registration <a href="{% url 'home-register' %}">here.</a>
+    </div>
+
+    <!-- Iniclude an example registration photo -->
+
+    <button type="submit" class="button-primary">
+      Submit
+    </button>
+  </form>
+{% endblock %}

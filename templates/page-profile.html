@@ -12,21 +12,12 @@
 
   <section>
     <h2>Registered Decks</h2>
-    <ul>
-      <li>...</li>
-    </ul>
-
-    <form action="#" method="POST">
-      {% csrf_token %}
-      <label for="deck_url">
-        Add Deck by URL
-      </label>
-      <input class="u-full-width" id="deck_url" name="deck_url" type="text" placeholder="Master Vault or DoKF URL" />
-
-      <button type="submit">
-        Add Deck
-      </button>
-    </form>
+    <p>You have 7 decks registered.</p>
+    <p>4 have been verified.</p>
+    <p>3 need verification photos.</p>
+    <a class="button" href="{% url 'register-add' %}">
+      Add Deck
+    </a>
   </section>
 
   <section>
@@ -34,6 +25,7 @@
     <ul>
       <li>Discord</li>
       <li>Challonge</li>
+      <li>The Crucible Online</li>
     </ul>
   </section>
 
@@ -47,5 +39,3 @@
     </form>
   </section>
 {% endblock %}
-
-

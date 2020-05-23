@@ -1,24 +1,24 @@
 <ul class="nav nav-top">
-  {% if ft_use_ratings %}
+  {% if ft_use_posts %}
   <li class="nav__item">
-    <a href="{% url 'home-ratings' %}" class="nav__link">
-      Ratings
+    <a href="{%url 'posts-list' %}" class="nav__link">
+      Articles
     </a>
   </li>
   {% endif %}
 
   {% if ft_use_register %}
   <li class="nav__item">
-    <a href="{% url 'home-register' %}" class="nav__link">
+    <a href="{% url 'register-add' %}" class="nav__link">
       Register
     </a>
   </li>
   {% endif %}
 
-  {% if ft_use_posts %}
+  {% if ft_use_ratings %}
   <li class="nav__item">
-    <a href="{%url 'posts-list' %}" class="nav__link">
-      Articles
+    <a href="{% url 'home-ratings' %}" class="nav__link">
+      Ratings
     </a>
   </li>
   {% endif %}

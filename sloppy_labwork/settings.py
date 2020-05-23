@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'register',
     'ratings',
     'posts',
+    'decks',
 ]
 
 MIDDLEWARE = [
