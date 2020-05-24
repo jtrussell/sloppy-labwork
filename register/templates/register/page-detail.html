@@ -1,0 +1,70 @@
+{% extends "page.html" %}
+{% load static %}
+
+{% block head %}
+<link rel="stylesheet" href="{% static 'register/detail.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>Registration</h1>
+
+  {% if object.user == request.user and not object.has_photo_verification %}
+    <p class="note">
+      <em>
+        You submitted this registration request on {{ object.created_on | date:'M j, Y' }}. It has not yet been verified.
+      </em>
+    </p>
+  {% endif %}
+
+  <table class="u-full-width">
+    <tbody>
+      <tr>
+        <td class="detail-label">Deck</td>
+        <td class="detail-value">
+          <a href="{{ object.deck.get_dok_url }}">
+            {{ object.deck.name }}
+          </a>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="detail-label">Status</td>
+        <td class="detail-value">
+          {% if object.has_photo_verification %}
+            <span class="text-success">
+              Last verified on {{ object.verified_on | date:'M j, Y' }}
+            </span>
+          {% else %}
+            <span class="text-danger">
+              Not verified
+            </span>
+          {% endif %}
+        </td>
+      </tr>
+
+      {% if object.has_photo_verification %}
+      <tr>
+        <td class="detail-label">Owner Discord</td>
+        <td class="detail-value">{{ object.user.username }}</td>
+      </tr>
+
+      <tr>
+        <td class="detail-label">Owner Challonge</td>
+        <td class="detail-value">{{ object.user.username }}</td>
+      </tr>
+
+      <tr>
+        <td class="detail-label">Owner TCO</td>
+        <td class="detail-value">{{ object.user.username }}</td>
+      </tr>
+      {% endif %}
+      
+    </tbody>
+  </table>
+
+  {% if object.has_photo_verification and object.photo_verification_link %}
+  <a href="{{ object.photo_verification_link }}">
+    View verification photo.
+  </a>
+  {% endif %}
+{% endblock %}

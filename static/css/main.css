@@ -19,6 +19,11 @@ section + section {
   width: 100%;
 }
 
+.text-success { color: #649d66;  }
+.text-danger { color: #e71414; }
+.text-muted { color: #ccc; }
+.text-right { text-align: right; }
+
 /* Notes */
 .note {
   margin-bottom: 2.5rem;

@@ -17,5 +17,8 @@ class Deck(models.Model):
     def get_master_vault_url(self):
         return 'https://www.keyforgegame.com/api/decks/{}/'.format(self.id)
 
+    def get_dok_url(self):
+        return 'https://decksofkeyforge.com/decks/{}'.format(self.id)
+
     def __str__(self):
         return self.name

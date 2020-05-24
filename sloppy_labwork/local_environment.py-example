@@ -19,6 +19,13 @@ os.environ['SITE_ID'] = '2'
 # add your client ID and secret below.
 os.environ['DISCORD_CLIENT_ID'] = '##################'
 os.environ['DISCORD_SECRET'] = '################################'
+
+# To add verification photos when developing locally, you'll need to connect to
+# an AWS account v
+os.environ['AWS_ACCESS_KEY_ID'] = '####################'
+os.environ['AWS_SECRET_ACCESS_KEY'] = '########################################'
+os.environ['AWS_S3_BUCKET_VERIFICATION_PHOTOS_BUCKET'] = 'my-bucket'
+
 os.environ['FT_USE_REGISTER'] = 'True'
 os.environ['FT_USE_RATINGS'] = 'True'
 os.environ['FT_USE_POSTS'] = 'True'

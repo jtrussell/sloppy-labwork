@@ -2,7 +2,10 @@
 
 {% block content %}
   <h1>Register a Deck</h1>
-  <form method="POST" class="form-wide">
+  {% if error_message %}
+    <div class="note note-danger">{{ error_message }}</div>
+  {% endif %}
+  <form method="POST" class="form-wide" enctype="multipart/form-data">
     {% csrf_token %}
     {{ form }}
     <div class="note">
@@ -16,7 +19,7 @@
         <li>Your username on <b>The Crucible Online</b></li>
         <li>Today's date</li>
       </ul>
-      The example below demonstrates a valid registration photo. Read more about deck registration <a href="{% url 'home-register' %}">here.</a>
+      The example below demonstrates a valid registration photo. Read more about deck registration <a href="{% url 'register-about' %}">here.</a>
     </div>
 
     <!-- Iniclude an example registration photo -->

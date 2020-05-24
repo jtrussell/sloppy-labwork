@@ -24,4 +24,4 @@ class RegiseterNewDeckForm(forms.Form):
             attrs={
                 'placeholder': 'https://www.keyforgegame.com/deck-details/2dea0ea6-e371-4b9a-826c-28f6620ef550'}
         ))
-    verification_photo = forms.FileField(required=False)
+    verification_photo = forms.FileField()

@@ -1,6 +1,9 @@
 from datetime import datetime
+from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.conf import settings
+from django.views import generic
 from django.shortcuts import render
 from django.contrib.admin.views.decorators import staff_member_required
 from allauth.account.decorators import login_required
@@ -8,16 +11,60 @@ from requests import get
 from decks.models import Deck
 from .forms import RegiseterNewDeckForm
 from .models import DeckRegistration
+from botocore.exceptions import ClientError
+import boto3
+import os
+import time
 
 
-def index(request):
-    return render(request, 'register/page-home.html', {})
+class RegisterList(generic.ListView):
+    template_name = 'register/page-list.html'
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            return DeckRegistration.objects.filter(
+                Q(has_photo_verification=1) | Q(user=self.request.user)
+            ).order_by('-verified_on')
+        else:
+            return DeckRegistration.objects.filter(has_photo_verification=1).order_by('-verified_on')
+
+
+class RegisterDetail(generic.DetailView):
+    model = DeckRegistration
+    template_name = 'register/page-detail.html'
+
+
+def about(request):
+    return render(request, 'register/page-about.html', {})
+
+
+def save_verification_photo(request, form, deck):
+    s3_client = boto3.client('s3')
+    f = request.FILES['verification_photo']
+    orig_filename, ext = os.path.splitext(f.name)
+    bucket_name = settings.AWS_S3_BUCKET_VERIFICATION_PHOTOS_BUCKET
+    object_name = 'verification-photos/{}-{}-{}{}'.format(
+        int(time.time()),
+        request.user.id,
+        deck.id,
+        ext
+    )
+    response = s3_client.put_object(
+        Body=f,
+        Bucket=bucket_name,
+        Key=object_name,
+        ACL='public-read'
+    )
+    return 'https://static.sloppylabwork.com/{}'.format(
+        object_name
+    )
 
 
 @login_required
 def add(request):
+    error_message = None
     if request.method == 'POST':
-        form = RegiseterNewDeckForm(request.POST)
+        form = RegiseterNewDeckForm(request.POST, request.FILES)
         if form.is_valid():
             # Process the form...
             master_vault_url = form.cleaned_data['master_vault_link']
@@ -37,25 +84,24 @@ def add(request):
                 )
                 old_registrations.delete()
 
-            # Save the uploaded image
-
-            # Save the registration
             registration = DeckRegistration()
             registration.user = request.user
             registration.deck = deck
-            registration.save()
 
-            # Better to redirect to the deck's registration page
-            return HttpResponseRedirect(reverse('register-add-success'))
+            try:
+                registration.photo_verification_link = save_verification_photo(
+                    request, form, deck)
+                registration.save()
+                return HttpResponseRedirect(reverse('register-detail', kwargs={'pk': registration.id}))
+            except ClientError:
+                error_message = "Oops! Let's try that again"
     else:
         form = RegiseterNewDeckForm()
 
-    return render(request, 'register/page-new.html', {'form': form})
-
-
-@login_required
-def edit(request):
-    return render(request, 'regiseter/page-new.html', {})
+    return render(request, 'register/page-new.html', {
+        'form': form,
+        'error_message': error_message
+    })
 
 
 @staff_member_required

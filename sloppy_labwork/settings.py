@@ -36,6 +36,8 @@ if not DEBUG:
 
 SITE_ID = int(os.environ['SITE_ID'])
 
+AWS_S3_BUCKET_VERIFICATION_PHOTOS_BUCKET = os.environ['AWS_S3_BUCKET_VERIFICATION_PHOTOS_BUCKET']
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
