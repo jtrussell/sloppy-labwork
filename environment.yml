@@ -12,3 +12,4 @@ dependencies:
     - django-heroku==0.3.1
     - Markdown==3.2.2
     - psycopg2-binary==2.8.5
+    - requests

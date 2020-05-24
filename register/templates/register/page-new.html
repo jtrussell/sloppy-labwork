@@ -2,17 +2,9 @@
 
 {% block content %}
   <h1>Register a Deck</h1>
-  <form method="POST">
+  <form method="POST" class="form-wide">
     {% csrf_token %}
-    <label for="deck_url">
-      Master Vault Link
-    </label>
-    <input class="u-full-width" id="deck_url" name="deck_url" type="text" placeholder="https://www.keyforgegame.com/deck-details/2dea0ea6-e371-4b9a-826c-28f6620ef550" />
-
-    <label for="deck_verification_photo">
-      Verification Photo
-    </label>
-    <input class="u-full-width" type="file" />
+    {{ form }}
     <div class="note">
       <b>Heads up!</b>
       Your verification photo should clearly show the back of your deck's

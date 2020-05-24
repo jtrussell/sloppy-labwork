@@ -1,0 +1,11 @@
+{% extends "admin/change_form.html" %}
+{% block submit_buttons_bottom %}
+    {{ block.super }}
+    {% if original %} {# Only show if changing #}
+        <div class="submit-row">
+            <a class="button" href="{% url 'register-verify' original.pk %}">
+                 Verify
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}

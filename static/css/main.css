@@ -15,6 +15,10 @@ section + section {
   margin-top: 2rem;
 }
 
+.form-wide input {
+  width: 100%;
+}
+
 /* Notes */
 .note {
   margin-bottom: 2.5rem;
