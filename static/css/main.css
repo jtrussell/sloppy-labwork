@@ -19,6 +19,18 @@ section + section {
   width: 100%;
 }
 
+input:disabled {
+  color: #ccc;
+}
+
+/* helptext is built in to Django forms */
+form .helptext {
+  display: block;
+  color: #ccc;
+  margin-top: -1.5rem;
+  margin-bottom: 1.5rem;
+}
+
 .text-success { color: #649d66;  }
 .text-danger { color: #e71414; }
 .text-muted { color: #ccc; }
@@ -80,6 +92,12 @@ footer {
 
 .nav-footer {
   font-size: 9px;
+}
+
+/* Pagination */
+.step-links {
+  display: flex;
+  justify-content: space-between;
 }
 
 /* Fancy Transition Junk */

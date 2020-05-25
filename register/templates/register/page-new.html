@@ -2,6 +2,7 @@
 
 {% block content %}
   <h1>Register a Deck</h1>
+  {% if user_can_register_decks %}
   <form method="POST" class="form-wide" enctype="multipart/form-data">
     {% csrf_token %}
     {{ form }}
@@ -25,4 +26,13 @@
       Submit
     </button>
   </form>
+  {% endif %}
+
+  {% if not user_can_register_decks %}
+  <div class="note">
+    <strong>Hold up!</strong> Before registering a deck you must have a
+    Challonge and TCO handles configured in your profile. <a href="{%
+    url 'profile' %}">Click here to go to your profile</a>.
+  </div>
+  {% endif %}
 {% endblock %}

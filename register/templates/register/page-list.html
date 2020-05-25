@@ -9,7 +9,7 @@
 <h1>Deck Registrations</h1>
 
 {% if user.is_authenticated %}
-<div>
+<div style="margin-bottom: 1.5rem">
   <a href="{% url 'register-add' %}">Register a deck you own.</a>
 </div>
 {% endif %}
@@ -44,10 +44,39 @@
       </td>
     </tr>
   {% empty %}
-    <td colspan="2" class="text-muted">
+    <td colspan="3" class="text-muted">
       Nothing to see here.
     </td>
   {% endfor %}
   </tbody>
 </table>
+
+<div class="pagination">
+  <span class="step-links">
+    <span>
+      {% if page_obj.has_previous %}
+      <a href="?page=1">&laquo; First</a>
+      <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+      {% else %}
+      <span class="text-muted">&laquo; First</span>
+      <span class="text-muted">Previous</span>
+      {% endif %}
+    </span>
+
+    <span class="current">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+    </span>
+
+    <span>
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">Next</a>
+      <a href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+      {% else %}
+      <span class="text-muted">Next</span>
+      <span class="text-muted">Last &raquo;</span>
+      {% endif %}
+    </span>
+  </span>
+</div>
+
 {% endblock %}

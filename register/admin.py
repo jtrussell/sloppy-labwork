@@ -22,7 +22,7 @@ def unverify(modeladmin, request, queryset):
 class DeckRegistrationAdmin(admin.ModelAdmin):
     list_display = ('deck', 'user', 'has_photo_verification', 'created_on')
     list_filter = ('has_photo_verification',)
-    search_fields = ['use', 'deck']
+    search_fields = ['user', 'deck']
     ordering = ('has_photo_verification', 'created_on')
     actions = (verify, unverify)
 

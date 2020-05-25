@@ -1,0 +1,59 @@
+{% extends "page.html" %}
+
+{% block content %}
+  <h1>User Profile</h1>
+  <p>Welcome, {{ user.get_username }}.</p>
+  <form action="{% url 'account_logout' %}" method="POST">
+    {% csrf_token %}
+    <button type="submit">
+      Sign Out
+    </button>
+  </form>
+
+  <section>
+    <h2>Account Details</h2>
+    <div class="note">
+      <strong>Warning</strong>: changing account details may invalidate
+      registrations you have already submitted.
+    </div>
+    <form method="POST" class="form-wide">
+      {% csrf_token %}
+      {{ username_form }}
+      <label for="">Discord handle:</label>
+      <input type="text" value="{{ discord_handle }}" disabled=true />
+      <span class="helptext">This cannot be changed.</span>
+      {{ profile_form }}
+      <button type="submit" class="button-primary">
+        Submit
+      </button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Registered Decks</h2>
+    <p>You have {{ num_registrations }} registered deck{{ num_registrations | pluralize:'s' }}.
+      {% if num_registrations > 0 %}
+        {% if num_pending_registrations == 0 %}
+          All have been verified.
+        {% else %}
+          {{ num_pending_registrations }} {{ num_pending_registrations | pluralize:'is,are' }} awaiting verification.
+        {% endif %}
+      {% endif %}
+    </p>
+    <a class="button" href="{% url 'register-add' %}">
+      Register a deck
+    </a>
+  </section>
+
+  <section>
+    <h2>Danger Zone</h2>
+    <p>Deleting your account is a permanent action that cannot be undone.
+    Deleting your account will result in all associated registrations being
+    deleted as well.</p>
+    <form action="#">
+      <a href="javascript:alert('Not yet implemented')" class="button">
+        Delete Account
+      </a>
+    </form>
+  </section>
+{% endblock %}

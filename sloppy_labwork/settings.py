@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'ratings',
     'posts',
     'decks',
+    'user_profile',
 ]
 
 MIDDLEWARE = [

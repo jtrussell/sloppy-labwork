@@ -19,6 +19,7 @@ import time
 
 class RegisterList(generic.ListView):
     template_name = 'register/page-list.html'
+    paginate_by = 20
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
@@ -63,6 +64,10 @@ def save_verification_photo(request, form, deck):
 @login_required
 def add(request):
     error_messages = []
+
+    # Also rate limit registration submission?
+    user_can_register_decks = request.user.profile.challonge_handle and request.user.profile.tco_handle
+
     if request.method == 'POST':
         form = RegiseterNewDeckForm(request.POST, request.FILES)
         if form.is_valid():
@@ -102,6 +107,7 @@ def add(request):
 
     return render(request, 'register/page-new.html', {
         'form': form,
+        'user_can_register_decks': user_can_register_decks,
         'error_messages': error_messages
     })
 
