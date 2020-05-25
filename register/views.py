@@ -1,4 +1,3 @@
-from datetime import datetime
 from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -12,6 +11,7 @@ from decks.models import Deck
 from .forms import RegiseterNewDeckForm
 from .models import DeckRegistration
 from botocore.exceptions import ClientError
+import datetime
 import boto3
 import os
 import time
@@ -70,8 +70,18 @@ def save_verification_photo(request, form, deck):
 def add(request):
     error_messages = []
 
-    # Also rate limit registration submission?
+    # Must have all info filled out before registering a field
     user_can_register_decks = request.user.profile.challonge_handle and request.user.profile.tco_handle
+
+    # Can't register too many decks
+    # TODO Move this to an environment variable
+    max_uploads_in_day = 10
+    twenty_four_hours_ago = datetime.datetime.now() - datetime.timedelta(hours=24)
+    my_uploads_today = DeckRegistration.objects.filter(
+        user=request.user,
+        created_on__gte=twenty_four_hours_ago)
+    user_hit_register_rate_limit = len(
+        my_uploads_today) > max_uploads_in_day - 1
 
     if request.method == 'POST':
         form = RegiseterNewDeckForm(request.POST, request.FILES)
@@ -113,6 +123,7 @@ def add(request):
     return render(request, 'register/page-new.html', {
         'form': form,
         'user_can_register_decks': user_can_register_decks,
+        'user_hit_register_rate_limit': user_hit_register_rate_limit,
         'error_messages': error_messages
     })
 
@@ -122,6 +133,6 @@ def verify(request, id):
     registration = DeckRegistration.objects.get(id=id)
     registration.has_photo_verification = True
     registration.verified_by = request.user
-    registration.verified_on = datetime.now()
+    registration.verified_on = datetime.datetime.now()
     registration.save()
     return HttpResponseRedirect('/admin/register/deckregistration/')

@@ -2,7 +2,7 @@
 
 {% block content %}
   <h1>Register a Deck</h1>
-  {% if user_can_register_decks %}
+  {% if user_can_register_decks and not user_hit_register_rate_limit %}
   <form method="POST" class="form-wide" enctype="multipart/form-data">
     {% csrf_token %}
     {{ form }}
@@ -26,6 +26,13 @@
       Submit
     </button>
   </form>
+  {% endif %}
+
+  {% if user_hit_register_rate_limit %}
+  <div class="note">
+    <strong>Hold up!</strong> You've maxed out on registration requests for
+    the day. Come back tomorrow and try again.
+  </div>
   {% endif %}
 
   {% if not user_can_register_decks %}
