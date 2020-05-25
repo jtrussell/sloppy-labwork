@@ -22,12 +22,17 @@ class RegisterList(generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
+        qs = DeckRegistration.objects.all()
+        f = self.request.GET.get('f')
+        if f:
+            qs = qs.filter(Q(deck__name__icontains=f)
+                           | Q(deck__id__icontains=f))
         if self.request.user.is_authenticated:
-            return DeckRegistration.objects.filter(
-                Q(has_photo_verification=1) | Q(user=self.request.user)
-            ).order_by('-verified_on')
+            qs = qs.filter(Q(has_photo_verification=1)
+                           | Q(user=self.request.user))
         else:
-            return DeckRegistration.objects.filter(has_photo_verification=1).order_by('-verified_on')
+            qs = qs.filter(has_photo_verification=1)
+        return qs.order_by('-verified_on')
 
 
 class RegisterDetail(generic.DetailView):

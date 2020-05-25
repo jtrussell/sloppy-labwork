@@ -23,6 +23,22 @@ input:disabled {
   color: #ccc;
 }
 
+.input-with-button-group {
+  display: flex;
+}
+
+.input-with-button-group input {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.input-with-button-group button {
+  border: 1px solid #ccc;
+  border-left: none;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
 /* helptext is built in to Django forms */
 form .helptext {
   display: block;

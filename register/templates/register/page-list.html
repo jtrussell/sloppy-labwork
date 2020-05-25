@@ -9,6 +9,16 @@
 </div>
 {% endif %}
 
+<form>
+  <label for="f">Search</label>
+  <div class="input-with-button-group">
+    <input autofocus value="{{request.GET.f}}" id="f" name="f" class="u-full-width" type="text" placeholder="By deck name or ID" />
+    <button type="submit" class="button-primary">
+      Go
+    </button>
+  </div>
+</form>
+
 <table>
   <thead>
     <tr>
