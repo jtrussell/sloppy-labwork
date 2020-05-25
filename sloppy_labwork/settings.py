@@ -99,6 +99,8 @@ SOCIALACCOUNT_AUTO_SIGNUP = False
 
 LOGIN_REDIRECT_URL = '/profile/'
 
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = os.environ['ACCOUNT_DEFAULT_HTTP_PROTOCOL']
+
 WSGI_APPLICATION = 'sloppy_labwork.wsgi.application'
 
 
