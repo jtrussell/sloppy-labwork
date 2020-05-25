@@ -4,7 +4,7 @@
 
 <head>
   <meta charset="utf-8">
-  <title>Sloppy Labwork</title>
+  <title>{%block head_title %}Sloppy Labwork{% endblock %}</title>
   <meta name="description" content="Resources for the KeyForge community and event organizers">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -21,12 +21,13 @@
   <!--
   <meta name="theme-color" content="#fafafa">
   -->
-  {% block head %}
+  {% block extra_head %}
     <!-- Custom head content -->
   {% endblock %}
 </head>
 
 <body class="preload">
+  {% block body %}
   <!--[if IE]>
     <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience and security.</p>
   <![endif]-->
@@ -34,11 +35,36 @@
   <!-- Add your site or application content here -->
   <main role="main" class="container stack">
     {% include 'nav-top.html' %}
+
+    {% if messages %}
+    <div class="note">
+      <ul class="note__list">
+        {% for message in messages %}
+        <li>{{message}}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if error_messages %}
+    <div class="note note__danger">
+      <ul class="note__list">
+        {% for message in error_messages %}
+        <li>{{message}}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
     {% block content %}
       <!-- Silence is golden -->
     {% endblock %}
+
     <div class="stack__spacer"></div>
+
     {% include 'footer.html' %}
+
+    {% endblock %}
   </main>
 
   <!-- Google Analytics: change UA-XXXXX-Y to be your site's ID. -->

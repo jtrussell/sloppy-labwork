@@ -35,6 +35,7 @@ section + section {
 
 .note__list { margin: 0; }
 .note__list li { margin: 0; }
+.note__list li:only-child { list-style-type: none; }
 
 /*
  * Stack

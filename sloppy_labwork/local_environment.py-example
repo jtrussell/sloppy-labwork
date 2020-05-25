@@ -15,11 +15,6 @@ os.environ['DEBUG'] = 'True'
 
 os.environ['SITE_ID'] = '2'
 
-# To login with Discord locally, you'll need to create an app with Discord and
-# add your client ID and secret below.
-os.environ['DISCORD_CLIENT_ID'] = '##################'
-os.environ['DISCORD_SECRET'] = '################################'
-
 # To add verification photos when developing locally, you'll need to connect to
 # an AWS account v
 os.environ['AWS_ACCESS_KEY_ID'] = '####################'

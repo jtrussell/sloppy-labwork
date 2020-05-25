@@ -48,3 +48,14 @@ And run the development server with:
 ```
 python manage.py runserver
 ```
+
+
+## Signing In
+
+In production, we only support signing in via 3rd party authentication
+providers. The most convenient way to authenticate during development is by
+using the Django Admin at
+[http://localhost:8000/admin](http://localhost:8000/admin).
+
+Alternatively, you may enter a `SocialApp` record in the DB for your own
+Discord app.

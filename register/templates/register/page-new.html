@@ -2,9 +2,6 @@
 
 {% block content %}
   <h1>Register a Deck</h1>
-  {% if error_message %}
-    <div class="note note-danger">{{ error_message }}</div>
-  {% endif %}
   <form method="POST" class="form-wide" enctype="multipart/form-data">
     {% csrf_token %}
     {{ form }}

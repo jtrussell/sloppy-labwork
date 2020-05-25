@@ -1,7 +1,7 @@
 {% extends "page.html" %}
 {% load static %}
 
-{% block head %}
+{% block extra_head %}
 <link rel="stylesheet" href="{% static 'register/list.css' %}">
 {% endblock %}
 
@@ -9,7 +9,9 @@
 <h1>Deck Registrations</h1>
 
 {% if user.is_authenticated %}
-<a href="{% url 'register-add' %}">Register a deck you own.</a>
+<div>
+  <a href="{% url 'register-add' %}">Register a deck you own.</a>
+</div>
 {% endif %}
 
 <table>
@@ -17,7 +19,6 @@
     <tr>
       <th>#</th>
       <th>Deck</th>
-      <th>Owner</th>
       <th class="text-right">Last Verified</th>
     </tr>
   </thead>
@@ -30,7 +31,6 @@
         </a>
       </td>
       <td>{{ reg.deck.name }}</td>
-      <td>{{ reg.user.username }}</td>
       <td class="text-right">
         {% if reg.has_photo_verification %}
           <span class="text-success">
@@ -44,7 +44,7 @@
       </td>
     </tr>
   {% empty %}
-    <td colspan="3" class="text-muted">
+    <td colspan="2" class="text-muted">
       Nothing to see here.
     </td>
   {% endfor %}

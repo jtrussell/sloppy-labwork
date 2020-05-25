@@ -62,7 +62,7 @@ def save_verification_photo(request, form, deck):
 
 @login_required
 def add(request):
-    error_message = None
+    error_messages = []
     if request.method == 'POST':
         form = RegiseterNewDeckForm(request.POST, request.FILES)
         if form.is_valid():
@@ -77,6 +77,8 @@ def add(request):
                 deck.name = r.json()['data']['name']
                 deck.save()
             else:
+                # TODO: Check if someone else the deck registered already
+
                 old_registrations = DeckRegistration.objects.filter(
                     user=request.user,
                     deck=deck,
@@ -94,13 +96,13 @@ def add(request):
                 registration.save()
                 return HttpResponseRedirect(reverse('register-detail', kwargs={'pk': registration.id}))
             except ClientError:
-                error_message = "Oops! Let's try that again"
+                error_messages.append("Oops! Let's try that again")
     else:
         form = RegiseterNewDeckForm()
 
     return render(request, 'register/page-new.html', {
         'form': form,
-        'error_message': error_message
+        'error_messages': error_messages
     })
 
 

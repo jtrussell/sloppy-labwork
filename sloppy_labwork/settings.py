@@ -94,15 +94,7 @@ AUTHENTICATION_BACKENDS = (
     'allauth.account.auth_backends.AuthenticationBackend',
 )
 
-SOCIALACCOUNT_PROVIDERS = {
-    'discord': {
-        'APP': {
-            'client_id': os.environ['DISCORD_CLIENT_ID'],
-            'secret': os.environ['DISCORD_SECRET'],
-        }
-    }
-}
-
+SOCIALACCOUNT_AUTO_SIGNUP = False
 
 LOGIN_REDIRECT_URL = '/profile/'
 
