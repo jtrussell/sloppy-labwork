@@ -74,8 +74,7 @@ def add(request):
     user_can_register_decks = request.user.profile.challonge_handle and request.user.profile.tco_handle
 
     # Can't register too many decks
-    # TODO Move this to an environment variable
-    max_uploads_in_day = 10
+    max_uploads_in_day = settings.MAX_UPLOADS_PER_DAY
     twenty_four_hours_ago = datetime.datetime.now() - datetime.timedelta(hours=24)
     my_uploads_today = DeckRegistration.objects.filter(
         user=request.user,

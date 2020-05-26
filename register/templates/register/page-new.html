@@ -12,12 +12,13 @@
       archon card as well as a handwritten that clearly lists:
       <ul class="note__list">
         <!-- Should include only the  -->
-        <li>Your username on <b>Discord</b>, e.g. Archonite#5132 </li>
-        <li>Your username on <b>Challonge</b></li>
-        <li>Your username on <b>The Crucible Online</b></li>
+        <li>Your username on <b>Discord</b>, i.e. {{ request.user.profile.discord_handle }}</li>
+        <li>Your username on <b>Challonge</b>, i.e. {{ request.user.profile.challonge_handle }} </li>
+        <li>Your username on <b>The Crucible Online</b>, i.e. {{ request.user.profile.tco_handle }}</li>
         <li>Today's date</li>
       </ul>
-      The example below demonstrates a valid registration photo. Read more about deck registration <a href="{% url 'register-about' %}">here.</a>
+      For an example of a valid registration photo, or read more about deck
+      registration, click <a href="{% url 'register-about' %}">here.</a>
     </div>
 
     <!-- Iniclude an example registration photo -->
