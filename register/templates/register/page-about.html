@@ -2,5 +2,46 @@
 
 {% block content %}
   <h1>About Deck Registration</h1>
+  <p>Many online tournaments require that aplayers prove they own the deck
+  before playing with it in an event. Usually this means taking a picture of
+  your deck's archon card alongside a handwritten note stating who the deck
+  belongs to.</p>
+  <p>The registration service here aims to cerntalize that process so players
+  only have to prove they own a deck once, and tournmanet organizers don't
+  have to worry about juggling verification pictures.</p>
+
+  <h2>How It Works, For Players</h2>
+  <p>Registering a deck with <span class="brand">Sloppy Labwork</span> is
+  just like verifying ownership for a typical online event. After creating an
+  account, you can submit a registration request <a href="{% url 'register-add' %}">here</a>.
+  Your registration request will include a photo of
+  the back of your archon card, as well as a handwritten note listing your
+  usernames on relevant online platforms.</p>
+
+  <p>From there, a <span class="brand">Sloppy Labwork</span> administartor
+  will review the request. Once it is approved, the deck will be pubicly
+  registered to you.</p> 
+
+  <p>There are some things to keep in mind. Your verification photo will not
+  be visible on the site until after it has been approved, but from that
+  point on it will be available to those who want to double check the
+  authenticity of your claim. Some tournament organizers may also ask that
+  registrations </p>
+  
+  <h2>How It Works, For Organizers</h2>
   <p>...</p>
+
+  <h2>FAQ</h2>
+  <ol>
+    <li>
+      <span class="faq-question">
+        How long does the approval process take?
+      </span>
+      <span class="faq-answer">
+        Assuming your photo is clear and accurate, the approval process
+        should take less than 48 hours.
+      </span>
+    </li>
+  </ol>
+
 {% endblock %}
