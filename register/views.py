@@ -44,6 +44,13 @@ def about(request):
     return render(request, 'register/page-about.html', {})
 
 
+def review(request, pk):
+    registration = DeckRegistration.objects.get(pk=pk)
+    return render(request, 'register/page-review.html', {
+        'registration': registration
+    })
+
+
 def save_verification_photo(request, form, deck):
     s3_client = boto3.client('s3')
     f = request.FILES['verification_photo']

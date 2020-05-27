@@ -1,0 +1,12 @@
+{% extends "page.html" %}
+
+{% block body %}
+<ul>
+  <li>Deck: {{ registration.deck.name }}</li>
+  <li>Discord: {{ registration.user.profile.discord_handle }}</li>
+  <li>Challonge: {{ registration.user.profile.challonge_handle }}</li>
+  <li>TCO: {{ registration.user.profile.tco_handle }}</li>
+</ul>
+
+<img src="{{ registration.photo_verification_link }}" alt="Verification photo">
+{% endblock %}

@@ -3,7 +3,10 @@
     {{ block.super }}
     {% if original %} {# Only show if changing #}
         <div class="submit-row">
-            <a class="button" href="{% url 'register-verify' original.pk %}">
+            <a href="{% url 'register-review' original.pk %}" class="button" style="margin: 0 0 0 8px">
+                Review
+            </a>
+            <a class="button" href="{% url 'register-verify' original.pk %}" style="margin: 0 0 0 8px">
                  Verify
             </a>
         </div>
