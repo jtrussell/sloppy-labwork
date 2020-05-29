@@ -38,9 +38,9 @@
 
   {% if not user_can_register_decks %}
   <div class="note">
-    <strong>Hold up!</strong> Before registering a deck you must have a
-    Challonge and TCO handles configured in your profile. <a href="{%
-    url 'profile' %}">Click here to go to your profile</a>.
+    <strong>Hold up!</strong> Before registering a deck you must have
+    Challonge and TCO handles configured in your profile. <a href="{% url
+    'profile' %}">Click here to go to your profile</a>.
   </div>
   {% endif %}
 {% endblock %}
