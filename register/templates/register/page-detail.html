@@ -36,7 +36,7 @@
             </span>
           {% else %}
             <span class="text-danger">
-              Not verified
+              Pending
             </span>
           {% endif %}
         </td>
@@ -62,8 +62,8 @@
     </tbody>
   </table>
 
-  {% if object.is_verified and object.photo_verification_link %}
-  <a href="{{ object.photo_verification_link }}">
+  {% if object.is_verified and object.verification_photo_url %}
+  <a href="{{ object.verification_photo_url }}">
     View verification photo.
   </a>
   {% endif %}

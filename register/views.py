@@ -9,7 +9,7 @@ from allauth.account.decorators import login_required
 from requests import get
 from decks.models import Deck
 from .forms import RegiseterNewDeckForm
-from .models import DeckRegistration
+from .models import DeckRegistration, SignedNonce
 from botocore.exceptions import ClientError
 import datetime
 import boto3
@@ -91,7 +91,11 @@ def add(request):
 
     if request.method == 'POST':
         form = RegiseterNewDeckForm(request.POST, request.FILES)
-        if form.is_valid():
+        nonce = SignedNonce.from_post(request.POST)
+        if not nonce.is_valid():
+            error_messages.append(
+                'The registration code just sumitted has expired. Please use the code below to submit a new registration request.')
+        elif form.is_valid():
             # Process the form...
             master_vault_url = form.cleaned_data['master_vault_link']
             master_vault_id = Deck.get_id_from_master_vault_url(
@@ -103,8 +107,10 @@ def add(request):
                 deck.name = r.json()['data']['name']
                 deck.save()
             else:
-                # TODO: Check if someone else the deck registered already
+                # TODO: Check if someone else registered the deck already
 
+                # Only allow the user to have one pending registartion per deck
+                # TODO: This should probably happen after we've saved the new one
                 old_registrations = DeckRegistration.objects.filter(
                     user=request.user,
                     deck=deck,
@@ -117,8 +123,9 @@ def add(request):
             registration.deck = deck
 
             try:
-                registration.photo_verification_link = save_verification_photo(
-                    request, form, deck)
+                registration.verification_photo_url = 'https://example.com/foo.png'
+                # registration.verification_photo_url = save_verification_photo(
+                #    request, form, deck)
                 registration.save()
                 return HttpResponseRedirect(reverse('register-detail', kwargs={'pk': registration.id}))
             except ClientError:
@@ -128,6 +135,7 @@ def add(request):
 
     return render(request, 'register/page-new.html', {
         'form': form,
+        'signed_nonce': SignedNonce.create(),
         'user_can_register_decks': user_can_register_decks,
         'user_hit_register_rate_limit': user_hit_register_rate_limit,
         'error_messages': error_messages

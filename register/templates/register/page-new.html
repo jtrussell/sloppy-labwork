@@ -6,19 +6,26 @@
   <form method="POST" class="form-wide" enctype="multipart/form-data">
     {% csrf_token %}
     {{ form }}
+    <input type="hidden" name="nonce" value={{ signed_nonce.nonce }} />
+    <input type="hidden" name="nonce_sig" value={{ signed_nonce.nonce_sig }} />
     <div class="note">
       <b>Heads up!</b>
-      Your verification photo should clearly show the back of your deck's
-      archon card as well as a handwritten that clearly lists:
+      Verification photos must show your deck's archon card and a handwritten
+      note that clearly displays the code below.
+
+      <div class="verification_nonce_display">
+        {{ signed_nonce.nonce }}
+      </div>
+
+      Please ensure that:
       <ul class="note__list">
-        <!-- Should include only the  -->
-        <li>Your username on <b>Discord</b>, i.e. {{ request.user.profile.discord_handle }}</li>
-        <li>Your username on <b>Challonge</b>, i.e. {{ request.user.profile.challonge_handle }} </li>
-        <li>Your username on <b>The Crucible Online</b>, i.e. {{ request.user.profile.tco_handle }}</li>
-        <li>Today's date</li>
+        <li>Your archon card is <strong>not</strong> in a sleeve.</li>
+        <li>The <strong>deck name</strong> on the archon card is fully visible.</li>
+        <li>The QR code on the archon card is <strong>obcured</strong>.</li>
+        <li>The <strong>16-digit sequence</strong> below your archon card's QR code is fully visible.</li>
       </ul>
-      For an example of a valid registration photo, or read more about deck
-      registration, click <a href="{% url 'register-about' %}">here.</a>
+      For an example of a valid registration photo, or to read more about
+      deck registration, click <a href="{% url 'register-about' %}">here.</a>
     </div>
 
     <!-- Iniclude an example registration photo -->

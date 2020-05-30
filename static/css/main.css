@@ -53,9 +53,19 @@ form .helptext {
 }
 
 .text-success { color: #649d66;  }
-.text-danger { color: #e71414; }
+.text-danger { color: firebrick; }
 .text-muted { color: #ccc; }
 .text-right { text-align: right; }
+
+.verification_nonce_display {
+  text-align: center;
+  border: 3px dashed mediumpurple;
+  color: rebeccapurple;
+  margin: 2rem 0;
+  font-size: 6rem;
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: 2rem;
+}
 
 /* Notes */
 .note {
@@ -64,6 +74,11 @@ form .helptext {
   border-radius: 3px;
   padding: 1rem;
   background-color: #efefef;
+}
+
+.note-danger {
+  color: firebrick;
+  border-color: firebrick;
 }
 
 .note__list { margin: 0; }
