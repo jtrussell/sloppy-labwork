@@ -8,7 +8,7 @@
 {% block content %}
   <h1>Registration</h1>
 
-  {% if object.user == request.user and not object.has_photo_verification %}
+  {% if object.user == request.user and not object.is_verified %}
     <p class="note">
       <em>
         You submitted this registration request on {{ object.created_on | date:'M j, Y' }}. It has not yet been verified.
@@ -30,7 +30,7 @@
       <tr>
         <td class="detail-label">Status</td>
         <td class="detail-value">
-          {% if object.has_photo_verification %}
+          {% if object.is_verified %}
             <span class="text-success">
               Last verified on {{ object.verified_on | date:'M j, Y' }}
             </span>
@@ -42,7 +42,7 @@
         </td>
       </tr>
 
-      {% if object.has_photo_verification %}
+      {% if object.is_verified %}
       <tr>
         <td class="detail-label">Owner Discord</td>
         <td class="detail-value">{{ object.user.username }}</td>
@@ -62,7 +62,7 @@
     </tbody>
   </table>
 
-  {% if object.has_photo_verification and object.photo_verification_link %}
+  {% if object.is_verified and object.photo_verification_link %}
   <a href="{{ object.photo_verification_link }}">
     View verification photo.
   </a>

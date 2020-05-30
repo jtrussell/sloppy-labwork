@@ -37,7 +37,7 @@
       </td>
       <td>{{ reg.deck.name }}</td>
       <td class="text-right">
-        {% if reg.has_photo_verification %}
+        {% if reg.is_verified %}
           <span class="text-success">
             {{ reg.verified_on | date:'M j, Y' }}
           </span>

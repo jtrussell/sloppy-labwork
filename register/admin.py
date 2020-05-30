@@ -5,7 +5,7 @@ from .models import DeckRegistration
 
 def verify(modeladmin, request, queryset):
     queryset.update(
-        has_photo_verification=True,
+        is_verified=True,
         verified_on=datetime.now(),
         verified_by=request.user
     )
@@ -13,17 +13,17 @@ def verify(modeladmin, request, queryset):
 
 def unverify(modeladmin, request, queryset):
     queryset.update(
-        has_photo_verification=False,
+        is_verified=False,
         verified_on=None,
         verified_by=None
     )
 
 
 class DeckRegistrationAdmin(admin.ModelAdmin):
-    list_display = ('deck', 'user', 'has_photo_verification', 'created_on')
-    list_filter = ('has_photo_verification',)
+    list_display = ('deck', 'user', 'is_verified', 'created_on')
+    list_filter = ('is_verified',)
     search_fields = ['user', 'deck']
-    ordering = ('has_photo_verification', 'created_on')
+    ordering = ('is_verified', 'created_on')
     actions = (verify, unverify)
 
 

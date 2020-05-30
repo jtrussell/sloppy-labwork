@@ -28,10 +28,10 @@ class RegisterList(generic.ListView):
             qs = qs.filter(Q(deck__name__icontains=f)
                            | Q(deck__id__icontains=f))
         if self.request.user.is_authenticated:
-            qs = qs.filter(Q(has_photo_verification=1)
+            qs = qs.filter(Q(is_verified=1)
                            | Q(user=self.request.user))
         else:
-            qs = qs.filter(has_photo_verification=1)
+            qs = qs.filter(is_verified=1)
         return qs.order_by('-verified_on')
 
 
@@ -108,7 +108,7 @@ def add(request):
                 old_registrations = DeckRegistration.objects.filter(
                     user=request.user,
                     deck=deck,
-                    has_photo_verification=False
+                    is_verified=False
                 )
                 old_registrations.delete()
 
@@ -137,7 +137,7 @@ def add(request):
 @staff_member_required
 def verify(request, id):
     registration = DeckRegistration.objects.get(id=id)
-    registration.has_photo_verification = True
+    registration.is_verified = True
     registration.verified_by = request.user
     registration.verified_on = datetime.datetime.now()
     registration.save()

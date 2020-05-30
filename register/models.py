@@ -10,7 +10,7 @@ class DeckRegistration(models.Model):
         Deck, on_delete=models.CASCADE, related_name='deck_registrations')
     photo_verification_link = models.CharField(
         max_length=255, default=None, blank=True, null=True)
-    has_photo_verification = models.BooleanField(
+    is_verified = models.BooleanField(
         default=False, verbose_name='verified')
     created_on = models.DateTimeField(auto_now_add=True)
     verified_on = models.DateTimeField(default=None, blank=True, null=True)
