@@ -12,6 +12,7 @@ class DeckRegistration(models.Model):
         User, on_delete=models.CASCADE, related_name='deck_registrations')
     deck = models.ForeignKey(
         Deck, on_delete=models.CASCADE, related_name='deck_registrations')
+    verification_code = models.CharField(max_length=5, default='?????')
     verification_photo_url = models.CharField(
         max_length=255, default=None, blank=True, null=True)
     is_verified = models.BooleanField(

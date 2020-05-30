@@ -91,8 +91,8 @@ def add(request):
 
     if request.method == 'POST':
         form = RegiseterNewDeckForm(request.POST, request.FILES)
-        nonce = SignedNonce.from_post(request.POST)
-        if not nonce.is_valid():
+        signed_nonce = SignedNonce.from_post(request.POST)
+        if not signed_nonce.is_valid():
             error_messages.append(
                 'The registration code just sumitted has expired. Please use the code below to submit a new registration request.')
         elif form.is_valid():
@@ -121,11 +121,11 @@ def add(request):
             registration = DeckRegistration()
             registration.user = request.user
             registration.deck = deck
+            registration.verification_code = signed_nonce.nonce
 
             try:
-                registration.verification_photo_url = 'https://example.com/foo.png'
-                # registration.verification_photo_url = save_verification_photo(
-                #    request, form, deck)
+                registration.verification_photo_url = save_verification_photo(
+                    request, form, deck)
                 registration.save()
                 return HttpResponseRedirect(reverse('register-detail', kwargs={'pk': registration.id}))
             except ClientError:
