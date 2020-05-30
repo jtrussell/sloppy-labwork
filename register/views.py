@@ -11,6 +11,8 @@ from decks.models import Deck
 from .forms import RegiseterNewDeckForm
 from .models import DeckRegistration, SignedNonce
 from botocore.exceptions import ClientError
+from PIL import Image
+from io import BytesIO
 import datetime
 import boto3
 import os
@@ -52,18 +54,17 @@ def review(request, pk):
 
 
 def save_verification_photo(request, form, deck):
+    img = request.FILES['verification_photo']
+    img = resize_image(img)
     s3_client = boto3.client('s3')
-    f = request.FILES['verification_photo']
-    orig_filename, ext = os.path.splitext(f.name)
     bucket_name = settings.AWS_S3_BUCKET_VERIFICATION_PHOTOS_BUCKET
-    object_name = 'verification-photos/{}-{}-{}{}'.format(
+    object_name = 'verification-photos/{}-{}-{}.jpg'.format(
         int(time.time()),
         request.user.id,
-        deck.id,
-        ext
+        deck.id
     )
     response = s3_client.put_object(
-        Body=f,
+        Body=img,
         Bucket=bucket_name,
         Key=object_name,
         ACL='public-read'
@@ -71,6 +72,22 @@ def save_verification_photo(request, form, deck):
     return 'https://static.sloppylabwork.com/{}'.format(
         object_name
     )
+
+
+def resize_image(img):
+    # Shrink the image down so we're not storing massive photos just for kicks
+    img = Image.open(img)
+    max_dim = 600
+    dims = (img.width, img.height)
+    if max(dims) > max_dim:
+        if dims[0] > dims[1]:
+            dims = (max_dim, int(max_dim * dims[1] / dims[0]))
+        else:
+            dims = (int(max_dim * dims[0] / dims[1]), max_dim)
+        img = img.resize(dims)
+    buf = BytesIO()
+    img.save(buf, format='JPEG', quality=60, optimize=True)
+    return buf.getvalue()
 
 
 @login_required

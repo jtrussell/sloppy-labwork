@@ -13,4 +13,5 @@ dependencies:
     - Markdown==3.2.2
     - psycopg2-binary==2.8.5
     - boto3==1.13.16
+    - Pillow==7.1.2
     - requests
