@@ -67,14 +67,14 @@
     {% endblock %}
   </main>
 
-  <!-- Google Analytics: change UA-XXXXX-Y to be your site's ID. -->
-  <!--
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-167976813-1"></script>
   <script>
-    window.ga = function () { ga.q.push(arguments) }; ga.q = []; ga.l = +new Date;
-    ga('create', 'UA-XXXXX-Y', 'auto'); ga('set','transport','beacon'); ga('send', 'pageview')
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '{{ GA_TRACKING_ID }}');
   </script>
-  <script src="https://www.google-analytics.com/analytics.js" async></script>
-  -->
   <script>
     // Used to avoid CSS animations on the initial load
     document.querySelector('body').classList.remove('preload')

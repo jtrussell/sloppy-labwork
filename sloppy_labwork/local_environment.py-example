@@ -19,6 +19,8 @@ os.environ['MAX_UPLOADS_PER_DAY'] = '10'
 
 os.environ['ACCOUNT_DEFAULT_HTTP_PROTOCOL'] = 'http'
 
+os.environ['GA_TRACKING_ID'] = 'UA-XXXXXXXXX-X'
+
 # To add verification photos when developing locally, you'll need to connect to
 # an AWS account v
 os.environ['AWS_ACCESS_KEY_ID'] = '####################'
