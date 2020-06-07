@@ -24,7 +24,7 @@ class RegisterList(generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        qs = DeckRegistration.objects.all()
+        qs = DeckRegistration.objects.filter(is_active=True)
         f = self.request.GET.get('f')
         if f:
             qs = qs.filter(Q(deck__name__icontains=f)

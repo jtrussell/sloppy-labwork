@@ -21,7 +21,7 @@ def unverify(modeladmin, request, queryset):
 
 class DeckRegistrationAdmin(admin.ModelAdmin):
     list_display = ('deck', 'user', 'is_verified', 'created_on')
-    list_filter = ('is_verified',)
+    list_filter = ('is_verified', 'is_active')
     search_fields = ['user', 'deck']
     ordering = ('is_verified', 'created_on')
     actions = (verify, unverify)

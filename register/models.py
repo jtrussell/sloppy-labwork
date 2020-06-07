@@ -17,6 +17,8 @@ class DeckRegistration(models.Model):
         max_length=255, default=None, blank=True, null=True)
     is_verified = models.BooleanField(
         default=False, verbose_name='verified')
+    is_active = models.BooleanField(
+        default=True, verbose_name='active')
     created_on = models.DateTimeField(auto_now_add=True)
     verified_on = models.DateTimeField(default=None, blank=True, null=True)
     verified_by = models.ForeignKey(
