@@ -120,7 +120,7 @@ def add(request):
 
             deck, created = Deck.objects.get_or_create(id=master_vault_id)
             if created:
-                r = get(deck.get_master_vault_url())
+                r = get(deck.get_master_vault_api_url())
                 deck.name = r.json()['data']['name']
                 deck.save()
             else:

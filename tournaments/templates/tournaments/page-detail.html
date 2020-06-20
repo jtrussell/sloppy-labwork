@@ -1,0 +1,81 @@
+{% extends "page.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'register/detail.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>Tournament Details</h1>
+
+  <table class="u-full-width">
+    <tbody>
+      <tr>
+        <td class="detail-label">Name</td>
+        <td class="detail-value">{{ tournament.name }}</td>
+      </tr>
+      <tr>
+        <td class="detail-label">Date</td>
+        <td class="detail-value">{{ tournament.date }}</td>
+      </tr>
+      <tr>
+        <td class="detail-label">Players</td>
+        <td class="detail-value">{{ num_players }} </td>
+      </tr>
+      <tr>
+        <td class="detail-label">Status</td>
+        <td class="detail-value text-success">
+          {% if num_unregistered_players == 0 %}
+            <span class="text-success">All players registered with verified decks</span>
+          {% else %}
+            <span class="text-danger">
+              {{ num_unregistered_players }} player{{ num_unregistered_players|pluralize }} still needs to register
+            </span>
+          {% endif %}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div>
+    <a class="button" href="{% url 'tournaments-edit' tournament.id %}">
+      Edit
+    </a>
+  </div>
+  
+  <h2>Player Information</h2>
+  <div>
+    <a href="{% url 'tournaments-detail' tournament.id %}">All ({{ num_players }})</a>
+    /
+    <a href="{% url 'tournaments-detail' tournament.id %}?show=unregistered">Unregistered ({{ num_unregistered_players }} )</a>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Discord</th>
+        <th>Deck</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for info in players_info %}
+      <tr>
+        <td>
+          {% if info.is_verified %}
+            <span class="text-success">Registered</span>
+          {% else %}
+            <span class="text-danger">Not registered</span>
+          {% endif %}
+        </td>
+        <td>{{ info.discord_handle }}</td>
+        <td>
+          <a href="{% url 'decks-detail' info.deck_id %}">Sloppy Labwork</a> /
+          <a href="{{ info.deck_master_vault_url }}">MV</a> /
+          <a href="{{ info.deck_dok_url }}">DoK</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+{% endblock %}

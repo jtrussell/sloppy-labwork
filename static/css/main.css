@@ -15,8 +15,15 @@ section + section {
   margin-top: 2rem;
 }
 
-.form-wide input {
+.form-wide input,
+.form-wide textarea {
   width: 100%;
+  white-space: nowrap;
+}
+
+.form-wide textarea {
+  font-size: 1.5rem;
+  height: 15rem;
 }
 
 input:disabled {

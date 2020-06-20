@@ -1,0 +1,21 @@
+{% extends "page.html" %}
+
+{% block content %}
+<h1>Edit Tournament</h1>
+
+<form method="POST" class="form-wide">
+  {% csrf_token %}
+  {{ form }}
+  <button class="button-primary" type="submit">
+    Save
+  </button>
+</form>
+<h2>Danger Zone</h2>
+<form method="POST">
+  {% csrf_token %}
+  <input type="hidden" name="delete" value="true" />
+  <button type="submit" class="button-danger">
+    Delete
+  </button>
+</form>
+{% endblock %}

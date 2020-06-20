@@ -14,11 +14,23 @@ class Deck(models.Model):
     def get_id_from_master_vault_url(value):
         return value.strip().rsplit('/', 1)[-1]
 
-    def get_master_vault_url(self):
-        return 'https://www.keyforgegame.com/api/decks/{}/'.format(self.id)
+    @staticmethod
+    def get_master_vault_ui_url_from_id(value):
+        return 'https://www.keyforgegame.com/deck-details/{}'.format(value)
+
+    @staticmethod
+    def get_master_vault_api_url_from_id(value):
+        return 'https://www.keyforgegame.com/api/decks/{}/'.format(value)
+
+    @staticmethod
+    def get_dok_url_from_id(value):
+        return 'https://decksofkeyforge.com/decks/{}'.format(value)
+
+    def get_master_vault_api_url(self):
+        return self.get_master_vault_api_url_from_id(self.id)
 
     def get_dok_url(self):
-        return 'https://decksofkeyforge.com/decks/{}'.format(self.id)
+        return self.get_dok_url_from_id(self.id)
 
     def __str__(self):
         return self.name

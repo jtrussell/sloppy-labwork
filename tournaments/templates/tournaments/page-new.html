@@ -1,0 +1,22 @@
+{% extends "page.html" %}
+
+{% block content %}
+<h1>New Tournament</h1>
+
+<p class="note">
+  Tournaments you create are only be visible to you. You will be able to
+  change player information later.
+  <br>
+  <br>
+  Player information should be in CSV or tab delimited format. Headers are
+  optional but columns should be in the order shown.
+</p>
+<form method="POST" class="form-wide">
+  {{ csrf_tokken }}
+    {% csrf_token %}
+  {{ form }}
+  <button class="button-primary" type="submit">
+    Submit
+  </button>
+</form>
+{% endblock %}

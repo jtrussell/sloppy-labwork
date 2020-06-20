@@ -25,6 +25,10 @@ class DeckRegistration(models.Model):
         User, on_delete=models.CASCADE, default=None, blank=True, null=True)
 
 
+class Meta:
+    ordering = ['is_active', 'is_verified', 'verified_on', 'created_on']
+
+
 # I kinda wish there was a way to make this owrk with
 class SignedNonce():
     def __init__(self, nonce, nonce_sig):

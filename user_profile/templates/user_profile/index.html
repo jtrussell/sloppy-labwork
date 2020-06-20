@@ -40,8 +40,21 @@
         {% endif %}
       {% endif %}
     </p>
-    <a class="button" href="{% url 'register-add' %}">
+    <a class="button" href="{% url 'register-new' %}">
       Register a deck
+    </a>
+  </section>
+
+  <section>
+    <h2>My Tournaments</h2>
+    <p>
+      This section is for tournament organizers. Starting a tournament with
+      <span class="brand">Sloppy Labwork</span> allows to to see at a glance
+      whether all participants have registered decks.
+    </p>
+    <p>You have 3 active tournaments. Click <a href="{% url 'tournaments-list' %}">here</a> to view them</p>
+    <a class="button" href="{% url 'tournaments-new' %}">
+      Start a tournament
     </a>
   </section>
 

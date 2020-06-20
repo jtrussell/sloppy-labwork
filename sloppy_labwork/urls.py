@@ -27,5 +27,6 @@ urlpatterns = [
     path('profile/', include('user_profile.urls')),
     path('accounts/', include('allauth.urls')),
     path('decks/', include('decks.urls')),
+    path('tournaments/', include('tournaments.urls')),
     path('admin/', admin.site.urls),
 ]

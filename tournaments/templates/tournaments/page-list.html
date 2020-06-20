@@ -1,51 +1,30 @@
 {% extends "page.html" %}
 
 {% block content %}
-<h1>Deck Registrations</h1>
+<h1>My Tournaments</h1>
 
 {% if user.is_authenticated %}
 <div style="margin-bottom: 1.5rem">
-  <a href="{% url 'register-new' %}">Register a deck you own.</a>
+  <a href="{% url 'tournaments-new' %}">Start a new tournament.</a>
 </div>
 {% endif %}
-
-<form>
-  <label for="f">Search</label>
-  <div class="input-with-button-group">
-    <input autofocus value="{{request.GET.f}}" id="f" name="f" class="u-full-width" type="text" placeholder="By deck name or ID" />
-    <button type="submit" class="button-primary">
-      Go
-    </button>
-  </div>
-</form>
 
 <table>
   <thead>
     <tr>
-      <th>#</th>
-      <th>Deck</th>
-      <th class="text-right">Last Verified</th>
+      <th>Name</th>
+      <th class="text-right">Date</th>
     </tr>
   </thead>
   <tbody>
-  {% for reg in deckregistration_list %}
+  {% for tourney in tournament_list %}
     <tr>
       <td>
-        <a href="{% url 'register-detail' reg.id %}">
-          {{ reg.id }}
+        <a href="{% url 'tournaments-detail' tourney.id %}">
+          {{ tourney.name }}
         </a>
-      </td>
-      <td>{{ reg.deck.name }}</td>
       <td class="text-right">
-        {% if reg.is_verified %}
-          <span class="text-success">
-            {{ reg.verified_on | date:'M j, Y' }}
-          </span>
-        {% else %}
-          <span class="text-danger">
-            Pending
-          </span>
-        {% endif %}
+        {{ tourney.date }}
       </td>
     </tr>
   {% empty %}
@@ -83,5 +62,4 @@
     </span>
   </span>
 </div>
-
 {% endblock %}

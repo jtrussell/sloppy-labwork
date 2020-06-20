@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'posts',
     'decks',
     'user_profile',
+    'tournaments',
 ]
 
 MIDDLEWARE = [
