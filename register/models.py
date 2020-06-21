@@ -24,6 +24,9 @@ class DeckRegistration(models.Model):
     verified_by = models.ForeignKey(
         User, on_delete=models.CASCADE, default=None, blank=True, null=True)
 
+    def __str__(self):
+        return self.deck.name
+
 
 class Meta:
     ordering = ['is_active', 'is_verified', 'verified_on', 'created_on']

@@ -15,8 +15,13 @@ section + section {
   margin-top: 2rem;
 }
 
+form.form-inline {
+  margin-bottom: 0;
+}
+
 .form-wide input,
-.form-wide textarea {
+.form-wide textarea,
+.form-wide select {
   width: 100%;
   white-space: nowrap;
 }

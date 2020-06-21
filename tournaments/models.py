@@ -1,8 +1,17 @@
 from django.db import models
+from django.urls import reverse
 from django.contrib.auth.models import User
 from decks.models import Deck
 from io import StringIO
 import csv
+
+
+class TournamentFormat(models.Model):
+    name = models.CharField(max_length=200, unique=False)
+    decks_per_player = models.IntegerField(default=1)
+
+    def __str__(self):
+        return self.name
 
 
 class Tournament(models.Model):
@@ -10,31 +19,20 @@ class Tournament(models.Model):
         User, on_delete=models.CASCADE, related_name='tournaments')
     name = models.CharField(max_length=200, unique=False)
     date = models.DateField()
-    players_info = models.TextField()
+    tournament_format = models.ForeignKey(
+        TournamentFormat, on_delete=models.CASCADE, related_name='tournaments')
 
-    def parse_players_info(self):
-        return self._parse_players_info(self.players_info)
+    def get_sign_up_url(self):
+        return reverse('tournaments-register', kwargs={'pk': self.id})
 
-    @staticmethod
-    def _parse_players_info(players_info):
-        infos = []
-        delim = ','
-        if '\t' in players_info:
-            delim = '\t'
-        f = StringIO(players_info)
-        reader = csv.reader(f, delimiter=delim)
-        for row in reader:
-            if len(row) != 4:
-                continue
-            if row[0] == 'Discord Handle' or row[0] == 'discord_handle':
-                continue
-            deck_id = Deck.get_id_from_master_vault_url(row[3])
-            infos.append({
-                'discord_handle': row[0],
-                'challonge_handle': row[1],
-                'tco_handle': row[2],
-                'deck_id': deck_id,
-                'deck_master_vault_url': Deck.get_master_vault_ui_url_from_id(deck_id),
-                'deck_dok_url': Deck.get_dok_url_from_id(deck_id)
-            })
-        return infos
+
+class TournamentRegistration(models.Model):
+    tournament = models.ForeignKey(
+        Tournament, on_delete=models.CASCADE, related_name='tournament_registrations')
+    player = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='tournament_registrations')
+    decks = models.ManyToManyField(
+        Deck, related_name='tournament_registrations')
+
+    def get_sign_up_url(self):
+        return ''

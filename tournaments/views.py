@@ -5,9 +5,10 @@ from django.urls import reverse
 from django.forms.models import model_to_dict
 from django.contrib.auth.mixins import LoginRequiredMixin
 from allauth.account.decorators import login_required
+from decks.models import Deck
 from register.models import DeckRegistration
-from .models import Tournament
-from .forms import TournamentForm
+from .models import Tournament, TournamentRegistration
+from .forms import TournamentForm, make_sign_up_form
 import random
 import datetime
 import csv
@@ -23,65 +24,82 @@ class TournamentList(LoginRequiredMixin, generic.ListView):
 
 @login_required
 def detail(request, pk):
-    tournament = get_object_or_404(Tournament, id=pk)
-    players_info = tournament.parse_players_info()
+    tournament = get_object_or_404(Tournament, id=pk, owner=request.user)
 
-    # Need to look up registrations for each player/deck combo :/
-    # This is kinda gross... should probably just refactor this to have better
-    # models for the situation
-    deck_ids = [info['deck_id'] for info in players_info]
-    registrations = DeckRegistration.objects.filter(
-        deck__in=deck_ids, is_verified=True, is_active=True)
+    t_registrations = tournament.tournament_registrations
+    num_players = t_registrations.count()
 
-    deck_to_discords_map = {deck_id: [] for deck_id in deck_ids}
-    for reg in registrations:
-        deck_to_discords_map[str(reg.deck.id)].append(
-            reg.user.profile.discord_handle)
+    num_unverified_players = 0
 
-    for info in players_info:
-        deck_id = info['deck_id']
-        discords_linked_to_deck = deck_to_discords_map[deck_id]
-        discord_handle = info['discord_handle']
-        info['is_verified'] = discord_handle in discords_linked_to_deck
-
-    num_players = len(players_info)
-    num_unregistered_players = len(
-        [info for info in players_info if not info['is_verified']])
-
-    if request.GET.get('show', 'all') == 'unregistered':
-        players_info = [
-            info for info in players_info if not info['is_verified']]
+    # if request.GET.get('show', 'all') == 'unregistered':
+    #    players_info = [
+    #        info for info in players_info if not info['is_verified']]
 
     return render(request, 'tournaments/page-detail.html', {
         'num_players': num_players,
-        'num_unregistered_players': num_unregistered_players,
-        'tournament': tournament,
-        'players_info': players_info,
+        'num_unverified_players': num_unverified_players,
+        'tournament': tournament
     })
-
-
-class TournamentEdit(LoginRequiredMixin, generic.DetailView):
-    model = Tournament
-    template_name = 'tournaments/page-edit.html'
 
 
 @login_required
 def edit(request, pk):
-    tourney = get_object_or_404(Tournament, id=pk)
+    tourney = get_object_or_404(Tournament, id=pk, owner=request.user)
     if request.method == 'POST':
-        form = TournamentForm(request.POST, instance=tourney)
-        if 'delete' in request.POST:
-            tourney.delete()
-            return HttpResponseRedirect(reverse('profile'))
-        else:
-            if form.is_valid():
-                form.save()
-                return HttpResponseRedirect(reverse('tournaments-detail', kwargs={'pk': tourney.id}))
+        pass
+        #form = TournamentForm(request.POST, instance=tourney)
+        # if 'delete' in request.POST:
+        #    tourney.delete()
+        #    return HttpResponseRedirect(reverse('profile'))
+        # else:
+        #    if form.is_valid():
+        #        form.save()
+        #        return HttpResponseRedirect(reverse('tournaments-detail', kwargs={'pk': tourney.id}))
     else:
         form = TournamentForm(model_to_dict(tourney))
     return render(request, 'tournaments/page-edit.html', {
         'form': form,
     })
+
+
+@login_required
+def sign_up(request, pk):
+    tourney = get_object_or_404(Tournament, id=pk, owner=request.user)
+    error_messages = []
+    treg = None
+    if request.method == 'POST' and 'UNREGISTER' in request.POST:
+        TournamentRegistration.objects.filter(
+            tournament=tourney, player=request.user).delete()
+    elif request.method == 'POST':
+        num_decks = tourney.tournament_format.decks_per_player
+        reg_ids = [request.POST['deck{}'.format(
+            ix)] for ix in range(num_decks)]
+        registrations = DeckRegistration.objects.filter(id__in=reg_ids)
+        decks = [r.deck for r in registrations]
+        treg, treg_created = TournamentRegistration.objects.get_or_create(
+            tournament=tourney, player=request.user)
+        if not treg_created:
+            treg.decks.clear()
+        treg.decks.add(*decks)
+    else:
+        try:
+            treg = TournamentRegistration.objects.get(
+                tournament=tourney, player=request.user)
+        except TournamentRegistration.DoesNotExist:
+            treg = None
+    form = make_sign_up_form(request.user, tourney)
+    return render(request, 'tournaments/page-sign-up.html', {
+        'error_messages': error_messages,
+        'tournament': tourney,
+        'form': form,
+        'treg': treg,
+    })
+
+
+@login_required
+def register(request, pk):
+    tourney = get_object_or_404(Tournament, id=pk)
+    return render(request, 'tournaments/page-register.html', {})
 
 
 @login_required
@@ -105,12 +123,5 @@ def get_new_tourney_form():
     return TournamentForm(initial={
         'name': 'Awesome Tournament #{}'.format(random.randint(1000, 9999)),
         'date': datetime.date.today,
-        'players_info': '\n'.join([
-            '\t'.join(['discord_handle', 'challonge_handle',
-                        'tco_handle', 'master_vault_link']),
-            '\t'.join(['yurk#4332', 'yurk_challonge',
-                       'yurk_tco', 'https://decksofkeyforge.com/decks/f80d1517-76f7-4338-b1b3-74d09629687f']),
-            '\t'.join(['jtrussell#4520', 'jtrussell',
-                       'jtrussell', 'https://www.keyforgegame.com/deck-details/d198df7c-ac63-46a9-9c92-3e56dcc56773']),
-        ])
+        'tournament_format': 1
     })

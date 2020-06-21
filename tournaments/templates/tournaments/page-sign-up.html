@@ -1,0 +1,50 @@
+{% extends "page.html" %}
+
+{% block content %}
+<h1>Tournament Sign Up</h1>
+
+<p>Sign up for <strong>{{ tournament.name }}</strong> on <strong>{{ tournament.date }}</strong>.</p>
+
+<p>The format for this event will be <strong>{{ tournament.tournament_format }}.</strong></p>
+
+{% if treg %}
+  <div class="note">
+    <p>
+      You're signed up for this event with the following deck(s):
+    </p>
+    <ul>
+      {% for d in treg.decks.all %}
+      <li>
+        <a href="{{ d.get_dok_url }}">{{ d }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+    <p>Use the form below to update your deck selections.</p>
+    <form method="POST" class="form-inline">
+      {% csrf_token %}
+      <input type="hidden" name="UNREGISTER" />
+      <button>Remove me from this event</button>
+    </form>
+  </div>
+{% else %}
+  <p>To sign up:</p>
+  <ol>
+    <li>Choose which of your decks you would like to play in the event. Make
+    sure a deck is selected for each available option.</li>
+    <li>Click the "Sign me up" button below.</li>
+  </ol>
+  <p>Some events may require more than one deck. This information, along with
+  your Discord, Challonge, and TCO handles will be made available to the event
+  organizer.</p>
+  <p>You will be able to change your deck selection(s) until sign-up closes for
+  the event.</p>
+{% endif %}
+
+<form method="POST" class="form-wide">
+  {% csrf_token %}
+  {{ form }}
+  <button class="button-primary" type="submit">
+    Sign me up
+  </button>
+</form>
+{% endblock %}

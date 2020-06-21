@@ -11,6 +11,10 @@
   </button>
 </form>
 <h2>Danger Zone</h2>
+<p class="note note-danger">
+  <strong>Warning!</strong><br>
+  Deleting a tournament is permanent and cannot be undone.
+</p>
 <form method="POST">
   {% csrf_token %}
   <input type="hidden" name="delete" value="true" />
