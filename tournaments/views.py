@@ -25,36 +25,42 @@ class TournamentList(LoginRequiredMixin, generic.ListView):
 @login_required
 def detail(request, pk):
     tournament = get_object_or_404(Tournament, id=pk, owner=request.user)
+    player_infos = get_player_infos(tournament)
+    num_players = len(player_infos)
+    num_unverified_players = len(
+        [i for i in player_infos if not i['is_verified']])
 
-    t_registrations = tournament.tournament_registrations
-    num_players = t_registrations.count()
-
-    num_unverified_players = 0
-
-    # if request.GET.get('show', 'all') == 'unregistered':
-    #    players_info = [
-    #        info for info in players_info if not info['is_verified']]
+    if request.GET.get('show', 'all') == 'unverified':
+        player_infos = [
+            info for info in player_infos if not info['is_verified']]
 
     return render(request, 'tournaments/page-detail.html', {
         'num_players': num_players,
         'num_unverified_players': num_unverified_players,
-        'tournament': tournament
+        'tournament': tournament,
+        'player_infos': player_infos,
     })
+
+
+@login_required
+def download(request, pk):
+    tournament = get_object_or_404(Tournament, id=pk, owner=request.user)
+    player_infos = get_player_infos(tournament, with_decks=True)
+    pass
 
 
 @login_required
 def edit(request, pk):
     tourney = get_object_or_404(Tournament, id=pk, owner=request.user)
     if request.method == 'POST':
-        pass
-        #form = TournamentForm(request.POST, instance=tourney)
-        # if 'delete' in request.POST:
-        #    tourney.delete()
-        #    return HttpResponseRedirect(reverse('profile'))
-        # else:
-        #    if form.is_valid():
-        #        form.save()
-        #        return HttpResponseRedirect(reverse('tournaments-detail', kwargs={'pk': tourney.id}))
+        form = TournamentForm(request.POST, instance=tourney)
+        if 'delete' in request.POST:
+            tourney.delete()
+            return HttpResponseRedirect(reverse('profile'))
+        else:
+            if form.is_valid():
+                form.save()
+                return HttpResponseRedirect(reverse('tournaments-detail', kwargs={'pk': tourney.id}))
     else:
         form = TournamentForm(model_to_dict(tourney))
     return render(request, 'tournaments/page-edit.html', {
@@ -125,3 +131,18 @@ def get_new_tourney_form():
         'date': datetime.date.today,
         'tournament_format': 1
     })
+
+
+def get_player_infos(tournament, with_decks=False):
+    t_registrations = tournament.tournament_registrations.all()
+    player_infos = [{
+        'is_verified': r.are_decks_verified(),
+        'discord_handle': r.player.profile.discord_handle,
+        'challonge_handle': r.player.profile.challonge_handle,
+        'tco_handle': r.player.profile.tco_handle,
+    } for r in t_registrations]
+
+    if with_decks:
+        pass
+
+    return player_infos

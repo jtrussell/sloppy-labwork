@@ -12,10 +12,6 @@
 
   <section>
     <h2>Account Details</h2>
-    <div class="note">
-      <strong>Warning</strong>: changing account details may invalidate
-      registrations you have already submitted.
-    </div>
     <form method="POST" class="form-wide">
       {% csrf_token %}
       {{ username_form }}
@@ -40,6 +36,12 @@
         {% endif %}
       {% endif %}
     </p>
+    {% if num_pending_registrations > 0 %}
+    <p>Please allow up to 48 hours for deck registrations to be verified,
+    feel free to <a href="{% url 'contact' %}">contact us</a> if you have
+    outstand registration requests.
+    registar</p>
+    {% endif %}
     <a class="button" href="{% url 'register-new' %}">
       Register a deck
     </a>
@@ -49,10 +51,10 @@
     <h2>My Tournaments</h2>
     <p>
       This section is for tournament organizers. Starting a tournament with
-      <span class="brand">Sloppy Labwork</span> allows to to see at a glance
+      <span class="brand">Sloppy Labwork</span> allows you to to see at a glance
       whether all participants have registered decks.
     </p>
-    <p>You have 3 active tournaments. Click <a href="{% url 'tournaments-list' %}">here</a> to view them</p>
+    <p>You have {{ user.tournaments.count }} active tournament(s). Click <a href="{% url 'tournaments-list' %}">here</a> to view them</p>
     <a class="button" href="{% url 'tournaments-new' %}">
       Start a tournament
     </a>

@@ -2,6 +2,7 @@ from django.db import models
 from django.urls import reverse
 from django.contrib.auth.models import User
 from decks.models import Deck
+from register.models import DeckRegistration
 from io import StringIO
 import csv
 
@@ -34,5 +35,8 @@ class TournamentRegistration(models.Model):
     decks = models.ManyToManyField(
         Deck, related_name='tournament_registrations')
 
-    def get_sign_up_url(self):
-        return ''
+    def are_decks_verified(self):
+        self_decks = self.decks.all()
+        registrations = DeckRegistration.objects.filter(
+            deck__in=self_decks, is_active=True, is_verified=True)
+        return registrations.count() == len(self_decks)
