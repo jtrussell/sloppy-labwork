@@ -70,7 +70,7 @@ def edit(request, pk):
 
 @login_required
 def sign_up(request, pk):
-    tourney = get_object_or_404(Tournament, id=pk, owner=request.user)
+    tourney = get_object_or_404(Tournament, id=pk)
     error_messages = []
     treg = None
     if request.method == 'POST' and 'UNREGISTER' in request.POST:
