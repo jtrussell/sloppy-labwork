@@ -24,6 +24,9 @@ class UserProfile(models.Model):
 
     discord_handle = property(_get_discord_handle)
 
+    def is_complete(self):
+        return self.challonge_handle and self.tco_handle
+
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):

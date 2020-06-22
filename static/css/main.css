@@ -88,6 +88,10 @@ form .helptext {
   background-color: #efefef;
 }
 
+.note *:last-child {
+  margin-bottom: 0;
+}
+
 .note-danger {
   color: firebrick;
   border-color: firebrick;

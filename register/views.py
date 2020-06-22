@@ -95,7 +95,7 @@ def add(request):
     error_messages = []
 
     # Must have all info filled out before registering a field
-    user_can_register_decks = request.user.profile.challonge_handle and request.user.profile.tco_handle
+    user_can_register_decks = request.user.profile.is_complete()
 
     # Can't register too many decks
     max_uploads_in_day = settings.MAX_UPLOADS_PER_DAY

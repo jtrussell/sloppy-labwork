@@ -94,7 +94,11 @@ def sign_up(request, pk):
         except TournamentRegistration.DoesNotExist:
             treg = None
     form = make_sign_up_form(request.user, tourney)
+    has_enough_decks = DeckRegistration.get_active_for_user(
+        request.user).count() >= tourney.tournament_format.decks_per_player
     return render(request, 'tournaments/page-sign-up.html', {
+        'is_profile_complete': request.user.profile.is_complete(),
+        'has_enough_decks': has_enough_decks,
         'error_messages': error_messages,
         'tournament': tourney,
         'form': form,

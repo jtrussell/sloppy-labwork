@@ -27,6 +27,10 @@ class DeckRegistration(models.Model):
     def __str__(self):
         return self.deck.name
 
+    @staticmethod
+    def get_active_for_user(user):
+        return DeckRegistration.objects.filter(user=user, is_verified=True, is_active=True)
+
 
 class Meta:
     ordering = ['is_active', 'is_verified', 'verified_on', 'created_on']
