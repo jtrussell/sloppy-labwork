@@ -18,8 +18,16 @@ class TournamentList(LoginRequiredMixin, generic.ListView):
     template_name = 'tournaments/page-list.html'
 
     def get_queryset(self):
-        qa = Tournament.objects.filter(owner=self.request.user)
-        return qa.order_by('-date')
+        qs = Tournament.objects.filter(owner=self.request.user)
+        return qs.order_by('-date')
+
+
+class TournamentRegistrationsList(LoginRequiredMixin, generic.ListView):
+    template_name = 'tournaments/page-registration-list.html'
+
+    def get_queryset(self):
+        qs = TournamentRegistration.objects.filter(player=self.request.user)
+        return qs.order_by('-tournament__date')
 
 
 @login_required

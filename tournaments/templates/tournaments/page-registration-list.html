@@ -1,13 +1,11 @@
 {% extends "page.html" %}
 
 {% block content %}
-<h1>Tournament Organizer</h1>
+<h1>My Tournaments</h1>
 
-{% if user.is_authenticated %}
-<div style="margin-bottom: 1.5rem">
-  <a href="{% url 'tournaments-new' %}">Start a new tournament.</a>
-</div>
-{% endif %}
+<p>
+  Looking to run your own tournament? <a href="{% url 'tournaments-list' %}">Click here</a>.
+</p>
 
 <table>
   <thead>
@@ -17,19 +15,19 @@
     </tr>
   </thead>
   <tbody>
-  {% for tourney in tournament_list %}
+  {% for reg in tournament_registration_list %}
     <tr>
       <td>
         <a href="{% url 'tournaments-detail' tourney.id %}">
-          {{ tourney.name }}
+          {{ reg.tourney.name }}
         </a>
       <td class="text-right">
-        {{ tourney.date }}
+        {{ reg.tourney.date }}
       </td>
     </tr>
   {% empty %}
     <td colspan="3" class="text-muted">
-      You're not running any events, why not start one?
+      <em>*crickets*</em>... Ask your event organizer to send you a sign-up link
     </td>
   {% endfor %}
   </tbody>

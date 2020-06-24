@@ -1,5 +1,6 @@
 {% extends "page.html" %}
 {% load static %}
+{% load tournaments_extras %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'register/detail.css' %}">
@@ -21,8 +22,8 @@
       <tr>
         <td class="detail-label">Registration Link</td>
         <td class="detail-value">
-          <a href="{{ tournament.get_sign_up_url }}">
-            {{ tournament.get_sign_up_url }}
+          <a href="{{ tournament.get_sign_up_url | as_abs_url:request }}">
+            {{ tournament.get_sign_up_url | as_abs_url:request }}
           </a>
         </td>
       </tr>
