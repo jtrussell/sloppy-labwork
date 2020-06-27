@@ -1,7 +1,8 @@
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.views import generic
 from django.urls import reverse
+from django.utils.text import slugify
 from django.forms.models import model_to_dict
 from django.contrib.auth.mixins import LoginRequiredMixin
 from allauth.account.decorators import login_required
@@ -53,8 +54,19 @@ def detail(request, pk):
 @login_required
 def download(request, pk):
     tournament = get_object_or_404(Tournament, id=pk, owner=request.user)
+    filename = slugify(tournament.name)
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="{}.csv"'.format(
+        filename)
+    writer = csv.writer(response)
+    writer.writerow(['is_verified', 'discord_handle',
+                     'challonge_handle', 'tco_handle'])
     player_infos = get_player_infos(tournament, with_decks=True)
-    pass
+    for row in player_infos:
+        is_verified = 1 if [row['is_verified']] else 0
+        writer.writerow([is_verified, row['discord_handle'],
+                         row['challonge_handle'], row['tco_handle']])
+    return response
 
 
 @login_required
