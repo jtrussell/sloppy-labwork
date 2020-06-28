@@ -22,7 +22,6 @@
 <table>
   <thead>
     <tr>
-      <th>#</th>
       <th>Deck</th>
       <th class="text-right">Last Verified</th>
     </tr>
@@ -32,10 +31,9 @@
     <tr>
       <td>
         <a href="{% url 'register-detail' reg.id %}">
-          {{ reg.id }}
+          {{ reg.deck.name }}
         </a>
       </td>
-      <td>{{ reg.deck.name }}</td>
       <td class="text-right">
         {% if reg.is_verified %}
           <span class="text-success">
