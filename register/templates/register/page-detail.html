@@ -42,24 +42,12 @@
         </td>
       </tr>
 
-      {% comment %}
-        {% if object.is_verified %}
-        <tr>
-          <td class="detail-label">Owner Discord</td>
-          <td class="detail-value">{{ object.user.username }}</td>
-        </tr>
-
-        <tr>
-          <td class="detail-label">Owner Challonge</td>
-          <td class="detail-value">{{ object.user.username }}</td>
-        </tr>
-
-        <tr>
-          <td class="detail-label">Owner TCO</td>
-          <td class="detail-value">{{ object.user.username }}</td>
-        </tr>
-        {% endif %}
-      {% endcomment %}
+      {% if object.is_verified %}
+      <tr>
+        <td class="detail-label">Owner TCO</td>
+        <td class="detail-value">{{ object.user.profile.tco_handle }}</td>
+      </tr>
+      {% endif %}
       
     </tbody>
   </table>
