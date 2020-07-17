@@ -108,6 +108,7 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL = os.environ['ACCOUNT_DEFAULT_HTTP_PROTOCOL']
 
 WSGI_APPLICATION = 'sloppy_labwork.wsgi.application'
 
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
