@@ -162,6 +162,9 @@ footer {
 .container { max-width: 600px; }
 
 /* Responsible breakpoints */
+.d-none { display: none; }
+.d-inline { display: inline; }
+.d-block { display: block;}
 @media (min-width: 400px) {
   .d-xs-none { display: none; }
   .d-xs-inline { display: inline; }
