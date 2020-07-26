@@ -160,3 +160,24 @@ footer {
 
 /* Skeleton Overrides */
 .container { max-width: 600px; }
+
+/* Responsible breakpoints */
+@media (min-width: 400px) {
+  .d-xs-none { display: none; }
+  .d-xs-inline { display: inline; }
+  .d-xs-block { display: block; }
+}
+@media (min-width: 550px) {
+  .d-md-none { display: none; }
+  .d-md-inline { display: inline; }
+  .d-md-block { display: block; }
+}
+@media (min-width: 750px) {
+  .d-lg-none { display: none; }
+  .d-lg-inline { display: inline; }
+  .d-lg-block { display: block; }
+}
+/*
+@media (min-width: 1000px) {}
+@media (min-width: 1200px) {} 
+*/

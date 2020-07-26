@@ -1,51 +1,81 @@
-<ul class="nav nav-top">
-  <li class="nav__item">
-    <a href="{% url 'home' %}" class="nav__link">
-      Home
-    </a>
-  </li>
+<div class="d-md-none">
+  <select class="u-full-width" style="margin-top: 15px;" id="responsive-nav-select">
+    <option value="{% url 'home' %}">Home</option>
+    <option value="{% url 'tournaments-registartion-list' %}">Events</option>
+    {% if ft_use_posts %} <option value="{% url 'posts-list' %}">Articles</option> {% endif %}
+    {% if ft_use_register %} <option value="{% url 'register-home' %}">Register</option> {% endif %}
+    {% if ft_use_ratings %} <option value="{% url 'home-ratings' %}">Ratings</option> {% endif %}
+    <option value="{% url 'account_login' %}">Profile</option>
+  </select>
+  <script>
+    (function () {
+      var pathname = document.location.pathname;
+      var elSelect = document.querySelector('#responsive-nav-select')
+      var navValue = '/'
+      elSelect.childNodes.forEach(function (opt) {
+        if (pathname.indexOf(opt.value) === 0) {
+          navValue = opt.value
+        }
+      })
+      elSelect.value = navValue
+      function slHandleResponsiveNavMenuChange (event) {
+        window.location = event.target.value
+      }
+      elSelect.addEventListener('change', slHandleResponsiveNavMenuChange)
+    }())
+  </script>
+</div>
 
-  <li class="nav__item">
-    <a href="{%url 'tournaments-registartion-list' %}" class="nav__link">
-      Events
-    </a>
-  </li>
+<div class="d-xs-none d-md-block">
+  <ul class="nav nav-top">
+    <li class="nav__item">
+      <a href="{% url 'home' %}" class="nav__link">
+        Home
+      </a>
+    </li>
 
-  {% if ft_use_posts %}
-  <li class="nav__item">
-    <a href="{%url 'posts-list' %}" class="nav__link">
-      Articles
-    </a>
-  </li>
-  {% endif %}
+    <li class="nav__item">
+      <a href="{%url 'tournaments-registartion-list' %}" class="nav__link">
+        Events
+      </a>
+    </li>
 
-  {% if ft_use_register %}
-  <li class="nav__item">
-    <a href="{% url 'register-home' %}" class="nav__link">
-      Register
-    </a>
-  </li>
-  {% endif %}
-
-  {% if ft_use_ratings %}
-  <li class="nav__item">
-    <a href="{% url 'home-ratings' %}" class="nav__link">
-      Ratings
-    </a>
-  </li>
-  {% endif %}
-
-  <li class="nav__spacer">&nbsp;</li>
-
-  <li class="nav__item">
-    {% if request.user.is_authenticated %}
-    <a href="{% url 'profile' %}" class="nav__link">
-      Profile
-    </a>
-    {% else %}
-    <a href="{% url 'account_login' %}" class="nav__link">
-      Sign In
-    </a>
+    {% if ft_use_posts %}
+    <li class="nav__item">
+      <a href="{%url 'posts-list' %}" class="nav__link">
+        Articles
+      </a>
+    </li>
     {% endif %}
-  </li>
-</ul>
+
+    {% if ft_use_register %}
+    <li class="nav__item">
+      <a href="{% url 'register-home' %}" class="nav__link">
+        Register
+      </a>
+    </li>
+    {% endif %}
+
+    {% if ft_use_ratings %}
+    <li class="nav__item">
+      <a href="{% url 'home-ratings' %}" class="nav__link">
+        Ratings
+      </a>
+    </li>
+    {% endif %}
+
+    <li class="nav__spacer">&nbsp;</li>
+
+    <li class="nav__item">
+      {% if request.user.is_authenticated %}
+      <a href="{% url 'profile' %}" class="nav__link">
+        Profile
+      </a>
+      {% else %}
+      <a href="{% url 'account_login' %}" class="nav__link">
+        Sign In
+      </a>
+      {% endif %}
+    </li>
+  </ul>
+</div>
