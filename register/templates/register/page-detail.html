@@ -44,8 +44,16 @@
 
       {% if object.is_verified %}
       <tr>
+        <td class="detail-label">Owner Discord</td>
+        <td class="detail-value">{{ object.user.profile.discord_handle }}</td>
+      </tr>
+      <tr>
         <td class="detail-label">Owner TCO</td>
         <td class="detail-value">{{ object.user.profile.tco_handle }}</td>
+      </tr>
+      <tr>
+        <td class="detail-label">Owner Challonge</td>
+        <td class="detail-value">{{ object.user.profile.challonge_handle }}</td>
       </tr>
       {% endif %}
       
