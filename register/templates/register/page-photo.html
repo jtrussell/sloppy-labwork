@@ -1,0 +1,10 @@
+{% extends "page.html" %}
+
+{% block content %}
+  <h1>Verification Photo</h1>
+  <p class="note">
+    The code in the photo below should match <strong>{{ object.verification_code }}</strong>.
+  </p>
+  <img style="width:100%;" src="{{ object.verification_photo_url }}" alt="verification photo" />
+{% endblock %}
+

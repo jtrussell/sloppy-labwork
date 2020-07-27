@@ -42,6 +42,11 @@ class RegisterDetail(generic.DetailView):
     template_name = 'register/page-detail.html'
 
 
+class RegisterPhoto(generic.DetailView):
+    model = DeckRegistration
+    template_name = 'register/page-photo.html'
+
+
 def about(request):
     return render(request, 'register/page-about.html', {})
 

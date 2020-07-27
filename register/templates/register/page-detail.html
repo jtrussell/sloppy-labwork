@@ -61,7 +61,7 @@
   </table>
 
   {% if object.is_verified and object.verification_photo_url %}
-  <a href="{{ object.verification_photo_url }}">
+  <a href="{% url 'register-photo' object.id %}">
     View verification photo.
   </a>
   {% endif %}
