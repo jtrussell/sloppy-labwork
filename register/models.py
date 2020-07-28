@@ -1,3 +1,4 @@
+from django.utils.translation import ugettext_lazy as _
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
@@ -8,6 +9,12 @@ import datetime
 
 
 class DeckRegistration(models.Model):
+    class Status(models.IntegerChoices):
+        PENDING = 0, _('Pending')
+        VERIFIED = 1, _('Verified')
+        VERIFIED_ACTIVE = 2, ('Active')
+        REJECTED = 3, _('Rejected')
+
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='deck_registrations')
     deck = models.ForeignKey(
@@ -15,25 +22,38 @@ class DeckRegistration(models.Model):
     verification_code = models.CharField(max_length=5, default='?????')
     verification_photo_url = models.CharField(
         max_length=255, default=None, blank=True, null=True)
-    is_verified = models.BooleanField(
-        default=False, verbose_name='verified')
-    is_active = models.BooleanField(
-        default=True, verbose_name='active')
     created_on = models.DateTimeField(auto_now_add=True)
     verified_on = models.DateTimeField(default=None, blank=True, null=True)
     verified_by = models.ForeignKey(
         User, on_delete=models.CASCADE, default=None, blank=True, null=True)
+    status = models.IntegerField(
+        choices=Status.choices, default=Status.PENDING, blank=False, null=False)
 
     def __str__(self):
         return self.deck.name
 
     @staticmethod
     def get_active_for_user(user):
-        return DeckRegistration.objects.filter(user=user, is_verified=True, is_active=True)
+        return DeckRegistration.objects.filter(user=user, status=DeckRegistration.Status.VERIFIED_ACTIVE)
+
+    def is_pending(self):
+        return self.status == DeckRegistration.Status.PENDING
+
+    def is_verified(self):
+        return self.status == DeckRegistration.Status.VERIFIED
+
+    def is_active(self):
+        return self.status == DeckRegistration.Status.VERIFIED_ACTIVE
+
+    def is_rejected(self):
+        return self.status == DeckRegistration.Status.REJECTED
+
+    def has_been_verified(self):
+        return self.is_verified() or self.is_active()
 
 
 class Meta:
-    ordering = ['is_active', 'is_verified', 'verified_on', 'created_on']
+    ordering = ['status', 'verified_on', 'created_on']
 
 
 # I kinda wish there was a way to make this owrk with

@@ -35,13 +35,27 @@
         </a>
       </td>
       <td class="text-right">
-        {% if reg.is_verified %}
+        {% if reg.is_active %}
           <span class="text-success">
             {{ reg.verified_on | date:'M j, Y' }}
           </span>
-        {% else %}
+        {% endif %}
+
+        {% if reg.is_verified %}
+          <span class="text-danger">
+            {{ reg.verified_on | date:'M j, Y' }}
+          </span>
+        {% endif %}
+
+        {% if reg.is_pending %}
           <span class="text-danger">
             Pending
+          </span>
+        {% endif %}
+
+        {% if reg.rejected %}
+          <span class="text-danger">
+            Rejected
           </span>
         {% endif %}
       </td>

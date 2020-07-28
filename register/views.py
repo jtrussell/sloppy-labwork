@@ -24,16 +24,17 @@ class RegisterList(generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        qs = DeckRegistration.objects.filter(is_active=True)
+        qs = DeckRegistration.objects
         f = self.request.GET.get('f')
         if f:
+            qs = qs.filter(status=DeckRegistration.Status.VERIFIED_ACTIVE)
             qs = qs.filter(Q(deck__name__icontains=f)
                            | Q(deck__id__icontains=f))
         if self.request.user.is_authenticated:
-            qs = qs.filter(Q(is_verified=1)
+            qs = qs.filter(Q(status=DeckRegistration.Status.VERIFIED_ACTIVE)
                            | Q(user=self.request.user))
         else:
-            qs = qs.filter(is_verified=1)
+            qs = qs.filter(status=DeckRegistration.Status.VERIFIED_ACTIVE)
         return qs.order_by('-verified_on')
 
 
@@ -136,7 +137,7 @@ def add(request):
                 old_registrations = DeckRegistration.objects.filter(
                     user=request.user,
                     deck=deck,
-                    is_verified=False
+                    status=DeckRegistration.Status.PENDING
                 )
                 old_registrations.delete()
 
@@ -167,7 +168,15 @@ def add(request):
 @staff_member_required
 def verify(request, id):
     registration = DeckRegistration.objects.get(id=id)
-    registration.is_verified = True
+    # Only allow one active registration per deck
+    old_active_registrations = DeckRegistration.objects.filter(
+        deck=registration.deck,
+        status=DeckRegistration.Status.VERIFIED_ACTIVE
+    )
+    old_active_registrations.update(
+        status=DeckRegistration.Status.VERIFIED
+    )
+    registration.status = DeckRegistration.Status.VERIFIED_ACTIVE
     registration.verified_by = request.user
     registration.verified_on = datetime.datetime.now()
     registration.save()

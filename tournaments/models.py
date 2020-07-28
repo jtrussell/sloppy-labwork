@@ -38,5 +38,5 @@ class TournamentRegistration(models.Model):
     def are_decks_verified(self):
         self_decks = self.decks.all()
         registrations = DeckRegistration.objects.filter(
-            deck__in=self_decks, is_active=True, is_verified=True)
+            deck__in=self_decks, status=DeckRegistration.Status.VERIFIED_ACTIVE)
         return registrations.count() == len(self_decks)

@@ -8,7 +8,7 @@
 {% block content %}
   <h1>Registration</h1>
 
-  {% if object.user == request.user and not object.is_verified %}
+  {% if object.user == request.user and object.is_pending %}
     <p class="note">
       <em>
         You submitted this registration request on {{ object.created_on | date:'M j, Y' }}. It has not yet been verified.
@@ -30,19 +30,30 @@
       <tr>
         <td class="detail-label">Status</td>
         <td class="detail-value">
-          {% if object.is_verified %}
+          {% if object.is_active %}
             <span class="text-success">
               Last verified on {{ object.verified_on | date:'M j, Y' }}
             </span>
-          {% else %}
+          {% endif %}
+          {% if object.is_verified %}
+            <span class="text-danger">
+              Verified on {{ object.verified_on | date:'M j, Y' }} but not the active registration
+            </span>
+          {% endif %}
+          {% if object.is_pending %}
             <span class="text-danger">
               Pending
+            </span>
+          {% endif %}
+          {% if object.is_rejected %}
+            <span class="text-danger">
+              Could not be verified
             </span>
           {% endif %}
         </td>
       </tr>
 
-      {% if object.is_verified %}
+      {% if object.is_active %}
       <tr>
         <td class="detail-label">Owner Discord</td>
         <td class="detail-value">{{ object.user.profile.discord_handle }}</td>
@@ -60,7 +71,7 @@
     </tbody>
   </table>
 
-  {% if object.is_verified and object.verification_photo_url %}
+  {% if object.is_active and object.verification_photo_url %}
   <a href="{% url 'register-photo' object.id %}">
     View verification photo.
   </a>

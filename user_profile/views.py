@@ -33,7 +33,7 @@ def index(request):
     my_registrations = DeckRegistration.objects.filter(user=request.user)
     num_registrations = len(my_registrations)
     my_pending_registrations = my_registrations.filter(
-        is_verified=False)
+        status=DeckRegistration.Status.PENDING)
     num_pending_registrations = len(my_pending_registrations)
 
     return render(request, 'user_profile/index.html', {

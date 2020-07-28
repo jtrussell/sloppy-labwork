@@ -1,5 +1,6 @@
 from django import forms
 from .models import Tournament, TournamentRegistration
+from register.models import DeckRegistration
 
 
 # TODO: Vaiidate players_info data
@@ -11,7 +12,8 @@ class TournamentForm(forms.ModelForm):
 
 
 def make_sign_up_form(user, tournament):
-    qs_user_deck_registrations = user.deck_registrations.filter(is_active=True)
+    qs_user_deck_registrations = user.deck_registrations.filter(
+        status=DeckRegistration.Status.VERIFIED_ACTIVE)
     fields = {
         'deck0': forms.ModelChoiceField(queryset=qs_user_deck_registrations, label='Deck 1')
     }
