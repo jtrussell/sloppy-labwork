@@ -16,7 +16,6 @@ class SlEmail():
 
     def send(self):
         client = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
-        response = client.send(self.message)
         return client.send(self.message)
 
 
