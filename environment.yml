@@ -6,7 +6,7 @@ dependencies:
   - python==3.8.3
   - pip
   - pip:
-    - Django==3.0.1
+    - Django==3.0.7
     - Markdown==3.2.2
     - Pillow==7.1.2
     - boto3==1.13.16
