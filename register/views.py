@@ -8,6 +8,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from allauth.account.decorators import login_required
 from requests import get
 from decks.models import Deck
+from sloppy_labwork.utils import NewDeckRegistrationSubmittedEmail
 from .forms import RegiseterNewDeckForm
 from .models import DeckRegistration, SignedNonce
 from botocore.exceptions import ClientError
@@ -15,7 +16,6 @@ from PIL import Image
 from io import BytesIO
 import datetime
 import boto3
-import os
 import time
 
 
@@ -150,6 +150,10 @@ def add(request):
                 registration.verification_photo_url = save_verification_photo(
                     request, form, deck)
                 registration.save()
+
+                email = NewDeckRegistrationSubmittedEmail(registration)
+                email.send()
+
                 return HttpResponseRedirect(reverse('register-detail', kwargs={'pk': registration.id}))
             except ClientError:
                 error_messages.append("Oops! Let's try that again")

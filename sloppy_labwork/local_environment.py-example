@@ -27,6 +27,10 @@ os.environ['AWS_ACCESS_KEY_ID'] = '####################'
 os.environ['AWS_SECRET_ACCESS_KEY'] = '########################################'
 os.environ['AWS_S3_BUCKET_VERIFICATION_PHOTOS_BUCKET'] = 'my-bucket'
 
+os.environ['SENDGRID_API_KEY'] = '#####################################################################'
+
+os.environ['REGISTER_VERIFIER_EMAIL'] = 'foo.bar@example.com'
+
 os.environ['FT_USE_REGISTER'] = 'True'
 os.environ['FT_USE_RATINGS'] = 'True'
 os.environ['FT_USE_POSTS'] = 'True'
