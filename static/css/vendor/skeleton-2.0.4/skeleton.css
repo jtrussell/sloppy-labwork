@@ -1,3 +1,21 @@
+
+/* Custom Colors */
+:root {
+  --color-bg: #222025;
+  --color-bg-secondary: #111;
+  --color-nav-links: #979595;
+  --color-text-normal: #bab8b8;
+  --color-text-active: #efefef;
+  --color-lines: #444;
+  --color-lines-active: #888;
+  --color-primary: #855cd6;
+  --color-primary-active: #7547d1;
+  --color-text-success: #649d66;
+  --color-text-danger: firebrick;
+  --color-text-muted: #ccc;
+  --link-decoration: none;
+}
+
 /*
 * Skeleton V2.0.4
 * Copyright 2014, Dave Gamache
@@ -125,7 +143,8 @@ body {
   line-height: 1.6;
   font-weight: 400;
   font-family: "Raleway", "HelveticaNeue", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  color: #222; }
+  color: var(--color-text-normal); 
+  background-color: var(--color-bg); }
 
 
 /* Typography
@@ -158,9 +177,8 @@ p {
 /* Links
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 a {
-  color: mediumpurple; }
-a:hover {
-  color: rebeccapurple; }
+  color: var(--color-primary); }
+a:hover { color: var(--color-primary-active); }
 
 
 /* Buttons
@@ -173,7 +191,7 @@ input[type="button"] {
   display: inline-block;
   height: 38px;
   padding: 0 30px;
-  color: #555;
+  color: var(--color-lines-active);
   text-align: center;
   font-size: 11px;
   font-weight: 600;
@@ -184,7 +202,7 @@ input[type="button"] {
   white-space: nowrap;
   background-color: transparent;
   border-radius: 3px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-lines);
   cursor: pointer;
   box-sizing: border-box; }
 .button:hover,
@@ -197,17 +215,17 @@ button:focus,
 input[type="submit"]:focus,
 input[type="reset"]:focus,
 input[type="button"]:focus {
-  color: #333;
-  border-color: #888;
+  color: var(--color-lines-active);
+  border-color: var(--color-lines-active);
   outline: 0; }
 .button.button-primary,
 button.button-primary,
 input[type="submit"].button-primary,
 input[type="reset"].button-primary,
 input[type="button"].button-primary {
-  color: #FFF;
-  background-color: mediumpurple;
-  border-color: mediumpurple; }
+  color: var(--color-text-active);
+  background-color: var(--color-primary);
+  border-color: var(--color-primary); }
 .button.button-primary:hover,
 button.button-primary:hover,
 input[type="submit"].button-primary:hover,
@@ -218,9 +236,9 @@ button.button-primary:focus,
 input[type="submit"].button-primary:focus,
 input[type="reset"].button-primary:focus,
 input[type="button"].button-primary:focus {
-  color: #FFF;
-  background-color: rebeccapurple;
-  border-color: rebeccapurple; }
+  color: var(--color-text-active);
+  background-color: var(--color-primary-active);
+  border-color: var(--color-primary-active); }
 
 
 /* Forms
@@ -236,8 +254,8 @@ textarea,
 select {
   height: 38px;
   padding: 6px 10px; /* The 6px vertically centers text on FF, ignored by Webkit */
-  background-color: #fff;
-  border: 1px solid #ccc;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-lines);
   border-radius: 3px;
   box-shadow: none;
   box-sizing: border-box; }
@@ -266,7 +284,7 @@ input[type="url"]:focus,
 input[type="password"]:focus,
 textarea:focus,
 select:focus {
-  border: 1px solid mediumpurple;
+  border: 1px solid var(--color-primary);
   outline: 0; }
 label,
 legend {
@@ -311,8 +329,8 @@ code {
   margin: 0 .2rem;
   font-size: 90%;
   white-space: nowrap;
-  background: #F1F1F1;
-  border: 1px solid #ccc;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-lines);
   border-radius: 3px; }
 pre > code {
   display: block;
@@ -326,7 +344,7 @@ th,
 td {
   padding: 12px 15px;
   text-align: left;
-  border-bottom: 1px solid #E1E1E1; }
+  border-bottom: 1px solid var(--color-lines); }
 th:first-child,
 td:first-child {
   padding-left: 0; }
@@ -377,7 +395,7 @@ hr {
   margin-top: 3rem;
   margin-bottom: 3.5rem;
   border-width: 0;
-  border-top: 1px solid #E1E1E1; }
+  border-top: 1px solid var(--color-lines); }
 
 
 /* Clearing
