@@ -8,6 +8,25 @@ import random
 import datetime
 
 
+class DeckVerificationRequest(models.Model):
+    deck = models.ForeignKey(
+        Deck, on_delete=models.CASCADE, related_name='verification_requests')
+    submitted_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    submitted_on = models.DateTimeField(auto_now_add=True)
+    verification_code = models.CharField(max_length=5, default='?????')
+    verification_photo_url = models.CharField(
+        max_length=255, default=None, blank=True, null=True)
+
+
+class DeckVerificationDecision(models.Model):
+    request = models.ForeignKey(
+        DeckVerificationRequest, on_delete=models.CASCADE, related_name='decisions')
+    reviewed_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    reviewed_on = models.DateTimeField(default=None, blank=True, null=True)
+    status = models.IntegerField(
+        choices=Status.choices, default=Status.PENDING, blank=False, null=False)
+
+
 class DeckRegistration(models.Model):
     class Status(models.IntegerChoices):
         PENDING = 0, _('Pending')
