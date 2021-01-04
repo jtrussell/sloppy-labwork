@@ -16,3 +16,4 @@ dependencies:
     - psycopg2-binary==2.8.5
     - requests
     - sendgrid==6.4.4
+    - opencv-python-headless==4.5
