@@ -1,7 +1,7 @@
 asgiref==3.2.7
 boto3==1.13.16
 botocore==1.16.16
-certifi==2020.12.5
+certifi==2020.6.20
 chardet==3.0.4
 defusedxml==0.6.0
 dj-database-url==0.5.0
@@ -13,9 +13,7 @@ gunicorn==20.0.4
 idna==2.9
 jmespath==0.10.0
 Markdown==3.2.2
-numpy==1.19.4
 oauthlib==3.1.0
-opencv-python-headless==4.5.1.48
 Pillow==7.1.2
 psycopg2==2.8.5
 psycopg2-binary==2.8.5
