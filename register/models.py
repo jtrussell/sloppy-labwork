@@ -64,7 +64,7 @@ class SignedNonce():
 
     @staticmethod
     def make_nonce():
-        nonce_chars = [random.choice('0123456789ABCDEF') for _ in range(5)]
+        nonce_chars = [random.choice('0123456789') for _ in range(5)]
         return ''.join(nonce_chars)
 
     @staticmethod

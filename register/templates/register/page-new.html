@@ -5,30 +5,33 @@
   {% if user_can_register_decks and not user_hit_register_rate_limit %}
   <form method="POST" class="form-wide" enctype="multipart/form-data">
     {% csrf_token %}
-    {{ form }}
-    <input type="hidden" name="nonce" value={{ signed_nonce.nonce }} />
-    <input type="hidden" name="nonce_sig" value={{ signed_nonce.nonce_sig }} />
-    <div class="note">
-      <b>Heads up!</b>
-      Verification photos must show your deck's archon card and a handwritten
-      note that clearly displays the code below.
+    <p>To register a deck, provide a link that deck in the master vault and a
+    verfication photo.</p>
 
-      <div class="verification_nonce_display">
-        {{ signed_nonce.nonce }}
-      </div>
+    <p>Verification photos must show your deck's archon card and a handwritten
+      note that clearly displays the code below.</p>
 
-      Please ensure that:
-      <ul class="note__list">
-        <li>Your archon card is <strong>not</strong> in a sleeve.</li>
-        <li>The <strong>deck name</strong> on the archon card is fully visible.</li>
-        <li>The QR code on the archon card is <strong>obscured</strong>.</li>
-        <li>The <strong>16-digit sequence</strong> below your archon card's QR code is fully visible.</li>
-      </ul>
-      For an example of a valid registration photo, or to read more about
-      deck registration, click <a href="{% url 'register-about' %}">here.</a>
+    <div class="verification_nonce_display">
+      {{ signed_nonce.nonce }}
     </div>
 
-    <!-- Iniclude an example registration photo -->
+    {{ form }}
+
+    <input type="hidden" name="nonce" value={{ signed_nonce.nonce }} />
+    <input type="hidden" name="nonce_sig" value={{ signed_nonce.nonce_sig }} />
+
+    <div class="note">
+      <b>Please ensure that...</b>
+      <ul class="note__list">
+        <li>The <strong>back</strong> of the archon card is face up.</li>
+        <li>The <strong>deck name</strong> on the archon card is fully visible.</li>
+        <li>There is a <strong>no writting or text</strong> in the photo
+        other than the deck name and verification code.</li>
+      </ul>
+
+      <p>For an example of a valid registration photo, or to read more about
+      deck registration, click <a href="{% url 'register-about' %}">here.</a></p>
+    </div>
 
     <button type="submit" class="button-primary">
       Submit

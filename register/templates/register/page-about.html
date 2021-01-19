@@ -2,39 +2,78 @@
 
 {% block content %}
   <h1>About Deck Registration</h1>
-  <p>Many online tournaments require that aplayers prove they own a deck
-  before playing with it in an event. Usually this involves taking a picture
-  of your deck's archon card alongside a handwritten note stating who the
-  deck belongs to.</p>
-  <p>The registration service here aims to cerntalize that process so players
-  only have to prove they own a deck once, and tournmanet organizers don't
-  have to worry about dealing with verification pictures.</p>
+  <p>Many online tournaments ask players to prove they have access to a deck
+  before using it in an event. Usually this involves taking a picture
+  of your deck's archon card alongside a handwritten note.</p>
+
+  <p>The registration service here aims to streamline that process for
+  players and tournament organizers. Players get a consistent verification
+  experience, and organizers get less overhead and can focus on running their
+  event.</p>
+
+  <h2>Goals</h2>
+  <p>Our goals for this service are pretty simple:</p>
+
+  <ul>
+    <li>Streamline event sign-up for player and event organizers.</li>
+    <li>Make it easy to share decks with your friends, teammates, and community.</li>
+  </ul>
+
+  <p>Deck sharing and netdecking can be a contentious topic. We come down
+  pretty firmly on the side of "sharing is good"&trade; and want to put tools in the
+  hands of event organizers that make sharing easy.</p>
 
   <h2>How It Works, For Players</h2>
-  <p>Registering a deck with <span class="brand">Sloppy Labwork</span> is
-  similar to verifying ownership for a typical online event. After creating
-  an account, you can submit a registration request <a href="{% url 'register-new' %}">here</a>.
-  Your registration request will include a photo of your archon card, as well
-  as a handwritten note containing a randomly
-  generated 5-digit code.</p>
+  <p>Registering a deck with <span class="brand">Sloppy Labwork</span> will
+  feel similar to deck verification processes you might have gone through for
+  online events in the past. After creating an account, you can submit a
+  registration request <a href="{% url 'register-new' %}">here</a>. Your
+  registration request will include a photo of your archon card, as well as a
+  handwritten note containing a randomly generated 5-digit code specific to
+  your registration request.</p>
 
-  <p>From there, a <span class="brand">Sloppy Labwork</span> administartor
-  will review the request. Once it is approved, the deck will be publicly
-  registered to you.</p> 
+  <p>Before you might have included your contact information and a date in
+  verification photos. Instead, we generate random verification codes for
+  each request. This removes the need to have a date in your photo - we know
+  the exact time each 5-digit code is generated. Similarly, these codes are
+  tied to the <span class="brand">Sloppy Labwork</span> account that
+  submitted the deck registration request. The registration request will be
+  connected to the contact information in your account, even if you later
+  update that information.</p>
 
-  <p>Keep in mind that after verification, your photo will be visible to
-  those who would like to double check your claim of ownership. Make sure to
-  cover your deck's QR code when taking a photo. Registration requests with a
-  fully visible QR code will be declined.</p>
+  <p>When a verification request is submitted, <span class="brand">Sloppy
+  Labwork</span> will attempt to parse your deck's name and handwritten
+  verification code from the photo automatically. When that happens, your
+  request may be approved within seconds of the time it was submitted. If
+  we're unable to verify your request automatically, it will then be reviewed
+  by a <span class="brand">Sloppy Labwork</span> administrator. Once
+  approved, you will be able to sign up for events with that deck.</p>
+
+  <p>Here are some tips to ensuring your verification photo can be processed
+  automatically:</p>
+
+  <ul>
+    <li>The <strong>back</strong> of your archon card should be face up in
+    your photo. This is the side with the archon artwork, <strong>not</strong>
+    the QR code side. If you can read your deck list, flip the card over.</li>
+    <li>The deck name should be fully visible, in focus, and with minimal
+    glare. This is only part of the card that need visible fore,
+    verification. In particular, be mindful of glare obscuring your deck's
+    name, especially if it is still in cellophane</li>
+    <li>Make sure there is no other writing or text in your image. Other text
+    will potentially confuse the automated process.</li>
+  </ul>
+
+  <p>IMAGE</p>
+
+  <p>Keep in mind that, after verification, your photo will be visible to
+  others who would like to double check your claim.</p>
   
-  <!--
   <h2>How It Works, For Organizers</h2>
-  <p>...</p>
-  -->
+  <p>Coming soon!</p>
 
-  <!--
-  <h2>Example</h2>
-  <p>Example photo here...</p>
-  -->
+  <p>Actually, we've started building this out and have a lot of details to
+  sort through. If you are a tournament organizer and are interested in being
+  a beta tester or providing feedback, please <a href="{% url 'contact' %}">reach out</a>!</p>
 
 {% endblock %}

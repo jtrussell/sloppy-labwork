@@ -106,6 +106,7 @@ def add(request):
     # Can't register too many decks
     max_uploads_in_day = settings.MAX_UPLOADS_PER_DAY
     twenty_four_hours_ago = datetime.datetime.now() - datetime.timedelta(hours=24)
+
     my_uploads_today = DeckRegistration.objects.filter(
         user=request.user,
         created_on__gte=twenty_four_hours_ago)
@@ -130,10 +131,10 @@ def add(request):
                 deck.name = r.json()['data']['name']
                 deck.save()
             else:
-                # TODO: Check if someone else registered the deck already
-
                 # Only allow the user to have one pending registartion per deck
-                # TODO: This should probably happen after we've saved the new one
+                # TODO: We need to either delete the associated s3 image or
+                # make sure we're accounting for deleted images registrations
+                # with our rate limiting.
                 old_registrations = DeckRegistration.objects.filter(
                     user=request.user,
                     deck=deck,
