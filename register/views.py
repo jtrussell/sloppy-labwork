@@ -24,7 +24,7 @@ class RegisterList(generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        qs = DeckRegistration.objects
+        qs = DeckRegistration.filter(is_archived=False)
         f = self.request.GET.get('f')
         if f:
             qs = qs.filter(status=DeckRegistration.Status.VERIFIED_ACTIVE)
@@ -118,7 +118,7 @@ def add(request):
         signed_nonce = SignedNonce.from_post(request.POST)
         if not signed_nonce.is_valid():
             error_messages.append(
-                'The registration code just sumitted has expired. Please use the code below to submit a new registration request.')
+                'This registration code has expired. Please use submit a new registration using the code below.')
         elif form.is_valid():
             # Process the form...
             master_vault_url = form.cleaned_data['master_vault_link']
@@ -132,15 +132,13 @@ def add(request):
                 deck.save()
             else:
                 # Only allow the user to have one pending registartion per deck
-                # TODO: We need to either delete the associated s3 image or
-                # make sure we're accounting for deleted images registrations
-                # with our rate limiting.
                 old_registrations = DeckRegistration.objects.filter(
                     user=request.user,
                     deck=deck,
                     status=DeckRegistration.Status.PENDING
+                ).update(
+                    is_archived=True
                 )
-                old_registrations.delete()
 
             registration = DeckRegistration()
             registration.user = request.user

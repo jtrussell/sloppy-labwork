@@ -28,13 +28,17 @@ class DeckRegistration(models.Model):
         User, on_delete=models.CASCADE, default=None, blank=True, null=True)
     status = models.IntegerField(
         choices=Status.choices, default=Status.PENDING, blank=False, null=False)
+    is_archived = models.BooleanField(default=False)
 
     def __str__(self):
         return self.deck.name
 
     @staticmethod
     def get_active_for_user(user):
-        return DeckRegistration.objects.filter(user=user, status=DeckRegistration.Status.VERIFIED_ACTIVE)
+        return DeckRegistration.objects.filter(
+            user=user,
+            status=DeckRegistration.Status.VERIFIED_ACTIVE,
+            is_archived=False)
 
     def is_pending(self):
         return self.status == DeckRegistration.Status.PENDING
@@ -56,7 +60,6 @@ class Meta:
     ordering = ['status', 'verified_on', 'created_on']
 
 
-# I kinda wish there was a way to make this owrk with
 class SignedNonce():
     def __init__(self, nonce, nonce_sig):
         self.nonce = nonce
@@ -69,7 +72,7 @@ class SignedNonce():
 
     @staticmethod
     def sign(nonce):
-        # A little extra security (or mabye just annoying?) signatures will
+        # A little extra security (or maybe just annoying?) signatures will
         # only be verifiable within a calendar day.
         days_since_epoch = (datetime.datetime.utcnow() -
                             datetime.datetime(1970, 1, 1)).days
