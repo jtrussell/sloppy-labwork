@@ -4,9 +4,15 @@
 <h1>Deck Registrations</h1>
 
 {% if user.is_authenticated %}
-<div style="margin-bottom: 1.5rem">
+<p>
   <a href="{% url 'register-new' %}">Register a deck.</a>
-</div>
+</p>
+{% endif %}
+
+{% if not user.is_authenticated %}
+<p>
+  You must sign in to register a deck. <a href="{% url 'register-about' %}">Learn more about deck registration</a>.
+</p>
 {% endif %}
 
 <form>
