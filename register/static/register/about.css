@@ -1,0 +1,8 @@
+.photo-group {
+  text-align: center;
+}
+
+.photo-group img {
+  border: 2px solid var(--color-lines);
+  border-radius: 2px;
+}

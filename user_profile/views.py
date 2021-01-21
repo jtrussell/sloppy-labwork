@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.shortcuts import render
 from allauth.account.decorators import login_required
 from django.contrib.auth.models import User
@@ -31,6 +32,9 @@ def index(request):
     discord_handle = request.user.profile.discord_handle
 
     my_registrations = DeckRegistration.objects.filter(user=request.user)
+    my_registrations = my_registrations.filter(
+        Q(status=DeckRegistration.Status.VERIFIED_ACTIVE) | Q(status=DeckRegistration.Status.PENDING))
+
     num_registrations = len(my_registrations)
     my_pending_registrations = my_registrations.filter(
         status=DeckRegistration.Status.PENDING)

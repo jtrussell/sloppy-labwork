@@ -24,7 +24,7 @@ class RegisterList(generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        qs = DeckRegistration.filter(is_archived=False)
+        qs = DeckRegistration.objects.filter(is_archived=False)
         f = self.request.GET.get('f')
         if f:
             qs = qs.filter(status=DeckRegistration.Status.VERIFIED_ACTIVE)
@@ -32,7 +32,9 @@ class RegisterList(generic.ListView):
                            | Q(deck__id__icontains=f))
         if self.request.user.is_authenticated:
             qs = qs.filter(Q(status=DeckRegistration.Status.VERIFIED_ACTIVE)
-                           | Q(user=self.request.user))
+                           | Q(user=self.request.user,
+                               status=DeckRegistration.Status.PENDING,
+                               is_archived=False))
         else:
             qs = qs.filter(status=DeckRegistration.Status.VERIFIED_ACTIVE)
         return qs.order_by('-verified_on')

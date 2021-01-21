@@ -1,4 +1,9 @@
 {% extends "page.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'register/about.css' %}">
+{% endblock %}
 
 {% block content %}
   <h1>About Deck Registration</h1>
@@ -15,59 +20,77 @@
   <p>Our goals for this service are pretty simple:</p>
 
   <ul>
-    <li>Streamline event sign-up for player and event organizers.</li>
+    <li>Streamline event sign-up for player and organizers.</li>
     <li>Make it easy to share decks with your friends, teammates, and community.</li>
   </ul>
 
-  <p>Deck sharing and netdecking can be a contentious topic. We come down
-  pretty firmly on the side of "sharing is good"&trade; and want to put tools in the
-  hands of event organizers that make sharing easy.</p>
+  <p>We believe <strong>sharing is good</strong> and want to put tools in the
+  hands of event organizers that make sharing as frictionless as
+  possible.</p>
 
   <h2>How It Works, For Players</h2>
   <p>Registering a deck with <span class="brand">Sloppy Labwork</span> will
-  feel similar to deck verification processes you might have gone through for
+  feel similar to deck verification processes you might have experienced with
   online events in the past. After creating an account, you can submit a
   registration request <a href="{% url 'register-new' %}">here</a>. Your
-  registration request will include a photo of your archon card, as well as a
-  handwritten note containing a randomly generated 5-digit code specific to
-  your registration request.</p>
+  registration request will include a link to your deck, a photo of your
+  archon card, and a handwritten note containing a randomly generated 5-digit
+  code specific to your registration request.</p>
 
-  <p>Before you might have included your contact information and a date in
+  <p>Before, you might have included contact information and a date in
   verification photos. Instead, we generate random verification codes for
   each request. This removes the need to have a date in your photo - we know
-  the exact time each 5-digit code is generated. Similarly, these codes are
-  tied to the <span class="brand">Sloppy Labwork</span> account that
-  submitted the deck registration request. The registration request will be
-  connected to the contact information in your account, even if you later
-  update that information.</p>
+  the exact time each code is generated. Similarly, these codes are tied to
+  the <span class="brand">Sloppy Labwork</span> account that submitted the
+  deck registration request. Registration requests will be associated with
+  the contact information in your account, even if you update that
+  information later.</p>
 
   <p>When a verification request is submitted, <span class="brand">Sloppy
-  Labwork</span> will attempt to parse your deck's name and handwritten
-  verification code from the photo automatically. When that happens, your
-  request may be approved within seconds of the time it was submitted. If
-  we're unable to verify your request automatically, it will then be reviewed
-  by a <span class="brand">Sloppy Labwork</span> administrator. Once
-  approved, you will be able to sign up for events with that deck.</p>
+  Labwork</span> will attempt to parse your deck's name and handwritten code
+  from the photo automatically. When that happens, your request may be
+  approved within seconds of the time it was submitted. If we're unable to
+  verify your request automatically, it will then be reviewed by a
+  <span class="brand">Sloppy Labwork</span> administrator. Once approved, you will
+  be able to sign up for events using that deck.</p>
 
-  <p>Here are some tips to ensuring your verification photo can be processed
+  <p>In a rush? If we aren't able to verify your first request automatically
+  you may submit a new request for the same deck and we'll archive your
+  previous attempt. Within a single day you may submit up to ten registration
+  requests.</p>
+
+  <p>Here are some tips for ensuring your verification photo can be processed
   automatically:</p>
 
   <ul>
-    <li>The <strong>back</strong> of your archon card should be face up in
-    your photo. This is the side with the archon artwork, <strong>not</strong>
-    the QR code side. If you can read your deck list, flip the card over.</li>
+    <li>The <strong>back</strong> of your archon card should be face up. This
+    is the side with archon artwork, <strong>not</strong> a QR code. If see a
+    QR code, flip the card over.</li>
     <li>The deck name should be fully visible, in focus, and with minimal
-    glare. This is only part of the card that need visible fore,
-    verification. In particular, be mindful of glare obscuring your deck's
-    name, especially if it is still in cellophane</li>
+    glare. This is the only part of the card that need visible for
+    verification. Be mindful of glare obscuring your deck's name, especially
+    if it is still in cellophane</li>
     <li>Make sure there is no other writing or text in your image. Other text
-    will potentially confuse the automated process.</li>
+    might confuse our automated process.</li>
+    <li>If possible, use a plain background - like a sheet unmarked paper -
+    for contrast. </li>
   </ul>
 
-  <p>IMAGE</p>
+  <p>
+    Here's an example that will verify automatically without issue:
+  </p>
+
+  <p class="photo-group">
+    <img src="https://static.sloppylabwork.com/sample-verification-photo-01.jpg" alt="Sample verification photo" />
+  </p>
 
   <p>Keep in mind that, after verification, your photo will be visible to
-  others who would like to double check your claim.</p>
+  others who would like to double check your claim. We will also display
+  partially obfuscated versions of your contact info in the public registry.
+  For example, we would show <code>j*******l</code> instead of
+  <code>jtrussell</code>. Event organizers will have access to your
+  non-obfuscated contact info once you have signed up for one of their
+  events.</p>
   
   <h2>How It Works, For Organizers</h2>
   <p>Coming soon!</p>
