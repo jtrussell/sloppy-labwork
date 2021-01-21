@@ -24,7 +24,7 @@ class RegisterList(generic.ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        qs = DeckRegistration.objects
+        qs = DeckRegistration.filter(is_archived=False)
         f = self.request.GET.get('f')
         if f:
             qs = qs.filter(status=DeckRegistration.Status.VERIFIED_ACTIVE)
@@ -106,6 +106,7 @@ def add(request):
     # Can't register too many decks
     max_uploads_in_day = settings.MAX_UPLOADS_PER_DAY
     twenty_four_hours_ago = datetime.datetime.now() - datetime.timedelta(hours=24)
+
     my_uploads_today = DeckRegistration.objects.filter(
         user=request.user,
         created_on__gte=twenty_four_hours_ago)
@@ -117,7 +118,7 @@ def add(request):
         signed_nonce = SignedNonce.from_post(request.POST)
         if not signed_nonce.is_valid():
             error_messages.append(
-                'The registration code just sumitted has expired. Please use the code below to submit a new registration request.')
+                'This registration code has expired. Please use submit a new registration using the code below.')
         elif form.is_valid():
             # Process the form...
             master_vault_url = form.cleaned_data['master_vault_link']
@@ -130,16 +131,14 @@ def add(request):
                 deck.name = r.json()['data']['name']
                 deck.save()
             else:
-                # TODO: Check if someone else registered the deck already
-
                 # Only allow the user to have one pending registartion per deck
-                # TODO: This should probably happen after we've saved the new one
                 old_registrations = DeckRegistration.objects.filter(
                     user=request.user,
                     deck=deck,
                     status=DeckRegistration.Status.PENDING
+                ).update(
+                    is_archived=True
                 )
-                old_registrations.delete()
 
             registration = DeckRegistration()
             registration.user = request.user

@@ -17,8 +17,7 @@ class UserProfile(models.Model):
         try:
             discord_data = SocialAccount.objects.filter(
                 user=self.user, provider='discord')[0].extra_data
-            return '{}#{}'.format(
-                discord_data.get('username'), discord_data.get('discriminator'))
+            return discord_data.get('username')
         except (IndexError, AttributeError) as err:
             return 'Unknown'
 

@@ -23,6 +23,6 @@ class RegiseterNewDeckForm(forms.Form):
         validators=[validate_master_vault_url],
         widget=forms.TextInput(
             attrs={
-                'placeholder': 'https://www.keyforgegame.com/deck-details/2dea0ea6-e371-4b9a-826c-28f6620ef550'}
+                'placeholder': 'e.g. https://www.keyforgegame.com/deck-details/2dea0ea6-e371-4b9a-826c-28f6620ef550'}
         ))
     verification_photo = forms.FileField()
