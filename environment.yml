@@ -6,13 +6,13 @@ dependencies:
   - python==3.8.3
   - pip
   - pip:
-    - Django==3.1.6
-    - Markdown==3.2.2
-    - Pillow==8.1.1
-    - boto3==1.13.16
-    - django-allauth==0.41
+    - Django==3.1.12
+    - Markdown==3.3.4
+    - Pillow==8.3.1
+    - boto3==1.17.108
+    - django-allauth==0.43.0
     - django-heroku==0.3.1
-    - gunicorn==20.0.4
-    - psycopg2-binary==2.8.5
+    - gunicorn==20.1.0
+    - psycopg2-binary==2.9.1
     - requests
-    - sendgrid==6.4.4
+    - sendgrid==6.7.1
