@@ -122,4 +122,5 @@ dmypy.json
 
 .vscode
 local_environment.py
-static_build/
+/staticfiles
+!/staticfiles/.gitkeep
