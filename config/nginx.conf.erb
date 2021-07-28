@@ -36,7 +36,7 @@ http {
 		keepalive_timeout 5;
 
 		location /static/ {
-			alias /app/static_build/;
+			alias /staticfiles/;
 			gzip_static on;
 			add_header Cache-Control public;
 		}
