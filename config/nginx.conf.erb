@@ -36,8 +36,9 @@ http {
 		keepalive_timeout 5;
 
 		location /static/ {
-			root staticfiles/;
+			alias <%= ENV["BUILD_DIR"] %>/staticfiles/;
 			gzip_static on;
+			autoindex off;
 			add_header Cache-Control public;
 		}
 
