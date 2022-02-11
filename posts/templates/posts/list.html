@@ -1,20 +1,23 @@
 {% extends "page.html" %}
 {% load static %}
 {% load posts_extras %}
-
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'posts/list.css' %}">
-{% endblock %}
-
-{% block content %}
-<h1>Articles</h1>
+<link rel="stylesheet" href="{% static 'posts/list.css' %}" />
+{% endblock %} {% block content %}
+<h1>Lab Notes</h1>
 <ul class="posts-list">
   {% for post in post_list %}
   <li class="posts-list__item">
-      <h2 class="posts-list__item-title">{{ post.title }}</h2>
-      <div class="posts-list__item-meta">By {{ post.author }} on {{ post.published_on | date:'M j, Y' }}</div>
-      <div class="posts-list__content">{{ post.content | squeeze | slice:':200' }}...</div>
-      <a href="{% url 'posts-detail' post.slug  %}" class="button">Read More &rarr;</a>
+    <h2 class="posts-list__item-title">{{ post.title }}</h2>
+    <div class="posts-list__item-meta">
+      By {{ post.author }} on {{ post.published_on | date:'M j, Y' }}
+    </div>
+    <div class="posts-list__content">
+      {{ post.content | squeeze | slice:':200' }}...
+    </div>
+    <a href="{% url 'posts-detail' post.slug  %}" class="button"
+      >Read More &rarr;</a
+    >
   </li>
   {% empty %}
   <li class="posts-list__item posts-list__empty">

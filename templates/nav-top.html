@@ -2,7 +2,7 @@
   <select class="u-full-width" style="margin-top: 15px;" id="responsive-nav-select">
     <option value="{% url 'home' %}">Home</option>
     <option value="{% url 'tournaments-registartion-list' %}">Events</option>
-    {% if ft_use_posts %} <option value="{% url 'posts-list' %}">Articles</option> {% endif %}
+    {% if ft_use_posts %} <option value="{% url 'posts-list' %}">Notes</option> {% endif %}
     {% if ft_use_register %} <option value="{% url 'register-home' %}">Register</option> {% endif %}
     {% if ft_use_ratings %} <option value="{% url 'home-ratings' %}">Ratings</option> {% endif %}
     <option value="{% url 'account_login' %}">Profile</option>
@@ -43,7 +43,7 @@
     {% if ft_use_posts %}
     <li class="nav__item">
       <a href="{%url 'posts-list' %}" class="nav__link">
-        Articles
+        Notes
       </a>
     </li>
     {% endif %}
