@@ -67,6 +67,8 @@ def random_access_archives(request):
             dok_username = form.cleaned_data['dok_username']
             min_sas = form.cleaned_data['min_sas']
             max_sas = form.cleaned_data['max_sas']
+            expansions = []
+            expansion = form.cleaned_data['expansion']
             constraints = []
             if min_sas:
                 constraints.append({
@@ -80,7 +82,9 @@ def random_access_archives(request):
                     'cap': 'MAX',
                     'value': max_sas,
                 })
-            filters = { 'owner': dok_username, 'constraints': constraints, }
+            if expansion:
+                expansions.append(expansion)
+            filters = { 'owner': dok_username, 'constraints': constraints,  'expansions': expansions, }
             try:
                 deck_info = get_random_deck_from_dok(filters=filters)
             except:
