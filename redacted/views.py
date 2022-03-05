@@ -99,3 +99,6 @@ def random_access_archives(request):
         'is_error': is_error,
     })
 
+
+def list(request):
+    return render(request, 'redacted/list.html')

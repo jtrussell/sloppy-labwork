@@ -1,0 +1,18 @@
+{% extends "page.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'redacted/list.css' %}" />
+{% endblock %}
+
+{% block content %}
+  <h1>Gizmos</h1>
+
+  <ul class="gizmo-list">
+    <li>
+      <a class="gizmo-title" href="{% url 'redacted-random' %}">Random Access Archives</a>
+      <p class="gizmo-description">This gizmo (very strange indeed) grabs random decks from DoK accounts. Use with caution!</p>
+    </li>
+  </ul>
+{% endblock %}
+
