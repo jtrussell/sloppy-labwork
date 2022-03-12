@@ -170,6 +170,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 FT_USE_REGISTER = os.environ['FT_USE_REGISTER'] == 'True'
 FT_USE_RATINGS = os.environ['FT_USE_RATINGS'] == 'True'
 FT_USE_POSTS = os.environ['FT_USE_POSTS'] == 'True'
+FT_USE_EVENTS = os.environ['FT_USE_EVENTS'] == 'True'
 
 # Bootstrap Heroku settings
 # Note that this env variable should NOT be present in your local environment
