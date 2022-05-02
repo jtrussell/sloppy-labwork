@@ -1,8 +1,15 @@
+from decimal import MIN_EMIN
 from email import header
-from random import randint
+from random import randrange
 from django.shortcuts import render
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 from requests import post
+from nacl.signing import VerifyKey
+from nacl.exceptions import BadSignatureError
 from .forms import RandomDecksFromDokForm
+import json
+import os
 
 DOK_PAGE_SIZE = 20
 
@@ -34,6 +41,9 @@ EMPTY_FILTERS_PAYLOAD = {
     'withOwners': False,
 }
 
+public_key = os.environ.get('DISCORD_BOT_PUBLIC_KEY')
+verify_key = VerifyKey(bytes.fromhex(public_key))
+
 
 def get_random_deck_from_dok(filters={}):
     filter_payload = EMPTY_FILTERS_PAYLOAD | filters
@@ -41,7 +51,7 @@ def get_random_deck_from_dok(filters={}):
         'https://decksofkeyforge.com/api/decks/filter-count',
         json=filter_payload)
     json_filter_count = req_filter_count.json()
-    ix_random_deck = randint(0, json_filter_count['count'])
+    ix_random_deck = randrange(0, json_filter_count['count'])
     page = ix_random_deck // DOK_PAGE_SIZE
     req_filter = post(
         'https://decksofkeyforge.com/api/decks/filter',
@@ -58,6 +68,82 @@ def get_random_deck_from_dok(filters={}):
     return deck_info
 
 
+@csrf_exempt
+def discord_webhook_ingress(request):
+    if request.method == 'POST':
+        signature = request.headers["X-Signature-Ed25519"]
+        timestamp = request.headers["X-Signature-Timestamp"]
+        raw_body = request.body
+        body = raw_body.decode("utf-8")
+
+        try:
+            verify_key.verify(f'{timestamp}{body}'.encode(), bytes.fromhex(signature))
+        except BadSignatureError:
+            return HttpResponse('Unauthorized', 401)
+
+        body_json = json.loads(body)
+
+        options = body_json['data'].get('options')
+
+        if body_json['type'] == 1:
+            return JsonResponse({ 'type': 1, })
+        else:
+            try:
+                owner=from_options('dok', options)
+                min_sas=from_options('min', options)
+                max_sas=from_options('max', options)
+                expansion=from_options('set', options)
+                filters = get_filters(owner, min_sas, max_sas, expansion)
+                deck_info = get_random_deck_from_dok(filters)
+                content = deck_info['url']
+                # TODO = put filters in content
+                return JsonResponse({
+                    'type': 4,
+                    'data': {
+                        'content': content
+                    }
+                })
+            except:
+                return JsonResponse({
+                    'type': 4,
+                    'flags': 64, # TODO - u no ephemeral?
+                    'data': {
+                        'content': 'Oops! That didn\'t work. Are there decks matching your filter?'
+                    }
+                })
+
+
+def from_options(opt_name, options=[]):
+    for opt in options:
+        if opt['name'] == opt_name:
+            return opt['value']
+    return None
+
+def get_filters(owner, min_sas=None, max_sas=None, expansion=None):
+    expansions = []
+    constraints = []
+    if min_sas:
+        constraints.append({
+            'property': 'sasRating',
+            'cap': 'MIN',
+            'value': min_sas,
+        })
+    if max_sas:
+        constraints.append({
+            'property': 'sasRating',
+            'cap': 'MAX',
+            'value': max_sas,
+        })
+    if expansion:
+        expansions.append(expansion)
+    filters = {
+        'owner': owner,
+        'constraints': constraints,
+        'expansions': expansions,
+    }
+    return filters
+
+
 def random_access_archives(request):
     is_error = False
     deck_info = None
@@ -67,24 +153,13 @@ def random_access_archives(request):
             dok_username = form.cleaned_data['dok_username']
             min_sas = form.cleaned_data['min_sas']
             max_sas = form.cleaned_data['max_sas']
-            expansions = []
             expansion = form.cleaned_data['expansion']
-            constraints = []
-            if min_sas:
-                constraints.append({
-                    'property': 'sasRating',
-                    'cap': 'MIN',
-                    'value': min_sas,
-                })
-            if max_sas:
-                constraints.append({
-                    'property': 'sasRating',
-                    'cap': 'MAX',
-                    'value': max_sas,
-                })
-            if expansion:
-                expansions.append(expansion)
-            filters = { 'owner': dok_username, 'constraints': constraints,  'expansions': expansions, }
+            filters = get_filters(
+                owner=dok_username,
+                min_sas=min_sas,
+                max_sas=max_sas,
+                expansion=expansion,
+            )
             try:
                 deck_info = get_random_deck_from_dok(filters=filters)
             except:
