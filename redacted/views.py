@@ -71,8 +71,8 @@ def get_random_deck_from_dok(filters={}):
 @csrf_exempt
 def discord_webhook_ingress(request):
     if request.method == 'POST':
-        signature = request.headers['HTTP_X-SIGNATURE-ED25519']
-        timestamp = request.headers['HTTP_X-SIGNATURE-TIMESTAMP']
+        signature = request.META['HTTP_X-SIGNATURE-ED25519']
+        timestamp = request.META['HTTP_X-SIGNATURE-TIMESTAMP']
         raw_body = request.body
         body = raw_body.decode('utf-8')
 
