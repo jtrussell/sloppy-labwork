@@ -1,5 +1,3 @@
-from decimal import MIN_EMIN
-from email import header
 from random import randrange
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
@@ -83,12 +81,11 @@ def discord_webhook_ingress(request):
 
         body_json = json.loads(body)
 
-        options = body_json['data'].get('options')
-
         if body_json['type'] == 1:
             return JsonResponse({ 'type': 1, })
         else:
             try:
+                options = body_json['data'].get('options')
                 owner=from_options('dok', options)
                 min_sas=from_options('min', options)
                 max_sas=from_options('max', options)
