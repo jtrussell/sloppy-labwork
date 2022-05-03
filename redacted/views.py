@@ -71,10 +71,10 @@ def get_random_deck_from_dok(filters={}):
 @csrf_exempt
 def discord_webhook_ingress(request):
     if request.method == 'POST':
-        signature = request.headers["X-Signature-Ed25519"]
-        timestamp = request.headers["X-Signature-Timestamp"]
+        signature = request.headers['HTTP_X-SIGNATURE-ED25519']
+        timestamp = request.headers['HTTP_X-SIGNATURE-TIMESTAMP']
         raw_body = request.body
-        body = raw_body.decode("utf-8")
+        body = raw_body.decode('utf-8')
 
         try:
             verify_key.verify(f'{timestamp}{body}'.encode(), bytes.fromhex(signature))
