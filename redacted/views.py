@@ -111,9 +111,9 @@ def discord_webhook_ingress(request):
             except:
                 return JsonResponse({
                     'type': 4,
-                    'flags': 64, # TODO - u no ephemeral?
                     'data': {
-                        'content': 'Oops! That didn\'t work. Are there decks matching your filter?'
+                        'flags': 1<<6,
+                        'content': 'Oops! That didn\'t work. Are there decks matching your filter?',
                     }
                 })
 
