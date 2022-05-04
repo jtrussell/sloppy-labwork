@@ -6,6 +6,7 @@ from requests import post
 from nacl.signing import VerifyKey
 from nacl.exceptions import BadSignatureError
 from .forms import RandomDecksFromDokForm
+from allauth.socialaccount.models import SocialAccount
 import json
 import os
 
@@ -85,11 +86,18 @@ def discord_webhook_ingress(request):
             return JsonResponse({ 'type': 1, })
         else:
             try:
-                options = body_json['data'].get('options')
+                if 'options' in body_json['data']:
+                    options = body_json['data'].get('options')
+                else:
+                    options = []
                 owner=from_options('dok', options)
                 min_sas=from_options('min', options)
                 max_sas=from_options('max', options)
                 expansion=from_options('set', options)
+                if not owner:
+                    sa_id = int(body_json['member']['user']['id'])
+                    sa = SocialAccount.objects.get(uid=sa_id)
+                    owner = sa.user.profile.dok_handle
                 filters = get_filters(owner, min_sas, max_sas, expansion)
                 deck_info = get_random_deck_from_dok(filters)
                 content = deck_info['url']

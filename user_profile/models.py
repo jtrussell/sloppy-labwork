@@ -12,6 +12,8 @@ class UserProfile(models.Model):
         max_length=255, unique=True, default=None, blank=True, null=True)
     tco_handle = models.CharField(max_length=255, unique=True,
                                   default=None, blank=True, null=True, verbose_name='TCO handle')
+    dok_handle = models.CharField(max_length=255, unique=True,
+                                  default=None, blank=True, null=True, verbose_name='DoK handle')
 
     def _get_discord_handle(self):
         try:
