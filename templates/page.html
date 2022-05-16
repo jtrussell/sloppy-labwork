@@ -74,7 +74,9 @@
   </script>
   <script>
     // Used to avoid CSS animations on the initial load
-    document.querySelector('body').classList.remove('preload')
+    setTimeout(function () {
+      document.querySelector('body').classList.remove('preload')
+    }, 500)
   </script>
 </body>
 
