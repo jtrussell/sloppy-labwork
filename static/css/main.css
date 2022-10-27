@@ -75,6 +75,14 @@ a {
 .text-muted { color: var(--color-text-muted); }
 .text-right { text-align: right; }
 
+img.icon { height: 2rem }
+
+aside {
+  border-top: 1px dotted var(--color-lines);
+  padding: 1.5em 0 0;
+  font-size: smaller;
+}
+
 table {
   font-size: 1.5rem;
 }
