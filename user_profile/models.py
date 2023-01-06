@@ -1,8 +1,9 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from allauth.socialaccount.models import SocialAccount
+
+from common.social_accounts import get_discord_data
 
 
 class UserProfile(models.Model):
@@ -16,12 +17,8 @@ class UserProfile(models.Model):
                                   default=None, blank=True, null=True, verbose_name='DoK handle')
 
     def _get_discord_handle(self):
-        try:
-            discord_data = SocialAccount.objects.filter(
-                user=self.user, provider='discord')[0].extra_data
-            return discord_data.get('username')
-        except (IndexError, AttributeError) as err:
-            return 'Unknown'
+        discord_data = get_discord_data(self.user)
+        return discord_data.get('username') or 'Unknown'
 
     discord_handle = property(_get_discord_handle)
 
