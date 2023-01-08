@@ -5,6 +5,7 @@
     {% if ft_use_posts %} <option value="{% url 'posts-list' %}">Notes</option> {% endif %}
     {% if ft_use_register %} <option value="{% url 'register-home' %}">Register</option> {% endif %}
     {% if ft_use_ratings %} <option value="{% url 'home-ratings' %}">Ratings</option> {% endif %}
+    {% if teammate_authorized %} <option value="{% url 'deck-simulator' %}">WoE</option> {% endif %}
     <option value="{% url 'redacted-list' %}">Gizmos</option>
     <option value="{% url 'account_login' %}">Profile</option>
   </select>
@@ -70,6 +71,12 @@
     <li class="nav__item">
       <a href="{% url 'redacted-list' %}" class="nav__link">
         Gizmos
+      </a>
+    </li>
+
+    <li class="nav__item">
+      <a href="{% url 'deck-simulator' %}" class="nav__link">
+        WoE
       </a>
     </li>
 
