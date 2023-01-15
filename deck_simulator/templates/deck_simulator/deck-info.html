@@ -1,3 +1,10 @@
 {% extends "page.html" %}
 {% block content %}
+<p>{{ deck.name }}</p>
+<p>{{ deck.uid }}</p>
+<a target="_blank" rel="noopener noreferrer" href="{% url 'generated-deck-proxy' deck.uid %}">
+    <button id="generate-deck-button">
+        Download proxy
+    </button>
+</a>
 {% endblock %}

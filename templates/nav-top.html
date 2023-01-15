@@ -74,11 +74,13 @@
       </a>
     </li>
 
+    {% if teammate_authorized %}
     <li class="nav__item">
       <a href="{% url 'deck-simulator' %}" class="nav__link">
         WoE
       </a>
     </li>
+    {% endif %}
 
     <li class="nav__spacer">&nbsp;</li>
 

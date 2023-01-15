@@ -1,24 +1,57 @@
 {% extends "page.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'deck_simulator/deck-simulator.css' %}" />
+{% endblock %}
+
 {% block content %}
-<h1>WoE deck simulator</h1>
-<details>
-    <summary><h3>Predefined cards</h3></summary>
-    <select name="available-cards" id="available-cards"></select>
-    <button id="add-card-button">Add</button>
-    <h5>Chosen cards</h5>
-    <ul id="chosen-cards-list" style="height: 200px; overflow: hidden; overflow-y: scroll;">
-    </ul>
+<h1 class="deck-simulator__title">WoE deck simulator</h1>
+<a href="{% url 'my-generated-decks' %}" class="deck-simulator__my-decks-link">previously generated decks</a>
+<p class="deck-simulator__info-par">You may add up to three houses in 'Predefined houses and cards' section. Each house will contain a collapsible section for predefined cards and per-house constraints such as number of creatures.</p>
+<p class="deck-simulator__info-par">A constraint is a minimum number of a certain count, such as cards with a given tag (f.e. 'token-generator') or of a given type (f.e. 'creature'), or a number of amber pips.</p>
+<p class="deck-simulator__info-par">If you choose an impossible or unrealistic constraint, such as 'key-cheat' > 0 for a house with no key cheats, the deck generation will fail.</p>
+<p class="deck-simulator__info-par">
+    Some cards are linked with others - in that case only one of the cards will be available to be added,
+    and the other will be added automatically at generation time. For example: if you choose Scylla, you will get Charybdis (and you can't choose Charybdis from the list).
+</p>
+<p class="deck-simulator__info-par">
+    To add tokens use the 'Token' section.
+</p>
+<p class="deck-simulator__info-par">
+    Adding a deck name is required.
+</p>
+<p class="deck-simulator__info-par">
+    Removing house/card choices is not implemented, to start over refresh the page xD
+</p>
+<details id="predefined-section">
+    <summary><h4 class="deck-simulator__collapse-header">Predefined houses and cards</h4></summary>
+    <select id="available-houses"></select>
+    <button id="add-house-button">Add</button>
 </details>
-<details>
-    <summary><h3>Metadata constraints</h3></summary>
-    {{ metadata_form }}
+<details id="total-constraints-section">
+    <summary><h4 class="deck-simulator__collapse-header">Deck-wide constraints</h4></summary>
 </details>
-<!--<a target="_blank" rel="noopener noreferrer" href="{% url 'deck-proxy' %}">-->
+<details id="token-section">
+    <summary><h4 class="deck-simulator__collapse-header">Token</h4></summary>
+    <select id="available-tokens"></select>
+    <button id="choose-token-button">Choose</button>
+    <p id="chosen-token"></p>
+</details>
+<div class="deck-simulator__input-name-container">
+    <label for="deck-name-input">Input deck name, max 20 chars</label>
+    <input id="deck-name-input" type="text" maxlength="20" />
+</div>
+<div class="deck-simulator__generate-button-container">
     <button id="generate-deck-button">
         Generate!
     </button>
-<!--</a>-->
+</div>
+{{ available_tokens|json_script:"available-tokens-data"}}
 {{ available_cards|json_script:"available-cards-data"}}
+{{ available_houses|json_script:"available-houses-data"}}
+{{ available_tags|json_script:"available-tags-data"}}
+{{ available_count_constraints|json_script:"available_count_constraints"}}
 <script>
 {% include 'deck_simulator/deck-simulator.js' %}
 </script>
