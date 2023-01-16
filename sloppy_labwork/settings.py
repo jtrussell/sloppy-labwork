@@ -62,7 +62,6 @@ INSTALLED_APPS = [
     'user_profile',
     'tournaments',
     'redacted',
-    'deck_simulator'
 ]
 
 MIDDLEWARE = [
@@ -92,7 +91,6 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.request',
                 'sloppy_labwork.context_processors.feature_flags',
-                'sloppy_labwork.context_processors.teammate_authorized',
             ],
         },
     },

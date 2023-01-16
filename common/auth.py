@@ -18,8 +18,6 @@ _TEAMMATE_DISCORD_IDS = {
 
 
 def is_teammate(user):
-    if not user.is_authenticated:
-        return False
     discord_data = get_discord_data(user)
     return discord_data.get('id') in _TEAMMATE_DISCORD_IDS
 
@@ -29,7 +27,7 @@ def teammate_required(view):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
             user = request.user
-            if not user.is_superuser and not is_teammate(user):
+            if not user.is_superuser and not (user.is_authenticated and is_teammate(user)):
                 raise PermissionDenied
             return view_func(request, *args, **kwargs)
         return _wrapped_view
