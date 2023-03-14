@@ -66,6 +66,14 @@ input:disabled {
   border-bottom-left-radius: 0;
 }
 
+ul.flat-list, ol.flat-list {
+  list-style-type: none;
+}
+
+ul.flat-list li, ol.flat-list li {
+  margin: 0;
+}
+
 a {
   text-decoration: var(--link-decoration);
 }

@@ -21,6 +21,7 @@ from . import views
 urlpatterns = [
     path('', views.index, name='home'),
     path('contact/', views.contact, name='contact'),
+    path('team/', views.the_team, name='the-team'),
     path('register/', include('register.urls')),
     path('ratings/', include('ratings.urls')),
     path('posts/', include('posts.urls')),
@@ -29,6 +30,5 @@ urlpatterns = [
     path('decks/', include('decks.urls')),
     path('tournaments/', include('tournaments.urls')),
     path('redacted/', include('redacted.urls')),
-    path('admin/', admin.site.urls),
     path('deck-simulator/', include('deck_simulator.urls'))
 ]
