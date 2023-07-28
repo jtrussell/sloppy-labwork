@@ -8,6 +8,8 @@ EXPANSION_CHOICES = [
     (452, _('Worlds Collide')),
     (479, _('Mass Mutation')),
     (496, _('Dark Tidings')),
+    (600, _('Winds of Exchange')),
+    (601, _('Unchained 2022')),
 ]
 
 class RandomDecksFromDokForm(forms.Form):
