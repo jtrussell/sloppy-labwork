@@ -180,9 +180,5 @@ def random_access_archives(request):
     })
 
 
-def shard_of_knowledge(request):
-    return render(request, 'redacted/shard-of-knowledge.html')
-
-
 def list(request):
     return render(request, 'redacted/list.html')
