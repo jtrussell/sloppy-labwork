@@ -31,5 +31,4 @@ urlpatterns = [
     path('tournaments/', include('tournaments.urls')),
     path('redacted/', include('redacted.urls')),
     path('admin/', admin.site.urls),
-    path('deck-simulator/', include('deck_simulator.urls')),
 ]

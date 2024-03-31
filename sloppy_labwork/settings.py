@@ -62,7 +62,6 @@ INSTALLED_APPS = [
     'user_profile',
     'tournaments',
     'redacted',
-    'deck_simulator'
 ]
 
 MIDDLEWARE = [

@@ -22,4 +22,4 @@ def squeeze(value):
     """
     Removes special characters and collapses whitespace
     """
-    return re.sub('\W+', ' ', value)
+    return re.sub(r'\W+', ' ', value)
