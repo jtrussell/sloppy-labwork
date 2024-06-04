@@ -17,35 +17,17 @@ cp ./sloppy_labwork/local_environment.py-example ./sloppy_labwork/local_environm
 
 ### Ye Olde Python
 
-Sloppy Labwork uses [conda](https://docs.conda.io/en/latest/) to manage
-dependencies during development. Initialize your enironment with:
+We recommend using a virtual environment for your project, our dependencies
+listed in `requirements.txt` and the version of python used in production is given in `runtime.txt`.
 
-```
-conda env create -f environment.yml
-```
-
-Then activate with:
-
-```
-conda activate sloppy-labwork
-```
-
-Should the environment definition change, you can update your local
-environment with:
-
-```
-conda env update -f environment.yml
-```
-
-We use a local configuration file to initialize necessary environment
-variables during development. This file will not be tracked by version
-control:
+Install the dependencies listed in our requirements file and then ensure you
+have a local settings file prepared:
 
 ```
 cp ./sloppy_labwork/local_environment.py-example ./sloppy_labwork/local_environment.py
 ```
 
-You may update the new file to turn features on/off and update app secrets.
+You may update the this local environment file to turn features on/off and update app secrets.
 
 
 ## Run It
