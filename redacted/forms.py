@@ -12,6 +12,8 @@ EXPANSION_CHOICES = [
     (601, _('Unchained 2022')),
     (609, _('Vault Masters 2023')),
     (700, _('Grim Reminders')),
+    (722, _('Menagerie')),
+    (737, _('Vault Masters 2024')),
 ]
 
 class RandomDecksFromDokForm(forms.Form):
