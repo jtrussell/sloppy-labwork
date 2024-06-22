@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'user_profile',
     'tournaments',
     'redacted',
+    'spangler_box',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,17 @@
+{% extends "page.html" %}
+
+{% block head_title %}Sloppy Labwork | Spangler Box{% endblock %}
+
+{% block content %}
+  <h1>Spangler Box</h1>
+  <p>Select a template to get started.</p>
+
+  <form method="POST" class="form-wide">
+    {% csrf_token %}
+    {{form}}
+    <button type="submit" class="button-primary">
+      Submit
+    </button>
+  </form>
+{% endblock %}
+
