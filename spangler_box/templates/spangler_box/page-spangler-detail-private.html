@@ -1,0 +1,24 @@
+{% extends "page.html" %}
+
+{% block content %}
+  <h1>Spangler Box - {{ object.pk }}</h1>
+
+  {% if is_waiting_for_player_two_to_join %}
+    <p class="note">It's Spanglin' time! Grab your dancing shoes and send your partner
+    <a href="{% url 'spangler-join' key=object.join_key %}">this link</a> to join you.</p>
+  {% endif %}
+
+  <p>What's in the box? <strong>{{ object.description }}</strong>!</p>
+
+  <p>Don't forget about {{ current_link }}</p>
+
+  {% if not is_waiting_for_player_two_to_join %}
+    <ol>
+      {% for link in object.links.all|dictsortreversed:'order' %}
+        {% if link.is_complete %}
+          <li>{{ link.description }}</li>
+        {% endif %}
+      {% endfor %}
+    </ol>
+  {% endif %}
+{% endblock %}

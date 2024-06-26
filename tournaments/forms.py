@@ -1,5 +1,5 @@
 from django import forms
-from .models import Tournament, TournamentRegistration
+from .models import Tournament
 from register.models import DeckRegistration
 
 

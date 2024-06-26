@@ -1,0 +1,14 @@
+{% extends "page.html" %}
+
+{% block content %}
+  <h1>Spangler Box - {{ secret.pk }}</h1>
+
+  <p>You have been invited to join a Spangler Box!</p>
+
+  <p>What's in the box? <strong>{{ secret.description }}</strong>!</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="submit" value="I'm in!" class="button-primary" />
+  </form>
+{% endblock %}

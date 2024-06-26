@@ -5,4 +5,4 @@ from .models import SecretChainTemplate
 
 class SelectTemplateForm(forms.Form):
     template = forms.ModelChoiceField(
-        queryset=SecretChainTemplate.objects.all(), label=_('Template'))
+        queryset=SecretChainTemplate.objects.all(), required=True, label=_('Template'), initial=1)

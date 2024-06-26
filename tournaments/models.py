@@ -3,8 +3,6 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from decks.models import Deck
 from register.models import DeckRegistration
-from io import StringIO
-import csv
 
 
 class TournamentFormat(models.Model):

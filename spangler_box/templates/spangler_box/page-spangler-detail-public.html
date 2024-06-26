@@ -1,0 +1,15 @@
+{% extends "page.html" %}
+
+{% block content %}
+  <h1>Spangler Box - {{ object.pk }}</h1>
+
+  PUBLIC
+
+  <ol>
+    {% for link in object.links.all %}
+      <li>{{ link.description }}</li>
+    {% endfor %}
+  </ol>
+{% endblock %}
+
+
