@@ -129,9 +129,7 @@ def add(request):
 
             deck, created = Deck.objects.get_or_create(id=master_vault_id)
             if created:
-                r = get(deck.get_master_vault_api_url())
-                deck.name = r.json()['data']['name']
-                deck.save()
+                deck.fetch_master_vault_data_and_save()
             else:
                 # Only allow the user to have one pending registartion per deck
                 old_registrations = DeckRegistration.objects.filter(

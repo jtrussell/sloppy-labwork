@@ -1,6 +1,8 @@
+from enum import unique
 from operator import is_
 from django.utils.translation import gettext_lazy as _
 from django.db import models
+from django.db.models.functions import Coalesce
 from django.contrib.auth.models import User
 import uuid
 
@@ -44,6 +46,11 @@ class SecretPlayer(models.Model):
         return self.player_number == SecretPlayer.PlayerNumber.SECOND
 
 
+class SecretChainLinkManager(models.Manager):
+    def with_response_counts(self):
+        return self.annotate(num_responses=Coalesce(models.Count('responses'), 0))
+
+
 class SecretChainLink(models.Model):
     class Meta:
         ordering = ['order']
@@ -53,6 +60,8 @@ class SecretChainLink(models.Model):
         BAN = 1, _('Ban')
         SAFE = 2, _('Safe')
         SELECT = 3, _('Select')
+
+    objects = SecretChainLinkManager()
 
     secret_chain = models.ForeignKey(
         SecretChain, on_delete=models.CASCADE, related_name='links')
@@ -66,26 +75,26 @@ class SecretChainLink(models.Model):
         return self.description
 
     def is_complete(self):
-        if self.kind == SecretChainLink.Kind.ADD_LIST_OF_KF_DECKS:
-            return self.text_responses.count() == 2
+        return self.responses.count() == 2
+
+
+class SecretChainLinkResponse(models.Model):
+    class Meta:
+        unique_together = (('secret_chain_link', 'player_number'))
+
+    secret_chain_link = models.ForeignKey(
+        SecretChainLink, on_delete=models.CASCADE, related_name='responses')
+    player_number = models.IntegerField(
+        choices=(SecretPlayer.PlayerNumber.choices), blank=False, null=False)
+    response = models.TextField(blank=False, null=False)
+
+    @property
+    def value(self):
+        kind = self.secret_chain_link.kind
+        if kind == SecretChainLink.Kind.ADD_LIST_OF_KF_DECKS:
+            return self.response.splitlines()
         else:
-            return self.list_item_responses.count() == 2
-
-
-class SecretChainLinkTextResponse(models.Model):
-    secret_chain_link = models.ForeignKey(
-        SecretChainLink, on_delete=models.CASCADE, related_name='text_responses')
-    player_number = models.IntegerField(
-        choices=(SecretPlayer.PlayerNumber.choices), blank=False, null=False)
-    response = models.TextField()
-
-
-class SecretChainLinkListItemResponse(models.Model):
-    secret_chain_link = models.ForeignKey(
-        SecretChainLink, on_delete=models.CASCADE, related_name='list_item_responses')
-    player_number = models.IntegerField(
-        choices=(SecretPlayer.PlayerNumber.choices), blank=False, null=False)
-    response = models.IntegerField()
+            return int(self.response)
 
 
 class SecretChainTemplate(models.Model):
@@ -99,6 +108,9 @@ class SecretChainTemplate(models.Model):
 
 
 class SecretChainTemplateLink(models.Model):
+    class Meta:
+        ordering = ['order']
+
     secret_chain_template = models.ForeignKey(
         SecretChainTemplate, on_delete=models.CASCADE, related_name='links')
     kind = models.IntegerField(

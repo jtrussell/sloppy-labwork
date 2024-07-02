@@ -51,8 +51,11 @@ class SecretDetail(generic.DetailView):
     def get_context_data(self, **kwargs):
         context = super(generic.DetailView, self).get_context_data(**kwargs)
         user = self.request.user
-        if user.is_authenticated and self.get_object().is_user_secret_player(user):
-            context['is_waiting_for_player_two_to_join'] = self.object.is_waiting_for_player_two_to_join()
-            context['is_user_secret_player'] = self.object.is_user_secret_player(
-                self.request.user)
+        secret = self.get_object()
+        if user.is_authenticated and secret.is_user_secret_player(user):
+            context['is_waiting_for_player_two_to_join'] = secret.is_waiting_for_player_two_to_join()
+            context['is_user_secret_player'] = secret.is_user_secret_player(
+                user)
+            context['current_link'] = secret.links.with_response_counts().filter(
+                num_responses__lt=2).first()
         return context
