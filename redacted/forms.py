@@ -14,7 +14,11 @@ EXPANSION_CHOICES = [
     (700, _('Grim Reminders')),
     (722, _('Menagerie')),
     (737, _('Vault Masters 2024')),
+    (800, _('Æmber Skies')),
+    (855, _('Tokens of Change')),
+    (874, _('More Mutation')),
 ]
+
 
 class RandomDecksFromDokForm(forms.Form):
     dok_username = forms.CharField(max_length=100, label=_('DoK username'))
@@ -36,5 +40,4 @@ class RandomDecksFromDokForm(forms.Form):
         required=False,
         widget=forms.Select(
             choices=EXPANSION_CHOICES)
-        )
-
+    )
