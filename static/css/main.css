@@ -188,6 +188,12 @@ footer {
   font-size: 1.5rem;
 }
 
+/* Markdown toc extension */
+.toctitle {
+  font-size: 3rem;
+  font-weight: 300;
+}
+
 /* Fancy Transition Junk */
 /* * { transition: background-color 0.3s linear, color 0.3s linear, border-color: 0.3s linear; } */
 * { transition: all 0.3s linear;}
