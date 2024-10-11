@@ -13,10 +13,18 @@ def markdown(value):
     """
     Converts Markdown to HTML
     """
-    return md.markdown(value, extensions=[
-        'markdown.extensions.fenced_code',
-        'markdown.extensions.toc',
-    ])
+    return md.markdown(
+        value,
+        extensions=[
+            'markdown.extensions.fenced_code',
+            'markdown.extensions.toc',
+        ],
+        extension_configs={
+            'markdown.extensions.toc': {
+                'title': 'Contents',
+            },
+        }
+    )
 
 
 @register.filter()
