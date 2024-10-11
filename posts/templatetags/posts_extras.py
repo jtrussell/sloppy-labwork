@@ -18,6 +18,7 @@ def markdown(value):
         extensions=[
             'markdown.extensions.fenced_code',
             'markdown.extensions.toc',
+            'markdown.extensions.attr_list',
         ],
         extension_configs={
             'markdown.extensions.toc': {
