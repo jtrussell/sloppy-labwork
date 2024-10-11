@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'user_profile',
     'tournaments',
     'redacted',
+    'transporter_platform',
 ]
 
 MIDDLEWARE = [
@@ -123,7 +124,7 @@ DATABASES = {
     }
 }
 
-DEFAULT_AUTO_FIELD='django.db.models.AutoField'
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
