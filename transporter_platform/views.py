@@ -2,6 +2,7 @@ from django.shortcuts import render
 from allauth.account.decorators import login_required
 from .forms import KagiLivePlayForm, ACTION_CREATE, ACTION_CANCEL, ACTION_RECORD_MATCH
 from .models import MatchRequest
+from django.http import HttpResponseRedirect
 
 from transporter_platform.models import MatchingService, PodPlayer
 
@@ -33,10 +34,11 @@ def kagi_live(request):
                 req = MatchingService.create_request_and_complete_if_able(
                     player)
             elif action == ACTION_CANCEL:
-                req = MatchingService.cancel_request_and_completing(req)
+                MatchingService.cancel_request_and_completing(req)
                 req = None
             elif action == ACTION_RECORD_MATCH:
                 pass
+        return HttpResponseRedirect(request.path_info)
 
     if req:
         is_checked_in = not req.is_cancelled

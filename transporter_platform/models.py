@@ -71,7 +71,7 @@ class MatchingService():
             match_with = MatchRequest.objects.annotate(has_played=models.Exists(
                 PastMatch.objects.filter(
                     player=player, opponent=models.OuterRef('player'))
-            )).filter(has_played=False, completed_by=None).exclude(player=player).latest()
+            )).filter(has_played=False, completed_by=None, player__pod=player.pod).exclude(player=player).latest()
             match_with.completed_by = request
             request.completed_by = match_with
             match_with.save()
