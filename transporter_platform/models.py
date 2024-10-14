@@ -81,7 +81,7 @@ class MatchingService():
 
         return request
 
-    @ staticmethod
+    @staticmethod
     def cancel_request_and_completing(match_request: MatchRequest):
         match_request.is_cancelled = True
         match_request.save()
@@ -89,3 +89,8 @@ class MatchingService():
             match_request.completed_by.is_cancelled = True
             match_request.completed_by.save()
         return match_request
+
+    @staticmethod
+    def record_match(playerA, playerB):
+        PastMatch.objects.create(player=playerA, opponent=playerB)
+        PastMatch.objects.create(player=playerB, opponent=playerA)

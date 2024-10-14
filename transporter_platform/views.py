@@ -35,9 +35,10 @@ def kagi_live(request):
                     player)
             elif action == ACTION_CANCEL:
                 MatchingService.cancel_request_and_completing(req)
-                req = None
             elif action == ACTION_RECORD_MATCH:
-                pass
+                MatchingService.record_match(
+                    req.player, req.completed_by.player)
+                MatchingService.cancel_request_and_completing(req)
         return HttpResponseRedirect(request.path_info)
 
     if req:
@@ -68,7 +69,9 @@ def _kagi_live_check_waiting_for_match(request):
 
 def _kagi_live_matched(request, matched_with):
     cancel_form = KagiLivePlayForm(initial={'action': ACTION_CANCEL})
+    record_form = KagiLivePlayForm(initial={'action': ACTION_RECORD_MATCH})
     return render(request, 'transporter_platform/page-kagi-live--matched.html', {
         'matched_with': matched_with,
         'cancel_form': cancel_form,
+        'record_form': record_form
     })
