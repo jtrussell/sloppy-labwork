@@ -2,4 +2,11 @@
 
 {% block content %}
   <p>You're playing {{ matched_with }}.</p>
+  <form method="POST">
+    {% csrf_token %}
+    {{ cancel_form }}
+    <button class="button-primary" type="submit">
+      Cancel
+    </button>
+  </form>
 {% endblock %}

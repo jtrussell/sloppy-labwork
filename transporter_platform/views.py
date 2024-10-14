@@ -13,13 +13,17 @@ def kagi_live(request):
 
     try:
         player = PodPlayer.objects.get(user=request.user)
-        req = MatchRequest.objects.filter(player=player).latest()
     except PodPlayer.DoesNotExist:
         player = None
-        req = None
 
     if not player:
         return render(request, 'transporter_platform/page-kagi-live--no-player.html', {})
+
+    try:
+        req = MatchRequest.objects.filter(
+            player=player, is_cancelled=False).latest()
+    except MatchRequest.DoesNotExist:
+        req = None
 
     if request.method == 'POST':
         submitted_form = KagiLivePlayForm(request.POST)
@@ -60,6 +64,8 @@ def _kagi_live_check_waiting_for_match(request):
 
 
 def _kagi_live_matched(request, matched_with):
+    cancel_form = KagiLivePlayForm(initial={'action': ACTION_CANCEL})
     return render(request, 'transporter_platform/page-kagi-live--matched.html', {
-        'matched_with': matched_with
+        'matched_with': matched_with,
+        'cancel_form': cancel_form,
     })

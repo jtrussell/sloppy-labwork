@@ -27,6 +27,11 @@ class PastMatch(models.Model):
         PodPlayer, on_delete=models.CASCADE)
 
 
+class NotCancelledManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_cancelled=False)
+
+
 class MatchRequest(models.Model):
     class Meta:
         get_latest_by = 'created_on'
@@ -37,6 +42,9 @@ class MatchRequest(models.Model):
         'self', on_delete=models.CASCADE, default=None, blank=True, null=True)
     is_cancelled = models.BooleanField(default=False)
 
+    # objects = NotCancelledManager()
+    # objects_all = models.Manager()
+
     def cancel_latest_for_player(self, player):
         req = self.objects.filter(player=player).latest()
         req.is_cancelled = True
@@ -44,19 +52,35 @@ class MatchRequest(models.Model):
             req.completed_by.is_cancelled = True
         req.save()
 
+    def __str__(self):
+        return self.player.user_handle
+
 
 class MatchingService():
     @staticmethod
     def create_request_and_complete_if_able(player: PodPlayer):
-        # Create a new match request for this player
         request = MatchRequest.objects.create(player=player)
 
-        # Complete with an existing request if possible
-        # TODO
+        reqs_to_cancel = MatchRequest.objects.filter(player=player, is_cancelled=False).exclude(
+            id=request.id)
+        reqs_to_cancel.update(is_cancelled=True)
+        MatchRequest.objects.filter(completed_by__in=reqs_to_cancel).update(
+            is_cancelled=True)
+
+        match_with = MatchRequest.objects.annotate(has_played=models.Exists(
+            PastMatch.objects.filter(
+                player=player, opponent=models.OuterRef('player'))
+        )).filter(has_played=False, is_cancelled=False, completed_by=None).exclude(player=player).latest()
+
+        if match_with:
+            match_with.completed_by = request
+            request.completed_by = match_with
+            match_with.save()
+            request.save()
 
         return request
 
-    @staticmethod
+    @ staticmethod
     def cancel_request_and_completing(match_request: MatchRequest):
         match_request.is_cancelled = True
         match_request.save()
