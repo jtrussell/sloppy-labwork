@@ -21,7 +21,7 @@ def kagi_live(request):
 
     try:
         req = MatchRequest.objects.filter(
-            player=player, is_cancelled=False).latest()
+            player=player).latest()
     except MatchRequest.DoesNotExist:
         req = None
 
@@ -34,6 +34,7 @@ def kagi_live(request):
                     player)
             elif action == ACTION_CANCEL:
                 req = MatchingService.cancel_request_and_completing(req)
+                req = None
             elif action == ACTION_RECORD_MATCH:
                 pass
 
