@@ -28,16 +28,26 @@ class PastMatch(models.Model):
 
 
 class MatchRequest(models.Model):
+    class Meta:
+        get_latest_by = 'created_on'
+
     player = models.ForeignKey(PodPlayer, on_delete=models.CASCADE)
     created_on = models.DateTimeField(auto_now_add=True)
     completed_by = models.OneToOneField(
         'self', on_delete=models.CASCADE, default=None, blank=True, null=True)
     is_cancelled = models.BooleanField(default=False)
 
+    def cancel_latest_for_player(self, player):
+        req = self.objects.filter(player=player).latest()
+        req.is_cancelled = True
+        if req.completed_by:
+            req.completed_by.is_cancelled = True
+        req.save()
+
 
 class MatchingService():
     @staticmethod
-    def create_request_and_complete_if_able(player):
+    def create_request_and_complete_if_able(player: PodPlayer):
         # Create a new match request for this player
         request = MatchRequest.objects.create(player=player)
 
@@ -45,3 +55,12 @@ class MatchingService():
         # TODO
 
         return request
+
+    @staticmethod
+    def cancel_request_and_completing(match_request: MatchRequest):
+        match_request.is_cancelled = True
+        match_request.save()
+        if (match_request.completed_by):
+            match_request.completed_by.is_cancelled = True
+            match_request.completed_by.save()
+        return match_request

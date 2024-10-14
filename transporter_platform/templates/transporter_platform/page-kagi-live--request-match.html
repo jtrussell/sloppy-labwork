@@ -3,6 +3,7 @@
 {% block content %}
   <form method="POST">
     {% csrf_token %}
+    {{ form }}
     <button class="button-primary" type="submit">
       Find me a match!
     </button>
