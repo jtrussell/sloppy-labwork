@@ -1,20 +1,22 @@
-{% extends "page.html" %}
+{% extends "page-full.html" %}
 
 {% block content %}
-  <p>You're playing {{ matched_with }}.</p>
+  <p class="h3">You're playing {{ matched_with }}.</p>
 
-  <form method="POST">
+  <p>Look for them at the <em>meeting point</em>... or... you know... wherever.</p>
+
+  <form method="POST" class="form-inline">
     {% csrf_token %}
     {{ record_form }}
-    <button class="button-primary" type="submit">
+    <button class="button-primary button-jumbo h4" type="submit">
       We Played
     </button>
   </form>
 
-  <form method="POST">
+  <form method="POST" class="form-inline">
     {% csrf_token %}
     {{ cancel_form }}
-    <button type="submit">
+    <button type="submit" class="button-jumbo h4">
       Cancel
     </button>
   </form>

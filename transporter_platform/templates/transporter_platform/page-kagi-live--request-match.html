@@ -1,10 +1,10 @@
-{% extends "page.html" %}
+{% extends "page-full.html" %}
 
 {% block content %}
   <form method="POST">
     {% csrf_token %}
     {{ form }}
-    <button class="button-primary" type="submit">
+    <button class="button-primary button-jumbo h4" type="submit">
       Find me a match!
     </button>
   </form>

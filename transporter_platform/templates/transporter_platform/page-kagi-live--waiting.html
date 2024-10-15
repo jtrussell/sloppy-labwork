@@ -1,11 +1,11 @@
-{% extends "page.html" %}
+{% extends "page-full.html" %}
 
 {% block content %}
-  <p>Waiting for opponent</p>
-  <form method="POST">
+  <p class="h3">Waiting for an opponent...</p>
+  <form class="form-wide" method="POST">
     {% csrf_token %}
     {{ form }}
-    <button class="button-primary" type="submit">
+    <button class="button-jumbo h4" type="submit">
       Cancel
     </button>
   </form>
