@@ -4,10 +4,11 @@ from django.contrib.auth.models import User
 import random
 
 FOOTER_MESSAGES = [
-    'Winning takes skill. Eating your opponent\'s deck just takes time.',
+    'Winning takes skill. Winning in adaptive takes an appetite.',
     'Stay sloppy.',
-    'If it aint Groke, don\'t flex it.',
+    'If it aint Groke, don\'t Flex it.',
     'They\'re probably stuck in a HOTF game.',
+    'YOUR AD HERE',
 ]
 
 
