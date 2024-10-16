@@ -58,7 +58,9 @@
     {% endblock %}
 
     <div class="stack__spacer"></div>
-    <a href="https://sloppylabwork.com/posts/kagi-live-2024/">&larr; Back to Sloppy Labwork</a></p>
+    {% if footer_text %}
+      <span class="text-muted" style="display:inline-block;margin-bottom: 10px;height: 4em;">{{ footer_text }}</span>
+    {% endif %}
     {% endblock %}
   </main>
 

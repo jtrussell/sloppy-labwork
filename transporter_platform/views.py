@@ -3,6 +3,7 @@ from allauth.account.decorators import login_required
 from .forms import KagiLivePlayForm, ACTION_CREATE, ACTION_CANCEL, ACTION_RECORD_MATCH
 from .models import MatchRequest
 from django.http import HttpResponseRedirect
+from datetime import datetime
 
 from transporter_platform.models import MatchingService, PodPlayer
 
@@ -48,7 +49,7 @@ def kagi_live(request):
     if matched_with:
         return _kagi_live_matched(request, matched_with)
     elif is_checked_in:
-        return _kagi_live_check_waiting_for_match(request)
+        return _kagi_live_check_waiting_for_match(request, req.created_on)
     else:
         return _kagi_live_request_match_form(request)
 
@@ -60,10 +61,28 @@ def _kagi_live_request_match_form(request):
     })
 
 
-def _kagi_live_check_waiting_for_match(request):
+def _kagi_live_check_waiting_for_match(request, created_on):
     form = KagiLivePlayForm(initial={'action': ACTION_CANCEL})
+
+    time_delta = datetime.now(created_on.tzinfo) - created_on
+    five_minutes = 5 * 60
+    ten_minutes = 10 * 60
+    one_hour = 60 * 60
+    elapsed_seconds = time_delta.total_seconds()
+
+    if elapsed_seconds > one_hour:
+        refresh_after_seconds = 10 * 60
+    elif elapsed_seconds > ten_minutes:
+        refresh_after_seconds = 5 * 60
+    elif elapsed_seconds > five_minutes:
+        refresh_after_seconds = 1 * 60
+    else:
+        refresh_after_seconds = 15
+
     return render(request, 'transporter_platform/page-kagi-live--waiting.html', {
-        'form': form
+        'form': form,
+        'refresh_after_seconds': refresh_after_seconds,
+        'footer_text': MatchingService.get_footer_text()
     })
 
 

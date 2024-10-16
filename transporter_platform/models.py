@@ -1,6 +1,14 @@
 from django.utils.translation import gettext_lazy as _
 from django.db import models
 from django.contrib.auth.models import User
+import random
+
+FOOTER_MESSAGES = [
+    'Winning takes skill. Eating your opponent\'s deck just takes time.',
+    'Stay sloppy.',
+    'If it aint Groke, don\'t flex it.',
+    'They\'re probably stuck in a HOTF game.',
+]
 
 
 class PodPlayer(models.Model):
@@ -94,3 +102,7 @@ class MatchingService():
     def record_match(playerA, playerB):
         PastMatch.objects.create(player=playerA, opponent=playerB)
         PastMatch.objects.create(player=playerB, opponent=playerA)
+
+    @staticmethod
+    def get_footer_text():
+        return random.choice(FOOTER_MESSAGES)

@@ -1,5 +1,9 @@
 {% extends "page-full.html" %}
 
+{% block extra_head %}
+  <meta http-equiv="refresh" content="{{ refresh_after_seconds }}">  
+{% endblock %}
+
 {% block content %}
   <p class="h3">Waiting for an opponent...</p>
   <form class="form-wide" method="POST">
