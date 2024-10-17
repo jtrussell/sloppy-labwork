@@ -194,6 +194,10 @@ footer {
   font-size: 1.5rem;
 }
 
+/* Post helpers */
+.img-left { float: left; margin: 0 1rem 0 0; }
+.img-right { float: right; margin-left: 0 0 0 1rem; }
+
 /* Markdown toc extension */
 .toctitle {
   font-size: 3rem;
