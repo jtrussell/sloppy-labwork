@@ -6,9 +6,13 @@ import random
 FOOTER_MESSAGES = [
     'Winning takes skill. Winning in adaptive takes an appetite.',
     'Stay sloppy.',
-    'If it aint Groke, don\'t Flex it.',
+    'KAGI Baby!',
+    'Please wait. Loading awesome match.',
+    'If it ain\'t Groke, don\'t Flex it.',
     'They\'re probably stuck in a HOTF game.',
-    'YOUR AD HERE',
+    'Ask about our sponsorship opportunities.',
+    'Forge friendships first.',
+    'KFC \'24. I\'m here for the food.',
 ]
 
 
