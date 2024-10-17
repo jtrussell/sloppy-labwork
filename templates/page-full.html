@@ -1,0 +1,75 @@
+{% load static %}
+<!doctype html>
+<html class="no-js" lang="">
+
+<head>
+  <meta charset="utf-8">
+  <title>{%block head_title %}Sloppy Labwork{% endblock %}</title>
+  <meta name="description" content="Resources for the KeyForge community and event organizers">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon-5.0.svg' %}">
+
+  <link href='//fonts.googleapis.com/css?family=Raleway:400,300,600' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="{% static 'css/vendor/skeleton-2.0.4/normalize.css' %}">
+  <link rel="stylesheet" href="{% static 'css/vendor/skeleton-2.0.4/skeleton.css' %}">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  
+  <!--
+  <meta name="theme-color" content="#fafafa">
+  -->
+  {% block extra_head %}
+    <!-- Custom head content -->
+  {% endblock %}
+</head>
+
+<body class="preload">
+  {% block body %}
+  <!--[if IE]>
+    <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience and security.</p>
+  <![endif]-->
+
+  <!-- Add your site or application content here -->
+  <main role="main" class="container stack" style="text-align: center;">
+    {% if messages %}
+    <div class="note">
+      <ul class="note__list">
+        {% for message in messages %}
+        <li>{{message}}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if error_messages %}
+    <div class="note note-danger">
+      <ul class="note__list">
+        {% for message in error_messages %}
+        <li>{{message}}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="stack__spacer"></div>
+
+    {% block content %}
+      <!-- Silence is golden -->
+    {% endblock %}
+
+    <div class="stack__spacer"></div>
+    {% if footer_text %}
+      <span class="text-muted" style="display:inline-block;margin-bottom: 10px;height: 4em;">{{ footer_text }}</span>
+    {% endif %}
+    {% endblock %}
+  </main>
+
+  <script>
+    // Used to avoid CSS animations on the initial load
+    setTimeout(function () {
+      document.querySelector('body').classList.remove('preload')
+    }, 500)
+  </script>
+</body>
+
+</html>

@@ -46,6 +46,12 @@ form.form-inline {
   height: 15rem;
 }
 
+.button-jumbo {
+  display: block;
+  width: 100%;
+  height: 76px;;
+}
+
 input:disabled {
   color: var(--color-text-muted);
 }
