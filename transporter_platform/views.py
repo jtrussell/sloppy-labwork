@@ -4,6 +4,7 @@ from .forms import KagiLivePlayForm, ACTION_CREATE, ACTION_CANCEL, ACTION_RECORD
 from .models import MatchRequest
 from django.http import HttpResponseRedirect
 from datetime import datetime
+from django.utils.safestring import mark_safe
 
 from transporter_platform.models import MatchingService, PodPlayer
 
@@ -19,7 +20,9 @@ def kagi_live(request):
         player = None
 
     if not player:
-        return render(request, 'transporter_platform/page-kagi-live--no-player.html', {})
+        return render(request, 'transporter_platform/page-kagi-live--no-player.html', {
+            'footer_text': mark_safe('<a href="/posts/kagi-live-2024/">&larr; Back to sl dot com</a>')
+        })
 
     try:
         req = MatchRequest.objects.filter(
