@@ -197,6 +197,7 @@ footer {
 /* Post helpers */
 .img-left { float: left; margin: 0 1rem 0 0; }
 .img-right { float: right; margin-left: 0 0 0 1rem; }
+.with-shadow img { box-shadow: 0 0 7px var(--color-primary); }
 
 /* Markdown toc extension */
 .toctitle {
