@@ -68,19 +68,16 @@ def _kagi_live_check_waiting_for_match(request, created_on):
     form = KagiLivePlayForm(initial={'action': ACTION_CANCEL})
 
     time_delta = datetime.now(created_on.tzinfo) - created_on
-    five_minutes = 5 * 60
     ten_minutes = 10 * 60
     one_hour = 60 * 60
     elapsed_seconds = time_delta.total_seconds()
 
     if elapsed_seconds > one_hour:
-        refresh_after_seconds = 10 * 60
+        refresh_after_seconds = 60
     elif elapsed_seconds > ten_minutes:
-        refresh_after_seconds = 5 * 60
-    elif elapsed_seconds > five_minutes:
-        refresh_after_seconds = 1 * 60
-    else:
         refresh_after_seconds = 15
+    else:
+        refresh_after_seconds = 5
 
     return render(request, 'transporter_platform/page-kagi-live--waiting.html', {
         'form': form,
