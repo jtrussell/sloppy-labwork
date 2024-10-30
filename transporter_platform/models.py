@@ -1,7 +1,9 @@
 from django.utils.translation import gettext_lazy as _
 from django.db import models
 from django.contrib.auth.models import User
+from requests import post
 import random
+import os
 
 FOOTER_MESSAGES = [
     'Winning takes skill. Winning in adaptive takes an appetite.',
@@ -89,6 +91,14 @@ class MatchingService():
             request.completed_by = match_with
             match_with.save()
             request.save()
+
+            d1 = player.user.profile.discord_id
+            d2 = match_with.player.user.profile.discord_id
+            print('Got players for match!', d1, d2)
+            if d1 and d2:
+                print(f'Sending webhook for {d1} and {d2}')
+                post(os.environ.get('DISCORD_TP_MATCH_WEBHOOK_URL'), json={
+                     'content': f'Oh my! <@!{d1}> and <@!{d2}> are paired up for KAGI Live :fire:!'})
         except MatchRequest.DoesNotExist:
             pass
 

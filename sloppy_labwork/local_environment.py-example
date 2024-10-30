@@ -23,6 +23,8 @@ os.environ['GA_TRACKING_ID'] = 'UA-XXXXXXXXX-X'
 
 os.environ['DISCORD_BOT_PUBLIC_KEY'] = '0000000000000000000000000000000000000000000000000000000000000000'
 
+os.environ['DISCORD_TP_MATCH_WEBHOOK_URL'] = 'https://discord.com/api/webhooks/XXXXX'
+
 # To add verification photos when developing locally, you'll need to connect to
 # an AWS account v
 os.environ['AWS_ACCESS_KEY_ID'] = '####################'

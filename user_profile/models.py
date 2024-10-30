@@ -16,6 +16,9 @@ class UserProfile(models.Model):
     dok_handle = models.CharField(max_length=255, unique=True,
                                   default=None, blank=True, null=True, verbose_name='DoK handle')
 
+    discord_id = models.IntegerField(default=None, blank=True, null=True,
+                                     verbose_name='Discord ID')
+
     def _get_discord_handle(self):
         discord_data = get_discord_data(self.user)
         return discord_data.get('username') or 'Unknown'
