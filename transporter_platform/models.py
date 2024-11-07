@@ -94,10 +94,14 @@ class MatchingService():
 
             d1 = player.user.profile.discord_id
             d2 = match_with.player.user.profile.discord_id
-            print('Got players for match!', d1, d2)
             if d1 and d2:
-                print(f'Sending webhook for {d1} and {d2}')
-                post(os.environ.get('DISCORD_TP_MATCH_WEBHOOK_URL'), json={
+                if player.pod == PodPlayer.Pod.DIS:
+                    webhook_url = os.environ.get(
+                        'DISCORD_TP_MATCH_WEBHOOK_URL_DIS')
+                else:
+                    webhook_url = os.environ.get(
+                        'DISCORD_TP_MATCH_WEBHOOK_URL_LOGOS')
+                post(webhook_url, json={
                      'content': f'Oh my! <@!{d1}> and <@!{d2}> are paired up for KAGI Live :fire:!'})
         except MatchRequest.DoesNotExist:
             pass
