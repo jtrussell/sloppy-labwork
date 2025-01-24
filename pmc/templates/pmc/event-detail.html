@@ -1,0 +1,29 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+  <h1>{{ object }}</h1>
+  <ul class="card-list">
+    {% for result in object.results.all %}
+      <li class="card">
+        <h2>{{ result.user }}</h2>
+        <ul class="stats-list">
+          <li>
+            <span class="label">Finishing Position</span>
+            <span class="value">{{ result.finishing_position }}</span>
+          </li>
+          <li>
+            <span class="label">Wins</span>
+            <span class="value">{{ result.num_wins }}</span>
+          </li>
+          <li>
+            <span class="label">Losses</span>
+            <span class="value">{{ result.num_losses }}</span>
+          </li>
+        </ul>
+      </li>
+    {% empty %}
+      <li>No results</li>
+    {% endfor %}
+  </ul>
+{% endblock %}
+

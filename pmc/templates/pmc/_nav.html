@@ -1,0 +1,34 @@
+<nav>
+  <div class="container">
+    <ul>
+      {% for link in nav_links %}
+      <li>
+        <a href="{{ link.url }}" {% if link.is_active %}class="active"{% endif %}>{{ link.name }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <select id="responsive-nav-select">
+      {% for link in nav_links %}
+      <option value="{{ link.url }}" {% if link.is_active %}selected{% endif %}>{{ link.name }}</option>
+      {% endfor %}
+    </select>
+    <script>
+        (function () {
+          var pathname = document.location.pathname;
+          var elSelect = document.querySelector('#responsive-nav-select')
+          var navValue = '/'
+          elSelect.childNodes.forEach(function (opt) {
+            if (pathname.indexOf(opt.value) === 0) {
+              navValue = opt.value
+            }
+          })
+          elSelect.value = navValue
+          function slHandleResponsiveNavMenuChange (event) {
+            window.location = event.target.value
+          }
+          elSelect.addEventListener('change', slHandleResponsiveNavMenuChange)
+        }())
+      </script>
+  </div>
+</nav>

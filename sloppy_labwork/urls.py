@@ -31,5 +31,6 @@ urlpatterns = [
     path('tournaments/', include('tournaments.urls')),
     path('redacted/', include('redacted.urls')),
     path('kagi-live/', include('transporter_platform.urls')),
+    path('pmc/', include('pmc.urls')),
     path('admin/', admin.site.urls),
 ]

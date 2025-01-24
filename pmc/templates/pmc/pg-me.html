@@ -1,0 +1,28 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+  <h1>me @ The Playgroup</h1>
+  
+  <p>This is where you'll see your player card and high level stats for recent
+  activity. You'll also find a link to edit your playgroup profile here.</p>
+  
+  <div class="card">
+    <h2>XP Things</h2>
+    <div>It's coming...</div>
+  </div>
+
+  <div class="card">
+    <h2>Achievements and Badges</h2>
+    <div>It's coming...</div>
+  </div>
+
+  <div class="card">
+    <h2>Points Things</h2>
+    <div>It's coming...</div>
+  </div>
+  
+  <div class="card">
+    <h2>Recent Events</h2>
+    <p>You have attended {{ events.count }} events with this group.</p>
+  </div>
+{% endblock %}

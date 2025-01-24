@@ -1,0 +1,287 @@
+:root {
+  --color-bg: #131313;
+  --color-text: #fff;
+  --color-links: #ffb400;
+  --color-primary: #ffb400;
+  --color-accent: #69140E;
+  --border-radius: 10px;
+  --border-radius-sm: 5px;
+  --border-size: 3px;
+  --border-size-sm: 2px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Lexenda', sans-serif;
+  font-size: 12pt;
+  padding: 0;
+}
+
+body {
+  padding-bottom: 20px;
+}
+
+a {
+  color: var(--color-links);
+}
+
+h1 {
+  color: var(--color-primary);
+  font-size: 22pt;
+  font-weight: 600;
+  margin: 30px 0;
+}
+
+h2, h3, h4, h5, h6 {
+  font-weight: 500;
+  margin: 20px 0 10px;
+}
+
+h2 { font-size: 20pt; }
+h3 { font-size: 18pt; }
+h4 { font-size: 16pt; }
+h5 { font-size: 15pt; }
+h6 { font-size: 14pt; }
+
+p { margin: 10px 0; }
+
+ul.bulleted-list {
+  list-style-type: disc;
+  padding-left: 20px;
+}
+
+ul.bulleted-list li {
+  margin-bottom: 3px;
+}
+
+nav {
+  padding: 24px 0 0;
+}
+
+nav ul {
+  display: flex;
+  flex-direction: row;
+  list-style-type: none;
+}
+
+nav select {
+  display: block;
+  width: 100%;
+  border: var(--border-size) solid var(--color-accent);
+}
+
+input,
+select {
+  border: var(--border-size-sm) solid var(--color-accent);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  padding: 6px 10px;
+  border-radius: var(--border-radius-sm);
+}
+
+form > p {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+form > p > label {
+  flex-basis: 120px;
+}
+
+@media (max-width: 680px) {
+  form > p {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+    margin-bottom: 20px;
+  }
+
+  form > p > label {
+    flex-basis: auto;
+  }
+}
+
+form > p > input {
+  flex: 1;
+}
+
+@media (max-width: 680px) {
+  h1 { margin: 20px 0; }
+  h2, h3, h4, h5, h6 { margin: 20px 0 10px; }
+
+  nav {
+    padding: 10px 0 0;
+  }
+
+  nav ul {
+    display: none;
+  }
+}
+
+@media (min-width: 680px) {
+  nav select {
+    display: none;
+  }
+}
+
+nav a {
+  text-transform: uppercase;
+  color: var(--color-text);
+  font-size: 15pt;
+  text-decoration: none;
+}
+
+nav a.active {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+nav li + li::before {
+  content: '•';
+  margin: 0 10px;
+}
+
+.container {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 10px;
+}
+
+.btn {
+  font-size: 10pt;
+  padding: 10px;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: var(--color-text);
+  border: var(--border-size) solid var(--color-accent);
+  background-color: transparent;
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.btn.btn-block {
+  display: block;
+  text-align: center;
+}
+
+.btn.btn-solid {
+  background-color: var(--color-accent);
+}
+
+.card {
+  border: var(--border-size-sm) solid var(--color-primary);
+  border-radius: var(--border-radius);
+  padding: 20px 20px;
+  margin: 20px 0;
+}
+
+.card.card-accent {
+  border-color: var(--color-accent);
+}
+
+.card h2 {
+  margin-top: 10px;
+}
+
+.card .card-actions {
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 5px;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card-list > .card {
+  margin: 0;
+  flex: 1;
+}
+
+.text-primary { color: var(--color-primary); }
+.text-accent { color: var(--color-accent); }
+
+
+.masthead {
+  padding: 10px 0;
+  border-bottom: 3px solid var(--color-accent);
+  font-size: 22px;
+}
+
+.masthead .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wordmark {
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.wordmark .key {
+  color: var(--color-primary);
+}
+
+.is-not-playgroup-staff .staff-only {
+  display: none;
+}
+
+.stats-list {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.stats-list > li {
+  border: var(--border-size-sm) solid var(--color-accent);
+  border-radius: var(--border-radius-sm);
+}
+
+.stats-list .label {
+  background-color: var(--color-accent);
+  font-variant: small-caps;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
+}
+
+.stats-list .label,
+.stats-list .value {
+  display: inline-block;
+  padding: 10px 15px;
+}
+
+@media (max-width: 680px) {
+  .stats-list {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stats-list > li {
+    display: flex;
+  }
+
+  .stats-list .label {
+    flex: 1;
+  }
+
+  .stats-list .value {
+    flex-basis: 30px;
+    text-align: right;
+  }
+}
+
+code {
+  font-family: monospace;
+}

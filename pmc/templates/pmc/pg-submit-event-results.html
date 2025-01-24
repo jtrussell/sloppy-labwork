@@ -1,0 +1,34 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+  <h1>Submit Event Results</h1>
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-solid">
+      Submit
+    </button>
+  </form>
+
+  <h2>Results File Format</h2>
+  <p>
+    Your results file should be in <code>CSV</code> format. I.e. it should be a
+    file with a <code>.csv</code> extension.
+  </p>
+
+  <p>
+    In addition, the file should contain <b>exactly</b> the fields listed below,
+    take care to match both spelling and capitalization:
+  </p>
+  <ul class="bulleted-list">
+    <li><code>user</code> - The username (not nickname) of the player.</li>
+    <li><code>finishing_position</code> - The player's numeric finishing position in the event.</li>
+    <li><code>num_wins - The number of wins attributed to the player in the event.</code></li>
+    <li><code>num_losses - The number of losses attributed to the player </code></li>
+  </ul>
+  <p>
+    Your <code>CSV</code> file must include a header row with each of the above
+    names. However you may report an empty value for any of these fields other
+    than <code>user</code>.
+  </p>
+{% endblock %}

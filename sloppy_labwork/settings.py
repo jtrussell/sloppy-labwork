@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'tournaments',
     'redacted',
     'transporter_platform',
+    'pmc',
 ]
 
 MIDDLEWARE = [
@@ -94,6 +95,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'sloppy_labwork.context_processors.feature_flags',
                 'sloppy_labwork.context_processors.teammate_authorized',
+                'pmc.context_processors.nav_links',
+                'pmc.context_processors.playgroup',
+                'pmc.context_processors.playgroup_member',
             ],
         },
     },

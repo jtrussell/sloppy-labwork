@@ -1,0 +1,22 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+	<h1>Members</h1>
+	<ul class="card-list">
+		{% for member in members %}
+			<li class="card">
+				<h2>{{ member }}</h2>
+				<div>
+					Possibly the best player yet.
+				</div>
+				<div class="card-actions">
+					<a class="btn btn-solid" href="{% url 'pmc-pg-member-detail' playgroup.slug member.user.username %}">
+						Profile
+					</a>
+				</div>
+			</li>
+		{% empty %}
+			<li>No members yet.</li>
+		{% endfor %}
+	</ul>
+{% endblock %}
