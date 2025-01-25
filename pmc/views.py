@@ -1,6 +1,8 @@
 import csv
 from django.db import transaction
 from django.http import HttpResponse
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 from django.views import generic
 from django.shortcuts import render
 from django.utils.decorators import method_decorator
@@ -131,6 +133,7 @@ def playgroup_leaderboard(request, slug):
 @is_pg_staff
 @transaction.atomic
 def submit_event_results(request, slug):
+    form_errors = []
     if request.method == 'POST':
         form = EventForm(request.POST, request.FILES)
         if form.is_valid():
@@ -150,18 +153,25 @@ def submit_event_results(request, slug):
                         **row
                     ))
                 except User.DoesNotExist:
-                    pass
-            EventResult.objects.bulk_create(event_results)
-            PlaygroupEvent.objects.create(
-                playgroup=Playgroup.objects.get(slug=slug),
-                event=event
-            )
+                    form_errors.append(f'No such user: {username}')
+
+            if not form_errors:
+                EventResult.objects.bulk_create(event_results)
+                PlaygroupEvent.objects.create(
+                    playgroup=Playgroup.objects.get(slug=slug),
+                    event=event
+                )
+                return HttpResponseRedirect(reverse('pmc-event-detail', kwargs={
+                    'slug': slug,
+                    'pk': event.id,
+                }))
 
         else:
             print(form.errors)
     else:
         form = EventForm()
     return render(request, 'pmc/pg-submit-event-results.html', {
+        'form_errors': form_errors,
         'form': form,
     })
 

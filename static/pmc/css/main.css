@@ -4,6 +4,9 @@
   --color-links: #ffb400;
   --color-primary: #ffb400;
   --color-accent: #69140E;
+  --color-success: #2BC98A;
+  --color-warning: #FFE870;
+  --color-danger: #FF7474;
   --border-radius: 10px;
   --border-radius-sm: 5px;
   --border-size: 3px;
@@ -54,10 +57,15 @@ p { margin: 10px 0; }
 ul.bulleted-list {
   list-style-type: disc;
   padding-left: 20px;
+  margin: 10px 0;;
 }
 
 ul.bulleted-list li {
   margin-bottom: 3px;
+}
+
+ul.error-list li {
+  color: var(--color-danger);
 }
 
 nav {
