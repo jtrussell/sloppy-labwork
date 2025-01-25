@@ -23,7 +23,8 @@ class PlaygroupMember(models.Model):
     playgroup = models.ForeignKey(
         Playgroup, on_delete=models.CASCADE, related_name='members')
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
-    nickname = models.SlugField(max_length=100)
+    nickname = models.CharField(
+        max_length=100, default=None, null=True, blank=True)
     joined_on = models.DateTimeField(auto_now_add=True)
     is_staff = models.BooleanField(default=False)
 

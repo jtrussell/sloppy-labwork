@@ -94,3 +94,10 @@ def _kagi_live_matched(request, matched_with):
         'cancel_form': cancel_form,
         'record_form': record_form
     })
+
+
+def sync_matches_played(request):
+    # list of tuples from google sheets
+    handle_pairs = []
+    for handleA, handleB in handle_pairs:
+        MatchingService.record_match_by_handles(handleA, handleB)
