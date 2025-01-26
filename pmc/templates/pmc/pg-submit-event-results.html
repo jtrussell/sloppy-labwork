@@ -4,10 +4,10 @@
   <h1>Submit Event Results</h1>
 
   {% if form_errors %}
-  <div class="card">
-    <h2>Ooops!</h2>
+  <div class="card card-danger">
+    <h2>Ooops...</h2>
     That didn't quite work. Check the issues below and try again.
-    <ul class="bulleted-list error-list">
+    <ul class="bulleted-list">
       {% for msg in form_errors %}
       <li>{{ msg }}</li>
       {% endfor %}

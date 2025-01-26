@@ -7,6 +7,7 @@ from django.views import generic
 from django.shortcuts import render
 from django.utils.decorators import method_decorator
 from django.contrib.auth import get_user_model
+from django.contrib import messages
 from pmc.forms import EventForm
 from .models import EventResult, Playgroup, PlaygroupEvent
 from .models import PlaygroupMember
@@ -140,20 +141,28 @@ def submit_event_results(request, slug):
             csv_file = form.cleaned_data['results_file']
             decoded_file = csv_file.read().decode('utf-8')
             reader = csv.DictReader(decoded_file.splitlines())
-            event = form.save()
-            User = get_user_model()
-            event_results = []
-            for row in reader:
-                username = row.pop('user')
-                try:
-                    user = User.objects.get(username=username)
-                    event_results.append(EventResult(
-                        user=user,
-                        event=event,
-                        **row
-                    ))
-                except User.DoesNotExist:
-                    form_errors.append(f'No such user: {username}')
+            required__headers = [
+                'user', 'finishing_position', 'num_wins', 'num_losses']
+            if set(reader.fieldnames) != set(required__headers):
+                form_errors.append(
+                    f'Your results file should include exactly the headers: {
+                        ', '.join(required__headers)}'
+                )
+            else:
+                event = form.save()
+                User = get_user_model()
+                event_results = []
+                for row in reader:
+                    username = row.pop('user')
+                    try:
+                        user = User.objects.get(username=username)
+                        event_results.append(EventResult(
+                            user=user,
+                            event=event,
+                            **row
+                        ))
+                    except User.DoesNotExist:
+                        form_errors.append(f'No such user: {username}')
 
             if not form_errors:
                 EventResult.objects.bulk_create(event_results)

@@ -64,10 +64,6 @@ ul.bulleted-list li {
   margin-bottom: 3px;
 }
 
-ul.error-list li {
-  color: var(--color-danger);
-}
-
 nav {
   padding: 24px 0 0;
 }
@@ -195,6 +191,8 @@ nav li + li::before {
 .card.card-accent {
   border-color: var(--color-accent);
 }
+
+.card-danger { border-color: var(--color-danger); }
 
 .card h2 {
   margin-top: 10px;
