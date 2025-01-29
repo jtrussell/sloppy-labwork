@@ -5,10 +5,11 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.views import generic
 from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.contrib.auth import get_user_model
-from django.contrib import messages
 from pmc.forms import EventForm
+from pmc.forms import PlaygroupMemberForm
 from .models import EventResult, Playgroup, PlaygroupEvent
 from .models import PlaygroupMember
 from .models import Event
@@ -60,7 +61,22 @@ def my_playgroup_profile(request, slug):
 
 @is_pg_member
 def manage_my_playgroup_profile(request, slug):
+    member = get_object_or_404(
+        PlaygroupMember,
+        playgroup__slug=slug,
+        user__username=request.user.username
+    )
+    if request.method == 'POST':
+        form = PlaygroupMemberForm(request.POST, instance=member)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse('pmc-my-pg', kwargs={'slug': slug}))
+
+    else:
+        form = PlaygroupMemberForm(instance=member)
+
     return render(request, 'pmc/pg-me-manage.html', {
+        'form': form,
         'slug': slug,
     })
 
@@ -127,10 +143,6 @@ def playgroup_leaderboard(request, slug):
     return render(request, 'pmc/pg-leaderboard.html', {'slug': slug})
 
 
-# Leaving some big TODO items here:
-#  - Error handling for when a user is not found
-#  - Need to think through how we allow users in the results that don't belong
-#    an associated PG.
 @is_pg_staff
 @transaction.atomic
 def submit_event_results(request, slug):
