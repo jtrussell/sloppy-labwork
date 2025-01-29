@@ -63,12 +63,18 @@ def nav_links(request):
 
 def playgroup(request):
     playgroup_slug = _get_playgroup_slug(request)
-    return {'playgroup': Playgroup.objects.get(slug=playgroup_slug)} if playgroup_slug else {}
+    try:
+        return {'playgroup': Playgroup.objects.get(slug=playgroup_slug)} if playgroup_slug else {}
+    except Playgroup.DoesNotExist:
+        return {}
 
 
 def playgroup_member(request):
     playgroup_slug = _get_playgroup_slug(request)
-    return {'playgroup_member': PlaygroupMember.objects.get(
-        playgroup__slug=playgroup_slug,
-        user=request.user
-    )} if playgroup_slug and request.user else {}
+    try:
+        return {'playgroup_member': PlaygroupMember.objects.get(
+            playgroup__slug=playgroup_slug,
+            user=request.user
+        )} if playgroup_slug and request.user else {}
+    except PlaygroupMember.DoesNotExist:
+        return {}
