@@ -7,7 +7,7 @@
 			<li class="card house-flair house-flair-{{member.house_flair}}">
 				<h2>{{ member }}</h2>
 				<div>
-					<em>{{ member.tagline }}</em>
+					<em>{{ member.tagline | default:"Silence is golden." }}</em>
 				</div>
 				<div class="card-actions">
 					<a class="btn btn-solid" href="{% url 'pmc-pg-member-detail' playgroup.slug member.user.username %}">

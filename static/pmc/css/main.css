@@ -75,9 +75,14 @@ nav ul {
 }
 
 nav select {
+  height: 38px;
   display: block;
   width: 100%;
+  white-space: nowrap;
   border: var(--border-size) solid var(--color-accent);
+  box-shadow: none;
+  box-sizing: border-box;
+  margin: 10px 0;
 }
 
 input,
@@ -250,6 +255,7 @@ nav li + li::before {
   display: flex;
   flex-direction: row;
   gap: 10px;
+  font-size: smaller;
 }
 
 .stats-list > li {
@@ -266,7 +272,7 @@ nav li + li::before {
 .stats-list .label,
 .stats-list .value {
   display: inline-block;
-  padding: 10px 15px;
+  padding: 7px 15px;
 }
 
 @media (max-width: 680px) {

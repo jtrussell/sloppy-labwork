@@ -1,14 +1,15 @@
 {% extends "pmc/_base.html" %}
 
 {% block content %}
-  <h1>me @ {{ playgroup }}</h1>
+  <h1>{{ playgroup_member }} @ {{ playgroup }}</h1>
 
   <div class="card">
     <h2>My Profile</h2>
     <p>
       Nickname: {{ playgroup_member.nickname }}<br />
       House Flair: {{ playgroup_member.get_house_flair_display }}<br />
-      Tagline: {{ playgroup_member.tagline }}
+      Tagline: {{ playgroup_member.tagline }}<br />
+      Member Since: {{ playgroup_member.joined_on }}
     </p>
     <div class="card-actions">
       <a href="{% url 'pmc-my-pg-manage' playgroup.slug %}" class="btn btn-solid">
@@ -17,16 +18,6 @@
     </div>
   </div>
 
-  <div class="card">
-    <h2>Achievements and Badges</h2>
-    <div>It's coming...</div>
-  </div>
-
-  <div class="card">
-    <h2>Points Things</h2>
-    <div>It's coming...</div>
-  </div>
-  
   <div class="card">
     <h2>Recent Events</h2>
     <p>You have attended {{ events.count }} events with this group.</p>
