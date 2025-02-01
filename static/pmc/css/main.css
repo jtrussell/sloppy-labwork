@@ -75,9 +75,14 @@ nav ul {
 }
 
 nav select {
+  height: 38px;
   display: block;
   width: 100%;
+  white-space: nowrap;
   border: var(--border-size) solid var(--color-accent);
+  box-shadow: none;
+  box-sizing: border-box;
+  margin: 10px 0;
 }
 
 input,
@@ -113,7 +118,8 @@ form > p > label {
   }
 }
 
-form > p > input {
+form > p > input,
+form > p > select {
   flex: 1;
 }
 
@@ -249,6 +255,7 @@ nav li + li::before {
   display: flex;
   flex-direction: row;
   gap: 10px;
+  font-size: smaller;
 }
 
 .stats-list > li {
@@ -265,7 +272,7 @@ nav li + li::before {
 .stats-list .label,
 .stats-list .value {
   display: inline-block;
-  padding: 10px 15px;
+  padding: 7px 15px;
 }
 
 @media (max-width: 680px) {
@@ -291,3 +298,53 @@ nav li + li::before {
 code {
   font-family: monospace;
 }
+
+em {
+  font-style: italic;
+}
+
+/* ***********************************
+ * House Flair
+ * *********************************** */
+.card.house-flair {
+  position: relative;
+}
+.card.house-flair-1 { border-color: #F16525; }
+.card.house-flair-2 { border-color: #AF1A50; }
+.card.house-flair-3 { border-color: #D4A036; }
+.card.house-flair-4 { border-color: #723F98; }
+.card.house-flair-5 { border-color: #0EB7E4; }
+.card.house-flair-6 { border-color: #68BD46; }
+.card.house-flair-7 { border-color: #D54048; }
+.card.house-flair-8 { border-color: #3E5DAA; }
+.card.house-flair-9 { border-color: #46BCCD; }
+.card.house-flair-10 { border-color: #1A172C; }
+.card.house-flair-11 { border-color: #0F5D96; }
+.card.house-flair-12 { border-color: #F29423; }
+.card.house-flair-13 { border-color: #3C4C91; }
+.card.house-flair-14 { border-color: #006840; }
+.card.house-flair::before {
+  content: "";
+  display: block;
+  height: 50px;
+  width: 50px;
+  position: absolute;
+  top: -15px;
+  left: -25px;
+  background-size: cover;
+}
+
+.card.house-flair-1::before { background-image: url('https://static.sloppylabwork.com/house-icons/brobnar.png'); }
+.card.house-flair-2::before { background-image: url('https://static.sloppylabwork.com/house-icons/dis.png'); }
+.card.house-flair-3::before { background-image: url('https://static.sloppylabwork.com/house-icons/ekwidon.png'); }
+.card.house-flair-4::before { background-image: url('https://static.sloppylabwork.com/house-icons/geistoid.png'); }
+.card.house-flair-5::before { background-image: url('https://static.sloppylabwork.com/house-icons/logos.png'); }
+.card.house-flair-6::before { background-image: url('https://static.sloppylabwork.com/house-icons/mars.png'); }
+.card.house-flair-7::before { background-image: url('https://static.sloppylabwork.com/house-icons/redemption.png'); }
+.card.house-flair-8::before { background-image: url('https://static.sloppylabwork.com/house-icons/sanctum.png'); }
+.card.house-flair-9::before { background-image: url('https://static.sloppylabwork.com/house-icons/saurian.png'); }
+.card.house-flair-10::before { background-image: url('https://static.sloppylabwork.com/house-icons/shadows.png'); }
+.card.house-flair-11::before { background-image: url('https://static.sloppylabwork.com/house-icons/skyborn.png'); }
+.card.house-flair-12::before { background-image: url('https://static.sloppylabwork.com/house-icons/staralliance.png'); }
+.card.house-flair-13::before { background-image: url('https://static.sloppylabwork.com/house-icons/unfathomable.png'); }
+.card.house-flair-14::before { background-image: url('https://static.sloppylabwork.com/house-icons/untamed.png'); }

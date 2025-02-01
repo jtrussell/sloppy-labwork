@@ -1,6 +1,8 @@
+from random import choice
 from django.db import models
 from django.db.models import UniqueConstraint
 from datetime import date
+from django.utils.translation import gettext_lazy as _
 
 
 class Playgroup(models.Model):
@@ -20,6 +22,22 @@ class Playgroup(models.Model):
 
 
 class PlaygroupMember(models.Model):
+    class FlairOptions(models.IntegerChoices):
+        BROBNAR = (1, _('Brobnar'))
+        DIS = (2, _('Dis'))
+        EKWIDON = (3, _('Ekwidon'))
+        GEISTOID = (4, _('Geistoid'))
+        LOGOS = (5, _('Logos'))
+        MARS = (6, _('Mars'))
+        REDEMPTION = (7, _('Redemption'))
+        SANCTUM = (8, _('Sanctum'))
+        SAURIAN = (9, _('Saurian'))
+        SHADOWS = (10, _('Shadows'))
+        SKYBORN = (11, _('Skyborn'))
+        STAR_ALLIANCE = (12, _('Star Alliance'))
+        UNFATHOMABLE = (13, _('Unfathomable'))
+        UNTAMED = (14, _('Untamed'))
+
     playgroup = models.ForeignKey(
         Playgroup, on_delete=models.CASCADE, related_name='members')
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
@@ -27,6 +45,10 @@ class PlaygroupMember(models.Model):
         max_length=100, default=None, null=True, blank=True)
     joined_on = models.DateTimeField(auto_now_add=True)
     is_staff = models.BooleanField(default=False)
+    house_flair = models.IntegerField(
+        choices=FlairOptions.choices, default=None, null=True, blank=True)
+    tagline = models.CharField(
+        max_length=100, default=None, null=True, blank=True)
 
     class Meta:
         constraints = [

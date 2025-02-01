@@ -1,26 +1,23 @@
 {% extends "pmc/_base.html" %}
 
 {% block content %}
-  <h1>me @ The Playgroup</h1>
-  
-  <p>This is where you'll see your player card and high level stats for recent
-  activity. You'll also find a link to edit your playgroup profile here.</p>
-  
-  <div class="card">
-    <h2>XP Things</h2>
-    <div>It's coming...</div>
-  </div>
+  <h1>{{ playgroup_member }} @ {{ playgroup }}</h1>
 
   <div class="card">
-    <h2>Achievements and Badges</h2>
-    <div>It's coming...</div>
+    <h2>My Profile</h2>
+    <p>
+      Nickname: {{ playgroup_member.nickname }}<br />
+      House Flair: {{ playgroup_member.get_house_flair_display }}<br />
+      Tagline: {{ playgroup_member.tagline }}<br />
+      Member Since: {{ playgroup_member.joined_on }}
+    </p>
+    <div class="card-actions">
+      <a href="{% url 'pmc-my-pg-manage' playgroup.slug %}" class="btn btn-solid">
+        Edit
+      </a>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Points Things</h2>
-    <div>It's coming...</div>
-  </div>
-  
   <div class="card">
     <h2>Recent Events</h2>
     <p>You have attended {{ events.count }} events with this group.</p>

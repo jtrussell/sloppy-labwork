@@ -1,5 +1,6 @@
 from django import forms
-from .models import Event
+from .models import Event, Playgroup
+from .models import PlaygroupMember
 
 
 class EventForm(forms.ModelForm):
@@ -21,3 +22,9 @@ class EventForm(forms.ModelForm):
     def save(self, commit=True):
         event = super(EventForm, self).save(commit=commit)
         return event
+
+
+class PlaygroupMemberForm(forms.ModelForm):
+    class Meta:
+        model = PlaygroupMember
+        fields = ('nickname', 'house_flair', 'tagline',)
