@@ -207,3 +207,7 @@ def submit_event_results(request, slug):
 @login_required
 def event_manage(request, pk):
     return render(request, 'pmc/event-manage.html', {'pk': pk})
+
+
+def typography(request):
+    return render(request, 'pmc/typography.html')

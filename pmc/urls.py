@@ -22,4 +22,5 @@ urlpatterns = [
          views.EventDetail.as_view(), name='pmc-event-detail'),
     path('pg/<slug:slug>/events/<int:pk>/manage',
          views.event_manage, name='pmc-event-manage'),
+    path('typography', views.typography),
 ]

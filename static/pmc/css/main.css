@@ -6,11 +6,14 @@
   --color-accent: #69140E;
   --color-success: #2BC98A;
   --color-warning: #FFE870;
+  --color-lines: #2B2B2B;
   --color-danger: #FF7474;
   --border-radius: 10px;
   --border-radius-sm: 5px;
   --border-size: 3px;
   --border-size-sm: 2px;
+  --gradient-primary: linear-gradient(#FFB400, #FFF200, #FFB400);
+  --gradient-accent: none;
 }
 
 * {
@@ -22,7 +25,8 @@ body {
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: 'Lexenda', sans-serif;
-  font-size: 12pt;
+  font-size: 16px;
+  line-height: 24px;
   padding: 0;
 }
 
@@ -38,12 +42,13 @@ h1 {
   color: var(--color-primary);
   font-size: 22pt;
   font-weight: 600;
-  margin: 30px 0;
+  margin: 40px 0;
+  font-variant: small-caps;
 }
 
 h2, h3, h4, h5, h6 {
   font-weight: 500;
-  margin: 20px 0 10px;
+  margin: 30px 0 15px;
 }
 
 h2 { font-size: 20pt; }
@@ -52,7 +57,8 @@ h4 { font-size: 16pt; }
 h5 { font-size: 15pt; }
 h6 { font-size: 14pt; }
 
-p { margin: 10px 0; }
+
+p { margin: 14px 0; }
 
 ul.bulleted-list {
   list-style-type: disc;
@@ -79,7 +85,7 @@ nav select {
   display: block;
   width: 100%;
   white-space: nowrap;
-  border: var(--border-size) solid var(--color-accent);
+  border: var(--border-size) solid var(--color-primary);
   box-shadow: none;
   box-sizing: border-box;
   margin: 10px 0;
@@ -87,7 +93,7 @@ nav select {
 
 input,
 select {
-  border: var(--border-size-sm) solid var(--color-accent);
+  border: var(--border-size-sm) solid var(--color-primary);
   background-color: var(--color-bg);
   color: var(--color-text);
   padding: 6px 10px;
@@ -165,26 +171,68 @@ nav li + li::before {
   padding: 0 10px;
 }
 
+/* ***********************************
+ * Buttons
+ * *********************************** */
+
 .btn {
   font-size: 10pt;
+  line-height: 18px;
   padding: 10px;
   text-transform: uppercase;
   cursor: pointer;
   color: var(--color-text);
-  border: var(--border-size) solid var(--color-accent);
+  border: var(--border-size) solid var(--color-primary);
   background-color: transparent;
   border-radius: var(--border-radius-sm);
   font-weight: 600;
   text-decoration: none;
 }
 
+.btn.btn-solid {
+  background-color: var(--color-primary);
+  background-image: var(--gradient-primary);
+  color: var(--color-bg);
+}
+
+.btn.btn-accent {
+  background-color: var(--color-accent);
+  background-image: var(--gradient-accent);
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
 .btn.btn-block {
   display: block;
   text-align: center;
+  width: 100%;;
 }
 
-.btn.btn-solid {
+.btn.btn-accent.btn-solid {
   background-color: var(--color-accent);
+}
+
+.btn-group {
+  margin: 20px 0;
+  display: flex;
+}
+
+.btn-group-center {
+  justify-content: center;
+}
+
+.btn-group .btn:not(:first-child) {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.btn-group .btn:not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.btn-group .btn + .btn {
+  margin-left: calc(0px - var(--border-size));
 }
 
 .card {
@@ -200,7 +248,12 @@ nav li + li::before {
 
 .card-danger { border-color: var(--color-danger); }
 
-.card h2 {
+.card h1,
+.card h2,
+.card h3,
+.card h4,
+.card h5,
+.card h6 {
   margin-top: 10px;
 }
 
@@ -348,3 +401,43 @@ em {
 .card.house-flair-12::before { background-image: url('https://static.sloppylabwork.com/house-icons/staralliance.png'); }
 .card.house-flair-13::before { background-image: url('https://static.sloppylabwork.com/house-icons/unfathomable.png'); }
 .card.house-flair-14::before { background-image: url('https://static.sloppylabwork.com/house-icons/untamed.png'); }
+
+/* ***********************************
+ * Tables
+ * *********************************** */
+table {
+  width: 100%;
+}
+
+tr > * {
+  padding: 5px;
+  text-align: right;
+}
+
+tr > th {
+  font-weight: bold;
+  padding-top: 20px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--color-lines);
+}
+
+tr:not(:last-child) > td {
+  border-bottom: 1px solid var(--color-lines);
+}
+
+tr > *:first-child {
+  text-align: left;
+  padding-left: 20px;
+}
+
+tr > *:last-child {
+  padding-right: 20px;
+}
+
+tr:first-child > * {
+  padding-top: 10px;
+}
+
+tr:last-child > td {
+  padding-bottom: 20px;
+}
