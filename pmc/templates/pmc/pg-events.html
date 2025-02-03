@@ -2,6 +2,14 @@
 
 {% block content %}
 	<h1>Events</h1>
+
+	<div class="card card-accent staff-only">
+		<h2>Staff Area</h2>
+		<a class="btn btn-accent btn-solid btn-block" href="{% url 'pmc-pg-events-new' view.kwargs.slug %}">
+			Submit Event Data
+		</a>
+	</div>
+
 	<ul class="card-list">
 		{% for event in events %}
 			<li class="card">
@@ -19,11 +27,4 @@
 			<li>No events yet.</li>
 		{% endfor %}
 	</ul>
-
-	<div class="card card-accent staff-only">
-		<h2>Staff Area</h2>
-		<a class="btn btn-accent btn-solid btn-block" href="{% url 'pmc-pg-events-new' view.kwargs.slug %}">
-			Submit Event Data
-		</a>
-	</div>
 {% endblock %}

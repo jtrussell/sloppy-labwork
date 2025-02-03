@@ -2,6 +2,19 @@
 
 {% block content %}
   <h1>{{ object }}</h1>
+  
+	<div class="card card-accent staff-only">
+		<h2>Staff Area</h2>
+    <div class="card-actions">
+
+      <!-- form for event points -->
+      <button class="btn btn-accent">
+        Assign Points
+      </button>
+    </div>
+		</a>
+	</div>
+
   <ul class="card-list">
     {% for result in object.results.all %}
       <li class="card">

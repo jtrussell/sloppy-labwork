@@ -97,3 +97,27 @@ class EventResult(models.Model):
 
     class Meta:
         ordering = ('finishing_position', '-num_wins', 'num_losses',)
+
+
+class LeaderboardPointsLookup(models.Model):
+    pass
+
+
+class LeaderboardPoints(models.Model):
+    pass
+
+
+class LeaderboardSeason(models.Model):
+    pass
+
+
+class LeaderboardPeriod(models.Model):
+    pass
+
+
+class Leaderboard(models.Model):
+    pass
+
+
+class LeaderboardRank(models.Model):
+    pass

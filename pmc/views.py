@@ -211,3 +211,9 @@ def event_manage(request, pk):
 
 def typography(request):
     return render(request, 'pmc/typography.html')
+
+
+@login_required
+@is_pg_staff
+def assign_event_points(request, slug, pk):
+    pass
