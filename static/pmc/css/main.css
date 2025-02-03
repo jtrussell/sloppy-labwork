@@ -18,6 +18,7 @@
 
 * {
   box-sizing: border-box;
+  transition: all 0.3s ease-in-out;
 }
 
 html,
@@ -160,6 +161,10 @@ nav a.active {
   font-weight: 600;
 }
 
+nav a:hover {
+  text-shadow: 0 0 3px var(--color-primary);
+}
+
 nav li + li::before {
   content: '•';
   margin: 0 10px;
@@ -176,8 +181,8 @@ nav li + li::before {
  * *********************************** */
 
 .btn {
-  font-size: 10pt;
-  line-height: 18px;
+  font-size: 16px;
+  line-height: 16px;
   padding: 10px;
   text-transform: uppercase;
   cursor: pointer;
@@ -200,6 +205,15 @@ nav li + li::before {
   background-image: var(--gradient-accent);
   border-color: var(--color-accent);
   color: var(--color-text);
+}
+
+
+.btn:hover {
+  box-shadow: 0 0 7px var(--color-primary);
+}
+
+.btn.btn-accent:hover {
+  box-shadow: 0 0 7px var(--color-accent);
 }
 
 .btn.btn-block {
