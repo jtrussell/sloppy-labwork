@@ -58,6 +58,26 @@ h4 { font-size: 16pt; }
 h5 { font-size: 15pt; }
 h6 { font-size: 14pt; }
 
+h1 + .subheading {
+  margin-top: -30px;
+  margin-bottom: 30px;
+  text-transform: uppercase;
+  font-size: 12px;
+  line-height: 12px;
+}
+
+h2 + .subheading,
+h3 + .subheading,
+h4 + .subheading,
+h5 + .subheading,
+h6 + .subheading {
+  font-size: 12px;
+  line-height: 12px;
+  margin-top: -5px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
 
 p { margin: 14px 0; }
 
@@ -424,19 +444,19 @@ table {
 }
 
 tr > * {
-  padding: 5px;
+  padding: 12px 5px;
   text-align: right;
 }
 
 tr > th {
-  font-weight: bold;
+  font-weight: 700;
   padding-top: 20px;
   padding-bottom: 10px;
   border-bottom: 3px solid var(--color-lines);
 }
 
 tr:not(:last-child) > td {
-  border-bottom: 1px solid var(--color-lines);
+  border-bottom: 2px solid var(--color-lines);
 }
 
 tr > *:first-child {
