@@ -489,3 +489,17 @@ tr:first-child > * {
 tr:last-child > td {
   padding-bottom: 20px;
 }
+
+
+/* ***********************************
+ * Messages
+ * *********************************** */
+ul.messages {
+  li {
+    padding: 20px;
+    margin: 10px 0;
+    border-radius: var(--border-radius-sm);
+    background-color: var(--color-primary);
+    color: var(--color-bg);
+  }
+}

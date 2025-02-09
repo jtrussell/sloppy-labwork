@@ -10,6 +10,7 @@ class EventForm(forms.ModelForm):
     format = forms.ModelChoiceField(
         queryset=EventFormat.objects.all(),
         empty_label=_('Other'),
+        required=False
     )
 
     class Meta:

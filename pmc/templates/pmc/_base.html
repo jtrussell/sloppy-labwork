@@ -37,12 +37,21 @@
 
 	{% include 'pmc/_nav.html' %}
 
+	{% if messages %}
+	<ul class="messages container">
+			{% for message in messages %}
+			<li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+					{{ message }}
+			</li>
+			{% endfor %}
+	</ul>
+	{% endif %}
+
 	<div class="container">
 		{% block content %}
 			<!-- Silence is golden -->
 		{% endblock %}
 	</div>
 
-	<!-- JS -->
 </body>
 </html>

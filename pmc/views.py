@@ -7,8 +7,10 @@ from django.views import generic
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.forms import EventForm
@@ -153,6 +155,7 @@ def delete_event(request, slug, pk):
     event = get_object_or_404(Event, pk=pk)
     # TODO - ensure that the event is associated with the playgroup
     event.delete()
+    messages.success(request, _('Event deleted.'))
     return HttpResponseRedirect(reverse('pmc-pg-events', kwargs={'slug': slug}))
 
 
@@ -211,6 +214,8 @@ def submit_event_results(request, slug):
                     playgroup=Playgroup.objects.get(slug=slug),
                     event=event
                 )
+
+                messages.success(request, _('Event results added.'))
                 return HttpResponseRedirect(reverse('pmc-event-detail', kwargs={
                     'slug': slug,
                     'pk': event.id,
