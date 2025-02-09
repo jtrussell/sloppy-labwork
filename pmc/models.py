@@ -85,8 +85,11 @@ class Event(models.Model):
     class Meta:
         ordering = ('-start_date',)
 
+    def get_player_count(self):
+        return self.player_count or self.results.count()
+
     def __str__(self):
-        return f'{self.name} ({self.start_date})'
+        return f'{self.name}'
 
 
 class PlaygroupEvent(models.Model):

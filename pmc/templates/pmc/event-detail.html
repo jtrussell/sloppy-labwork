@@ -2,6 +2,15 @@
 
 {% block content %}
   <h1>{{ object }}</h1>
+  <div class="subheading">
+    <ul class="inline-list">
+      <li>{{ object.start_date }}</li>
+      <li>{{ object.get_player_count }} Players</li>
+      {% if object.format is not None %}
+      <li>{{ object.format }}</li>
+      {% endif %}
+    </ul>
+  </div>
   
 	<div class="card card-accent staff-only">
 		<h2>Staff Area</h2>

@@ -66,6 +66,10 @@ h1 + .subheading {
   line-height: 12px;
 }
 
+@media (max-width: 680px) {
+  h1 + .subheading { margin-top: -15px }
+}
+
 h2 + .subheading,
 h3 + .subheading,
 h4 + .subheading,
@@ -84,7 +88,7 @@ p { margin: 14px 0; }
 ul.bulleted-list {
   list-style-type: disc;
   padding-left: 20px;
-  margin: 10px 0;;
+  margin: 10px 0;
 }
 
 ul.bulleted-list li {
@@ -387,6 +391,17 @@ code {
 
 em {
   font-style: italic;
+}
+
+ul.inline-list {
+  display: flex;
+  flex-direction: row;
+  list-style-type: none;
+}
+
+ul.inline-list li + li::before {
+  content: '•';
+  margin: 0 10px;
 }
 
 /* ***********************************
