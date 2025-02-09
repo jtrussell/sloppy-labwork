@@ -1,15 +1,20 @@
 from django import forms
 from .models import Event
 from .models import PlaygroupMember
+from .models import EventFormat
 from django.utils.translation import gettext_lazy as _
 
 
 class EventForm(forms.ModelForm):
     results_file = forms.FileField(required=True)
+    format = forms.ModelChoiceField(
+        queryset=EventFormat.objects.all(),
+        empty_label=_('Other'),
+    )
 
     class Meta:
         model = Event
-        fields = ('name', 'start_date', 'player_count')
+        fields = ('name', 'start_date', 'format', 'player_count')
         labels = {
             'name': _('Event Name'),
             'start_date': _('Event Date'),

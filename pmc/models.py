@@ -64,11 +64,23 @@ class PlaygroupMember(models.Model):
         return f'{self.nickname} ({self.user.username})' if self.nickname else self.user.username
 
 
+class EventFormat(models.Model):
+    name = models.CharField(max_length=200)
+
+    class Meta:
+        ordering = ('name',)
+
+    def __str__(self):
+        return self.name
+
+
 class Event(models.Model):
     name = models.CharField(max_length=200)
     start_date = models.DateField(default=date.today)
     player_count = models.SmallIntegerField(
         default=None, null=True, blank=True)
+    format = models.ForeignKey(EventFormat, on_delete=models.SET_NULL,
+                               related_name='events', default=None, null=True, blank=True)
 
     class Meta:
         ordering = ('-start_date',)

@@ -4,6 +4,7 @@ from .models import PlaygroupMember
 from .models import Event
 from .models import EventResult
 from .models import RankingPoints
+from .models import EventFormat
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -43,9 +44,16 @@ class RankingPointsAdmin(admin.ModelAdmin):
     list_filter = ('result__event',)
 
 
+class EventFormatAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ['name']
+    list_filter = ('name',)
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
 admin.site.register(EventResult, EventResultAdmin)
 admin.site.register(RankingPointsMap, RankingPointsMapAdmin)
 admin.site.register(RankingPoints, RankingPointsAdmin)
+admin.site.register(EventFormat, EventFormatAdmin)
