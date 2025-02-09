@@ -207,7 +207,7 @@ nav li + li::before {
   text-transform: uppercase;
   cursor: pointer;
   color: var(--color-text);
-  border: var(--border-size) solid var(--color-primary);
+  border: var(--border-size-sm) solid var(--color-primary);
   background-color: transparent;
   border-radius: var(--border-radius-sm);
   font-weight: 600;
@@ -221,7 +221,6 @@ nav li + li::before {
 }
 
 .btn.btn-accent {
-  background-color: var(--color-accent);
   background-image: var(--gradient-accent);
   border-color: var(--color-accent);
   color: var(--color-text);

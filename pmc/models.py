@@ -1,4 +1,6 @@
+from math import e
 from random import choice
+from tabnanny import verbose
 from django.db import models
 from django.db.models import UniqueConstraint
 from datetime import date
@@ -65,6 +67,8 @@ class PlaygroupMember(models.Model):
 class Event(models.Model):
     name = models.CharField(max_length=200)
     start_date = models.DateField(default=date.today)
+    player_count = models.SmallIntegerField(
+        default=None, null=True, blank=True)
 
     class Meta:
         ordering = ('-start_date',)
@@ -98,26 +102,55 @@ class EventResult(models.Model):
     class Meta:
         ordering = ('finishing_position', '-num_wins', 'num_losses',)
 
-
-class LeaderboardPointsLookup(models.Model):
-    pass
-
-
-class LeaderboardPoints(models.Model):
-    pass
+    def __str__(self):
+        return f'{self.event.name} - {self.user} - ({self.finishing_position})'
 
 
-class LeaderboardSeason(models.Model):
-    pass
+class RankingPointsMap(models.Model):
+    max_players = models.PositiveSmallIntegerField()
+    finishing_position = models.PositiveSmallIntegerField()
+    points = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ('max_players', 'finishing_position',)
 
 
-class LeaderboardPeriod(models.Model):
-    pass
+class RankingPoints(models.Model):
+    points = models.PositiveIntegerField(default=0)
+    result = models.ForeignKey(
+        EventResult, on_delete=models.CASCADE, related_name='ranking_points')
+    created_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = _('Ranking points')
+
+    def __str__(self):
+        return f'{self.points}'
 
 
-class Leaderboard(models.Model):
-    pass
+class RankingPointsService():
+    @staticmethod
+    def assign_points_for_results(event_results, player_count):
+        rp_map_entries = RankingPointsMap.objects.filter(
+            max_players=RankingPointsMap.objects
+            .filter(max_players__gte=player_count)
+            .aggregate(models.Max('max_players'))['max_players__max']
+        ).order_by('finishing_position')
 
+        ranking_points = [RankingPoints(result=r)
+                          for r in event_results if r.finishing_position]
+        for rp in rp_map_entries:
+            for pts in ranking_points:
+                if int(pts.result.finishing_position) >= rp.finishing_position:
+                    pts.points = rp.points
 
-class LeaderboardRank(models.Model):
-    pass
+        RankingPoints.objects.bulk_create(ranking_points)
+        return ranking_points
+
+    @staticmethod
+    def assign_points_for_event(event):
+        results = event.results.all()
+        RankingPoints.objects.filter(result__event=event).delete()
+        return RankingPointsService.assign_points_for_results(
+            results, event.player_count or len(results)
+        )

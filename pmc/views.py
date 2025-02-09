@@ -1,7 +1,6 @@
 import csv
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.views import generic
@@ -10,12 +9,16 @@ from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.forms import EventForm
 from pmc.forms import PlaygroupMemberForm
-from .models import EventResult, Playgroup, PlaygroupEvent
+from .models import EventResult
+from .models import Playgroup
+from .models import PlaygroupEvent
 from .models import PlaygroupMember
 from .models import Event
+from .models import RankingPointsService
 
 
 def is_pg_member(view):
@@ -143,6 +146,16 @@ class EventDetail(LoginRequiredMixin, generic.DetailView):
         return super().dispatch(request, *args, **kwargs)
 
 
+@require_POST
+@login_required
+@is_pg_staff
+def delete_event(request, slug, pk):
+    event = get_object_or_404(Event, pk=pk)
+    # TODO - ensure that the event is associated with the playgroup
+    event.delete()
+    return HttpResponseRedirect(reverse('pmc-pg-events', kwargs={'slug': slug}))
+
+
 @login_required
 @is_pg_member
 def playgroup_leaderboard(request, slug):
@@ -160,13 +173,16 @@ def submit_event_results(request, slug):
             csv_file = form.cleaned_data['results_file']
             decoded_file = csv_file.read().decode('utf-8')
             reader = csv.DictReader(decoded_file.splitlines())
-            required__headers = [
+            available_headers = [
                 'user', 'finishing_position', 'num_wins', 'num_losses']
-            if set(reader.fieldnames) != set(required__headers):
+            if not set(reader.fieldnames).issubset(set(available_headers)):
                 form_errors.append(
-                    f'Your results file should include exactly the headers: {
-                        ', '.join(required__headers)}'
+                    f'Your results file may include only these columns: {
+                        ', '.join(available_headers)}'
                 )
+            elif not 'user' in reader.fieldnames:
+                form_errors.append(
+                    f'Your results file must include a "user" column')
             else:
                 event = form.save()
                 User = get_user_model()
@@ -184,7 +200,13 @@ def submit_event_results(request, slug):
                         form_errors.append(f'No such user: {username}')
 
             if not form_errors:
-                EventResult.objects.bulk_create(event_results)
+                results = EventResult.objects.bulk_create(event_results)
+
+                RankingPointsService.assign_points_for_results(
+                    results,
+                    event.player_count or len(results)
+                )
+
                 PlaygroupEvent.objects.create(
                     playgroup=Playgroup.objects.get(slug=slug),
                     event=event
@@ -213,7 +235,11 @@ def typography(request):
     return render(request, 'pmc/typography.html')
 
 
+@require_POST
 @login_required
 @is_pg_staff
 def assign_event_points(request, slug, pk):
-    pass
+    event = get_object_or_404(Event, pk=pk)
+    # TODO verify that the event is associated with the playgroup
+    RankingPointsService.assign_points_for_event(event)
+    return HttpResponseRedirect(reverse('pmc-event-detail', kwargs={'slug': slug, 'pk': pk}))

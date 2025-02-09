@@ -20,9 +20,11 @@ urlpatterns = [
          views.submit_event_results, name='pmc-pg-events-new'),
     path('pg/<slug:slug>/events/<int:pk>',
          views.EventDetail.as_view(), name='pmc-event-detail'),
+    path('pg/<slug:slug>/events/<int:pk>/delete',
+         views.delete_event, name='pmc-delete-event'),
     path('pg/<slug:slug>/events/<int:pk>/manage',
          views.event_manage, name='pmc-event-manage'),
     path('pg/<slug:slug>/events/<int:pk>/points',
-         views.assign_event_points, name='pmc-event-points'),
+         views.assign_event_points, name='pmc-event-assign-points'),
     path('typography', views.typography),
 ]

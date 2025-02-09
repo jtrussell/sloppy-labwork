@@ -1,6 +1,7 @@
 from django import forms
-from .models import Event, Playgroup
+from .models import Event
 from .models import PlaygroupMember
+from django.utils.translation import gettext_lazy as _
 
 
 class EventForm(forms.ModelForm):
@@ -8,16 +9,19 @@ class EventForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ('name', 'start_date',)
+        fields = ('name', 'start_date', 'player_count')
+        labels = {
+            'name': _('Event Name'),
+            'start_date': _('Event Date'),
+            'player_count': _('Player Count'),
+        }
         widgets = {
             'start_date': forms.DateInput(attrs={'type': 'date'}),
+            'player_count': forms.NumberInput(attrs={
+                'min': 0,
+                'placeholder': _('Automatic')
+            }),
         }
-
-    # def clean_results_file(self):
-    #    results_file = self.cleaned_data.get('results_file')
-    #    if not results_file.name.endswith('.csv'):
-    #        raise forms.ValidationError('Only CSV files are supported')
-    #    return results_file
 
     def save(self, commit=True):
         event = super(EventForm, self).save(commit=commit)

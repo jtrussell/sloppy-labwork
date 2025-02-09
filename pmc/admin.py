@@ -1,8 +1,9 @@
 from django.contrib import admin
-from .models import Playgroup
+from .models import Playgroup, RankingPointsMap
 from .models import PlaygroupMember
 from .models import Event
 from .models import EventResult
+from .models import RankingPoints
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -30,7 +31,21 @@ class EventResultAdmin(admin.ModelAdmin):
     list_filter = ('event',)
 
 
+class RankingPointsMapAdmin(admin.ModelAdmin):
+    list_display = ('max_players', 'finishing_position', 'points')
+    search_fields = ['max_players']
+    list_filter = ('max_players',)
+
+
+class RankingPointsAdmin(admin.ModelAdmin):
+    list_display = ('result', 'points')
+    search_fields = ['result__event']
+    list_filter = ('result__event',)
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
 admin.site.register(EventResult, EventResultAdmin)
+admin.site.register(RankingPointsMap, RankingPointsMapAdmin)
+admin.site.register(RankingPoints, RankingPointsAdmin)

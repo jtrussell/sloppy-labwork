@@ -8,9 +8,19 @@
     <div class="card-actions">
 
       <!-- form for event points -->
-      <button class="btn btn-accent">
-        Assign Points
-      </button>
+      <form action="{% url 'pmc-delete-event' playgroup.slug object.pk %}" method="POST">
+        {% csrf_token %}
+        <button class="btn btn-solid btn-accent" type="submit">
+          Delete Event
+        </button>
+      </form>
+
+      <form action="{% url 'pmc-event-assign-points' playgroup.slug object.pk %}" method="POST">
+        {% csrf_token %}
+        <button class="btn btn-accent" type="submit">
+          Assign Points
+        </button>
+      </form>
     </div>
 		</a>
 	</div>
@@ -20,18 +30,30 @@
       <li class="card">
         <h2>{{ result.user }}</h2>
         <ul class="stats-list">
+          {% if result.ranking_points.first is not None %}
+          <li>
+            <span class="label">Ranking Points</span>
+            <span class="value">{{ result.ranking_points.first }}</span>
+          </li>
+          {% endif %}
+          {% if result.finishing_position is not None %}
           <li>
             <span class="label">Finishing Position</span>
             <span class="value">{{ result.finishing_position }}</span>
           </li>
+          {% endif %}
+          {% if result.num_wins is not None %}
           <li>
             <span class="label">Wins</span>
             <span class="value">{{ result.num_wins }}</span>
           </li>
+          {% endif %}
+          {% if result.num_losses is not None %}
           <li>
             <span class="label">Losses</span>
             <span class="value">{{ result.num_losses }}</span>
           </li>
+          {% endif %}
         </ul>
       </li>
     {% empty %}
