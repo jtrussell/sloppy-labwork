@@ -155,7 +155,7 @@ class RankingPointsService():
         rp_map_entries = RankingPointsMap.objects.filter(
             max_players=RankingPointsMap.objects
             .filter(max_players__gte=player_count)
-            .aggregate(models.Max('max_players'))['max_players__max']
+            .aggregate(models.Min('max_players'))['max_players__min']
         ).order_by('finishing_position')
 
         ranking_points = [RankingPoints(result=r)
