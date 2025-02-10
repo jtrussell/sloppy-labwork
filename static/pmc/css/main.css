@@ -338,50 +338,6 @@ nav li + li::before {
   display: none;
 }
 
-.stats-list {
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-  font-size: smaller;
-}
-
-.stats-list > li {
-  border: var(--border-size-sm) solid var(--color-accent);
-  border-radius: var(--border-radius-sm);
-}
-
-.stats-list .label {
-  background-color: var(--color-accent);
-  font-variant: small-caps;
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
-}
-
-.stats-list .label,
-.stats-list .value {
-  display: inline-block;
-  padding: 7px 15px;
-}
-
-@media (max-width: 680px) {
-  .stats-list {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .stats-list > li {
-    display: flex;
-  }
-
-  .stats-list .label {
-    flex: 1;
-  }
-
-  .stats-list .value {
-    flex-basis: 30px;
-    text-align: right;
-  }
-}
-
 code {
   font-family: monospace;
 }
@@ -501,8 +457,10 @@ table .avatar {
   height: 32px;
   width: 32px;
   background-size: cover;
-  border-radius: 50%;
-  border: 2px solid var(--color-lines);
+}
+
+table td.stat {
+  width: 60px;
 }
 
 /* ***********************************
