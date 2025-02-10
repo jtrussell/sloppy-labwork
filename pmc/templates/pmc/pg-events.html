@@ -15,7 +15,7 @@
 			<li class="card">
 				<h2>{{ event }}</h2>
 				<div>
-					Number of participants: {{ event.results.count }}
+					Number of participants: {{ event.get_player_count }}
 				</div>
 				<div class="card-actions">
 					<a class="btn btn-solid" href="{% url 'pmc-event-detail' playgroup.slug event.pk %}">
