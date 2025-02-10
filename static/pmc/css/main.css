@@ -1,5 +1,6 @@
 :root {
   --color-bg: #131313;
+  --color-paper-bg: #1f1f1f;
   --color-text: #fff;
   --color-links: #ffb400;
   --color-primary: #ffb400;
@@ -273,17 +274,11 @@ nav li + li::before {
 }
 
 .card {
-  border: var(--border-size-sm) solid var(--color-primary);
+  background-color: var(--color-paper-bg);
   border-radius: var(--border-radius);
   padding: 20px 20px;
   margin: 20px 0;
 }
-
-.card.card-accent {
-  border-color: var(--color-accent);
-}
-
-.card-danger { border-color: var(--color-danger); }
 
 .card h1,
 .card h2,
@@ -490,6 +485,20 @@ tr:last-child > td {
   padding-bottom: 20px;
 }
 
+/* ***********************************
+ * Messages
+ * *********************************** */
+.banner-with-avatar {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-lines);
+}
+
+.banner-with-avatar img.avatar {
+  margin-right: 20px;
+  height: 75px;
+  width: 75px;
+}
 
 /* ***********************************
  * Messages
@@ -503,3 +512,4 @@ ul.messages {
     color: var(--color-bg);
   }
 }
+

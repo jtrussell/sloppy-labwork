@@ -5,7 +5,11 @@
 	<ul class="card-list">
 		{% for member in members %}
 			<li class="card house-flair house-flair-{{member.house_flair}}">
-				<h2>{{ member }}</h2>
+				<h2 class="banner-with-avatar" style="background-color: {{ member.banner_bg_color }}">
+					<img class="avatar" src="{{ member.avatar_src }}" style="border-right: 3px solid {{ member.banner_stroke_color }}" alt="">
+					{{ member }}
+				</h2>
+
 				<div>
 					<em>{{ member.tagline | default:"Silence is golden." }}</em>
 				</div>

@@ -52,6 +52,12 @@ class PlaygroupMember(models.Model):
     tagline = models.CharField(
         max_length=100, default=None, null=True, blank=True)
 
+    # TODO - Add avatar and banner image fields to main user profile
+    avatar_src = 'https://static.sloppylabwork.com/pmc/tmp/kc-logo-dark.png'
+    banner_bg_color = '#131313'
+    banner_stroke_color = '#ffb400'
+    banner_text_color = '#fff'
+
     class Meta:
         constraints = [
             UniqueConstraint(fields=['playgroup', 'user'],
