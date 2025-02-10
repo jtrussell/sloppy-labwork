@@ -496,8 +496,14 @@ tr:last-child > td {
 
 .banner-with-avatar img.avatar {
   margin-right: 20px;
-  height: 75px;
-  width: 75px;
+  height: 100px;
+  width: 100px;
+}
+
+.banner-sub-text {
+  display: block;
+  font-size: 10pt;
+  font-style: italic;
 }
 
 /* ***********************************
