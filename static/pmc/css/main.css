@@ -459,6 +459,10 @@ tr > * {
   text-align: right;
 }
 
+td {
+  vertical-align: middle;
+}
+
 tr > th {
   font-weight: 700;
   padding-top: 20px;
@@ -472,19 +476,33 @@ tr:not(:last-child) > td {
 
 tr > *:first-child {
   text-align: left;
-  padding-left: 20px;
+  padding-left: 10px;
 }
 
 tr > *:last-child {
-  padding-right: 20px;
+  padding-right: 10px;
 }
 
 tr:first-child > * {
-  padding-top: 10px;
+  margin-top: 10px;
 }
 
 tr:last-child > td {
-  padding-bottom: 20px;
+  margin-bottom: 10px;
+}
+
+table .name-with-avatar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+table .avatar {
+  height: 32px;
+  width: 32px;
+  background-size: cover;
+  border-radius: 50%;
+  border: 2px solid var(--color-lines);
 }
 
 /* ***********************************
