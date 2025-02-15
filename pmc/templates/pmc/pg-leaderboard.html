@@ -2,7 +2,38 @@
 
 {% block content %}
 <h1>Leaderboard</h1>
+
+<div class="btn-group btn-group-center">
+  {% for lb in leaderboards %}
+  <a href="{% url 'pmc-pg-leaderboard' slug lb.pk %}" class="btn{% if lb.pk == pk %} btn-solid{% endif %}">
+    {{ lb }}
+  </a>
+  {% endfor %}
+</div>
+
 <div class="card">
-  <p>Coming soon!</p>
+  <table>
+    <thead>
+      <th class="col-sm">#</th>
+      <th class="text-left">Player</th>
+      <th>Avg. Points</th>
+    </thead>
+    <tbody>
+      {% for item in rankings %}
+      <tr>
+        <td class="col-sm">{{ item.rank }}</td>
+        <td class="text-left">
+          <div class="name-with-avatar">
+            <img class="avatar" src="https://static.sloppylabwork.com/pmc/tmp/kc-logo-dark.png" alt="">
+            {{ item.user }}
+          </div>
+        </td>
+        <td>
+          {{ item.average_points }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}

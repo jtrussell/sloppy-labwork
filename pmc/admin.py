@@ -5,6 +5,11 @@ from .models import Event
 from .models import EventResult
 from .models import RankingPoints
 from .models import EventFormat
+from .models import LeaderboardSeason
+from .models import LeaderboardSeasonPeriod
+from .models import Leaderboard
+from .models import PlayerRank
+from .models import PlayerRankHistory
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -50,6 +55,35 @@ class EventFormatAdmin(admin.ModelAdmin):
     list_filter = ('name',)
 
 
+class LeaderboardSeasonAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ['name']
+
+
+class LeaderboardSeasonPeriodAdmin(admin.ModelAdmin):
+    list_display = ('name', 'season', 'start_date')
+    search_fields = ['season']
+    list_filter = ('season',)
+
+
+class LeaderboardAdmin(admin.ModelAdmin):
+    list_display = ('name', 'period_frequency')
+    search_fields = ['name']
+    list_filter = ('name',)
+
+
+class PlayerRankAdmin(admin.ModelAdmin):
+    list_display = ('leaderboard', 'user', 'rank', 'average_points')
+    search_fields = ['leaderboard', 'user']
+    list_filter = ('leaderboard',)
+
+
+class PlayerRankHistoryAdmin(admin.ModelAdmin):
+    list_display = ('leaderboard', 'rank', 'user')
+    search_fields = ['leaderboard', 'user', 'period']
+    list_filter = ('leaderboard',)
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
@@ -57,3 +91,8 @@ admin.site.register(EventResult, EventResultAdmin)
 admin.site.register(RankingPointsMap, RankingPointsMapAdmin)
 admin.site.register(RankingPoints, RankingPointsAdmin)
 admin.site.register(EventFormat, EventFormatAdmin)
+admin.site.register(LeaderboardSeason, LeaderboardSeasonAdmin)
+admin.site.register(LeaderboardSeasonPeriod, LeaderboardSeasonPeriodAdmin)
+admin.site.register(Leaderboard, LeaderboardAdmin)
+admin.site.register(PlayerRank, PlayerRankAdmin)
+admin.site.register(PlayerRankHistory, PlayerRankHistoryAdmin)

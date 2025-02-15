@@ -1,8 +1,10 @@
 from math import e
+from os import name
 from random import choice
 from tabnanny import verbose
 from django.db import models
 from django.db.models import UniqueConstraint
+from django.db.models import F
 from datetime import date
 from django.utils.translation import gettext_lazy as _
 
@@ -149,6 +151,90 @@ class RankingPoints(models.Model):
         return f'{self.points}'
 
 
+class LeaderboardSeason(models.Model):
+    name = models.CharField(max_length=200)
+    sort_order = models.PositiveSmallIntegerField(default=1)
+
+
+class LeaderboardSeasonPeriod(models.Model):
+    class FrequencyOptions(models.IntegerChoices):
+        MONTH = (1, _('Month'))
+        SEASON = (2, _('Season'))
+        ALL_TIME = (3, _('All Time'))
+
+    name = models.CharField(max_length=200)
+    start_date = models.DateField(default=date.today)
+    season = models.ForeignKey(
+        LeaderboardSeason, on_delete=models.CASCADE, related_name='periods')
+    frequency = models.IntegerField(choices=FrequencyOptions.choices)
+
+    class Meta:
+        ordering = ('-start_date',)
+        UniqueConstraint(fields=['start_date', 'frequency'],
+                         name='unique_leaderboard_period')
+
+
+class Leaderboard(models.Model):
+    name = models.CharField(max_length=200)
+    sort_order = models.PositiveSmallIntegerField(default=1)
+    period_frequency = models.IntegerField(
+        choices=LeaderboardSeasonPeriod.FrequencyOptions.choices)
+
+    class Meta:
+        ordering = ('sort_order',)
+
+    def __str__(self):
+        return self.name
+
+    def get_start_and_end_of_current_period(self):
+        today = date.today()
+        if self.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.MONTH:
+            return (today.replace(day=1), today)
+        elif self.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.SEASON:
+            # TODO - seasons should be anchored by KFC events
+            return (today.replace(month=1, day=1), today)
+        elif self.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.ALL_TIME:
+            return (date(2020, 1, 1), today)
+        else:
+            raise ValueError(f'Unknown frequency: {self.period_frequency}')
+
+
+class PlayerRank(models.Model):
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    rank = models.PositiveIntegerField()
+    average_points = models.FloatField(default=0)
+    leaderboard = models.ForeignKey(
+        Leaderboard, on_delete=models.CASCADE, related_name='rankings')
+
+    class Meta:
+        ordering = ('rank',)
+        constraints = [
+            UniqueConstraint(
+                fields=['user', 'leaderboard'], name='unique_player_rank'),
+        ]
+
+
+class PlayerRankHistory(models.Model):
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    rank = models.PositiveIntegerField()
+    average_points = models.FloatField(default=0)
+    leaderboard = models.ForeignKey(
+        Leaderboard, on_delete=models.CASCADE, related_name='historic_rankings')
+    period = models.ForeignKey(
+        LeaderboardSeasonPeriod, on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ('rank',)
+        constraints = [
+            UniqueConstraint(
+                fields=['user', 'leaderboard', 'period'], name='unique_player_rank_history'),
+            # models.CheckConstraint(
+            #     check=Q(leaderboard__period_frequency=F('period__frequency')),
+            #     name='leaderboard_period_frequency_match'
+            # )
+        ]
+
+
 class RankingPointsService():
     @staticmethod
     def assign_points_for_results(event_results, player_count):
@@ -175,3 +261,54 @@ class RankingPointsService():
         return RankingPointsService.assign_points_for_results(
             results, event.player_count or len(results)
         )
+
+    @staticmethod
+    def assign_points_for_leaderboard(leaderboard, start_date, end_date, top_n=4):
+        """
+        Updates PlayerRank records based on the top N highest-scoring RankingPoints 
+        within the given period.
+
+        Args:
+            leaderboard (Leaderboard): The leaderboard for which ranks are being calculated.
+            start_date (date): The start date of the period.
+            end_date (date): The end date of the period.
+            top_n (int): The number of highest-scoring results to consider for each user.
+        """
+
+        from django.db.models import Subquery, OuterRef, Window, Sum
+        from django.db.models.functions import Rank
+
+        ranked_points = RankingPoints.objects.filter(
+            result__event__start_date__gte=start_date,
+            result__event__start_date__lt=end_date,
+            result__user=OuterRef("result__user")
+        ).order_by("-points").values("points")[:top_n]
+
+        user_points = (
+            RankingPoints.objects.filter(
+                result__event__start_date__gte=start_date,
+                result__event__start_date__lt=end_date
+            )
+            .filter(points__in=Subquery(ranked_points))
+            .values(user_id=F("result__user"))
+            .annotate(avg_points=Sum("points") / top_n)
+            .annotate(
+                rank=Window(
+                    expression=Rank(),
+                    order_by=[F("avg_points").desc()]
+                )
+            )
+        )
+
+        player_ranks = [
+            PlayerRank(
+                user_id=entry["user_id"],
+                rank=entry["rank"],
+                average_points=entry["avg_points"],
+                leaderboard=leaderboard
+            )
+            for entry in user_points
+        ]
+        PlayerRank.objects.filter(leaderboard=leaderboard).delete()
+        PlayerRank.objects.bulk_create(player_ranks, ignore_conflicts=True)
+        # return player_ranks

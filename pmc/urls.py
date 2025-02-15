@@ -14,6 +14,8 @@ urlpatterns = [
          views.PlaygroupMemberManage.as_view(), name='pmc-pg-member-manage'),
     path('pg/<slug:slug>/leaderboard',
          views.playgroup_leaderboard, name='pmc-pg-leaderboard'),
+    path('pg/<slug:slug>/leaderboard/<int:pk>',
+         views.playgroup_leaderboard, name='pmc-pg-leaderboard'),
     path('pg/<slug:slug>/events',
          views.PlaygroupEventsList.as_view(), name='pmc-pg-events'),
     path('pg/<slug:slug>/events/new',
@@ -27,4 +29,5 @@ urlpatterns = [
     path('pg/<slug:slug>/events/<int:pk>/points',
          views.assign_event_points, name='pmc-event-assign-points'),
     path('typography', views.typography),
+    path('refresh-leaderboard/<int:pk>', views.refresh_leaderboard),
 ]
