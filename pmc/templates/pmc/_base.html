@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+	<!-- CSS -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reset-css@5.0.2/reset.min.css">
+	<link rel="stylesheet" href="{% static 'pmc/css/main.css' %}">
+
+	<!-- Fonts -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap" rel="stylesheet">
+
+	<!-- Favicons -->
+  <link rel="icon" type="image/svg+xml" href="{% static 'pmc/img/favicon.png' %}">
+
+	<meta name="description" content="Project Might Club!">
+	<meta name="keywords" content="">
+	<title>KeyChain</title>
+</head>
+
+<body class="body {% if not playgroup_member.is_staff %}is-not-playgroup-staff{% endif %}">
+	<div class="masthead">
+		<div class="container">
+			<span>
+				{{ playgroup.name }}
+			</span>
+
+			<span class="wordmark">
+				<span class="key">Key</span><span class="chain">Chain</span>
+			</span>
+		</div>
+	</div>
+
+	{% include 'pmc/_nav.html' %}
+
+	{% if messages %}
+	<ul class="messages container">
+			{% for message in messages %}
+			<li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+					{{ message }}
+			</li>
+			{% endfor %}
+	</ul>
+	{% endif %}
+
+	<div class="container">
+		{% block content %}
+			<!-- Silence is golden -->
+		{% endblock %}
+	</div>
+
+</body>
+</html>

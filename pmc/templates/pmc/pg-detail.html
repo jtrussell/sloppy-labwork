@@ -1,0 +1,19 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+  <h1>Welcome to {{ object.name }}</h1>
+
+  <div class="card">
+    <h2>Members</h2>
+    <p>
+      There are <a href="{% url 'pmc-pg-members' object.slug %}">{{ object.members.count }} Members.</a>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Events</h2>
+    <p>
+      {{ playgroup }} has run <a href="{% url 'pmc-pg-events' object.slug %}">{{ object.events.count }} Event(s).</a>
+    </p>
+  </div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+	<h1>Events</h1>
+
+	<div class="card card-accent staff-only">
+		<h2>Staff Area</h2>
+		<a class="btn btn-accent btn-solid btn-block" href="{% url 'pmc-pg-events-new' view.kwargs.slug %}">
+			Submit Event Data
+		</a>
+	</div>
+
+	<ul class="card-list">
+		{% for event in events %}
+			<li class="card">
+				<h2>{{ event }}</h2>
+				<div>
+					Number of participants: {{ event.get_player_count }}
+				</div>
+				<div class="card-actions">
+					<a class="btn btn-solid" href="{% url 'pmc-event-detail' playgroup.slug event.pk %}">
+						Details
+					</a>
+				</div>
+			</li>
+		{% empty %}
+			<li>No events yet.</li>
+		{% endfor %}
+	</ul>
+{% endblock %}
