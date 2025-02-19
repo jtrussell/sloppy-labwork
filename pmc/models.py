@@ -323,7 +323,7 @@ class RankingPointsService():
             ]
 
             player_ranks.sort(
-                key=lambda pr: (-pr.average_points, -pr.num_results))
+                key=lambda pr: (-pr.total_points, -pr.num_results))
             for rank, pr in enumerate(player_ranks, start=1):
                 pr.rank = rank
 
