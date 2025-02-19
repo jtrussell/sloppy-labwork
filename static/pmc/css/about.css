@@ -2,14 +2,13 @@
     display: flex;
     align-items: start; /* Aligns items at the top */
     flex-direction: column;
-    gap: 12px; /* Adjust spacing between icon, title, and description */
-
+    gap: 12px;
 }
 
 .legend-item {
     display: flex;
     flex-direction: row;
-    gap: 12px; /* Adjust spacing between icon, title, and description */
+    gap: 12px;
 }
 
 .legend-icon {
@@ -30,7 +29,7 @@
 .about-item {
     display: flex;
     flex-direction: column;
-    gap: 12px; /* Adjust spacing between icon, title, and description */
+    gap: 12px;
     padding-top: 75px;
 }
 
@@ -40,6 +39,27 @@
 .about-item-header {
     display: flex;
     flex-direction: row;
-    gap: 12px; /* Adjust spacing between icon, title, and description */
+    gap: 12px;
     align-items: baseline;
+}
+
+ul {
+    list-style: disc;
+    margin-left: 25px;
+}
+
+ol {
+    list-style: decimal;
+    margin-left: 25px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
+
+strong {
+    font-weight: bold;
+}
+
+.tab {
+    width: 200px;
+    display:inline-block;
 }
