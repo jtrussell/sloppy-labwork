@@ -1,0 +1,83 @@
+{% extends "pmc/_base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'pmc/css/about.css' %}">
+<div id="legend">
+    <div class="legend-item">
+        <img class="legend-icon" src="{% static 'pmc/img/Global.svg' %}" alt="Global Icon">
+        <div class="legend-title">Global:</div>
+        <div class="legend-decription">Elements that are account-wide, across all playgroups.</div>
+    </div>
+    
+    <div class="legend-item">
+        <img class="legend-icon" src="{% static 'pmc/img/Playgroup.svg' %}" alt="Playgroup Icon">
+        <div class="legend-title">Playgroup:</div>
+        <div class="legend-decription">Elements that are within the context of an individual playgroup.</div>
+    </div>
+</div>
+
+<div class="about-item">
+    <div class="about-item-header">
+        <img class="about-item-icon" src="{% static 'pmc/img/Lv_DETAIL.png' %}" alt="Level Detail">
+        <h1>Level (Lv)</h1>
+        <img class="legend-icon" src="{% static 'pmc/img/Global.svg' %}" alt="Global Icon">
+    </div>
+    <div class="about-item-description">
+        Your Level (Lv) is an at-a-glance view of your overall progression and participation in KeyForge 
+        organized play through KeyChain, earned over time by accruing Experience Points (XP). Your level 
+        appears on your player profile, and additional personalization items can be unlocked through leveling 
+        up. Higher levels generally require more XP to level up.
+    </div>
+</div>
+
+<div class="about-item">
+    <div class="about-item-header">
+        <img class="about-item-icon" src="{% static 'pmc/img/XP_DETAIL.png' %}" alt="Experience Detail">
+        <h1>Experience Points (XP)</h1>
+        <img class="legend-icon" src="{% static 'pmc/img/Global.svg' %}" alt="Global Icon">
+    </div>
+    <div class="about-item-description">
+        <span>
+            Experience Points (XP) are earned for general participation in KeyForge organized play across all 
+            playgroups, and serve as the foundation for your overall KeyChain account progression. Earning XP 
+            is how you level up. XP is awarded as such:
+        </span>
+        <ul>
+            <li>Event Attended: 	25 XP</li>
+            <li>Match Won: 	10 XP</li>
+            <li>Match Lost: 	5 XP</li>
+        </ul>
+    </div>
+</div>
+
+<div class="about-item">
+    <div class="about-item-header">
+        <img class="about-item-icon" src="{% static 'pmc/img/RP_DETAIL.png' %}" alt="Rank Point Detail">
+        <h1>Rank Points (RP)</h1>
+        <img class="legend-icon" src="{% static 'pmc/img/Global.svg' %}" alt="Global Icon">
+        <img class="legend-icon" src="{% static 'pmc/img/Playgroup.svg' %}" alt="Playgroup Icon">
+    </div>
+    <div class="about-item-description">
+        <span>
+            Rank Points (RP) are a leaderboard ranking metric used for determining player placements and standings 
+            across events. There are two types of RP:
+        </span>
+        <ol>
+            <li>
+                <strong>Global RP:</strong> Calculated from events across all playgroups, using predefined RP value mappings.
+            </li>
+            <li>
+                <strong>Playgroup RP:</strong> Calculated internally from events within a single playgroup, using RP value mappings 
+                set by the Playgroup EO.
+            </li>
+        </ol>
+        <span>
+            RP can be filtered by Month, Year, or All-Time, allowing standings to be measured across different 
+            timeframes.
+        </span>
+    </div>
+</div>
+
+{% endblock %}

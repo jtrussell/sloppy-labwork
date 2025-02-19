@@ -239,6 +239,8 @@ def event_manage(request, pk):
 def typography(request):
     return render(request, 'pmc/typography.html')
 
+def about(request):
+    return render(request, 'pmc/about.html')
 
 @require_POST
 @login_required
