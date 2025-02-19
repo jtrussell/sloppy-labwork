@@ -44,7 +44,7 @@ def nav_links(request):
         })
 
         nav_links.append({
-            'name': _('Leaderboard'),
+            'name': _('Leaderboards'),
             'url': reverse('pmc-pg-leaderboard', args=[playgroup_slug]),
             'is_active': False,
         })

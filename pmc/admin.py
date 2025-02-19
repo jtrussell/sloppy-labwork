@@ -1,10 +1,14 @@
 from django.contrib import admin
-from .models import Playgroup, RankingPointsMap
+from .models import LeaderboardLog, Playgroup, RankingPointsMap
 from .models import PlaygroupMember
 from .models import Event
 from .models import EventResult
 from .models import RankingPoints
 from .models import EventFormat
+from .models import LeaderboardSeason
+from .models import LeaderboardSeasonPeriod
+from .models import Leaderboard
+from .models import PlayerRank
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -50,6 +54,36 @@ class EventFormatAdmin(admin.ModelAdmin):
     list_filter = ('name',)
 
 
+class LeaderboardSeasonAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ['name']
+
+
+class LeaderboardSeasonPeriodAdmin(admin.ModelAdmin):
+    list_display = ('name', 'season', 'start_date')
+    search_fields = ['season']
+    list_filter = ('season',)
+
+
+class LeaderboardAdmin(admin.ModelAdmin):
+    list_display = ('name', 'period_frequency')
+    search_fields = ['name']
+    list_filter = ('name',)
+
+
+class PlayerRankAdmin(admin.ModelAdmin):
+    list_display = ('leaderboard', 'playgroup',
+                    'user', 'rank', 'average_points')
+    search_fields = ['leaderboard', 'playgrou', 'user']
+    list_filter = ('leaderboard',)
+
+
+class LeaderboardLogAdmin(admin.ModelAdmin):
+    list_display = ('leaderboard', 'action', 'action_date')
+    search_fields = ['leaderboard']
+    list_filter = ('leaderboard',)
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
@@ -57,3 +91,8 @@ admin.site.register(EventResult, EventResultAdmin)
 admin.site.register(RankingPointsMap, RankingPointsMapAdmin)
 admin.site.register(RankingPoints, RankingPointsAdmin)
 admin.site.register(EventFormat, EventFormatAdmin)
+admin.site.register(LeaderboardSeason, LeaderboardSeasonAdmin)
+admin.site.register(LeaderboardSeasonPeriod, LeaderboardSeasonPeriodAdmin)
+admin.site.register(Leaderboard, LeaderboardAdmin)
+admin.site.register(PlayerRank, PlayerRankAdmin)
+admin.site.register(LeaderboardLog, LeaderboardLogAdmin)
