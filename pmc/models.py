@@ -274,53 +274,60 @@ class RankingPointsService():
         tomorrow = date.today() + timedelta(days=1)
         end_date = next_period.start_date if next_period else tomorrow
 
-        top_n_subquery = RankingPoints.objects.filter(
+        ranking_points_qs = RankingPoints.objects.filter(
             result__event__start_date__gte=start_date,
-            result__event__start_date__lt=end_date,
-            result__user=OuterRef('result__user')
-        ).order_by("-points").values("points")[:top_n]
+            result__event__start_date__lt=end_date
+        )
+
+        ranked_points = ranking_points_qs.annotate(
+            point_rank=Window(
+                expression=Rank(),
+                partition_by=[F("result__user")],
+                order_by=F("points").desc()
+            )
+        ).filter(point_rank__lte=top_n)
 
         def compute_rankings(playgroup=None):
             """ Helper function to compute rankings for a given playgroup or globally. """
-            filters = {
-                'result__event__start_date__gte': start_date,
-                'result__event__start_date__lt': end_date
-            }
+            filters = {}
             if playgroup:
-                filters['result__event__playgroups'] = playgroup
+                filters["result__event__playgroups"] = playgroup
 
-            user_points = (
-                RankingPoints.objects.filter(**filters)
-                .values(user_id=F('result__user'))
-                .annotate(
-                    total_points=Sum('points'),
-                    num_results=Count('id'),
-                    avg_points=Sum(
-                        Subquery(top_n_subquery)
-                    ) / top_n
-                )
-                .annotate(
-                    rank=Window(
-                        expression=Rank(),
-                        order_by=[F('total_points').desc(),
-                                  F('num_results').desc()]
-                    )
-                )
+            all_user_points = ranking_points_qs.filter(**filters).values("result__user").annotate(
+                total_points=Sum("points"),
+                num_results=Count("id")
             )
 
-            return [
+            top_n_user_points = ranked_points.filter(**filters).values("result__user").annotate(
+                avg_points=Sum("points") / top_n
+            )
+
+            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            for entry in top_n_user_points:
+                if entry["result__user"] in user_data:
+                    user_data[entry["result__user"]
+                              ]["avg_points"] = entry["avg_points"]
+
+            player_ranks = [
                 PlayerRank(
-                    user_id=entry['user_id'],
+                    user_id=user_id,
                     playgroup=playgroup,
-                    rank=entry['rank'],
-                    average_points=entry['avg_points'],
-                    total_points=entry['total_points'],
-                    num_results=entry['num_results'],
+                    rank=None,
+                    average_points=user_data[user_id].get("avg_points", 0),
+                    total_points=user_data[user_id]["total_points"],
+                    num_results=user_data[user_id]["num_results"],
                     leaderboard=leaderboard,
                     period=ranking_period
                 )
-                for entry in user_points
+                for user_id in user_data
             ]
+
+            player_ranks.sort(
+                key=lambda pr: (-pr.average_points, -pr.num_results))
+            for rank, pr in enumerate(player_ranks, start=1):
+                pr.rank = rank
+
+            return player_ranks
 
         global_ranks = compute_rankings(playgroup=None)
         playgroup_ranks = []

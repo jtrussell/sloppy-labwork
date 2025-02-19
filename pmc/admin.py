@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import LeaderboardLog, Playgroup, RankingPointsMap
+from .models import LeaderboardLog, Playgroup, PlaygroupEvent, RankingPointsMap
 from .models import PlaygroupMember
 from .models import Event
 from .models import EventResult
@@ -84,6 +84,12 @@ class LeaderboardLogAdmin(admin.ModelAdmin):
     list_filter = ('leaderboard',)
 
 
+class PlaygroupEventAdmin(admin.ModelAdmin):
+    list_display = ('playgroup', 'event',)
+    search_fields = ['playgroup', 'event']
+    list_filter = ()
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
@@ -96,3 +102,4 @@ admin.site.register(LeaderboardSeasonPeriod, LeaderboardSeasonPeriodAdmin)
 admin.site.register(Leaderboard, LeaderboardAdmin)
 admin.site.register(PlayerRank, PlayerRankAdmin)
 admin.site.register(LeaderboardLog, LeaderboardLogAdmin)
+admin.site.register(PlaygroupEvent, PlaygroupEventAdmin)
