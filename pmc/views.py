@@ -1,12 +1,14 @@
+import os
 import csv
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.views import generic
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -15,7 +17,9 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.forms import EventForm
 from pmc.forms import PlaygroupMemberForm
-from .models import EventResult
+from .models import EventResult, LeaderboardLog
+from .models import PlayerRank
+from .models import Leaderboard
 from .models import Playgroup
 from .models import PlaygroupEvent
 from .models import PlaygroupMember
@@ -41,6 +45,17 @@ def is_pg_staff(view):
             is_member = PlaygroupMember.objects.filter(
                 user=request.user, playgroup__slug=kwargs['slug'], is_staff=True).exists()
             if is_member:
+                return view_func(request, *args, **kwargs)
+            raise PermissionDenied
+        return wrapper
+    return decorator(view)
+
+
+def api_key_required(view):
+    def decorator(view_func):
+        def wrapper(request, *args, **kwargs):
+            api_key = request.META.get('HTTP_X_API_KEY')
+            if api_key == os.environ['PMC_RATINGS_API_KEY']:
                 return view_func(request, *args, **kwargs)
             raise PermissionDenied
         return wrapper
@@ -161,8 +176,18 @@ def delete_event(request, slug, pk):
 
 @login_required
 @is_pg_member
-def playgroup_leaderboard(request, slug):
-    return render(request, 'pmc/pg-leaderboard.html', {'slug': slug})
+def playgroup_leaderboard(request, slug, pk=None):
+    if pk is None:
+        return HttpResponseRedirect(reverse('pmc-pg-leaderboard', kwargs={
+            'slug': slug,
+            'pk': Leaderboard.objects.first().pk
+        }))
+    return render(request, 'pmc/pg-leaderboard.html', {
+        'leaderboards': Leaderboard.objects.all(),
+        'rankings': PlayerRank.objects.filter(leaderboard=pk, playgroup__slug=slug),
+        'slug': slug,
+        'pk': pk,
+    })
 
 
 @login_required
@@ -250,3 +275,20 @@ def assign_event_points(request, slug, pk):
     # TODO verify that the event is associated with the playgroup
     RankingPointsService.assign_points_for_event(event)
     return HttpResponseRedirect(reverse('pmc-event-detail', kwargs={'slug': slug, 'pk': pk}))
+
+
+@csrf_exempt
+@require_POST
+@api_key_required
+@transaction.atomic
+def refresh_leaderboard(request, pk):
+    leaderboard = Leaderboard.objects.get(pk=pk)
+    period = leaderboard.get_current_period()
+    RankingPointsService.assign_points_for_leaderboard(
+        leaderboard,
+        period
+    )
+    LeaderboardLog.objects.create(
+        leaderboard=leaderboard
+    ).save()
+    return HttpResponse('Done.', content_type='text/plain')

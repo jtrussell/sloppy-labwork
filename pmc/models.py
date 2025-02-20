@@ -1,9 +1,8 @@
-from math import e
-from random import choice
-from tabnanny import verbose
+from email.policy import default
 from django.db import models
 from django.db.models import UniqueConstraint
 from datetime import date
+from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
 
 
@@ -149,6 +148,83 @@ class RankingPoints(models.Model):
         return f'{self.points}'
 
 
+class LeaderboardSeason(models.Model):
+    name = models.CharField(max_length=200)
+    sort_order = models.PositiveSmallIntegerField(default=1)
+
+    def __str__(self):
+        return self.name
+
+
+class LeaderboardSeasonPeriod(models.Model):
+    class FrequencyOptions(models.IntegerChoices):
+        MONTH = (1, _('Month'))
+        SEASON = (2, _('Season'))
+        ALL_TIME = (3, _('All Time'))
+
+    name = models.CharField(max_length=200)
+    start_date = models.DateField(default=date.today)
+    season = models.ForeignKey(
+        LeaderboardSeason, on_delete=models.CASCADE, related_name='periods')
+    frequency = models.IntegerField(choices=FrequencyOptions.choices)
+
+    class Meta:
+        ordering = ('-start_date',)
+        UniqueConstraint(fields=['start_date', 'frequency'],
+                         name='unique_leaderboard_period')
+
+    def __str__(self):
+        return f'{self.season} - {self.name}'
+
+
+class Leaderboard(models.Model):
+    name = models.CharField(max_length=200)
+    sort_order = models.PositiveSmallIntegerField(default=1)
+    period_frequency = models.IntegerField(
+        choices=LeaderboardSeasonPeriod.FrequencyOptions.choices)
+
+    class Meta:
+        ordering = ('sort_order',)
+
+    def __str__(self):
+        return self.name
+
+    def get_current_period(self):
+        return LeaderboardSeasonPeriod.objects.filter(
+            frequency=self.period_frequency
+        ).order_by('-start_date').first()
+
+
+class PlayerRank(models.Model):
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    playgroup = models.ForeignKey(
+        Playgroup, on_delete=models.CASCADE, default=None, null=True, blank=True)
+    rank = models.PositiveIntegerField()
+    average_points = models.FloatField(default=0)
+    num_results = models.PositiveIntegerField(default=0)
+    total_points = models.FloatField(default=0)
+    leaderboard = models.ForeignKey(
+        Leaderboard, on_delete=models.CASCADE, related_name='rankings')
+    period = models.ForeignKey(
+        LeaderboardSeasonPeriod, on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ('rank', '-num_results')
+        constraints = [
+            UniqueConstraint(
+                fields=['user', 'leaderboard', 'playgroup', 'period'], name='unique_user_leaderboard_playgroup_period'),
+        ]
+
+
+class LeaderboardLog(models.Model):
+    class ActionOptions(models.IntegerChoices):
+        UPDATE = (1, _('Update Rankings'))
+    leaderboard = models.ForeignKey(Leaderboard, on_delete=models.CASCADE)
+    action = models.IntegerField(
+        choices=ActionOptions.choices, default=ActionOptions.UPDATE)
+    action_date = models.DateTimeField(auto_now_add=True)
+
+
 class RankingPointsService():
     @staticmethod
     def assign_points_for_results(event_results, player_count):
@@ -175,3 +251,92 @@ class RankingPointsService():
         return RankingPointsService.assign_points_for_results(
             results, event.player_count or len(results)
         )
+
+    @staticmethod
+    def assign_points_for_leaderboard(leaderboard, ranking_period, top_n=4):
+        """
+        Updates PlayerRank records based on the top N highest-scoring RankingPoints
+        within a given ranking period. Computes both global and playgroup rankings.
+
+        Args:
+            leaderboard (Leaderboard): The leaderboard for which ranks are being calculated.
+            ranking_period (LeaderboardSeasonPeriod): The period defining the date range.
+            top_n (int): The number of highest-scoring results to consider for calculating average points.
+        """
+        from django.db.models import Sum, Count, F, Window, Subquery, OuterRef
+        from django.db.models.functions import Rank
+
+        start_date = ranking_period.start_date
+        next_period = LeaderboardSeasonPeriod.objects.filter(
+            frequency=ranking_period.frequency,
+            start_date__gt=start_date
+        ).order_by("start_date").first()
+        tomorrow = date.today() + timedelta(days=1)
+        end_date = next_period.start_date if next_period else tomorrow
+
+        ranking_points_qs = RankingPoints.objects.filter(
+            result__event__start_date__gte=start_date,
+            result__event__start_date__lt=end_date
+        )
+
+        ranked_points = ranking_points_qs.annotate(
+            point_rank=Window(
+                expression=Rank(),
+                partition_by=[F("result__user")],
+                order_by=F("points").desc()
+            )
+        ).filter(point_rank__lte=top_n)
+
+        def compute_rankings(playgroup=None):
+            """ Helper function to compute rankings for a given playgroup or globally. """
+            filters = {}
+            if playgroup:
+                filters["result__event__playgroups"] = playgroup
+
+            all_user_points = ranking_points_qs.filter(**filters).values("result__user").annotate(
+                total_points=Sum("points"),
+                num_results=Count("id")
+            )
+
+            top_n_user_points = ranked_points.filter(**filters).values("result__user").annotate(
+                avg_points=Sum("points") / top_n
+            )
+
+            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            for entry in top_n_user_points:
+                if entry["result__user"] in user_data:
+                    user_data[entry["result__user"]
+                              ]["avg_points"] = entry["avg_points"]
+
+            player_ranks = [
+                PlayerRank(
+                    user_id=user_id,
+                    playgroup=playgroup,
+                    rank=None,
+                    average_points=user_data[user_id].get("avg_points", 0),
+                    total_points=user_data[user_id]["total_points"],
+                    num_results=user_data[user_id]["num_results"],
+                    leaderboard=leaderboard,
+                    period=ranking_period
+                )
+                for user_id in user_data
+            ]
+
+            player_ranks.sort(
+                key=lambda pr: (-pr.total_points, -pr.num_results))
+            for rank, pr in enumerate(player_ranks, start=1):
+                pr.rank = rank
+
+            return player_ranks
+
+        global_ranks = compute_rankings(playgroup=None)
+        playgroup_ranks = []
+        for playgroup in Playgroup.objects.all():
+            playgroup_ranks.extend(compute_rankings(playgroup=playgroup))
+
+        PlayerRank.objects.filter(
+            leaderboard=leaderboard, period=ranking_period).delete()
+        PlayerRank.objects.bulk_create(
+            global_ranks + playgroup_ranks, ignore_conflicts=True)
+
+        return global_ranks + playgroup_ranks

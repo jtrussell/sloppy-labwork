@@ -435,6 +435,21 @@ tr > *:first-child {
   padding-left: 10px;
 }
 
+th.text-left,
+td.text-left {
+  text-align: left;
+}
+
+th.col-sm,
+td.col-sm {
+  width: 30px
+}
+
+th.col-md,
+td.col-md {
+  width: 100px;
+}
+
 tr > *:last-child {
   padding-right: 10px;
 }
