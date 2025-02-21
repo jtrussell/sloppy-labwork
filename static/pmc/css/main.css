@@ -2,6 +2,7 @@
   --color-bg: #131313;
   --color-paper-bg: #1f1f1f;
   --color-text: #fff;
+  --color-text-muted: #aaa;
   --color-links: #ffb400;
   --color-primary: #ffb400;
   --color-accent: #69140E;
@@ -478,6 +479,30 @@ table td.stat {
   width: 60px;
 }
 
+.levels-spread {
+  text-transform: uppercase;
+}
+
+.levels-spread .current-level {
+  font-size: 3rem;
+}
+
+.levels-spread .current-level::before {
+  content: "LV. ";
+  font-size: 1.2rem;
+}
+
+.levels-spread .next-level {
+  font-size: 2.2rem;
+  color: var(--color-text-muted);
+}
+
+.levels-spread .next-level::before {
+  content: "LV. ";
+  font-size: 1rem;
+}
+
+
 /* ***********************************
  * Messages
  * *********************************** */
@@ -512,3 +537,56 @@ ul.messages {
   }
 }
 
+
+/* ***********************************
+ * Progress Bar
+ * *********************************** */
+.progress-bar {
+  background-color: var(--color-lines);
+  padding: 10px;
+  border-radius: 25px; /* 1/2 height of inner bar + padding */
+ }
+
+ .progress-bar > .progress {
+  height: 30px;
+  border-radius: 10px;
+  background-color: var(--color-primary);
+  background: var(--gradient-primary);
+  animation: pulse 2s infinite;
+ }
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0px rgba(255, 180, 0, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(255, 180, 0, 0);
+  }
+}
+
+/* ***********************************
+ * Utilities
+ * *********************************** */
+.flex {
+  display: flex;
+}
+
+.flex.row {
+  flex-direction: row;
+}
+
+.flex.col {
+  flex-direction: column;
+}
+
+.flex.spread {
+  justify-content: space-between;
+}
+
+.flex > .spacer {
+  flex: 1;
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}

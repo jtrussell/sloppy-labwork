@@ -1,10 +1,40 @@
 {% extends "pmc/_base.html" %}
 
 {% block content %}
-  <h1>{{ playgroup_member }} @ {{ playgroup }}</h1>
+  <h1>My KeyChain</h1>
+
+  <h2>Global</h2>
+  <div class="subheading">@{{ user }}</div>
 
   <div class="card">
-    <h2>My Profile</h2>
+    <h2 class="banner-with-avatar" style="background-color: {{ playgroup_member.banner_bg_color }}">
+      <img class="avatar" src="{{ playgroup_member.avatar_src }}" style="border-right: 3px solid {{ playgroup_member.banner_stroke_color }}" alt="">
+      <div>
+        <span class="banner-text">{{ user }}</span>
+        <span class="banner-sub-text">{{ playgroup_member.tagline | default:"Silence is golden." }}</span>
+      </div>
+    </h2>
+
+    <div style="margin-top: 30px">
+      <div class="flex row spread levels-spread">
+        <span class="current-level">{{ current_level }}</span>
+        <span class="spacer"></span>
+        <span class="next-level">{{ next_level }}</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress" style="width: {{ percent_level_up }}%"></div>
+      </div>
+      <div class="text-muted">
+        {{ level_increment_progress }} / {{ level_increment }} XP
+      </div>
+    </div>
+  </div>
+
+  <h2>{{ playgroup }}</h2>
+  <div class="subheading">Playgroup</div>
+
+  <div class="card">
+    <h3>My Profile</h3>
     <p>
       Nickname: {{ playgroup_member.nickname }}<br />
       House Flair: {{ playgroup_member.get_house_flair_display }}<br />
@@ -19,7 +49,10 @@
   </div>
 
   <div class="card">
-    <h2>Recent Events</h2>
+    <h3>Recent Events</h3>
     <p>You have attended {{ events.count }} events with this group.</p>
   </div>
+
+
+
 {% endblock %}

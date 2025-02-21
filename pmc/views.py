@@ -74,8 +74,28 @@ class PlaygroupDetail(LoginRequiredMixin, generic.DetailView):
 @login_required
 @is_pg_member
 def my_playgroup_profile(request, slug):
+    total_xp = request.user.pmc_profile.get_total_xp()
+    current_level = request.user.pmc_profile.get_level()
+    next_level = request.user.pmc_profile.get_next_level()
+
+    percent_level_up = None
+    if current_level and next_level:
+        level_increment = next_level.required_xp - current_level.required_xp
+        level_increment_progress = total_xp - current_level.required_xp
+        if level_increment > 0:
+            percent_level_up = round(
+                100 * (level_increment_progress) / (level_increment))
+    else:
+        level_increment = None
+        level_increment_progress = None
+
     return render(request, 'pmc/pg-me.html', {
-        'slug': slug,
+        'total_xp': total_xp,
+        'current_level': current_level,
+        'next_level': next_level,
+        'percent_level_up': percent_level_up,
+        'level_increment': level_increment,
+        'level_increment_progress': level_increment_progress,
         'events': Event.objects.filter(
             playgroups__slug=slug,
             results__user=request.user
@@ -264,8 +284,10 @@ def event_manage(request, pk):
 def typography(request):
     return render(request, 'pmc/typography.html')
 
+
 def about(request):
     return render(request, 'pmc/about.html')
+
 
 @require_POST
 @login_required

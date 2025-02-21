@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import LeaderboardLog, Playgroup, PlaygroupEvent, RankingPointsMap
+from .models import LeaderboardLog, Playgroup, PlaygroupEvent, PmcProfile, RankingPointsMap
 from .models import PlaygroupMember
 from .models import Event
 from .models import EventResult
@@ -9,6 +9,7 @@ from .models import LeaderboardSeason
 from .models import LeaderboardSeasonPeriod
 from .models import Leaderboard
 from .models import PlayerRank
+from .models import LevelBreakpoint
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -90,6 +91,18 @@ class PlaygroupEventAdmin(admin.ModelAdmin):
     list_filter = ()
 
 
+class PmcProfileAdmin(admin.ModelAdmin):
+    list_display = ('user',)
+    search_fields = ['user']
+    list_filter = ()
+
+
+class LevelBreakpointAdmin(admin.ModelAdmin):
+    list_display = ('level', 'required_xp')
+    search_fields = ['level']
+    list_filter = ()
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
@@ -103,3 +116,5 @@ admin.site.register(Leaderboard, LeaderboardAdmin)
 admin.site.register(PlayerRank, PlayerRankAdmin)
 admin.site.register(LeaderboardLog, LeaderboardLogAdmin)
 admin.site.register(PlaygroupEvent, PlaygroupEventAdmin)
+admin.site.register(PmcProfile, PmcProfileAdmin)
+admin.site.register(LevelBreakpoint, LevelBreakpointAdmin)
