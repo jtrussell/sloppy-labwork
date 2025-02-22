@@ -1,9 +1,13 @@
-from email.policy import default
+from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import UniqueConstraint
 from datetime import date
 from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
+from django.dispatch import receiver
+from django.db.models.signals import post_save
+from django.db.models import Sum, Value, F, Count, Window
+from django.db.models.functions import Coalesce, Rank
 
 
 class Playgroup(models.Model):
@@ -216,6 +220,55 @@ class PlayerRank(models.Model):
         ]
 
 
+class LevelBreakpoint(models.Model):
+    level = models.PositiveIntegerField(unique=True)
+    required_xp = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ('level',)
+
+    def __str__(self):
+        return f'{self.level}'
+
+
+class PmcProfile(models.Model):
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name='pmc_profile')
+
+    def get_total_xp(self):
+        experience_points = (
+            EventResult.objects.filter(user=self.user)
+            .annotate(
+                attendance_points=Value(25),
+                win_points=Coalesce(F('num_wins'), 0) * 10,
+                loss_points=Coalesce(F('num_losses'), 0) * 5
+            )
+            .aggregate(
+                total_experience=Sum(
+                    F('attendance_points') + F('win_points') + F('loss_points'))
+            )
+        )
+        return experience_points["total_experience"] or 0
+
+    def get_level(self):
+        return LevelBreakpoint.objects.filter(
+            required_xp__lte=self.get_total_xp()
+        ).order_by('-level').first()
+
+    def get_next_level(self):
+        return LevelBreakpoint.objects.filter(
+            required_xp__gt=self.get_total_xp()
+        ).order_by('level').first()
+
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created or not hasattr(instance, 'pmc_profile'):
+        PmcProfile.objects.create(user=instance)
+    else:
+        instance.pmc_profile.save()
+
+
 class LeaderboardLog(models.Model):
     class ActionOptions(models.IntegerChoices):
         UPDATE = (1, _('Update Rankings'))
@@ -263,8 +316,6 @@ class RankingPointsService():
             ranking_period (LeaderboardSeasonPeriod): The period defining the date range.
             top_n (int): The number of highest-scoring results to consider for calculating average points.
         """
-        from django.db.models import Sum, Count, F, Window, Subquery, OuterRef
-        from django.db.models.functions import Rank
 
         start_date = ranking_period.start_date
         next_period = LeaderboardSeasonPeriod.objects.filter(
@@ -302,7 +353,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
