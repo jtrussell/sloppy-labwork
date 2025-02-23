@@ -16,6 +16,8 @@
   --border-size-sm: 2px;
   --gradient-primary: linear-gradient(#FFB400, #FFF200, #FFB400);
   --gradient-accent: none;
+
+  --url-wordmark-dark-alpha: url('https://static.sloppylabwork.com/pmc/brand/KC_WORDMARK_DARK_ALPHA.png');
 }
 
 * {
@@ -27,7 +29,7 @@ html,
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
-  font-family: 'Lexenda', sans-serif;
+  font-family: 'Lexend', sans-serif;
   font-size: 16px;
   line-height: 24px;
   padding: 0;
@@ -46,7 +48,6 @@ h1 {
   font-size: 22pt;
   font-weight: 600;
   margin: 40px 0;
-  font-variant: small-caps;
 }
 
 h2, h3, h4, h5, h6 {
@@ -328,11 +329,11 @@ nav li + li::before {
 }
 
 .wordmark {
-  text-transform: uppercase;
-  font-weight: 600;
-}
-.wordmark .key {
-  color: var(--color-primary);
+  display: inline-block;
+  height: 30px;
+  width: 120px;
+  background-image: var(--url-wordmark-dark-alpha);
+  background-size: cover;
 }
 
 .is-not-playgroup-staff .staff-only {
@@ -480,7 +481,7 @@ table td.stat {
 }
 
 .levels-spread {
-  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .levels-spread .current-level {
@@ -488,7 +489,8 @@ table td.stat {
 }
 
 .levels-spread .current-level::before {
-  content: "LV. ";
+  content: "Lv ";
+  font-weight: normal;
   font-size: 1.2rem;
 }
 
@@ -498,7 +500,8 @@ table td.stat {
 }
 
 .levels-spread .next-level::before {
-  content: "LV. ";
+  content: "Lv ";
+  font-weight: normal;
   font-size: 1rem;
 }
 
