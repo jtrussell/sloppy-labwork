@@ -5,9 +5,6 @@ from pmc.models import LevelBreakpoint, EventFormat
 class Command(BaseCommand):
     help = 'Setups up basic PMC data for development and testing'
 
-    # def add_arguments(self, parser):
-    #    parser.add_argument("poll_ids", nargs="+", type=int)
-
     def handle(self, *args, **options):
         self.stdout.write('Creating level breakpoints... ', ending='')
         self.make_levels()
