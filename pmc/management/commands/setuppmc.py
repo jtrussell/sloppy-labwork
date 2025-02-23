@@ -1,5 +1,6 @@
-from django.core.management.base import BaseCommand, CommandError
-from pmc.models import LevelBreakpoint, EventFormat
+from django.core.management.base import BaseCommand
+from pmc.models import LevelBreakpoint, EventFormat, Leaderboard, LeaderboardSeason, LeaderboardSeasonPeriod
+from datetime import date
 
 
 class Command(BaseCommand):
@@ -9,13 +10,20 @@ class Command(BaseCommand):
         self.stdout.write('Creating level breakpoints... ', ending='')
         self.make_levels()
         self.stdout.write(
-            self.style.SUCCESS('Ok.')
+            self.style.SUCCESS('OK')
         )
 
         self.stdout.write('Creating event formats... ', ending='')
         self.make_events_formats()
         self.stdout.write(
-            self.style.SUCCESS('Ok.')
+            self.style.SUCCESS('OK')
+        )
+
+        self.stdout.write(
+            'Making leaderboards, seasons, periods... ', ending='')
+        self.make_leaderboards()
+        self.stdout.write(
+            self.style.SUCCESS('OK')
         )
 
     def make_playgroups(self):
@@ -31,18 +39,41 @@ class Command(BaseCommand):
                       23500, 24000, 24500, 25000, 25500, 26000, 26500, 27000, 27500, 28000, 28500,
                       29000, 29500, 30000, 30500, 31000, 31500, 32000, 32500, 33000, 33500, 34000,
                       34500, 35000]
-        level_breaks = [LevelBreakpoint(
-            level=level,
-            required_xp=xp
-        ) for level, xp in enumerate(break_vals, start=1)]
-        LevelBreakpoint.objects.all().delete()
-        LevelBreakpoint.objects.bulk_create(level_breaks)
+        for level, xp in enumerate(break_vals, start=1):
+            LevelBreakpoint.objects.get_or_create(level=level,
+                                                  defaults={'required_xp': xp})
 
     def make_leaderboards(self):
-        # leaderboards
-        # seasons
-        # periods
-        pass
+        month_leaderboard, _ = Leaderboard.objects.get_or_create(
+            name='Month',
+            period_frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH,
+            defaults={'sort_order': 1}
+        )
+        month_leaderboard.get_period_for_date(date.today())
+
+        season_leaderboard, _ = Leaderboard.objects.get_or_create(
+            name='Season',
+            period_frequency=LeaderboardSeasonPeriod.FrequencyOptions.SEASON,
+            defaults={'sort_order': 10}
+        )
+        season_leaderboard.get_period_for_date(date.today())
+
+        Leaderboard.objects.get_or_create(
+            name='All Time',
+            period_frequency=LeaderboardSeasonPeriod.FrequencyOptions.ALL_TIME,
+            defaults={'sort_order': 100}
+        )
+
+        all_time_season, _ = LeaderboardSeason.objects.get_or_create(
+            name='All Time'
+        )
+
+        LeaderboardSeasonPeriod.objects.get_or_create(
+            name='All Time',
+            season=all_time_season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.ALL_TIME,
+            defaults={'start_date': date(2020, 1, 1)}
+        )
 
     def make_events_formats(self):
         EventFormat.objects.get_or_create(name='Adaptive')

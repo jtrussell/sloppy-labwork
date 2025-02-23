@@ -1,5 +1,6 @@
 import os
 import csv
+from datetime import date
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseRedirect
@@ -17,7 +18,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.forms import EventForm
 from pmc.forms import PlaygroupMemberForm
-from .models import EventResult, LeaderboardLog
+from .models import EventResult, LeaderboardLog, LeaderboardSeasonPeriod
 from .models import PlayerRank
 from .models import Leaderboard
 from .models import Playgroup
@@ -305,10 +306,24 @@ def assign_event_points(request, slug, pk):
 @transaction.atomic
 def refresh_leaderboard(request, pk):
     leaderboard = Leaderboard.objects.get(pk=pk)
-    period = leaderboard.get_current_period()
+    period = leaderboard.get_period_for_date(date.today())
+    if leaderboard.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.MONTH:
+        top_n = 4
+        order_by = 'total_points'
+    elif leaderboard.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.SEASON:
+        top_n = 10
+        order_by = 'total_points'
+    elif leaderboard.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.ALL_TIME:
+        top_n = 100
+        order_by = 'average_points'
+    else:
+        raise ValueError('Invalid leaderboard period frequency')
+
     RankingPointsService.assign_points_for_leaderboard(
         leaderboard,
-        period
+        period,
+        order_by=order_by,
+        top_n=top_n
     )
     LeaderboardLog.objects.create(
         leaderboard=leaderboard

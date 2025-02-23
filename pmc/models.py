@@ -153,7 +153,7 @@ class RankingPoints(models.Model):
 
 
 class LeaderboardSeason(models.Model):
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, unique=True)
     sort_order = models.PositiveSmallIntegerField(default=1)
 
     def __str__(self):
@@ -197,6 +197,43 @@ class Leaderboard(models.Model):
         return LeaderboardSeasonPeriod.objects.filter(
             frequency=self.period_frequency
         ).order_by('-start_date').first()
+
+    def get_period_for_date(self, the_date):
+        if self.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.ALL_TIME:
+            return LeaderboardSeasonPeriod.objects.filter(
+                frequency=self.period_frequency
+            ).first()
+
+        # Seasons start on December 1st
+        december = 12
+        if the_date.month == december:
+            season_name = f'{the_date.year} - {the_date.year + 1}'
+        else:
+            season_name = f'{the_date.year - 1} - {the_date.year}'
+        season, _ = LeaderboardSeason.objects.get_or_create(name=season_name)
+
+        if self.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.MONTH:
+            period_start = the_date.replace(day=1)
+            period_name = period_start.strftime('%B %Y')
+        elif self.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.SEASON:
+            period_name = season_name
+            if the_date.month == december:
+                period_start = the_date.replace(day=1)
+            else:
+                period_start = the_date.replace(
+                    year=the_date.year - 1, month=december, day=1)
+        else:
+            raise ValueError(
+                f'Unhandled leaderboard period frequency {self.period_frequency}')
+
+        period, _ = LeaderboardSeasonPeriod.objects.get_or_create(
+            name=period_name,
+            start_date=period_start,
+            season=season,
+            frequency=self.period_frequency
+        )
+
+        return period
 
 
 class PlayerRank(models.Model):
@@ -306,7 +343,7 @@ class RankingPointsService():
         )
 
     @staticmethod
-    def assign_points_for_leaderboard(leaderboard, ranking_period, top_n=4):
+    def assign_points_for_leaderboard(leaderboard, ranking_period, order_by='total_points', top_n=4):
         """
         Updates PlayerRank records based on the top N highest-scoring RankingPoints
         within a given ranking period. Computes both global and playgroup rankings.
@@ -353,7 +390,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
+            user_data = {entry["result__user"]: entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -374,7 +411,7 @@ class RankingPointsService():
             ]
 
             player_ranks.sort(
-                key=lambda pr: (-pr.total_points, -pr.num_results))
+                key=lambda pr: (-getattr(pr, order_by), -pr.num_results))
             for rank, pr in enumerate(player_ranks, start=1):
                 pr.rank = rank
 
