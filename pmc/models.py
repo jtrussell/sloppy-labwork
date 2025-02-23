@@ -74,7 +74,7 @@ class PlaygroupMember(models.Model):
 
 
 class EventFormat(models.Model):
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, unique=True)
 
     class Meta:
         ordering = ('name',)

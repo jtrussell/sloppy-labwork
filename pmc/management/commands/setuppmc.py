@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand, CommandError
-from pmc.models import LevelBreakpoint
+from pmc.models import LevelBreakpoint, EventFormat
 
 
 class Command(BaseCommand):
@@ -9,9 +9,14 @@ class Command(BaseCommand):
     #    parser.add_argument("poll_ids", nargs="+", type=int)
 
     def handle(self, *args, **options):
-
         self.stdout.write('Creating level breakpoints... ', ending='')
         self.make_levels()
+        self.stdout.write(
+            self.style.SUCCESS('Ok.')
+        )
+
+        self.stdout.write('Creating event formats... ', ending='')
+        self.make_events_formats()
         self.stdout.write(
             self.style.SUCCESS('Ok.')
         )
@@ -43,7 +48,9 @@ class Command(BaseCommand):
         pass
 
     def make_events_formats(self):
-        pass
+        EventFormat.objects.get_or_create(name='Adaptive')
+        EventFormat.objects.get_or_create(name='Archon')
+        EventFormat.objects.get_or_create(name='Sealed')
 
     def make_ranking_points_map(self):
         pass
