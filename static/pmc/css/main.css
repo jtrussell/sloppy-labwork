@@ -1,6 +1,7 @@
 :root {
   --color-bg: #131313;
   --color-paper-bg: #1f1f1f;
+  --color-bg-footer: #050505;
   --color-text: #fff;
   --color-text-muted: #aaa;
   --color-links: #ffb400;
@@ -33,10 +34,7 @@ body {
   font-size: 16px;
   line-height: 24px;
   padding: 0;
-}
-
-body {
-  padding-bottom: 20px;
+  height: 100dvh;
 }
 
 a {
@@ -200,6 +198,7 @@ nav li + li::before {
 }
 
 .container {
+  width: 100%;
   max-width: 700px;
   margin: 0 auto;
   padding: 0 10px;
@@ -575,22 +574,48 @@ ul.messages {
   display: flex;
 }
 
-.flex.row {
+.flex.flex-row {
   flex-direction: row;
 }
 
-.flex.col {
+.flex.flex-col {
   flex-direction: column;
 }
 
-.flex.spread {
+@media (max-width: 680px) {
+  .flex.flex-col-sm {
+    flex-direction: column;
+  }
+}
+
+.flex.flex-spread {
   justify-content: space-between;
 }
 
-.flex > .spacer {
+.flex > .flex-spacer {
   flex: 1;
 }
 
 .text-muted {
   color: var(--color-text-muted);
+}
+
+/* ***********************************
+ * Footer
+ * *********************************** */
+footer {
+  margin-top: 30px;
+  padding: 40px 0;
+  background-color: var(--color-bg-footer);
+}
+
+ul.footer-links {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  font-size: smaller;
+}
+
+ul.footer-links a {
+  text-decoration: none;
 }

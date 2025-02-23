@@ -22,7 +22,7 @@
 	<title>KeyChain</title>
 </head>
 
-<body class="body {% if not playgroup_member.is_staff %}is-not-playgroup-staff{% endif %}">
+<body class="body {% if not playgroup_member.is_staff %}is-not-playgroup-staff{% endif %} flex flex-col">
 	<div class="masthead">
 		<div class="container">
 			<span>
@@ -50,6 +50,18 @@
 			<!-- Silence is golden -->
 		{% endblock %}
 	</div>
+
+	<div class="flex-spacer"></div>
+
+	<footer>
+		<div class="container">
+			<ul class="footer-links flex row flex-col-sm">
+				<li>
+					<a href="{% url 'pmc-about' %}">About</a>
+				</li>
+			</ul>
+		</div>
+	</footer>
 
 </body>
 </html>

@@ -29,6 +29,6 @@ urlpatterns = [
     path('pg/<slug:slug>/events/<int:pk>/points',
          views.assign_event_points, name='pmc-event-assign-points'),
     path('typography', views.typography),
-    path('about', views.about),
+    path('about', views.about, name='pmc-about'),
     path('refresh-leaderboard/<int:pk>', views.refresh_leaderboard),
 ]
