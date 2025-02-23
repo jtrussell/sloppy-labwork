@@ -548,6 +548,7 @@ ul.messages {
   background-color: var(--color-lines);
   padding: 10px;
   border-radius: 25px; /* 1/2 height of inner bar + padding */
+  overflow: hidden;
  }
 
  .progress-bar > .progress {
