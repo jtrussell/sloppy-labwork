@@ -324,11 +324,11 @@ class RankingPointsService():
             .aggregate(models.Min('max_players'))['max_players__min']
         ).order_by('finishing_position')
 
-        ranking_points = [RankingPoints(result=r)
-                          for r in event_results if r.finishing_position]
+        ranking_points = [RankingPoints(result=r, points=0)
+                          for r in event_results]
         for rp in rp_map_entries:
             for pts in ranking_points:
-                if int(pts.result.finishing_position) >= rp.finishing_position:
+                if int(pts.result.finishing_position or 0) >= rp.finishing_position:
                     pts.points = rp.points
 
         RankingPoints.objects.bulk_create(ranking_points)
@@ -390,7 +390,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
