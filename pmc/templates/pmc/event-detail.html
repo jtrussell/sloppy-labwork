@@ -38,21 +38,21 @@
     <h2>Results</h2>
     <table>
       <tr>
+        <th title="Finishing Position">#</th>
         <th>Player</th>
-        <th title="Finishing Position">FP</th>
         <th title="Wins">W</th>
         <th title="Losses">L</th>
         <th title="Ranking Points">RP</th>
       </tr>
       {% for result in object.results.all %}
         <tr>
+          <td class="stat">{{ result.finishing_position|default_if_none:"-" }}</td>
           <td>
             <div class="name-with-avatar">
               <img class="avatar" src="https://static.sloppylabwork.com/pmc/tmp/kc-logo-dark.png" alt="">
               {{ result.user }}
             </div>
           </td>
-          <td class="stat">{{ result.finishing_position|default_if_none:"-" }}</td>
           <td class="stat">{{ result.num_wins|default_if_none:"-" }}</td>
           <td class="stat">{{ result.num_losses|default_if_none:"-" }}</td>
           <td class="stat">{{ result.ranking_points.first|default_if_none:"-" }}</td>
