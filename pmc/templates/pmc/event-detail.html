@@ -39,14 +39,14 @@
     <table>
       <tr>
         <th title="Finishing Position">#</th>
-        <th>Player</th>
+        <th class="text-left">Player</th>
         <th title="Wins">W</th>
         <th title="Losses">L</th>
         <th title="Ranking Points">RP</th>
       </tr>
       {% for result in object.results.all %}
         <tr>
-          <td class="stat">{{ result.finishing_position|default_if_none:"-" }}</td>
+          <td class="col-sm">{{ result.finishing_position|default_if_none:"-" }}</td>
           <td>
             <div class="name-with-avatar">
               <img class="avatar" src="https://static.sloppylabwork.com/pmc/tmp/kc-logo-dark.png" alt="">
