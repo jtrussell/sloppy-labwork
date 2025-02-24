@@ -2,6 +2,7 @@
   --color-bg: #131313;
   --color-paper-bg: #1f1f1f;
   --color-bg-footer: #050505;
+  --color-bg-masthead: #050505;
   --color-text: #fff;
   --color-text-muted: #aaa;
   --color-links: #ffb400;
@@ -319,6 +320,7 @@ nav li + li::before {
   padding: 10px 0;
   border-bottom: 3px solid var(--color-accent);
   font-size: 22px;
+  background-color: var(--color-bg-masthead);
 }
 
 .masthead .container {
