@@ -67,6 +67,7 @@ class PlaygroupDetail(LoginRequiredMixin, generic.DetailView):
     model = Playgroup
     template_name = 'pmc/pg-detail.html'
 
+    @method_decorator(login_required)
     @method_decorator(is_pg_member)
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
@@ -134,6 +135,7 @@ class PlaygroupMembersList(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         return PlaygroupMember.objects.filter(playgroup__slug=self.kwargs['slug'])
 
+    @method_decorator(login_required)
     @method_decorator(is_pg_member)
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
@@ -143,6 +145,7 @@ class PlaygroupMemberDetail(LoginRequiredMixin, generic.DetailView):
     model = PlaygroupMember
     template_name = 'pmc/pg-member-detail.html'
 
+    @method_decorator(login_required)
     @method_decorator(is_pg_member)
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
@@ -158,6 +161,7 @@ class PlaygroupMemberManage(LoginRequiredMixin, generic.DetailView):
     model = PlaygroupMember
     template_name = 'pmc/pg-member-manage.html'
 
+    @method_decorator(login_required)
     @method_decorator(is_pg_staff)
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
@@ -170,6 +174,7 @@ class PlaygroupEventsList(LoginRequiredMixin, generic.ListView):
     def get_queryset(self):
         return Event.objects.filter(playgroups__slug=self.kwargs['slug'])
 
+    @method_decorator(login_required)
     @method_decorator(is_pg_member)
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
@@ -179,6 +184,7 @@ class EventDetail(LoginRequiredMixin, generic.DetailView):
     model = Event
     template_name = 'pmc/event-detail.html'
 
+    @method_decorator(login_required)
     @method_decorator(is_pg_member)
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
