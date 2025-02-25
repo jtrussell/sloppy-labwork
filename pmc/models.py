@@ -55,12 +55,6 @@ class PlaygroupMember(models.Model):
     tagline = models.CharField(
         max_length=100, default=None, null=True, blank=True)
 
-    # TODO - Add avatar and banner image fields to main user profile
-    avatar_src = 'https://static.sloppylabwork.com/pmc/tmp/kc-logo-dark.png'
-    banner_bg_color = '#131313'
-    banner_stroke_color = '#ffb400'
-    banner_text_color = '#fff'
-
     class Meta:
         constraints = [
             UniqueConstraint(fields=['playgroup', 'user'],
@@ -271,6 +265,11 @@ class LevelBreakpoint(models.Model):
 class PmcProfile(models.Model):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name='pmc_profile')
+    avatar = models.ForeignKey(
+        'Avatar', on_delete=models.SET_NULL, default=None, null=True, blank=True)
+
+    def get_avatar(self):
+        return self.avatar or Avatar.objects.get(pmc_id='001')
 
     def get_total_xp(self):
         experience_points = (
@@ -390,7 +389,8 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
+            user_data = {entry["result__user"]
+                : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -428,3 +428,26 @@ class RankingPointsService():
             global_ranks + playgroup_ranks, ignore_conflicts=True)
 
         return global_ranks + playgroup_ranks
+
+
+class Avatar(models.Model):
+    pmc_id = models.CharField(max_length=10, unique=True)
+    src = models.URLField()
+    category_label = models.CharField(max_length=25)
+    name = models.CharField(max_length=100)
+    banner_bg_color = models.CharField(max_length=6)
+    banner_stroke_color = models.CharField(max_length=6)
+    required_level = models.PositiveIntegerField(default=0)
+
+    @property
+    def banner_text_color(self):
+        hex_color = self.banner_bg_color
+        rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        brightness = int(0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2])
+        return '000' if brightness > 128 else 'fff'
+
+    class Meta:
+        ordering = ('required_level', 'pmc_id')
+
+    def __str__(self):
+        return self.name

@@ -20,6 +20,10 @@
 	<meta name="description" content="Project Might Club!">
 	<meta name="keywords" content="">
 	<title>KeyChain</title>
+
+  {% block extra_head %}
+    <!-- Custom head content -->
+  {% endblock %}
 </head>
 
 <body class="body {% if not playgroup_member.is_staff %}is-not-playgroup-staff{% endif %} flex flex-col">

@@ -25,7 +25,7 @@
         <td class="col-sm">{{ item.rank }}</td>
         <td class="text-left">
           <div class="name-with-avatar">
-            <img class="avatar" src="https://static.sloppylabwork.com/pmc/tmp/kc-logo-dark.png" alt="">
+            <img class="avatar" src="{{ item.user.pmc_profile.get_avatar.src}}" alt="">
             {{ item.user }}
           </div>
         </td>

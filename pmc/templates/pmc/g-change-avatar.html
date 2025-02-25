@@ -1,0 +1,46 @@
+{% extends "pmc/_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/change-avatar.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>Choose an Avatar</h1>
+    
+  <h2>Current</h2>
+  <div class="banner-with-avatar" style="background-color: #{{ current_avatar.banner_bg_color }}">
+    <img class="avatar" src="{{ current_avatar.src }}" style="border-right: 3px solid #{{ current_avatar.banner_stroke_color }}" alt="current_avatar.name">
+    <div style="color: #{{ current_avatar.banner_text_color }}">
+      <span class="banner-text">{{ user }}</span>
+      <span class="banner-sub-text">This space is intentionally left blank.</span>
+    </div>
+  </div>
+
+  <h2>Options</h2>
+  <div class="card">
+    {% for cat in categories %}
+    <div class="avatar-category">
+      <h3>{{ cat }}</h3>
+      <ul class="avatar-list">
+        {% for avatar in avatars %}
+        {% if avatar.category_label == cat %}
+          <li class="avatar-list-item {{avatar.required_level}} {{current_level}} {% if avatar.required_level > current_level %} disabled{% endif %}">
+            <form action="{% url 'pmc-change-avatar' %}" method="post">
+              {% csrf_token %}
+              <input type="hidden" name="avatar" value="{{ avatar.pk }}">
+              <a href="javascript:void(0)" class="avatar-selection-link" onclick="this.closest('form').submit()">
+                <img src="{{ avatar.src }}" alt="{{ avatar.name }}">
+              </a>
+            </form>
+            {% if avatar.required_level > current_level %}
+              <span class="avatar-level-requirement">{{ avatar.required_level }}</span>
+            {% endif %}
+          </li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+{% endblock %}

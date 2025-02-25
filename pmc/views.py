@@ -26,6 +26,7 @@ from .models import PlaygroupEvent
 from .models import PlaygroupMember
 from .models import Event
 from .models import RankingPointsService
+from .models import Avatar
 
 
 def is_pg_member(view):
@@ -92,6 +93,7 @@ def my_playgroup_profile(request, slug):
         level_increment_progress = None
 
     return render(request, 'pmc/pg-me.html', {
+        'avatar': request.user.pmc_profile.get_avatar(),
         'total_xp': total_xp,
         'current_level': current_level,
         'next_level': next_level,
@@ -294,6 +296,27 @@ def typography(request):
 
 def about(request):
     return render(request, 'pmc/about.html')
+
+
+@login_required
+def change_avatar(request):
+    if request.method == 'POST':
+        avatar_id = request.POST.get('avatar')
+        avatar = Avatar.objects.get(pk=avatar_id)
+        request.user.pmc_profile.avatar = avatar
+        request.user.pmc_profile.save()
+        return HttpResponseRedirect(reverse('pmc-change-avatar'))
+
+    avatars = Avatar.objects.all()
+    categories = avatars.order_by().values_list(
+        'category_label', flat=True).distinct()
+    current_level = request.user.pmc_profile.get_level()
+    return render(request, 'pmc/g-change-avatar.html', {
+        'current_avatar': request.user.pmc_profile.get_avatar(),
+        'avatars': avatars,
+        'categories': categories,
+        'current_level': current_level.level,
+    })
 
 
 @require_POST

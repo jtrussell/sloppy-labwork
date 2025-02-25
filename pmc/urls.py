@@ -6,6 +6,7 @@ urlpatterns = [
     path('pg/<slug:slug>/@me/', views.my_playgroup_profile, name='pmc-my-pg'),
     path('pg/<slug:slug>/@me/manage',
          views.manage_my_playgroup_profile, name='pmc-my-pg-manage'),
+    path('@me/change-avatar', views.change_avatar, name='pmc-change-avatar'),
     path('pg/<slug:slug>/members',
          views.PlaygroupMembersList.as_view(), name='pmc-pg-members'),
     path('pg/<slug:slug>/members/<username>',

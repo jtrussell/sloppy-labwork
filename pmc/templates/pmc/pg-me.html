@@ -7,9 +7,9 @@
   <div class="subheading">@{{ user }}</div>
 
   <div class="card">
-    <h2 class="banner-with-avatar" style="background-color: {{ playgroup_member.banner_bg_color }}">
-      <img class="avatar" src="{{ playgroup_member.avatar_src }}" style="border-right: 3px solid {{ playgroup_member.banner_stroke_color }}" alt="">
-      <div>
+    <h2 class="banner-with-avatar" style="background-color: #{{ avatar.banner_bg_color }}">
+      <img class="avatar" src="{{ avatar.src }}" style="border-right: 3px solid #{{ avatar.banner_stroke_color }}" alt="">
+      <div style="color: #{{ avatar.banner_text_color }}">
         <span class="banner-text">{{ user }}</span>
         <span class="banner-sub-text">{{ playgroup_member.tagline | default:"Silence is golden." }}</span>
       </div>
