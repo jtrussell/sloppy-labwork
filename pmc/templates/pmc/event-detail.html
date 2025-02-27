@@ -49,7 +49,7 @@
           <td class="col-sm">{{ result.finishing_position|default_if_none:"-" }}</td>
           <td>
             <div class="name-with-avatar">
-              <img class="avatar" src="https://static.sloppylabwork.com/pmc/tmp/kc-logo-dark.png" alt="">
+            <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
               {{ result.user }}
             </div>
           </td>
@@ -61,4 +61,3 @@
     </table>
   </div>
 {% endblock %}
-
