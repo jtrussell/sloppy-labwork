@@ -362,7 +362,7 @@ def refresh_leaderboard(request, pk):
         order_by = 'total_points'
     elif leaderboard.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.ALL_TIME:
         top_n = 100
-        order_by = 'total_point'
+        order_by = 'total_points'
     else:
         raise ValueError('Invalid leaderboard period frequency')
 
