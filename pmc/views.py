@@ -75,8 +75,7 @@ class PlaygroupDetail(LoginRequiredMixin, generic.DetailView):
 
 
 @login_required
-@is_pg_member
-def my_playgroup_profile(request, slug):
+def my_keychain(request):
     total_xp = request.user.pmc_profile.get_total_xp()
     current_level = request.user.pmc_profile.get_level()
     next_level = request.user.pmc_profile.get_next_level()
@@ -92,7 +91,7 @@ def my_playgroup_profile(request, slug):
         level_increment = None
         level_increment_progress = None
 
-    return render(request, 'pmc/pg-me.html', {
+    return render(request, 'pmc/g-my-keychain.html', {
         'avatar': request.user.pmc_profile.get_avatar(),
         'total_xp': total_xp,
         'current_level': current_level,
@@ -100,9 +99,8 @@ def my_playgroup_profile(request, slug):
         'percent_level_up': percent_level_up,
         'level_increment': level_increment,
         'level_increment_progress': level_increment_progress,
-        'events': Event.objects.filter(
-            playgroups__slug=slug,
-            results__user=request.user
+        'memberships': PlaygroupMember.objects.filter(
+            user=request.user
         )
     })
 
@@ -211,10 +209,23 @@ def playgroup_leaderboard(request, slug, pk=None):
             'slug': slug,
             'pk': Leaderboard.objects.first().pk
         }))
-    return render(request, 'pmc/pg-leaderboard.html', {
+    return render(request, 'pmc/g-leaderboard.html', {
         'leaderboards': Leaderboard.objects.all(),
         'rankings': PlayerRank.objects.filter(leaderboard=pk, playgroup__slug=slug),
         'slug': slug,
+        'pk': pk,
+    })
+
+
+@login_required
+def global_leaderboard(request, pk=None):
+    if pk is None:
+        return HttpResponseRedirect(reverse('pmc-leaderboard', kwargs={
+            'pk': Leaderboard.objects.first().pk
+        }))
+    return render(request, 'pmc/g-leaderboard.html', {
+        'leaderboards': Leaderboard.objects.all(),
+        'rankings': PlayerRank.objects.filter(leaderboard=pk, playgroup=None),
         'pk': pk,
     })
 
@@ -308,8 +319,15 @@ def change_avatar(request):
         return HttpResponseRedirect(reverse('pmc-change-avatar'))
 
     avatars = Avatar.objects.all()
-    categories = avatars.order_by().values_list(
-        'category_label', flat=True).distinct()
+    categories = [
+        'KeyChain',
+        'Houses',
+        'Sets',
+        'Card Types',
+        'Icons',
+        'Counters',
+        'Other',
+    ]
     current_level = request.user.pmc_profile.get_level()
     return render(request, 'pmc/g-change-avatar.html', {
         'current_avatar': request.user.pmc_profile.get_avatar(),

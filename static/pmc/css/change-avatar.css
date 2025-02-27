@@ -27,7 +27,7 @@ ul.avatar-list {
 
 .avatar-list-item a:hover {
   cursor: pointer;
-  box-shadow: 0 0 5px var(--color-primary);
+  box-shadow: 0 0 7px var(--color-primary);
 }
 
 .avatar-list-item.disabled a {

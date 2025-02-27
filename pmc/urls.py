@@ -2,8 +2,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('@me', views.my_keychain, name='pmc-my-keychain'),
     path('pg/<slug:slug>/', views.PlaygroupDetail.as_view(), name='pmc-pg-detail'),
-    path('pg/<slug:slug>/@me/', views.my_playgroup_profile, name='pmc-my-pg'),
     path('pg/<slug:slug>/@me/manage',
          views.manage_my_playgroup_profile, name='pmc-my-pg-manage'),
     path('@me/change-avatar', views.change_avatar, name='pmc-change-avatar'),
@@ -13,6 +13,8 @@ urlpatterns = [
          views.PlaygroupMemberDetail.as_view(), name='pmc-pg-member-detail'),
     path('pg/<slug:slug>/members/<username>/manage',
          views.PlaygroupMemberManage.as_view(), name='pmc-pg-member-manage'),
+    path('/leaderboard', views.global_leaderboard, name='pmc-leaderboard'),
+    path('/leaderboard/<int:pk>', views.global_leaderboard, name='pmc-leaderboard'),
     path('pg/<slug:slug>/leaderboard',
          views.playgroup_leaderboard, name='pmc-pg-leaderboard'),
     path('pg/<slug:slug>/leaderboard/<int:pk>',

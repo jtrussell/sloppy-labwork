@@ -5,7 +5,7 @@
 
 <div class="btn-group btn-group-center">
   {% for lb in leaderboards %}
-  <a href="{% url 'pmc-pg-leaderboard' slug lb.pk %}" class="btn{% if lb.pk == pk %} btn-solid{% endif %}">
+  <a href="{% url 'pmc-leaderboard' lb.pk %}" class="btn{% if lb.pk == pk %} btn-solid{% endif %}">
     {{ lb }}
   </a>
   {% endfor %}

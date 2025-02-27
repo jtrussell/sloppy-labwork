@@ -18,16 +18,16 @@ def nav_links(request):
     playgroup_slug = _get_playgroup_slug(request)
     nav_links = []
 
+    nav_links.append({
+        'name': _('My KeyChain'),
+        'url': reverse('pmc-my-keychain'),
+        'is_active': False,
+    })
+
     if playgroup_slug:
         nav_links.append({
             'name': _('Home'),
             'url': reverse('pmc-pg-detail', args=[playgroup_slug]),
-            'is_active': False,
-        })
-
-        nav_links.append({
-            'name': _('My KeyChain'),
-            'url': reverse('pmc-my-pg', args=[playgroup_slug]),
             'is_active': False,
         })
 
@@ -46,6 +46,13 @@ def nav_links(request):
         nav_links.append({
             'name': _('Leaderboards'),
             'url': reverse('pmc-pg-leaderboard', args=[playgroup_slug]),
+            'is_active': False,
+        })
+
+    if not playgroup_slug:
+        nav_links.append({
+            'name': _('Leaderboards'),
+            'url': reverse('pmc-leaderboard'),
             'is_active': False,
         })
 

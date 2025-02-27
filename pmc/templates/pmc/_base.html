@@ -29,11 +29,13 @@
 <body class="body {% if not playgroup_member.is_staff %}is-not-playgroup-staff{% endif %} flex flex-col">
 	<div class="masthead">
 		<div class="container">
-			<span>
-				{{ playgroup.name }}
-			</span>
+			{% if playgroup %}
+				<span>
+					{{ playgroup.name }}
+				</span>
+			{% endif %}
 
-			<span class="wordmark"></span>
+			<a href="{% url 'pmc-my-keychain' %}" class="wordmark"></a>
 		</div>
 	</div>
 
