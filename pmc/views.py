@@ -209,7 +209,7 @@ def playgroup_leaderboard(request, slug, pk=None):
             'slug': slug,
             'pk': Leaderboard.objects.first().pk
         }))
-    return render(request, 'pmc/g-leaderboard.html', {
+    return render(request, 'pmc/pg-leaderboard.html', {
         'leaderboards': Leaderboard.objects.all(),
         'rankings': PlayerRank.objects.filter(leaderboard=pk, playgroup__slug=slug),
         'slug': slug,
