@@ -1,0 +1,118 @@
+
+.playercard {
+  aspect-ratio: 7 / 10;
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.banner {
+  flex: 1;
+}
+
+.banner img.avatar {
+  height: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+.background {
+  height: 83%;
+}
+
+.banner {
+  display: flex;
+  gap: 20px;
+  flex-direction: row;
+  align-items: center;
+}
+
+.banner .banner-text {
+  display: block;
+  font-weight: bold;
+  font-size: 2.2em;
+  margin-bottom: 12px;
+}
+
+.banner .banner-sub-text {
+  font-size: 1em;
+  font-style: normal;
+}
+
+@media (max-width: 768px) {
+  .banner {
+    gap: 10px;
+  }
+
+  .banner .banner-text {
+    font-size: 2em;
+    margin-bottom: 5px;
+  }
+
+  .banner .banner-sub-text {
+    font-size: 0.9em;
+  }
+}
+
+.element-category:not(:last-child) {
+  margin-bottom: 40px;
+}
+
+ul.element-list {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.element-list-item {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.element-list-item,
+.element-list-item a,
+.element-list-item form,
+.element-list-item img {
+  display: inline-block;
+  width: 100px;
+  height: 100px;
+}
+
+.element-list-item a:hover {
+  cursor: pointer;
+  box-shadow: 0 0 7px var(--color-primary);
+}
+
+.element-list-item.disabled a {
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.element-list-item.disabled img {
+  filter: brightness(30%) grayscale(100%);
+  -webkit-filter: brightness(30%) grayscale(100%);
+}
+
+.element-list-item.disabled::after {
+  content: "";
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 60px;
+  height: 60px;
+  background-image: url("https://static.sloppylabwork.com/pmc/lock.svg");
+  z-index: 10;
+}
+
+.element-list-item .element-level-requirement {
+  position: absolute;
+  left: 0;
+  bottom: 28px;
+  width: 100%;
+  color: #333;
+  font-size: 20px;
+  text-align: center ;
+  z-index: 100;
+}

@@ -1,5 +1,5 @@
 from django import forms
-from .models import Event
+from .models import Event, PmcProfile
 from .models import PlaygroupMember
 from .models import EventFormat
 from django.utils.translation import gettext_lazy as _
@@ -37,4 +37,10 @@ class EventForm(forms.ModelForm):
 class PlaygroupMemberForm(forms.ModelForm):
     class Meta:
         model = PlaygroupMember
-        fields = ('nickname', 'house_flair', 'tagline',)
+        fields = ('nickname',)
+
+
+class PmcProfileForm(forms.ModelForm):
+    class Meta:
+        model = PmcProfile
+        fields = ('tagline',)

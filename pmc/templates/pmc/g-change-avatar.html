@@ -2,39 +2,40 @@
 {% load static %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'pmc/css/change-avatar.css' %}">
+  <link rel="stylesheet" href="{% static 'pmc/css/playercard.css' %}">
 {% endblock %}
 
 {% block content %}
-  <h1>Choose an Avatar</h1>
-    
-  <h2>Current</h2>
-  <div class="banner-with-avatar" style="background-color: #{{ current_avatar.banner_bg_color }}">
-    <img class="avatar" src="{{ current_avatar.src }}" style="border-right: 3px solid #{{ current_avatar.banner_stroke_color }}" alt="current_avatar.name">
-    <div style="color: #{{ current_avatar.banner_text_color }}">
-      <span class="banner-text">{{ user }}</span>
-      <span class="banner-sub-text">This space is intentionally left blank.</span>
-    </div>
+  <h1>Update my Playercard</h1>
+  <div class="subheading">Choose an Avatar</div>
+
+  <div class="btn-group btn-group-center">
+    <a href="{% url 'pmc-manage-avatar' %}" class="btn btn-solid">Avatar</a>
+    <a href="{% url 'pmc-manage-background' %}" class="btn">Background</a>
   </div>
+    
+  <h2>Current - Lv {{ current_level }}</h2>
+
+	{% include 'pmc/_playercard.html' %}
 
   <h2>Options</h2>
   <div class="card">
     {% for cat in categories %}
-    <div class="avatar-category">
+    <div class="element-category">
       <h3>{{ cat }}</h3>
-      <ul class="avatar-list">
+      <ul class="element-list">
         {% for avatar in avatars %}
         {% if avatar.category_label == cat %}
-          <li class="avatar-list-item {{avatar.required_level}} {{current_level}} {% if avatar.required_level > current_level %} disabled{% endif %}">
-            <form action="{% url 'pmc-change-avatar' %}" method="post">
+          <li class="element-list-item {{avatar.required_level}} {{current_level}} {% if avatar.required_level > current_level %} disabled{% endif %}">
+            <form action="{% url 'pmc-manage-avatar' %}" method="post">
               {% csrf_token %}
               <input type="hidden" name="avatar" value="{{ avatar.pk }}">
-              <a href="javascript:void(0)" class="avatar-selection-link" onclick="this.closest('form').submit()">
+              <a href="javascript:void(0)" class="element-selection-link" onclick="this.closest('form').submit()">
                 <img src="{{ avatar.src }}" alt="{{ avatar.name }}">
               </a>
             </form>
             {% if avatar.required_level > current_level %}
-              <span class="avatar-level-requirement">{{ avatar.required_level }}</span>
+              <span class="element-level-requirement">{{ avatar.required_level }}</span>
             {% endif %}
           </li>
         {% endif %}

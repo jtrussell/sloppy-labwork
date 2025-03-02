@@ -98,6 +98,7 @@ TEMPLATES = [
                 'pmc.context_processors.nav_links',
                 'pmc.context_processors.playgroup',
                 'pmc.context_processors.playgroup_member',
+                'pmc.context_processors.pmc_profile',
             ],
         },
     },

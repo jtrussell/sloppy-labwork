@@ -27,22 +27,6 @@ class Playgroup(models.Model):
 
 
 class PlaygroupMember(models.Model):
-    class FlairOptions(models.IntegerChoices):
-        BROBNAR = (1, _('Brobnar'))
-        DIS = (2, _('Dis'))
-        EKWIDON = (3, _('Ekwidon'))
-        GEISTOID = (4, _('Geistoid'))
-        LOGOS = (5, _('Logos'))
-        MARS = (6, _('Mars'))
-        REDEMPTION = (7, _('Redemption'))
-        SANCTUM = (8, _('Sanctum'))
-        SAURIAN = (9, _('Saurian'))
-        SHADOWS = (10, _('Shadows'))
-        SKYBORN = (11, _('Skyborn'))
-        STAR_ALLIANCE = (12, _('Star Alliance'))
-        UNFATHOMABLE = (13, _('Unfathomable'))
-        UNTAMED = (14, _('Untamed'))
-
     playgroup = models.ForeignKey(
         Playgroup, on_delete=models.CASCADE, related_name='members')
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
@@ -50,10 +34,6 @@ class PlaygroupMember(models.Model):
         max_length=100, default=None, null=True, blank=True)
     joined_on = models.DateTimeField(auto_now_add=True)
     is_staff = models.BooleanField(default=False)
-    house_flair = models.IntegerField(
-        choices=FlairOptions.choices, default=None, null=True, blank=True)
-    tagline = models.CharField(
-        max_length=100, default=None, null=True, blank=True)
 
     class Meta:
         constraints = [
@@ -267,9 +247,16 @@ class PmcProfile(models.Model):
         User, on_delete=models.CASCADE, related_name='pmc_profile')
     avatar = models.ForeignKey(
         'Avatar', on_delete=models.SET_NULL, default=None, null=True, blank=True)
+    background = models.ForeignKey(
+        'Background', on_delete=models.SET_NULL, default=None, null=True, blank=True)
+    tagline = models.CharField(
+        max_length=100, default=None, null=True, blank=True)
 
     def get_avatar(self):
         return self.avatar or Avatar.objects.get(pmc_id='001')
+
+    def get_background(self):
+        return self.background or Background.objects.get(pmc_id='001')
 
     def get_total_xp(self):
         experience_points = (
@@ -389,8 +376,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]
-                : entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -445,6 +431,20 @@ class Avatar(models.Model):
         rgb = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
         brightness = int(0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2])
         return '000' if brightness > 128 else 'fff'
+
+    class Meta:
+        ordering = ('required_level', 'pmc_id')
+
+    def __str__(self):
+        return self.name
+
+
+class Background(models.Model):
+    pmc_id = models.CharField(max_length=10, unique=True)
+    src = models.URLField()
+    category_label = models.CharField(max_length=25)
+    name = models.CharField(max_length=100)
+    required_level = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ('required_level', 'pmc_id')

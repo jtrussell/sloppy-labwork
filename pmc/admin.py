@@ -11,6 +11,7 @@ from .models import Leaderboard
 from .models import PlayerRank
 from .models import LevelBreakpoint
 from .models import Avatar
+from .models import Background
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -110,6 +111,12 @@ class AvatarAdmin(admin.ModelAdmin):
     list_filter = ('category_label',)
 
 
+class BackgroundAdmin(admin.ModelAdmin):
+    list_display = ('pmc_id', 'name', 'category_label', 'required_level')
+    search_fields = ['pmc_id', 'name']
+    list_filter = ('category_label',)
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
@@ -126,3 +133,4 @@ admin.site.register(PlaygroupEvent, PlaygroupEventAdmin)
 admin.site.register(PmcProfile, PmcProfileAdmin)
 admin.site.register(LevelBreakpoint, LevelBreakpointAdmin)
 admin.site.register(Avatar, AvatarAdmin)
+admin.site.register(Background, BackgroundAdmin)

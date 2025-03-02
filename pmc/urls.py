@@ -3,10 +3,14 @@ from . import views
 
 urlpatterns = [
     path('@me', views.my_keychain, name='pmc-my-keychain'),
+    path('@me/manage', views.manage_my_pmc_profile,
+         name='pmc-my-keychain-manage'),
+    path('@me/manage/avatar', views.change_avatar, name='pmc-manage-avatar'),
+    path('@me/manage/background', views.change_background,
+         name='pmc-manage-background'),
     path('pg/<slug:slug>/', views.PlaygroupDetail.as_view(), name='pmc-pg-detail'),
     path('pg/<slug:slug>/@me/manage',
          views.manage_my_playgroup_profile, name='pmc-my-pg-manage'),
-    path('@me/change-avatar', views.change_avatar, name='pmc-change-avatar'),
     path('pg/<slug:slug>/members',
          views.PlaygroupMembersList.as_view(), name='pmc-pg-members'),
     path('pg/<slug:slug>/members/<username>',

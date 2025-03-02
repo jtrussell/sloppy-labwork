@@ -4,12 +4,12 @@
 	<h1>Members</h1>
 	<ul class="card-list">
 		{% for member in members %}
-			<li class="card house-flair house-flair-{{member.house_flair}}">
+			<li class="card">
 				<h2 class="banner-with-avatar" style="background-color: #{{ member.user.pmc_profile.get_avatar.banner_bg_color }}">
 					<img class="avatar" src="{{ member.user.pmc_profile.get_avatar.src }}" style="border-right: 3px solid #{{ member.user.pmc_profile.get_avatar.banner_stroke_color }}" alt="">
 					<div style="color: #{{ member.user.pmc_profile.get_avatar.banner_text_color }}">
 						<span class="banner-text">{{ member }}</span>
-						<span class="banner-sub-text">{{ member.tagline | default:"Silence is golden." }}</span>
+						<span class="banner-sub-text">{{ member.user.pmc_profile.tagline | default:"Silence is golden." }}</span>
 					</div>
 				</h2>
 

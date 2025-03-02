@@ -85,3 +85,11 @@ def playgroup_member(request):
         )} if playgroup_slug and request.user else {}
     except PlaygroupMember.DoesNotExist:
         return {}
+
+
+def pmc_profile(request):
+    return {
+        'my_profile': request.user.pmc_profile if request.user.is_authenticated else None,
+        'my_avatar': request.user.pmc_profile.get_avatar() if request.user.is_authenticated else None,
+        'my_background': request.user.pmc_profile.get_background() if request.user.is_authenticated else None,
+    }

@@ -1,0 +1,47 @@
+{% extends "pmc/_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/playercard.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>Update my Playercard</h1>
+  <div class="subheading">Choose a Background</div>
+
+  <div class="btn-group btn-group-center">
+    <a href="{% url 'pmc-manage-avatar' %}" class="btn">Avatar</a>
+    <a href="{% url 'pmc-manage-background' %}" class="btn btn-solid">Background</a>
+  </div>
+    
+  <h2>Current - Lv {{ current_level }}</h2>
+
+	{% include 'pmc/_playercard.html' %}
+
+  <h2>Options</h2>
+  <div class="card">
+    {% for cat in categories %}
+    <div class="element-category">
+      <h3>{{ cat }}</h3>
+      <ul class="element-list">
+        {% for background in backgrounds %}
+        {% if background.category_label == cat %}
+          <li class="element-list-item {{background.required_level}} {{current_level}} {% if background.required_level > current_level %} disabled{% endif %}">
+            <form action="{% url 'pmc-manage-background' %}" method="post">
+              {% csrf_token %}
+              <input type="hidden" name="background" value="{{ background.pk }}">
+              <a href="javascript:void(0)" class="element-selection-link" onclick="this.closest('form').submit()">
+                <img src="{{ background.src }}" alt="{{ background.name }}">
+              </a>
+            </form>
+            {% if background.required_level > current_level %}
+              <span class="element-level-requirement">{{ background.required_level }}</span>
+            {% endif %}
+          </li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+{% endblock %}

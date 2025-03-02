@@ -16,7 +16,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
-from pmc.forms import EventForm
+from pmc.forms import EventForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
 from .models import EventResult, LeaderboardLog, LeaderboardSeasonPeriod
 from .models import PlayerRank
@@ -27,6 +27,7 @@ from .models import PlaygroupMember
 from .models import Event
 from .models import RankingPointsService
 from .models import Avatar
+from .models import Background
 
 
 def is_pg_member(view):
@@ -316,7 +317,7 @@ def change_avatar(request):
         avatar = Avatar.objects.get(pk=avatar_id)
         request.user.pmc_profile.avatar = avatar
         request.user.pmc_profile.save()
-        return HttpResponseRedirect(reverse('pmc-change-avatar'))
+        return HttpResponseRedirect(reverse('pmc-manage-avatar'))
 
     avatars = Avatar.objects.all()
     categories = [
@@ -332,6 +333,46 @@ def change_avatar(request):
     return render(request, 'pmc/g-change-avatar.html', {
         'current_avatar': request.user.pmc_profile.get_avatar(),
         'avatars': avatars,
+        'categories': categories,
+        'current_level': current_level.level,
+    })
+
+
+@login_required
+def change_background(request):
+    if request.method == 'POST':
+        background_id = request.POST.get('background')
+        background = Background.objects.get(pk=background_id)
+        request.user.pmc_profile.background = background
+        request.user.pmc_profile.save()
+        return HttpResponseRedirect(reverse('pmc-manage-background'))
+
+    backgrounds = Background.objects.all()
+    categories = [
+        'KeyChain',
+        'General',
+        'Brobnar',
+        'Dis',
+        'Logos',
+        'Mars',
+        'Sanctum',
+        'Untamed',
+        'Saurian',
+        'Star Alliance',
+        'Unfathomable',
+        'Geistoid',
+        'Ekwidon',
+        'Skyborn',
+        'Redemption',
+        'Sets',
+        'Future Release',
+        'Adventures',
+        'KeyForge Community'
+    ]
+    current_level = request.user.pmc_profile.get_level()
+    return render(request, 'pmc/g-change-background.html', {
+        'current_background': request.user.pmc_profile.get_background(),
+        'backgrounds': backgrounds,
         'categories': categories,
         'current_level': current_level.level,
     })
@@ -376,3 +417,20 @@ def refresh_leaderboard(request, pk):
         leaderboard=leaderboard
     ).save()
     return HttpResponse('Done.', content_type='text/plain')
+
+
+@login_required
+def manage_my_pmc_profile(request):
+    profile = request.user.pmc_profile
+    if request.method == 'POST':
+        form = PmcProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect(reverse('pmc-my-keychain'))
+
+    else:
+        form = PmcProfileForm(instance=profile)
+
+    return render(request, 'pmc/g-me-manage.html', {
+        'form': form,
+    })
