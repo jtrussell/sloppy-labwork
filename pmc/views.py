@@ -16,9 +16,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
-from pmc.forms import EventForm, PmcProfileForm
+from pmc.forms import EventForm, LeaderboardSeasonPeriodForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
-from .models import EventResult, LeaderboardLog, LeaderboardSeasonPeriod
+from .models import EventResult, LeaderboardLog, LeaderboardSeason, LeaderboardSeasonPeriod
 from .models import PlayerRank
 from .models import Leaderboard
 from .models import Playgroup
@@ -210,8 +210,26 @@ def playgroup_leaderboard(request, slug, pk=None):
             'slug': slug,
             'pk': Leaderboard.objects.first().pk
         }))
+    rank_filters = {
+        'leaderboard': pk,
+        'playgroup': None
+    }
+    leaderboard = Leaderboard.objects.get(pk=pk)
+    season = request.GET.get('season')
+    period = request.GET.get('period')
+    if period:
+        rank_filters['period'] = period
+    elif season:
+        rank_filters['period__season'] = season
+    else:
+        rank_filters['period'] = leaderboard.get_current_period()
+
+    season_period_form = LeaderboardSeasonPeriodForm(
+        Leaderboard.objects.get(pk=pk), request.GET or None)
+
     return render(request, 'pmc/pg-leaderboard.html', {
         'leaderboards': Leaderboard.objects.all(),
+        'season_period_form': season_period_form,
         'rankings': PlayerRank.objects.filter(leaderboard=pk, playgroup__slug=slug),
         'slug': slug,
         'pk': pk,
@@ -224,9 +242,28 @@ def global_leaderboard(request, pk=None):
         return HttpResponseRedirect(reverse('pmc-leaderboard', kwargs={
             'pk': Leaderboard.objects.first().pk
         }))
+
+    rank_filters = {
+        'leaderboard': pk,
+        'playgroup': None
+    }
+    leaderboard = Leaderboard.objects.get(pk=pk)
+    season = request.GET.get('season')
+    period = request.GET.get('period')
+    if period:
+        rank_filters['period'] = period
+    elif season:
+        rank_filters['period__season'] = season
+    else:
+        rank_filters['period'] = leaderboard.get_current_period()
+
+    season_period_form = LeaderboardSeasonPeriodForm(
+        Leaderboard.objects.get(pk=pk), request.GET or None)
+
     return render(request, 'pmc/g-leaderboard.html', {
         'leaderboards': Leaderboard.objects.all(),
-        'rankings': PlayerRank.objects.filter(leaderboard=pk, playgroup=None),
+        'season_period_form': season_period_form,
+        'rankings': PlayerRank.objects.filter(**rank_filters),
         'pk': pk,
     })
 

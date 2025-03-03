@@ -1,5 +1,7 @@
+from tokenize import blank_re
 from django import forms
-from .models import Event, PmcProfile
+from pkg_resources import require
+from .models import Event, LeaderboardSeason, LeaderboardSeasonPeriod, PmcProfile
 from .models import PlaygroupMember
 from .models import EventFormat
 from django.utils.translation import gettext_lazy as _
@@ -44,3 +46,48 @@ class PmcProfileForm(forms.ModelForm):
     class Meta:
         model = PmcProfile
         fields = ('tagline',)
+
+
+class LeaderboardSeasonPeriodForm(forms.Form):
+    season = forms.ModelChoiceField(
+        queryset=LeaderboardSeason.objects.none(),
+        initial=LeaderboardSeason.objects.first(),
+        required=True,
+        widget=forms.Select(attrs={'onchange': 'this.closest("form").submit()'}))
+    period = forms.ModelChoiceField(
+        queryset=LeaderboardSeasonPeriod.objects.none(),
+        initial=LeaderboardSeasonPeriod.objects.first(),
+        required=True,
+        widget=forms.Select(attrs={'onchange': 'this.closest("form").submit()'}))
+
+    def __init__(self, leaderboard, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        season_qs = LeaderboardSeason.objects.filter(
+            periods__frequency=leaderboard.period_frequency
+        ).distinct()
+        self.fields['season'].queryset = season_qs
+
+        if 'season' in self.data:
+            try:
+                season_id = int(self.data.get('season'))
+                period_qs = LeaderboardSeasonPeriod.objects.filter(
+                    season_id=season_id, frequency=leaderboard.period_frequency)
+                self.fields['period'].queryset = period_qs
+                if 'period' not in self.data:
+                    self.fields['period'].initial = period_qs.first()
+            except (ValueError, TypeError):
+                pass
+        else:
+            initial_season = season_qs.first()
+            self.fields['season'].initial = initial_season
+
+            period_qs = LeaderboardSeasonPeriod.objects.filter(
+                season=initial_season, frequency=leaderboard.period_frequency)
+            self.fields['period'].queryset = period_qs
+            self.fields['period'].initial = period_qs.first()
+
+        if leaderboard.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.ALL_TIME:
+            self.fields.pop('season')
+            self.fields.pop('period')
+        elif leaderboard.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.SEASON:
+            self.fields.pop('period')

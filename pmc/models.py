@@ -156,7 +156,7 @@ class LeaderboardSeasonPeriod(models.Model):
                          name='unique_leaderboard_period')
 
     def __str__(self):
-        return f'{self.season} - {self.name}'
+        return f'{self.name}'
 
 
 class Leaderboard(models.Model):
