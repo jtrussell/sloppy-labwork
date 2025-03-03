@@ -84,9 +84,12 @@ class Command(BaseCommand):
         )
 
     def make_events_formats(self):
-        EventFormat.objects.get_or_create(name='Adaptive')
-        EventFormat.objects.get_or_create(name='Archon')
-        EventFormat.objects.get_or_create(name='Sealed')
+        EventFormat.objects.get_or_create(
+            name='Adaptive', defaults={'sort_order': 100})
+        EventFormat.objects.get_or_create(
+            name='Archon', defaults={'sort_order': 10})
+        EventFormat.objects.get_or_create(
+            name='Sealed', defaults={'sort_order': 1})
 
     def make_ranking_points_map(self):
         pass

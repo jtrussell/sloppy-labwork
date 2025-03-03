@@ -49,9 +49,10 @@ class PlaygroupMember(models.Model):
 
 class EventFormat(models.Model):
     name = models.CharField(max_length=200, unique=True)
+    sort_order = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
-        ordering = ('name',)
+        ordering = ('sort_order', 'name',)
 
     def __str__(self):
         return self.name
@@ -129,6 +130,9 @@ class RankingPoints(models.Model):
 class LeaderboardSeason(models.Model):
     name = models.CharField(max_length=200, unique=True)
     sort_order = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        ordering = ('sort_order', 'name',)
 
     def __str__(self):
         return self.name
