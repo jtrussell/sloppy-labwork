@@ -40,6 +40,8 @@
           {{ item.num_results }}
         </td>
       </tr>
+      {% empty %}
+        <td colspan="4" class="text-muted">Nothing to see here.</td>
       {% endfor %}
     </tbody>
   </table>
