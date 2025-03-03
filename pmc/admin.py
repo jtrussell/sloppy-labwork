@@ -76,8 +76,8 @@ class LeaderboardAdmin(admin.ModelAdmin):
 
 class PlayerRankAdmin(admin.ModelAdmin):
     list_display = ('leaderboard', 'playgroup',
-                    'user', 'rank', 'average_points')
-    search_fields = ['leaderboard', 'playgrou', 'user']
+                    'user', 'rank', 'total_points', 'num_results')
+    search_fields = ['leaderboard', 'playgroup', 'user']
     list_filter = ('leaderboard',)
 
 

@@ -1,3 +1,4 @@
+from math import e
 import os
 import csv
 from datetime import date
@@ -212,25 +213,23 @@ def playgroup_leaderboard(request, slug, pk=None):
         }))
     rank_filters = {
         'leaderboard': pk,
-        'playgroup': None
+        'playgroup__slug': slug
     }
-    leaderboard = Leaderboard.objects.get(pk=pk)
-    season = request.GET.get('season')
-    period = request.GET.get('period')
-    if period:
-        rank_filters['period'] = period
-    elif season:
-        rank_filters['period__season'] = season
-    else:
-        rank_filters['period'] = leaderboard.get_current_period()
-
     season_period_form = LeaderboardSeasonPeriodForm(
         Leaderboard.objects.get(pk=pk), request.GET or None)
+    try:
+        # TODO - determine season/period and send that into the form instead
+        rank_filters['period__season'] = season_period_form.data.get(
+            'season') or season_period_form.fields['season'].initial
+        rank_filters['period'] = season_period_form.data.get(
+            'period') or season_period_form.fields['period'].initial
+    except KeyError:
+        pass
 
     return render(request, 'pmc/pg-leaderboard.html', {
         'leaderboards': Leaderboard.objects.all(),
         'season_period_form': season_period_form,
-        'rankings': PlayerRank.objects.filter(leaderboard=pk, playgroup__slug=slug),
+        'rankings': PlayerRank.objects.filter(**rank_filters),
         'slug': slug,
         'pk': pk,
     })
@@ -247,18 +246,15 @@ def global_leaderboard(request, pk=None):
         'leaderboard': pk,
         'playgroup': None
     }
-    leaderboard = Leaderboard.objects.get(pk=pk)
-    season = request.GET.get('season')
-    period = request.GET.get('period')
-    if period:
-        rank_filters['period'] = period
-    elif season:
-        rank_filters['period__season'] = season
-    else:
-        rank_filters['period'] = leaderboard.get_current_period()
-
     season_period_form = LeaderboardSeasonPeriodForm(
         Leaderboard.objects.get(pk=pk), request.GET or None)
+    try:
+        rank_filters['period__season'] = season_period_form.data.get(
+            'season') or season_period_form.fields['season'].initial
+        rank_filters['period'] = season_period_form.data.get(
+            'period') or season_period_form.fields['period'].initial
+    except KeyError:
+        pass
 
     return render(request, 'pmc/g-leaderboard.html', {
         'leaderboards': Leaderboard.objects.all(),
