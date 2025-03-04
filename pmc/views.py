@@ -136,7 +136,7 @@ class PlaygroupMembersList(LoginRequiredMixin, generic.ListView):
     template_name = 'pmc/pg-members.html'
 
     def get_queryset(self):
-        return PlaygroupMember.objects.filter(playgroup__slug=self.kwargs['slug'])
+        return PlaygroupMember.objects.filter(playgroup__slug=self.kwargs['slug'], is_hidden=False)
 
     @method_decorator(login_required)
     @method_decorator(is_pg_member)

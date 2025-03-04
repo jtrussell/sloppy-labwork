@@ -34,6 +34,7 @@ class PlaygroupMember(models.Model):
         max_length=100, default=None, null=True, blank=True)
     joined_on = models.DateTimeField(auto_now_add=True)
     is_staff = models.BooleanField(default=False)
+    is_hidden = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
