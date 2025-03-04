@@ -2,6 +2,7 @@ from math import e
 import os
 import csv
 from datetime import date
+from datetime import timedelta
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseRedirect
@@ -446,6 +447,17 @@ def refresh_leaderboard(request, pk):
         order_by=order_by,
         top_n=top_n
     )
+
+    last_week_period = leaderboard.get_period_for_date(
+        date.today() - timedelta(days=7))
+    if last_week_period.pk != period.pk:
+        RankingPointsService.assign_points_for_leaderboard(
+            leaderboard,
+            last_week_period,
+            order_by=order_by,
+            top_n=top_n
+        )
+
     LeaderboardLog.objects.create(
         leaderboard=leaderboard
     ).save()
