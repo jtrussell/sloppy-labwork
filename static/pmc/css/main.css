@@ -636,3 +636,22 @@ ul.footer-links {
 ul.footer-links a {
   text-decoration: none;
 }
+
+/* ***********************************
+ * Icons
+ * *********************************** */
+.pmc-icon {
+  display: inline-block;
+  height: 18px;
+  width: 18px;
+  background-size: cover;
+  vertical-align: middle;
+}
+
+.pmc-icon.icon-xp {
+  background-image: url('https://static.sloppylabwork.com/pmc/icons/XP_SIMPLE.svg');
+}
+
+.pmc-icon.icon-rp {
+  background-image: url('https://static.sloppylabwork.com/pmc/icons/RP_SIMPLE.svg');
+}

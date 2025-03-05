@@ -6,6 +6,7 @@
   display: flex;
   flex-direction: column;
   container-type: inline-size;
+  overflow: hidden;
 }
 
 .banner {
@@ -40,21 +41,6 @@
   font-style: normal;
 }
 
-@container (max-width: 768px) {
-  .banner {
-    gap: 10px;
-  }
-
-  .banner .banner-text {
-    font-size: 2em;
-    margin-bottom: 5px;
-  }
-
-  .banner .banner-sub-text {
-    font-size: 0.9em;
-  }
-}
-
 @container (max-width: 512px) {
   .banner .banner-text {
     font-size: 1.2em;
@@ -62,11 +48,25 @@
   }
 
   .banner .banner-sub-text {
-    font-size: 0.7em;
+    font-size: 0.6em;
     line-height: 0.8em;
   }
 }
 
+@container (max-width: 768px) {
+  .banner {
+    gap: 10px;
+  }
+
+  .banner .banner-text {
+    font-size: 1.5em;
+    margin-bottom: 5px;
+  }
+
+  .banner .banner-sub-text {
+    font-size: 0.9em;
+  }
+}
 
 .element-category:not(:last-child) {
   margin-bottom: 40px;

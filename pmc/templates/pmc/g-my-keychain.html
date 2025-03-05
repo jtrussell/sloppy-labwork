@@ -16,7 +16,7 @@
         <h3>Playercard</h3>
         {% include 'pmc/_playercard.html' %}
       </div>
-      <div class="flex-1">
+      <div>
         <h3>Most Recent Event</h3>
         <table>
           <tbody>
@@ -38,11 +38,11 @@
                 {{ user.event_results.first.num_losses | default_if_none:"-" }}</td>
             </tr>
             <tr>
-              <td class="text-muted">Experience (XP)</td>
+              <td class="text-muted">Experience <i class="pmc-icon icon-xp"></i></td>
               <td>{{ user.event_results.first.get_xp }}</td>
             </tr>
             <tr>
-              <td class="text-muted">Ranking Points (RP)</td>
+              <td class="text-muted">Ranking Points <i class="pmc-icon icon-rp"></i></td>
               <td>{{ user.event_results.first.ranking_points.first.points | default_if_none:"-" }}</td>
             </tr>
             {% else %}
@@ -53,23 +53,21 @@
           </tbody>
         </table>
 
-        <h3>My Rankings</h3>
+        <h3>Stats</h3>
         <table>
           <tbody>
-            {% for ranking in global_rankings %}
-              <tr>
-                <td>
-                  <a href="{% url 'pmc-leaderboard' ranking.leaderboard.pk %}">
-                    {{ ranking.leaderboard }}
-                  </a>
-                </td>
-                <td>{{ ranking.rank }}</td>
-              </tr>
-            {% empty %}
-              <tr>
-                <td class="text-muted">None yet</td>
-              </tr>
-            {% endfor %}
+            <tr>
+              <td class="text-muted">Events Attended</td>
+              <td>{{ user.event_results.count }}</td>
+            </tr>
+            <tr>
+              <td class="text-muted">Events Won</td>
+              <td>{{ events_won.count }}</td>
+            </tr>
+            <tr>
+              <td class="text-muted">Match Wins</td>
+              <td>{{ num_game_wins }}</td>
+            </tr>
           </tbody>
         </table>
       </div>
