@@ -82,7 +82,7 @@ class PlaygroupDetail(LoginRequiredMixin, generic.DetailView):
 @login_required
 def my_results(request):
     return render(request, 'pmc/g-my-results.html', {
-        'results': EventResult.objects.filter(user=request.user)
+        'results': EventResult.objects.filter(user=request.user).order_by('-event__start_date')
     })
 
 
@@ -103,14 +103,15 @@ def my_keychain(request):
         level_increment = None
         level_increment_progress = None
 
+    my_results = EventResult.objects.filter(
+        user=request.user).order_by('-event__start_date')
+
+    print(my_results.first().event)
+
     return render(request, 'pmc/g-my-keychain.html', {
-        'events_won': EventResult.objects.filter(
-            user=request.user,
-            finishing_position=1
-        ),
-        'num_game_wins': EventResult.objects.filter(
-            user=request.user
-        ).aggregate(Sum('num_wins'))['num_wins__sum'],
+        'my_results': my_results,
+        'events_won': my_results.filter(finishing_position=1),
+        'num_game_wins': my_results.aggregate(Sum('num_wins'))['num_wins__sum'],
         'current_level': current_level,
         'next_level': next_level,
         'percent_level_up': percent_level_up,

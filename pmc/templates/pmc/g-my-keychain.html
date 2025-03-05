@@ -20,30 +20,30 @@
         <h3>Most Recent Event</h3>
         <table>
           <tbody>
-            {% if user.event_results.first %}
+            {% if my_results.first %}
             <tr>
               <td colspan="2">
-                <a href="{% url 'pmc-event-detail' user.event_results.first.event.playgroups.first.slug user.event_results.first.event.pk %}">
-                  {{ user.event_results.first.event }}
+                <a href="{% url 'pmc-event-detail' my_results.first.event.playgroups.first.slug my_results.first.event.pk %}">
+                  {{ my_results.first.event }}
                 </a>
               </td>
             </tr>
             <tr>
               <td class="text-muted">Date</td>
-              <td>{{ user.event_results.first.event.start_date | date:"SHORT_DATE_FORMAT" }}</td>
+              <td>{{ my_results.first.event.start_date | date:"SHORT_DATE_FORMAT" }}</td>
             </tr>
             <tr>
               <td class="text-muted">Record (W/L)</td>
-              <td>{{ user.event_results.first.num_wins | default_if_none:"-" }} / 
-                {{ user.event_results.first.num_losses | default_if_none:"-" }}</td>
+              <td>{{ my_results.first.num_wins | default_if_none:"-" }} / 
+                {{ my_results.first.num_losses | default_if_none:"-" }}</td>
             </tr>
             <tr>
               <td class="text-muted">Experience <i class="pmc-icon icon-xp"></i></td>
-              <td>{{ user.event_results.first.get_xp }}</td>
+              <td>{{ my_results.first.get_xp }}</td>
             </tr>
             <tr>
               <td class="text-muted">Ranking Points <i class="pmc-icon icon-rp"></i></td>
-              <td>{{ user.event_results.first.ranking_points.first.points | default_if_none:"-" }}</td>
+              <td>{{ my_results.first.ranking_points.first.points | default_if_none:"-" }}</td>
             </tr>
             {% else %}
               <tr>
@@ -58,7 +58,7 @@
           <tbody>
             <tr>
               <td class="text-muted">Events Attended</td>
-              <td>{{ user.event_results.count }}</td>
+              <td>{{ my_results.count }}</td>
             </tr>
             <tr>
               <td class="text-muted">Events Won</td>
