@@ -5,6 +5,7 @@ from datetime import date
 from datetime import timedelta
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import Max
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.views import generic
@@ -18,6 +19,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
+from pmc.context_processors import playgroup
 from pmc.forms import EventForm, LeaderboardSeasonPeriodForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
 from .models import EventResult, LeaderboardLog, LeaderboardSeason, LeaderboardSeasonPeriod
@@ -101,9 +103,38 @@ def my_keychain(request):
         level_increment = None
         level_increment_progress = None
 
+    latest_periods = LeaderboardSeasonPeriod.objects.values('frequency').annotate(
+        max_value=Max('start_date')
+    )
+    month_ranking = PlayerRank.objects.filter(
+        user=request.user,
+        playgroup=None,
+        leaderboard__period_frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH,
+        period__start_date=latest_periods.filter(
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH).order_by('max_value').first()['max_value']
+    ).first()
+
+    season_ranking = PlayerRank.objects.filter(
+        user=request.user,
+        playgroup=None,
+        leaderboard__period_frequency=LeaderboardSeasonPeriod.FrequencyOptions.SEASON,
+        period__start_date=latest_periods.filter(
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.SEASON).order_by('max_value').first()['max_value']
+    ).first()
+
+    all_time_ranking = PlayerRank.objects.filter(
+        user=request.user,
+        playgroup=None,
+        leaderboard__period_frequency=LeaderboardSeasonPeriod.FrequencyOptions.ALL_TIME,
+        period__start_date=latest_periods.filter(
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.ALL_TIME).order_by('max_value').first()['max_value']
+    ).first()
+
+    global_rankings = [month_ranking, season_ranking, all_time_ranking]
+    global_rankings = [r for r in global_rankings if r]
+
     return render(request, 'pmc/g-my-keychain.html', {
-        'avatar': request.user.pmc_profile.get_avatar(),
-        'total_xp': total_xp,
+        'global_rankings': global_rankings,
         'current_level': current_level,
         'next_level': next_level,
         'percent_level_up': percent_level_up,

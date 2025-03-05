@@ -5,6 +5,7 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
 }
 
 .banner {
@@ -39,7 +40,7 @@
   font-style: normal;
 }
 
-@media (max-width: 768px) {
+@container (max-width: 768px) {
   .banner {
     gap: 10px;
   }
@@ -53,6 +54,19 @@
     font-size: 0.9em;
   }
 }
+
+@container (max-width: 512px) {
+  .banner .banner-text {
+    font-size: 1.2em;
+    margin-bottom: 3px;
+  }
+
+  .banner .banner-sub-text {
+    font-size: 0.7em;
+    line-height: 0.8em;
+  }
+}
+
 
 .element-category:not(:last-child) {
   margin-bottom: 40px;

@@ -9,13 +9,72 @@
   <h1>My KeyChain</h1>
 
   <h2>Global</h2>
-  <div class="subheading">@{{ user }}</div>
 
-  <div class="card">
-    <h3>Playercard</h3>
-    {% include 'pmc/_playercard.html' %}
+  <div class="card flex flex-col flex-gap-2">
+    <div class="flex flex-row flex-col-sm flex-gap-2">
+      <div class="flex-1">
+        <h3>Playercard</h3>
+        {% include 'pmc/_playercard.html' %}
+      </div>
+      <div class="flex-1">
+        <h3>Most Recent Event</h3>
+        <table>
+          <tbody>
+            {% if user.event_results.first %}
+            <tr>
+              <td colspan="2">
+                <a href="{% url 'pmc-event-detail' user.event_results.first.event.playgroups.first.slug user.event_results.first.event.pk %}">
+                  {{ user.event_results.first.event }}
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td class="text-muted">Date</td>
+              <td>{{ user.event_results.first.event.start_date | date:"SHORT_DATE_FORMAT" }}</td>
+            </tr>
+            <tr>
+              <td class="text-muted">Record (W/L)</td>
+              <td>{{ user.event_results.first.num_wins | default_if_none:"-" }} / 
+                {{ user.event_results.first.num_losses | default_if_none:"-" }}</td>
+            </tr>
+            <tr>
+              <td class="text-muted">Experience (XP)</td>
+              <td>{{ user.event_results.first.get_xp }}</td>
+            </tr>
+            <tr>
+              <td class="text-muted">Ranking Points (RP)</td>
+              <td>{{ user.event_results.first.ranking_points.first.points | default_if_none:"-" }}</td>
+            </tr>
+            {% else %}
+              <tr>
+                <td class="text-muted">None yet</td>
+              </tr> 
+            {% endif %}
+          </tbody>
+        </table>
 
-    <h3 style="margin-top: 30px">My Stats</h3>
+        <h3>My Rankings</h3>
+        <table>
+          <tbody>
+            {% for ranking in global_rankings %}
+              <tr>
+                <td>
+                  <a href="{% url 'pmc-leaderboard' ranking.leaderboard.pk %}">
+                    {{ ranking.leaderboard }}
+                  </a>
+                </td>
+                <td>{{ ranking.rank }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td class="text-muted">None yet</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div>
       <div class="flex row spread levels-spread">
         <span class="current-level">{{ current_level }}</span>
@@ -51,7 +110,7 @@
 
       <p>
         Nickname: {{ membership.nickname }}<br />
-        Member Since: {{ membership.joined_on }}
+        Member Since: {{ membership.joined_on | date:"SHORT_DATE_FORMAT" }}
       </p>
       
       <div class="card-actions">
@@ -63,6 +122,10 @@
           Edit
         </a>
       </div>
+    </div>
+  {% empty %}
+    <div class="card">
+      <p class="text-muted">No playgroups yet.</p>
     </div>
   {% endfor %}
 
