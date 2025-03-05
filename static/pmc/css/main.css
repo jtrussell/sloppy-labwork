@@ -459,6 +459,10 @@ table td.stat {
   width: 60px;
 }
 
+table a {
+  text-decoration: none;
+}
+
 .levels-spread {
   font-weight: 700;
 }
@@ -588,6 +592,21 @@ ul.messages {
 
 .text-muted {
   color: var(--color-text-muted);
+}
+
+.text-bold {
+  font-weight: 700;
+}
+
+.text-shy {
+  font-weight: 300;
+  font-size: 12px;
+}
+
+.elide {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 /* ***********************************

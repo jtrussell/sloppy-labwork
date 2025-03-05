@@ -88,6 +88,10 @@ class PlaygroupEvent(models.Model):
 
 
 class EventResult(models.Model):
+    xp_for_attendance = 25
+    xp_for_win = 10
+    xp_for_loss = 5
+
     event = models.ForeignKey(
         Event, on_delete=models.CASCADE, related_name='results')
     user = models.ForeignKey(
@@ -104,6 +108,14 @@ class EventResult(models.Model):
 
     def __str__(self):
         return f'{self.event.name} - {self.user} - ({self.finishing_position})'
+
+    def get_xp(self):
+        xp = self.xp_for_attendance
+        if self.num_wins:
+            xp += self.num_wins * self.xp_for_win
+        if self.num_losses:
+            xp += self.num_losses * self.xp_for_loss
+        return xp
 
 
 class RankingPointsMap(models.Model):
@@ -267,9 +279,10 @@ class PmcProfile(models.Model):
         experience_points = (
             EventResult.objects.filter(user=self.user)
             .annotate(
-                attendance_points=Value(25),
-                win_points=Coalesce(F('num_wins'), 0) * 10,
-                loss_points=Coalesce(F('num_losses'), 0) * 5
+                attendance_points=Value(EventResult.xp_for_attendance),
+                win_points=Coalesce(F('num_wins'), 0) * EventResult.xp_for_win,
+                loss_points=Coalesce(F('num_losses'), 0) *
+                EventResult.xp_for_loss
             )
             .aggregate(
                 total_experience=Sum(
@@ -381,7 +394,8 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
+            user_data = {entry["result__user"]
+                : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]

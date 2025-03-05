@@ -1,0 +1,43 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+<h1>My Event Results</h1>
+
+<div class="card">
+  <table>
+    <tbody>
+      <thead>
+        <tr>
+          <th class="text-left">Event</th>
+          <th class="stat">FP</th>
+          <th class="stat">W</th>
+          <th class="stat">L</th>
+          <th class="stat">RP</th>
+          <th class="stat">XP</th>
+        </tr>
+      </thead>
+      {% for item in results %}
+      <tr>
+        <td class="text-left">
+          <a class="text-bold" href="{% url 'pmc-event-detail' item.event.playgroups.first.slug item.event.pk %}">
+            {{ item.event }}
+          </a>
+
+          <ul class="inline-list text-shy">
+            <li>{{ item.event.start_date | date:"SHORT_DATE_FORMAT" }}</li>
+            <li>{{ item.event.format | default:"Unknown format" }}</li>
+          </ul>
+        </td>
+        <td class="stat">{{ item.finishing_position | default:"-" }}</td>
+        <td class="stat">{{ item.num_wins | default_if_none:"-" }}</td>
+        <td class="stat">{{ item.num_losses | default_if_none:"-" }}</td>
+        <td class="stat">{{ item.ranking_points.first.points | default:"-" }}</td>
+        <td class="stat">{{ item.get_xp | default_if_none:"-" }}</td>
+      </tr>
+      {% empty %}
+        <td colspan="4" class="text-muted">Nothing to see here.</td>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -78,6 +78,13 @@ class PlaygroupDetail(LoginRequiredMixin, generic.DetailView):
 
 
 @login_required
+def my_results(request):
+    return render(request, 'pmc/g-my-results.html', {
+        'results': EventResult.objects.filter(user=request.user)
+    })
+
+
+@login_required
 def my_keychain(request):
     total_xp = request.user.pmc_profile.get_total_xp()
     current_level = request.user.pmc_profile.get_level()

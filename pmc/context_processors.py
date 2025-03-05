@@ -56,6 +56,12 @@ def nav_links(request):
             'is_active': False,
         })
 
+        nav_links.append({
+            'name': _('Results'),
+            'url': reverse('pmc-my-results'),
+            'is_active': False,
+        })
+
     longest_matched_path = ''
     for link in nav_links:
         if request.path.startswith(link['url']) and len(link['url']) > len(longest_matched_path):

@@ -8,6 +8,7 @@ urlpatterns = [
     path('@me/manage/avatar', views.change_avatar, name='pmc-manage-avatar'),
     path('@me/manage/background', views.change_background,
          name='pmc-manage-background'),
+    path('@me/results', views.my_results, name='pmc-my-results'),
     path('pg/<slug:slug>/', views.PlaygroupDetail.as_view(), name='pmc-pg-detail'),
     path('pg/<slug:slug>/@me/manage',
          views.manage_my_playgroup_profile, name='pmc-my-pg-manage'),
