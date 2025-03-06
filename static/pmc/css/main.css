@@ -286,6 +286,9 @@ nav li + li::before {
   margin-left: calc(0px - var(--border-size));
 }
 
+/* ***********************************
+ * Cards
+ * *********************************** */
 .card {
   background-color: var(--color-paper-bg);
   border-radius: var(--border-radius);
@@ -307,6 +310,7 @@ nav li + li::before {
   flex-direction: row;
   gap: 5px;
   justify-content: flex-end;
+  margin-top: 5px;
 }
 
 @media (max-width: 680px) {
@@ -330,9 +334,11 @@ nav li + li::before {
   flex: 1;
 }
 
-.text-primary { color: var(--color-primary); }
-.text-accent { color: var(--color-accent); }
-
+.playgroup-logo {
+  max-height: 120px;
+  max-width: 120px;
+  background-size: cover;
+}
 
 .masthead {
   padding: 10px 0;
@@ -597,6 +603,9 @@ ul.messages {
 .flex-spacer {
   flex: 9001;
 }
+
+.text-primary { color: var(--color-primary); }
+.text-accent { color: var(--color-accent); }
 
 .text-muted {
   color: var(--color-text-muted);

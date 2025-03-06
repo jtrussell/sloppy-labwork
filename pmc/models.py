@@ -13,6 +13,7 @@ from django.db.models.functions import Coalesce, Rank
 class Playgroup(models.Model):
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=100, unique=True)
+    logo_src = models.URLField(default=None, null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
     events = models.ManyToManyField(

@@ -101,15 +101,22 @@
 
   {% for membership in memberships %}
     <div class="card">
-      <h3>
-        <a href="{% url 'pmc-pg-detail' membership.playgroup.slug %}">{{ membership.playgroup.name }}</a>
-      </h3>
-      <div class="subheading">Playgroup</div>
+      <div class="flex flex-row flex-gap-2">
+        {% if membership.playgroup.logo_src %}
+          <img src="{{ membership.playgroup.logo_src }}" alt="{{ membership.playgroup.name }}" class="playgroup-logo">
+        {% endif %}
+        <div class="flex-1">
+          <h3>
+            <a href="{% url 'pmc-pg-detail' membership.playgroup.slug %}">{{ membership.playgroup.name }}</a>
+          </h3>
+          <div class="subheading">Playgroup</div>
 
-      <p>
-        Nickname: {{ membership.nickname }}<br />
-        Member Since: {{ membership.joined_on | date:"SHORT_DATE_FORMAT" }}
-      </p>
+          <p>
+            Nickname: {{ membership.nickname }}<br />
+            Member Since: {{ membership.joined_on | date:"SHORT_DATE_FORMAT" }}
+          </p>
+        </div>
+      </div>
       
       <div class="card-actions">
         <a href="{% url 'pmc-pg-events' membership.playgroup.slug %}" class="btn">Events</a>
