@@ -1,7 +1,9 @@
 from django.urls import path
+from django.views.generic.base import RedirectView
 from . import views
 
 urlpatterns = [
+    path('', RedirectView.as_view(url='@me', permanent=False)),
     path('@me', views.my_keychain, name='pmc-my-keychain'),
     path('@me/manage', views.manage_my_pmc_profile,
          name='pmc-my-keychain-manage'),
