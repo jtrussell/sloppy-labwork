@@ -1,7 +1,21 @@
 {% extends "pmc/_base.html" %}
+{% load static %}
 
 {% block content %}
 	<h1>Members</h1>
+
+	<form action="{% url 'pmc-pg-add-member-by-qrcode' playgroup.slug %}" method="POST" class="card">
+		<h2>Staff Area</h2>
+		{% csrf_token %}
+		<input id="qr-code-message" type="hidden" name="qr_code_message" value="">
+		<p>Add members to your playgroup by scanning the QR code on their playercard.</p>
+		<p id="qr-reader"></p>
+		<div class="card-actions">
+			<button type="button" id="qr-btn-start" class="btn btn-accent btn-solid btn-block">Scan</button>
+			<button type="button" id="qr-btn-stop" style="display: none;" class="btn btn-accent btn-block">Cancel</button>
+		</div>
+	</form>
+
 	<ul class="card-list">
 		{% for member in members %}
 			<li class="card">
@@ -23,4 +37,9 @@
 			<li>No members yet.</li>
 		{% endfor %}
 	</ul>
+{% endblock %}
+
+{% block extra_body %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" integrity="sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexq+GAlNkNNqVC7YyIV+NwqCTJe2hDWCiffTyRNOeGEzRRJ9ifvRm/HCzGYg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="{% static 'pmc/scripts/qrcode-form.js' %}"></script>
 {% endblock %}

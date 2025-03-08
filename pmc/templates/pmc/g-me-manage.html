@@ -1,12 +1,44 @@
 {% extends "pmc/_base.html" %}
+{% load static %}
 
 {% block content %}
   <h1>Update Your KeyChain Profile</h1>
-  <form method="POST" enctype="multipart/form-data">
+  <form method="POST" enctype="multipart/form-data" class="card">
+    <h2>Profile Settings</h2>
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit" class="btn btn-solid">
-      Submit
-    </button>
+    <div class="card-actions">
+      <button type="submit" class="btn btn-solid">
+        Submit
+      </button>
+    </div>
   </form>
+
+  <form action="{% url 'pmc-manage-mv-connect' %}" method="POST" class="card">
+    <h2>Master Vault</h2>
+    {% csrf_token %}
+    {% if my_profile.mv_username %}
+      <input type="hidden" name="disconnect" value="1">
+      <p><span>Connected as <code>{{ my_profile.mv_username }}</code>.</span></p>
+      <p>The QR code displayed on your KeyChain playercard may be used to register for
+      organized play events or to gain access to playgroups within KeyChian.</p>
+      <div class="card-actions">
+        <button type="submit" class="btn">Disconnect</button>
+      </div>
+    {% else %}
+      <input id="qr-code-message" type="hidden" name="qr_code_message" value="">
+      <p>Add a Master Vault account to your KeyChain by scanning the QR code in
+        your Master Vault profile.</p>
+      <p id="qr-reader"></p>
+      <div class="card-actions">
+        <button type="button" id="qr-btn-start" class="btn btn-solid">Scan</button>
+        <button type="button" id="qr-btn-stop" style="display: none;" class="btn">Cancel</button>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block extra_body %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" integrity="sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexq+GAlNkNNqVC7YyIV+NwqCTJe2hDWCiffTyRNOeGEzRRJ9ifvRm/HCzGYg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="{% static 'pmc/scripts/qrcode-form.js' %}"></script>
 {% endblock %}

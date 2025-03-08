@@ -373,6 +373,9 @@ nav li + li::before {
 
 code {
   font-family: monospace;
+  padding: 3px 6px;
+  border: 1px solid var(--color-lines);
+  border-radius: var(--border-radius-sm);
 }
 
 em {

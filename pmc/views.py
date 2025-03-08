@@ -1,8 +1,10 @@
+import json
 from math import e
 import os
 import csv
 from datetime import date
 from datetime import timedelta
+from re import U
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Sum
@@ -105,8 +107,6 @@ def my_keychain(request):
 
     my_results = EventResult.objects.filter(
         user=request.user).order_by('-event__start_date')
-
-    print(my_results.first().event)
 
     return render(request, 'pmc/g-my-keychain.html', {
         'my_results': my_results,
@@ -494,3 +494,55 @@ def manage_my_pmc_profile(request):
     return render(request, 'pmc/g-me-manage.html', {
         'form': form,
     })
+
+
+@require_POST
+@login_required
+def set_master_vault_data(request):
+    profile = request.user.pmc_profile
+
+    if request.POST.get('disconnect'):
+        profile.mv_id = None
+        profile.mv_username = None
+        profile.mv_qrcode_message = None
+        profile.save()
+        messages.success(request, _('Master Vault account disconnected.'))
+        return HttpResponseRedirect(reverse('pmc-my-keychain-manage'))
+
+    message = request.POST.get('qr_code_message')
+    try:
+        message_data = json.loads(message)
+        profile.mv_id = message_data['id']
+        profile.mv_username = message_data['un']
+        profile.mv_qrcode_message = message
+        profile.save_qrcode()
+        profile.save()
+        messages.success(request, _('Master Vault account connected.'))
+    except Exception as e:
+        print(e)
+        messages.error(request, _('Oops! Something went wrong.'))
+    return HttpResponseRedirect(reverse('pmc-my-keychain-manage'))
+
+
+@require_POST
+@login_required
+@is_pg_staff
+def add_pg_member_by_qrcode(request, slug):
+    message = request.POST.get('qr_code_message')
+    try:
+        message_data = json.loads(message)
+        mv_id = message_data['id']
+        User = get_user_model()
+        member, _created = PlaygroupMember.objects.get_or_create(
+            playgroup=Playgroup.objects.get(slug=slug),
+            user=User.objects.get(pmc_profile__mv_id=mv_id)
+        )
+        messages.success(request, _('Member added.'))
+        return HttpResponseRedirect(reverse('pmc-pg-member-detail', kwargs={
+            'slug': slug,
+            'username': member.user.username
+        }))
+    except Exception as e:
+        print(e)
+        messages.error(request, _('Oops! Something went wrong.'))
+    return HttpResponseRedirect(reverse('pmc-pg-members', kwargs={'slug': slug}))

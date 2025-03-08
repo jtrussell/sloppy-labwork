@@ -7,5 +7,12 @@
     </div>
   </div>
 
+  {% if my_profile.mv_qrcode_message %}
+    <img
+      class="qrcode"
+      src="https://static.sloppylabwork.com/{{ my_profile.get_mv_qrcode_path }}"
+      alt="Master Vault QR Code" />
+  {% endif %}
+
   <img class="background" src="{{ my_background.src }}" alt="{{ my_background.name }}">
 </div>
