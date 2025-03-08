@@ -2,11 +2,70 @@
 
 {% block content %}
   <h1>Update Your KeyChain Profile</h1>
-  <form method="POST" enctype="multipart/form-data">
+  <form method="POST" enctype="multipart/form-data" class="card">
+    <h2>Profile Settings</h2>
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit" class="btn btn-solid">
-      Submit
-    </button>
+    <div class="card-actions">
+      <button type="submit" class="btn btn-solid">
+        Submit
+      </button>
+    </div>
   </form>
+
+  <form action="{% url 'pmc-manage-mv-connect' %}" method="POST" class="card">
+    <h2>Master Vault</h2>
+    {% csrf_token %}
+    {% if my_profile.mv_username %}
+      <input type="hidden" name="disconnect" value="1">
+      <p><span>Connected as <code>{{ my_profile.mv_username }}</code>.</span></p>
+      <div class="card-actions">
+        <button type="submit" class="btn">Disconnect</button>
+      </div>
+    {% else %}
+      <input id="qr-code-message" type="hidden" name="qr_code_message" value="">
+      <p>Add a Master Vault account to your KeyChain by scanning the QR code in
+        your Master Vault profile.</p>
+      <p id="qr-reader"></p>
+      <div class="card-actions">
+        <button type="button" id="qr-btn-start" class="btn btn-solid">Scan</button>
+        <button type="button" id="qr-btn-stop" style="display: none;" class="btn">Cancel</button>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block extra_body %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" integrity="sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexq+GAlNkNNqVC7YyIV+NwqCTJe2hDWCiffTyRNOeGEzRRJ9ifvRm/HCzGYg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script type="text/javascript">
+    const html5QrCode = new Html5Qrcode("qr-reader");
+
+    function onScanSuccess(qrCodeMessage) {
+      const input = document.getElementById("qr-code-message");
+      input.value = qrCodeMessage;
+      input.closest("form").submit();
+    }
+
+    function onScanFailure(error) {}
+
+    function startScan() {
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        onScanSuccess,
+        onScanFailure
+      );
+      document.getElementById("qr-btn-start").style.display = "none";
+      document.getElementById("qr-btn-stop").style.display = "inline";
+    }
+
+    function stopScan() {
+      document.getElementById("qr-btn-start").style.display = "inline";
+      document.getElementById("qr-btn-stop").style.display = "none";
+      html5QrCode.stop();
+    }
+
+    document.getElementById("qr-btn-start").addEventListener("click", startScan);
+    document.getElementById("qr-btn-stop").addEventListener("click", stopScan);
+  </script>
 {% endblock %}

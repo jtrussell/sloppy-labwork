@@ -1,3 +1,4 @@
+import json
 from math import e
 import os
 import csv
@@ -105,8 +106,6 @@ def my_keychain(request):
 
     my_results = EventResult.objects.filter(
         user=request.user).order_by('-event__start_date')
-
-    print(my_results.first().event)
 
     return render(request, 'pmc/g-my-keychain.html', {
         'my_results': my_results,
@@ -494,3 +493,30 @@ def manage_my_pmc_profile(request):
     return render(request, 'pmc/g-me-manage.html', {
         'form': form,
     })
+
+
+@require_POST
+@login_required
+def set_master_vault_data(request):
+    profile = request.user.pmc_profile
+
+    if request.POST.get('disconnect'):
+        profile.mv_id = None
+        profile.mv_username = None
+        profile.mv_qrcode_message = None
+        profile.save()
+        messages.success(request, _('Master Vault account disconnected.'))
+        return HttpResponseRedirect(reverse('pmc-my-keychain-manage'))
+
+    message = request.POST.get('qr_code_message')
+    print(message)
+    try:
+        message_data = json.loads(message)
+        profile.mv_id = message_data['id']
+        profile.mv_username = message_data['un']
+        profile.mv_qrcode_message = message
+        profile.save()
+        messages.success(request, _('Master Vault account connected.'))
+    except:
+        messages.error(request, _('Oops! Something went wrong.'))
+    return HttpResponseRedirect(reverse('pmc-my-keychain-manage'))

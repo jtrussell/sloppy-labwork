@@ -269,6 +269,12 @@ class PmcProfile(models.Model):
         'Background', on_delete=models.SET_NULL, default=None, null=True, blank=True)
     tagline = models.CharField(
         max_length=100, default=None, null=True, blank=True)
+    mv_id = models.CharField(max_length=36, unique=True,
+                             default=None, null=True, blank=True)
+    mv_username = models.CharField(
+        max_length=100, default=None, null=True, blank=True)
+    mv_qrcode_message = models.CharField(
+        max_length=200, default=None, null=True, blank=True)
 
     def get_avatar(self):
         return self.avatar or Avatar.objects.get(pmc_id='001')
@@ -395,8 +401,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]
-                : entry for entry in all_user_points}
+            user_data = {entry["result__user"]: entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
