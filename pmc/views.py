@@ -4,6 +4,7 @@ import os
 import csv
 from datetime import date
 from datetime import timedelta
+from re import U
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Sum
@@ -521,3 +522,27 @@ def set_master_vault_data(request):
         print(e)
         messages.error(request, _('Oops! Something went wrong.'))
     return HttpResponseRedirect(reverse('pmc-my-keychain-manage'))
+
+
+@require_POST
+@login_required
+@is_pg_staff
+def add_pg_member_by_qrcode(request, slug):
+    message = request.POST.get('qr_code_message')
+    try:
+        message_data = json.loads(message)
+        mv_id = message_data['id']
+        User = get_user_model()
+        member, _created = PlaygroupMember.objects.get_or_create(
+            playgroup=Playgroup.objects.get(slug=slug),
+            user=User.objects.get(pmc_profile__mv_id=mv_id)
+        )
+        messages.success(request, _('Member added.'))
+        return HttpResponseRedirect(reverse('pmc-pg-member-detail', kwargs={
+            'slug': slug,
+            'username': member.user.username
+        }))
+    except Exception as e:
+        print(e)
+        messages.error(request, _('Oops! Something went wrong.'))
+    return HttpResponseRedirect(reverse('pmc-pg-members', kwargs={'slug': slug}))

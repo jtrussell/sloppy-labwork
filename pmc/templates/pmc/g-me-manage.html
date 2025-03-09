@@ -1,4 +1,5 @@
 {% extends "pmc/_base.html" %}
+{% load static %}
 
 {% block content %}
   <h1>Update Your KeyChain Profile</h1>
@@ -19,6 +20,8 @@
     {% if my_profile.mv_username %}
       <input type="hidden" name="disconnect" value="1">
       <p><span>Connected as <code>{{ my_profile.mv_username }}</code>.</span></p>
+      <p>The QR code displayed on your KeyChain playercard may be used to register for
+      organized play events or to gain access to playgroups within KeyChian.</p>
       <div class="card-actions">
         <button type="submit" class="btn">Disconnect</button>
       </div>
@@ -37,35 +40,5 @@
 
 {% block extra_body %}
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" integrity="sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexq+GAlNkNNqVC7YyIV+NwqCTJe2hDWCiffTyRNOeGEzRRJ9ifvRm/HCzGYg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script type="text/javascript">
-    const html5QrCode = new Html5Qrcode("qr-reader");
-
-    function onScanSuccess(qrCodeMessage) {
-      const input = document.getElementById("qr-code-message");
-      input.value = qrCodeMessage;
-      input.closest("form").submit();
-    }
-
-    function onScanFailure(error) {}
-
-    function startScan() {
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        onScanSuccess,
-        onScanFailure
-      );
-      document.getElementById("qr-btn-start").style.display = "none";
-      document.getElementById("qr-btn-stop").style.display = "inline";
-    }
-
-    function stopScan() {
-      document.getElementById("qr-btn-start").style.display = "inline";
-      document.getElementById("qr-btn-stop").style.display = "none";
-      html5QrCode.stop();
-    }
-
-    document.getElementById("qr-btn-start").addEventListener("click", startScan);
-    document.getElementById("qr-btn-stop").addEventListener("click", stopScan);
-  </script>
+  <script src="{% static 'pmc/scripts/qrcode-form.js' %}"></script>
 {% endblock %}
