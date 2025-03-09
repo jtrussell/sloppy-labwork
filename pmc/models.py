@@ -8,6 +8,11 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.db.models import Sum, Value, F, Count, Window
 from django.db.models.functions import Coalesce, Rank
+from django.conf import settings
+from io import BytesIO
+import qrcode
+import boto3
+import hashlib
 
 
 class Playgroup(models.Model):
@@ -308,6 +313,37 @@ class PmcProfile(models.Model):
             required_xp__gt=self.get_total_xp()
         ).order_by('level').first()
 
+    def get_mv_qrcode_path(self):
+        if not self.mv_qrcode_message:
+            return None
+        hash = hashlib.md5(self.mv_qrcode_message.encode()).hexdigest()
+        return f'mv-qrcode/{hash}.png'
+
+    def save_qrcode(self):
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=2,
+        )
+        qr.add_data(self.mv_qrcode_message)
+        qr.make(fit=True)
+        img = qr.make_image(fill='black', back_color='white')
+
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        buffer.seek(0)
+
+        s3_client = boto3.client('s3')
+        bucket_name = settings.AWS_S3_BUCKET_MV_QRCODE
+        s3_key = self.get_mv_qrcode_path()
+        s3_client.upload_fileobj(
+            buffer,
+            bucket_name,
+            s3_key,
+            ExtraArgs={'ContentType': 'image/png', 'ACL': 'public-read'}
+        )
+
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
@@ -401,7 +437,8 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            user_data = {entry["result__user"]
+                : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]

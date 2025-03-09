@@ -509,14 +509,15 @@ def set_master_vault_data(request):
         return HttpResponseRedirect(reverse('pmc-my-keychain-manage'))
 
     message = request.POST.get('qr_code_message')
-    print(message)
     try:
         message_data = json.loads(message)
         profile.mv_id = message_data['id']
         profile.mv_username = message_data['un']
         profile.mv_qrcode_message = message
+        profile.save_qrcode()
         profile.save()
         messages.success(request, _('Master Vault account connected.'))
-    except:
+    except Exception as e:
+        print(e)
         messages.error(request, _('Oops! Something went wrong.'))
     return HttpResponseRedirect(reverse('pmc-my-keychain-manage'))
