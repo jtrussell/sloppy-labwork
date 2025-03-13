@@ -546,3 +546,28 @@ def add_pg_member_by_qrcode(request, slug):
         print(e)
         messages.error(request, _('Oops! Something went wrong.'))
     return HttpResponseRedirect(reverse('pmc-pg-members', kwargs={'slug': slug}))
+
+
+@require_POST
+@login_required
+@is_pg_staff
+def add_pg_member_by_username(request, slug):
+    username = request.POST.get('username')
+    try:
+        User = get_user_model()
+        member, _created = PlaygroupMember.objects.get_or_create(
+            playgroup=Playgroup.objects.get(slug=slug),
+            user=User.objects.get(username=username)
+        )
+        messages.success(request, _('Member added.'))
+        return HttpResponseRedirect(reverse('pmc-pg-member-detail', kwargs={
+            'slug': slug,
+            'username': member.user.username
+        }))
+    except User.DoesNotExist:
+        messages.error(request, _(
+            'Oops! We could not find a user with that username.'))
+    except Exception as e:
+        print(e)
+        messages.error(request, _('Oops! Something went wrong.'))
+    return HttpResponseRedirect(reverse('pmc-pg-members', kwargs={'slug': slug}))

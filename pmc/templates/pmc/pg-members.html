@@ -4,17 +4,26 @@
 {% block content %}
 	<h1>Members</h1>
 
-	<form action="{% url 'pmc-pg-add-member-by-qrcode' playgroup.slug %}" method="POST" class="card">
+	<div class="card">
 		<h2>Staff Area</h2>
-		{% csrf_token %}
-		<input id="qr-code-message" type="hidden" name="qr_code_message" value="">
-		<p>Add members to your playgroup by scanning the QR code on their playercard.</p>
-		<p id="qr-reader"></p>
-		<div class="card-actions">
-			<button type="button" id="qr-btn-start" class="btn btn-accent btn-solid btn-block">Scan</button>
-			<button type="button" id="qr-btn-stop" style="display: none;" class="btn btn-accent btn-block">Cancel</button>
+		<p>Add members to your playgroup by username or by scanning the QR code on
+		their playercard.</p>
+		<div>
+			<form action="{% url 'pmc-pg-add-member-by-username' playgroup.slug %}" method="POST" class="flex flex-row flex-gap-1">
+				<input type="text" class="flex-1" name="username" placeholder="Username">
+				<button class="btn btn-solid">Add</button>
+			</flex>
 		</div>
-	</form>
+		<form action="{% url 'pmc-pg-add-member-by-qrcode' playgroup.slug %}" method="POST">
+			{% csrf_token %}
+			<input id="qr-code-message" type="hidden" name="qr_code_message" value="">
+			<p id="qr-reader"></p>
+			<div class="card-actions">
+				<button type="button" id="qr-btn-start" class="btn btn-accent btn-solid btn-block">Scan</button>
+				<button type="button" id="qr-btn-stop" style="display: none;" class="btn btn-accent btn-block">Cancel</button>
+			</div>
+		</form>
+	</div>
 
 	<ul class="card-list">
 		{% for member in members %}

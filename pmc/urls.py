@@ -25,6 +25,8 @@ urlpatterns = [
          views.PlaygroupMemberManage.as_view(), name='pmc-pg-member-manage'),
     path('pg/<slug:slug>/add-member-by-qrcode',
          views.add_pg_member_by_qrcode, name='pmc-pg-add-member-by-qrcode'),
+    path('pg/<slug:slug>/add-member-by-username',
+         views.add_pg_member_by_username, name='pmc-pg-add-member-by-username'),
     path('pg/<slug:slug>/leaderboard',
          views.playgroup_leaderboard, name='pmc-pg-leaderboard'),
     path('pg/<slug:slug>/leaderboard/<int:pk>',
