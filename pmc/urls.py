@@ -49,6 +49,6 @@ urlpatterns = [
 
     path('typography', views.typography),
     path('about', views.about, name='pmc-about'),
-    path('attributions', views.attributions, name='pmc-g-attributions'),
+    path('attributions', views.attributions, name='pmc-attributions'),
     path('refresh-leaderboard/<int:pk>', views.refresh_leaderboard),
 ]
