@@ -359,6 +359,10 @@ def about(request):
     return render(request, 'pmc/about.html')
 
 
+def attributions(request):
+    return render(request, 'pmc/g-attributions.html')
+
+
 @login_required
 def change_avatar(request):
     if request.method == 'POST':

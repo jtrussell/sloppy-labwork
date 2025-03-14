@@ -1,8 +1,11 @@
 {% extends "pmc/_base.html" %}
 {% load static %}
 
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'pmc/css/about.css' %}">
+{% endblock %}
+
 {% block content %}
-<link rel="stylesheet" href="{% static 'pmc/css/about.css' %}">
 <h1>About Keychain</h1>
 <div id="legend">
     <div class="legend-item">
