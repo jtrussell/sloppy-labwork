@@ -1,6 +1,7 @@
 {% extends "pmc/_base.html" %}
 
 {% block content %}
+<div class="staff-only">
   <h1>Submit Event Results</h1>
 
   {% if form_errors %}
@@ -47,4 +48,5 @@
       than <code>user</code>.
     </p>
   </div>
+</div>
 {% endblock %}
