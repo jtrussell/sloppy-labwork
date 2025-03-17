@@ -100,7 +100,7 @@ class Command(BaseCommand):
         Avatar.objects.get_or_create(pmc_id='002', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/002_KeyChain_Light.png',
                                      'category_label': 'KeyChain', 'name': 'KeyChain (Light)', 'banner_bg_color': 'eeeeee', 'banner_stroke_color': '69140e', 'required_level': 0})
         Avatar.objects.get_or_create(pmc_id='003', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/003_Brobnar.png',
-                                     'category_label': 'Houses', 'name': 'Brobnar', 'banner_bg_color': 'f7982e', 'banner_stroke_color': '00a8d8', 'required_level': 2})
+                                     'category_label': 'Houses', 'name': 'Brobnar', 'banner_bg_color': 'f7982e', 'banner_stroke_color': 'fdc010', 'required_level': 2})
         Avatar.objects.get_or_create(pmc_id='004', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/004_Dis.png',
                                      'category_label': 'Houses', 'name': 'Dis', 'banner_bg_color': '51494e', 'banner_stroke_color': 'e01c74', 'required_level': 2})
         Avatar.objects.get_or_create(pmc_id='005', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/005_Logos.png',
@@ -112,7 +112,7 @@ class Command(BaseCommand):
         Avatar.objects.get_or_create(pmc_id='008', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/008_Shadows.png',
                                      'category_label': 'Houses', 'name': 'Shadows', 'banner_bg_color': 'd5cbc5', 'banner_stroke_color': '1b172c', 'required_level': 2})
         Avatar.objects.get_or_create(pmc_id='009', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/009_Untamed.png',
-                                     'category_label': 'Houses', 'name': 'Untamed', 'banner_bg_color': '004123', 'banner_stroke_color': 'e26a28', 'required_level': 2})
+                                     'category_label': 'Houses', 'name': 'Untamed', 'banner_bg_color': '4123', 'banner_stroke_color': 'e26a28', 'required_level': 2})
         Avatar.objects.get_or_create(pmc_id='010', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/010_Saurian.png',
                                      'category_label': 'Houses', 'name': 'Saurian', 'banner_bg_color': 'fff8e6', 'banner_stroke_color': '47bccd', 'required_level': 4})
         Avatar.objects.get_or_create(pmc_id='011', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/011_Star_Alliance.png',
@@ -152,7 +152,7 @@ class Command(BaseCommand):
         Avatar.objects.get_or_create(pmc_id='028', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/028_DISC.png',
                                      'category_label': 'Sets', 'name': 'Discovery', 'banner_bg_color': '213c4a', 'banner_stroke_color': 'ffffff', 'required_level': 0})
         Avatar.objects.get_or_create(pmc_id='030', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/030_UC23.png',
-                                     'category_label': 'Sets', 'name': 'Unchained', 'banner_bg_color': 'ffffff', 'banner_stroke_color': '000000', 'required_level': 9})
+                                     'category_label': 'Sets', 'name': 'Unchained', 'banner_bg_color': 'ffffff', 'banner_stroke_color': '0', 'required_level': 9})
         Avatar.objects.get_or_create(pmc_id='031', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/031_MN24.png',
                                      'category_label': 'Sets', 'name': 'Menagerie', 'banner_bg_color': 'a5a19b', 'banner_stroke_color': 'eadc83', 'required_level': 9})
         Avatar.objects.get_or_create(pmc_id='032', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/032_VM23.png', 'category_label': 'Sets',
@@ -160,15 +160,17 @@ class Command(BaseCommand):
         Avatar.objects.get_or_create(pmc_id='033', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/033_VM24.png', 'category_label': 'Sets',
                                      'name': 'Vault Masters 2024', 'banner_bg_color': '526473', 'banner_stroke_color': 'fcee21', 'required_level': 9})
         Avatar.objects.get_or_create(pmc_id='035', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/035_Stun.png',
-                                     'category_label': 'Counters', 'name': 'Stun', 'banner_bg_color': 'fff19a', 'banner_stroke_color': '000000', 'required_level': 10})
+                                     'category_label': 'Counters', 'name': 'Stun', 'banner_bg_color': 'fff19a', 'banner_stroke_color': '0', 'required_level': 10})
         Avatar.objects.get_or_create(pmc_id='036', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/036_Ward.png',
-                                     'category_label': 'Counters', 'name': 'Ward', 'banner_bg_color': '2a4ca0', 'banner_stroke_color': '000000', 'required_level': 10})
+                                     'category_label': 'Counters', 'name': 'Ward', 'banner_bg_color': '2a4ca0', 'banner_stroke_color': '0', 'required_level': 10})
         Avatar.objects.get_or_create(pmc_id='037', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/037_Enrage.png',
-                                     'category_label': 'Counters', 'name': 'Enrage', 'banner_bg_color': 'f9bf75', 'banner_stroke_color': '000000', 'required_level': 10})
+                                     'category_label': 'Counters', 'name': 'Enrage', 'banner_bg_color': 'f9bf75', 'banner_stroke_color': '0', 'required_level': 10})
         Avatar.objects.get_or_create(pmc_id='038', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/038_PowerCounter.png',
                                      'category_label': 'Counters', 'name': 'Power Counter', 'banner_bg_color': 'eaebed', 'banner_stroke_color': 'c72329', 'required_level': 10})
         Avatar.objects.get_or_create(pmc_id='039', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/039_Chain.png',
-                                     'category_label': 'Counters', 'name': 'Chain', 'banner_bg_color': 'c7c5be', 'banner_stroke_color': '233e96', 'required_level': 10})
+                                     'category_label': 'Counters', 'name': 'Chain', 'banner_bg_color': 'c7c5be', 'banner_stroke_color': '2.33E+98', 'required_level': 10})
+        Avatar.objects.get_or_create(pmc_id='040', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/040_Aember.png',
+                                     'category_label': 'Counters', 'name': 'Æmber', 'banner_bg_color': 'fcb934', 'banner_stroke_color': 'fddb29', 'required_level': 10})
         Avatar.objects.get_or_create(pmc_id='041', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/041_YellowKey.png',
                                      'category_label': 'Counters', 'name': 'Yellow Key', 'banner_bg_color': 'fff1a4', 'banner_stroke_color': 'f5dc5f', 'required_level': 6})
         Avatar.objects.get_or_create(pmc_id='042', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/042_BlueKey.png',
@@ -211,119 +213,115 @@ class Command(BaseCommand):
                                      'category_label': 'Counters', 'name': 'Chroma Keys', 'banner_bg_color': 'e9e9e9', 'banner_stroke_color': 'ffffff', 'required_level': 18})
 
     def make_backgrounds(self):
-        Background.objects.get_or_create(pmc_id='001', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/001_KeyChain_Dark.png', 'category_label': 'KeyChain', 'name': 'KeyChain (Dark)', 'required_level': 0})
-        Background.objects.get_or_create(pmc_id='002', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/002_KeyChain_Light.png', 'category_label': 'KeyChain', 'name': 'KeyChain (Light)', 'required_level': 0})
-        Background.objects.get_or_create(pmc_id='003', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/003_Discovery.png', 'category_label': 'General', 'name': 'Discovering KeyForge', 'required_level': 0})
-        Background.objects.get_or_create(pmc_id='004', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/004_SloppyLabwork.png', 'category_label': 'Logos', 'name': 'Sloppy Labwork', 'required_level': 3})
-        Background.objects.get_or_create(pmc_id='005', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/005_EnsignClark.png', 'category_label': 'Star Alliance', 'name': 'Ensign Clark', 'required_level': 13})
-        Background.objects.get_or_create(pmc_id='006', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/006_PaleogeneSociety.png', 'category_label': 'Saurian', 'name': 'Paleogene Society', 'required_level': 13})
-        Background.objects.get_or_create(pmc_id='007', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/007_OracleZan.png', 'category_label': 'Future Release', 'name': 'Oracle Zan', 'required_level': 13})
-        Background.objects.get_or_create(pmc_id='008', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/008_HumbleRestraint.png', 'category_label': 'Sanctum', 'name': 'Humble Restraint', 'required_level': 12})
-        Background.objects.get_or_create(pmc_id='009', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/009_Bwahah.png', 'category_label': 'General', 'name': 'Bwahah', 'required_level': 10})
-        Background.objects.get_or_create(pmc_id='010', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/010_TheRedCotAComin.png', 'category_label': 'General', 'name': 'The Red CotA Comin\'', 'required_level': 7})
-        Background.objects.get_or_create(pmc_id='011', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/011_SingingTheBlues.png', 'category_label': 'General', 'name': 'Sing the Blues oA', 'required_level': 7})
-        Background.objects.get_or_create(pmc_id='012', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/012_TheAemberSky.png', 'category_label': 'Sets', 'name': 'The Æmber Sky', 'required_level': 8})
-        Background.objects.get_or_create(pmc_id='013', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/013_GrimReminders.png', 'category_label': 'Sets', 'name': 'Grim Reminders', 'required_level': 8})
-        Background.objects.get_or_create(pmc_id='014', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/014_EdgeOfTheWorld.png', 'category_label': 'Skyborn', 'name': 'Edge of the World', 'required_level': 14})
-        Background.objects.get_or_create(pmc_id='015', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/015_BadPenny.png', 'category_label': 'Sanctum', 'name': 'Bad Penny', 'required_level': 3})
-        Background.objects.get_or_create(pmc_id='016', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/016_Chaostadon.png', 'category_label': 'Saurian', 'name': 'Chaostadon', 'required_level': 4})
-        Background.objects.get_or_create(pmc_id='017', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/017_TheOldBook.png', 'category_label': 'General', 'name': 'The Old Book', 'required_level': 2})
-        Background.objects.get_or_create(pmc_id='018', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/018_ID.png', 'category_label': 'General', 'name': 'ID Check', 'required_level': 21})
-        Background.objects.get_or_create(pmc_id='019', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/019_TheKeyraken.png', 'category_label': 'Adventures', 'name': 'The Keyraken', 'required_level': 17})
+        Background.objects.get_or_create(pmc_id='001', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/001_KeyChain_Dark.png',
+                                         'name': 'KeyChain (Dark)', 'category_label': 'KeyChain', 'required_level': 0, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='002', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/002_KeyChain_Light.png',
+                                         'name': 'KeyChain (Light)', 'category_label': 'KeyChain', 'required_level': 0, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='003', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/003_Discovery.png',
+                                         'name': 'Discovery', 'category_label': 'Sets', 'required_level': 0, 'artist_credit': 'David Otálora'})
+        Background.objects.get_or_create(pmc_id='004', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/004_SloppyLabwork.png',
+                                         'name': 'Sloppy Labwork', 'category_label': 'Logos', 'required_level': 3, 'artist_credit': 'Hans Krill'})
+        Background.objects.get_or_create(pmc_id='005', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/005_EnsignClark.png',
+                                         'name': 'Ensign Clark', 'category_label': 'Star Alliance', 'required_level': 13, 'artist_credit': 'Xavi Planas'})
+        Background.objects.get_or_create(pmc_id='006', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/006_PaleogeneSociety.png',
+                                         'name': 'Paleogene Society', 'category_label': 'Saurian', 'required_level': 13, 'artist_credit': 'VictorG.Art'})
+        Background.objects.get_or_create(pmc_id='008', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/008_HumbleRestraint.png',
+                                         'name': 'Humble Restraint', 'category_label': 'Sanctum', 'required_level': 12, 'artist_credit': 'Nicholas Hoe'})
+        Background.objects.get_or_create(pmc_id='010', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/010_TheRedCotAComin.png',
+                                         'name': 'The Red CotA Comin\'', 'category_label': 'General', 'required_level': 7, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='011', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/011_SingingTheBlues.png',
+                                         'name': 'Sing the Blues oA', 'category_label': 'General', 'required_level': 7, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='012', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/012_TheAemberSky.png',
+                                         'name': 'The Æmber Sky', 'category_label': 'Sets', 'required_level': 8, 'artist_credit': 'Scott Schomburg'})
+        Background.objects.get_or_create(pmc_id='013', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/013_GrimReminders.png',
+                                         'name': 'Grim Reminders', 'category_label': 'Sets', 'required_level': 8, 'artist_credit': 'Kevin Sidharta'})
+        Background.objects.get_or_create(pmc_id='014', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/014_EdgeOfTheWorld.png',
+                                         'name': 'Edge of the World', 'category_label': 'Skyborn', 'required_level': 14, 'artist_credit': 'Julia Alentseva'})
+        Background.objects.get_or_create(pmc_id='015', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/015_BadPenny.png',
+                                         'name': 'Bad Penny', 'category_label': 'Shadows', 'required_level': 3, 'artist_credit': 'Nasrul Hakim'})
+        Background.objects.get_or_create(pmc_id='016', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/016_Chaostadon.png',
+                                         'name': 'Chaostadon', 'category_label': 'Saurian', 'required_level': 4, 'artist_credit': 'Kevin Sidharta'})
+        Background.objects.get_or_create(pmc_id='017', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/017_TheOldBook.png',
+                                         'name': 'The Old Book', 'category_label': 'General', 'required_level': 2, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='018', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/018_ID.png',
+                                         'name': 'ID Check', 'category_label': 'General', 'required_level': 21, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='019', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/019_TheKeyraken.png',
+                                         'name': 'The Keyraken', 'category_label': 'Adventures', 'required_level': 17, 'artist_credit': 'Kevin Sidharta'})
         Background.objects.get_or_create(pmc_id='020', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/020_KeymanderSpectralInvestigator.png',
-                                         'category_label': 'KeyForge Community', 'name': 'Keymander: Spectral Investigator', 'required_level': 16})
+                                         'name': 'Keymander: Spectral Investigator', 'category_label': 'KeyForge Community', 'required_level': 16, 'artist_credit': None})
         Background.objects.get_or_create(pmc_id='021', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/021_KeymanderPrimordialSerpent.png',
-                                         'category_label': 'KeyForge Community', 'name': 'Keymander: Primordial Serpent', 'required_level': 16})
-        Background.objects.get_or_create(pmc_id='022', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/022_KeymanderWeirdo.png', 'category_label': 'KeyForge Community', 'name': 'Keymander: Weirdo', 'required_level': 16})
-        Background.objects.get_or_create(pmc_id='023', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/023_MightMakesRight.png', 'category_label': 'Brobnar', 'name': 'Might Makes Right', 'required_level': 3})
-        Background.objects.get_or_create(pmc_id='024', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/024_HauntedHouse.png', 'category_label': 'Geistoid', 'name': 'Haunted House', 'required_level': 5})
-        Background.objects.get_or_create(pmc_id='025', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/025_BrendTheFanatic.png', 'category_label': 'Sanctum', 'name': 'Brend the Fanatic', 'required_level': 12})
-        Background.objects.get_or_create(pmc_id='026', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/026_AbyssalConspiracy.png', 'category_label': 'Adventures', 'name': 'The Abyssal Conspiracy', 'required_level': 17})
-        Background.objects.get_or_create(pmc_id='027', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/027_GettingStarted.png', 'category_label': 'General', 'name': 'Starting the Journey', 'required_level': 2})
-        Background.objects.get_or_create(pmc_id='028', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/028_AmmoniaClouds.png', 'category_label': 'Mars', 'name': 'Ammonia Clouds', 'required_level': 3})
-        Background.objects.get_or_create(pmc_id='029', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/029_CatenaFiend.png', 'category_label': 'Dis', 'name': 'Catena Fiend', 'required_level': 22})
-        Background.objects.get_or_create(pmc_id='030', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/030_KelifiDragon.png', 'category_label': 'Brobnar', 'name': 'Kalifi Dragon', 'required_level': 11})
-        Background.objects.get_or_create(pmc_id='031', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/031_DominatorBauble.png', 'category_label': 'Dis', 'name': 'Dominator Bauble', 'required_level': 11})
-        Background.objects.get_or_create(pmc_id='032', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/032_CloudburstCommand.png', 'category_label': 'Skyborn', 'name': 'Cloudburst Command', 'required_level': 5})
-        Background.objects.get_or_create(pmc_id='033', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/033_PunctuatedEquilibrium.png', 'category_label': 'Untamed', 'name': 'Punctuated Equilibrium', 'required_level': 13})
-        Background.objects.get_or_create(pmc_id='034', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/034_FuzzyGruen.png', 'category_label': 'Untamed', 'name': 'Fuzzy Gruen', 'required_level': 3})
-        Background.objects.get_or_create(pmc_id='035', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/035_DarkTidings.png', 'category_label': 'Sets', 'name': 'Dark Tidings', 'required_level': 8})
-        Background.objects.get_or_create(pmc_id='036', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/036_Kaupe.png', 'category_label': 'Unfathomable', 'name': 'Kaupe', 'required_level': 4})
-        Background.objects.get_or_create(pmc_id='037', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/037_Almsmaster.png', 'category_label': 'Sanctum', 'name': 'Almsmaster', 'required_level': 3})
-        Background.objects.get_or_create(pmc_id='038', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/038_LibraryOfBabble.png', 'category_label': 'Logos', 'name': 'Library of Babble', 'required_level': 11})
-        Background.objects.get_or_create(pmc_id='039', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/039_Memolith.png', 'category_label': 'General', 'name': 'Memolith', 'required_level': 10})
-        Background.objects.get_or_create(pmc_id='040', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/040_DrXyloxxzlphrex.png', 'category_label': 'Mars', 'name': 'Dr. Xyloxxzlphrex', 'required_level': 12})
-        Background.objects.get_or_create(pmc_id='041', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/041_UnlockedGateway.png', 'category_label': 'Dis', 'name': 'Unlocked Gateway', 'required_level': 3})
-        Background.objects.get_or_create(pmc_id='042', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/042_VaultAssault.png', 'category_label': 'Sets', 'name': 'Vault Assault', 'required_level': 6})
-        Background.objects.get_or_create(pmc_id='043', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/043_NicheMarket.png', 'category_label': 'Ekwidon', 'name': 'Niche Market', 'required_level': 14})
-        Background.objects.get_or_create(pmc_id='044', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/044_MoonLightSpecial.png', 'category_label': 'Ekwidon', 'name': 'Moon Light Special', 'required_level': 5})
-        Background.objects.get_or_create(pmc_id='045', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/045_EctoCharge.png', 'category_label': 'Geistoid', 'name': 'Ecto-Charge', 'required_level': 14})
-        Background.objects.get_or_create(pmc_id='046', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/046_TacticalOfficerMoon.png', 'category_label': 'Star Alliance', 'name': 'Tactical Officer Moon', 'required_level': 4})
-        Background.objects.get_or_create(pmc_id='047', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/047_TheChosenOne.png', 'category_label': 'Unfathomable', 'name': 'The Chosen One', 'required_level': 14})
-        Background.objects.get_or_create(pmc_id='048', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/048_BurnTheStockpile.png', 'category_label': 'Brobnar', 'name': 'Burn the Stockpile', 'required_level': 22})
-        Background.objects.get_or_create(pmc_id='049', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/049_NeonBlue.png', 'category_label': 'General', 'name': 'Neon Blue', 'required_level': 20})
-        Background.objects.get_or_create(pmc_id='050', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/050_NeonGreen.png', 'category_label': 'General', 'name': 'Neon Green', 'required_level': 20})
-        Background.objects.get_or_create(pmc_id='051', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/051_NeonPink.png', 'category_label': 'General', 'name': 'Neon Pink', 'required_level': 20})
-        Background.objects.get_or_create(pmc_id='052', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/052_NeonYellow.png', 'category_label': 'General', 'name': 'Neon Yellow', 'required_level': 20})
-        Background.objects.get_or_create(pmc_id='053', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/053_KeyChain_Bronze.png', 'category_label': 'KeyChain', 'name': 'KeyChain (Bronze)', 'required_level': 10})
-        Background.objects.get_or_create(pmc_id='054', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/054_KeyChain_Silver.png', 'category_label': 'KeyChain', 'name': 'KeyChain (Silver)', 'required_level': 20})
-        Background.objects.get_or_create(pmc_id='055', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/055_KeyChain_Gold.png', 'category_label': 'KeyChain', 'name': 'KeyChain (Gold)', 'required_level': 40})
-        Background.objects.get_or_create(pmc_id='056', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/056_KeyChain_Ascension.png', 'category_label': 'KeyChain', 'name': 'KeyChain (Ascension)', 'required_level': 50})
-        Background.objects.get_or_create(pmc_id='057', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/057_VindicationOutpost.png', 'category_label': 'Redemption', 'name': 'Vindication Outpost', 'required_level': 13})
-        Background.objects.get_or_create(pmc_id='058', defaults={
-                                         'src': 'https://static.sloppylabwork.com/pmc/backgrounds/058_RedeemerAmara.png', 'category_label': 'Redemption', 'name': 'Redeemer Amara', 'required_level': 5})
+                                         'name': 'Keymander: Primordial Serpent', 'category_label': 'KeyForge Community', 'required_level': 16, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='022', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/022_KeymanderWeirdo.png',
+                                         'name': 'Keymander: Weirdo', 'category_label': 'KeyForge Community', 'required_level': 16, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='023', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/023_MightMakesRight.png',
+                                         'name': 'Might Makes Right', 'category_label': 'Brobnar', 'required_level': 3, 'artist_credit': 'Monztre'})
+        Background.objects.get_or_create(pmc_id='024', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/024_HauntedHouse.png',
+                                         'name': 'Haunted House', 'category_label': 'Geistoid', 'required_level': 5, 'artist_credit': 'BalanceSheet'})
+        Background.objects.get_or_create(pmc_id='025', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/025_BrendTheFanatic.png',
+                                         'name': 'Brend the Fanatic', 'category_label': 'Shadows', 'required_level': 12, 'artist_credit': 'Djib'})
+        Background.objects.get_or_create(pmc_id='026', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/026_AbyssalConspiracy.png',
+                                         'name': 'The Abyssal Conspiracy', 'category_label': 'Adventures', 'required_level': 17, 'artist_credit': 'Kevin Sidharta'})
+        Background.objects.get_or_create(pmc_id='027', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/027_GettingStarted.png',
+                                         'name': 'Welcome to the Jungle', 'category_label': 'General', 'required_level': 2, 'artist_credit': 'David Kegg'})
+        Background.objects.get_or_create(pmc_id='028', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/028_AmmoniaClouds.png',
+                                         'name': 'Ammonia Clouds', 'category_label': 'Mars', 'required_level': 3, 'artist_credit': 'BalanceSheet'})
+        Background.objects.get_or_create(pmc_id='029', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/029_CatenaFiend.png',
+                                         'name': 'Catena Fiend', 'category_label': 'Dis', 'required_level': 22, 'artist_credit': 'Arthur Magalhaes'})
+        Background.objects.get_or_create(pmc_id='030', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/030_KelifiDragon.png',
+                                         'name': 'Kalifi Dragon', 'category_label': 'Brobnar', 'required_level': 11, 'artist_credit': 'Caio Monteiro'})
+        Background.objects.get_or_create(pmc_id='031', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/031_DominatorBauble.png',
+                                         'name': 'Dominator Bauble', 'category_label': 'Dis', 'required_level': 11, 'artist_credit': 'Caravan Studio'})
+        Background.objects.get_or_create(pmc_id='032', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/032_CloudburstCommand.png',
+                                         'name': 'Cloudburst Command', 'category_label': 'Skyborn', 'required_level': 5, 'artist_credit': 'David Otálora'})
+        Background.objects.get_or_create(pmc_id='033', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/033_PunctuatedEquilibrium.png',
+                                         'name': 'Punctuated Equilibrium', 'category_label': 'Untamed', 'required_level': 13, 'artist_credit': 'Jessé Suursoo'})
+        Background.objects.get_or_create(pmc_id='034', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/034_FuzzyGruen.png',
+                                         'name': 'Fuzzy Gruen', 'category_label': 'Untamed', 'required_level': 3, 'artist_credit': 'Adam Vehige'})
+        Background.objects.get_or_create(pmc_id='035', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/035_DarkTidings.png',
+                                         'name': 'Dark Tidings', 'category_label': 'Sets', 'required_level': 8, 'artist_credit': 'Ângelo Bortolini'})
+        Background.objects.get_or_create(pmc_id='036', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/036_Kaupe.png',
+                                         'name': 'Kaupe', 'category_label': 'Unfathomable', 'required_level': 4, 'artist_credit': 'Art Tavern'})
+        Background.objects.get_or_create(pmc_id='037', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/037_Almsmaster.png',
+                                         'name': 'Almsmaster', 'category_label': 'Sanctum', 'required_level': 3, 'artist_credit': 'Ivan Tao'})
+        Background.objects.get_or_create(pmc_id='038', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/038_LibraryOfBabble.png',
+                                         'name': 'Library of Babble', 'category_label': 'Logos', 'required_level': 11, 'artist_credit': 'BalanceSheet'})
+        Background.objects.get_or_create(pmc_id='039', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/039_Memolith.png',
+                                         'name': 'Memolith', 'category_label': 'General', 'required_level': 10, 'artist_credit': 'Francisco Badilla'})
+        Background.objects.get_or_create(pmc_id='040', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/040_DrXyloxxzlphrex.png',
+                                         'name': 'Dr. Xyloxxzlphrex', 'category_label': 'Mars', 'required_level': 12, 'artist_credit': 'Djib'})
+        Background.objects.get_or_create(pmc_id='041', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/041_UnlockedGateway.png',
+                                         'name': 'Unlocked Gateway', 'category_label': 'Dis', 'required_level': 3, 'artist_credit': 'Sean Donaldson'})
+        Background.objects.get_or_create(pmc_id='042', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/042_VaultAssault.png',
+                                         'name': 'Vault Assault', 'category_label': 'Sets', 'required_level': 6, 'artist_credit': 'Shady Curi'})
+        Background.objects.get_or_create(pmc_id='043', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/043_NicheMarket.png',
+                                         'name': 'Niche Market', 'category_label': 'Ekwidon', 'required_level': 14, 'artist_credit': 'Jeferson Cordeiro'})
+        Background.objects.get_or_create(pmc_id='044', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/044_MoonLightSpecial.png',
+                                         'name': 'Moon Light Special', 'category_label': 'Ekwidon', 'required_level': 5, 'artist_credit': 'Kaion Luong'})
+        Background.objects.get_or_create(pmc_id='045', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/045_EctoCharge.png',
+                                         'name': 'Ecto-Charge', 'category_label': 'Geistoid', 'required_level': 14, 'artist_credit': 'BalanceSheet'})
+        Background.objects.get_or_create(pmc_id='046', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/046_TacticalOfficerMoon.png',
+                                         'name': 'Tactical Officer Moon', 'category_label': 'Star Alliance', 'required_level': 4, 'artist_credit': 'Colin Searle'})
+        Background.objects.get_or_create(pmc_id='047', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/047_TheChosenOne.png',
+                                         'name': 'The Chosen One', 'category_label': 'Unfathomable', 'required_level': 14, 'artist_credit': 'Mariana Ennes'})
+        Background.objects.get_or_create(pmc_id='048', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/048_BurnTheStockpile.png',
+                                         'name': 'Burn the Stockpile', 'category_label': 'Brobnar', 'required_level': 22, 'artist_credit': 'BalanceSheet'})
+        Background.objects.get_or_create(pmc_id='049', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/049_NeonBlue.png',
+                                         'name': 'Neon Blue', 'category_label': 'General', 'required_level': 20, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='050', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/050_NeonGreen.png',
+                                         'name': 'Neon Green', 'category_label': 'General', 'required_level': 20, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='051', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/051_NeonPink.png',
+                                         'name': 'Neon Pink', 'category_label': 'General', 'required_level': 20, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='052', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/052_NeonYellow.png',
+                                         'name': 'Neon Yellow', 'category_label': 'General', 'required_level': 20, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='053', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/053_KeyChain_Bronze.png',
+                                         'name': 'KeyChain (Bronze)', 'category_label': 'KeyChain', 'required_level': 10, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='054', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/054_KeyChain_Silver.png',
+                                         'name': 'KeyChain (Silver)', 'category_label': 'KeyChain', 'required_level': 20, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='055', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/055_KeyChain_Gold.png',
+                                         'name': 'KeyChain (Gold)', 'category_label': 'KeyChain', 'required_level': 40, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='056', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/056_KeyChain_Ascension.png',
+                                         'name': 'KeyChain (Ascension)', 'category_label': 'KeyChain', 'required_level': 50, 'artist_credit': None})
+        Background.objects.get_or_create(pmc_id='057', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/057_VindicationOutpost.png',
+                                         'name': 'Vindication Outpost', 'category_label': 'Redemption', 'required_level': 13, 'artist_credit': 'Michael Angelo Dulay'})
+        Background.objects.get_or_create(pmc_id='058', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/058_RedeemerAmara.png',
+                                         'name': 'Redeemer Amara', 'category_label': 'Redemption', 'required_level': 5, 'artist_credit': 'Allison Capa'})

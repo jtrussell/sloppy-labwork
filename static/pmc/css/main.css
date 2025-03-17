@@ -19,6 +19,10 @@
   --gradient-primary: linear-gradient(#FFB400, #FFF200, #FFB400);
   --gradient-accent: none;
 
+  --staff-color-paper-bg: #0c1d43;
+  --staff-color-text: #8FD3FA;
+  --staff-color-lines: #8FD3FA;
+
   --url-wordmark-dark-alpha: url('https://static.sloppylabwork.com/pmc/brand/KC_WORDMARK_DARK_ALPHA.png');
 }
 
@@ -294,6 +298,10 @@ nav li + li::before {
   border-radius: var(--border-radius);
   padding: 20px 20px;
   margin: 20px 0;
+}
+
+.card.card-staff {
+  background-color: var(--staff-color-paper-bg);
 }
 
 .card h1:first-child,

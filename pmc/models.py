@@ -1,3 +1,4 @@
+from colorama import Back
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import UniqueConstraint
@@ -282,10 +283,16 @@ class PmcProfile(models.Model):
         max_length=200, default=None, null=True, blank=True)
 
     def get_avatar(self):
-        return self.avatar or Avatar.objects.get(pmc_id='001')
+        try:
+            return self.avatar or Avatar.objects.get(pmc_id='001')
+        except Avatar.DoesNotExist:
+            return None
 
     def get_background(self):
-        return self.background or Background.objects.get(pmc_id='001')
+        try:
+            return self.background or Background.objects.get(pmc_id='001')
+        except Background.DoesNotExist:
+            return None
 
     def get_total_xp(self):
         experience_points = (
@@ -437,8 +444,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]
-                : entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -507,6 +513,8 @@ class Background(models.Model):
     category_label = models.CharField(max_length=25)
     name = models.CharField(max_length=100)
     required_level = models.PositiveIntegerField(default=0)
+    artist_credit = models.CharField(
+        max_length=100, default=None, null=True, blank=True)
 
     class Meta:
         ordering = ('required_level', 'pmc_id')
