@@ -20,7 +20,7 @@
   --gradient-accent: none;
 
   --staff-color-paper-bg: #0c1d43;
-  --staff-color-text: #8FD3FA;
+  --staff-color-accent: #8FD3FA;
   --staff-color-lines: #8FD3FA;
 
   --url-wordmark-dark-alpha: url('https://static.sloppylabwork.com/pmc/brand/KC_WORDMARK_DARK_ALPHA.png');
@@ -98,6 +98,18 @@ h6 + .subheading {
   color: var(--color-primary);
 }
 
+.card-staff h1 {
+  color: var(--staff-color-accent);
+}
+
+.card-staff h2 + .subheading,
+.card-staff h3 + .subheading,
+.card-staff h4 + .subheading,
+.card-staff h5 + .subheading,
+.card-staff h6 + .subheading {
+  color: var(--color-accent);
+}
+
 p { margin: 14px 0; }
 
 ul.bulleted-list {
@@ -140,6 +152,13 @@ select {
   padding: 6px 10px;
   border-radius: var(--border-radius-sm);
   font-size: 16px;
+}
+
+.card-staff input,
+.card-staff select {
+  background-color: var(--staff-color-paper-bg);
+  color: var(--staff-color-accent);
+  border-color: var(--staff-color-lines);
 }
 
 form > p {
@@ -288,6 +307,18 @@ nav li + li::before {
 
 .btn-group .btn + .btn {
   margin-left: calc(0px - var(--border-size));
+}
+
+.card-staff .btn {
+  background-color: var(--staff-color-paper-bg);
+  color: var(--staff-color-accent);
+  border-color: var(--staff-color-lines);
+}
+
+.card-staff .btn.btn-solid {
+  background-color: var(--staff-color-accent);
+  background-image: none;
+  color: var(--staff-color-paper-bg);
 }
 
 /* ***********************************
