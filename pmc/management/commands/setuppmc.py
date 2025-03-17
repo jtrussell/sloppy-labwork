@@ -112,7 +112,7 @@ class Command(BaseCommand):
         Avatar.objects.get_or_create(pmc_id='008', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/008_Shadows.png',
                                      'category_label': 'Houses', 'name': 'Shadows', 'banner_bg_color': 'd5cbc5', 'banner_stroke_color': '1b172c', 'required_level': 2})
         Avatar.objects.get_or_create(pmc_id='009', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/009_Untamed.png',
-                                     'category_label': 'Houses', 'name': 'Untamed', 'banner_bg_color': '4123', 'banner_stroke_color': 'e26a28', 'required_level': 2})
+                                     'category_label': 'Houses', 'name': 'Untamed', 'banner_bg_color': '004123', 'banner_stroke_color': 'e26a28', 'required_level': 2})
         Avatar.objects.get_or_create(pmc_id='010', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/010_Saurian.png',
                                      'category_label': 'Houses', 'name': 'Saurian', 'banner_bg_color': 'fff8e6', 'banner_stroke_color': '47bccd', 'required_level': 4})
         Avatar.objects.get_or_create(pmc_id='011', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/011_Star_Alliance.png',
@@ -152,7 +152,7 @@ class Command(BaseCommand):
         Avatar.objects.get_or_create(pmc_id='028', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/028_DISC.png',
                                      'category_label': 'Sets', 'name': 'Discovery', 'banner_bg_color': '213c4a', 'banner_stroke_color': 'ffffff', 'required_level': 0})
         Avatar.objects.get_or_create(pmc_id='030', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/030_UC23.png',
-                                     'category_label': 'Sets', 'name': 'Unchained', 'banner_bg_color': 'ffffff', 'banner_stroke_color': '0', 'required_level': 9})
+                                     'category_label': 'Sets', 'name': 'Unchained', 'banner_bg_color': 'ffffff', 'banner_stroke_color': '000000', 'required_level': 9})
         Avatar.objects.get_or_create(pmc_id='031', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/031_MN24.png',
                                      'category_label': 'Sets', 'name': 'Menagerie', 'banner_bg_color': 'a5a19b', 'banner_stroke_color': 'eadc83', 'required_level': 9})
         Avatar.objects.get_or_create(pmc_id='032', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/032_VM23.png', 'category_label': 'Sets',
@@ -160,15 +160,15 @@ class Command(BaseCommand):
         Avatar.objects.get_or_create(pmc_id='033', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/033_VM24.png', 'category_label': 'Sets',
                                      'name': 'Vault Masters 2024', 'banner_bg_color': '526473', 'banner_stroke_color': 'fcee21', 'required_level': 9})
         Avatar.objects.get_or_create(pmc_id='035', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/035_Stun.png',
-                                     'category_label': 'Counters', 'name': 'Stun', 'banner_bg_color': 'fff19a', 'banner_stroke_color': '0', 'required_level': 10})
+                                     'category_label': 'Counters', 'name': 'Stun', 'banner_bg_color': 'fff19a', 'banner_stroke_color': '000000', 'required_level': 10})
         Avatar.objects.get_or_create(pmc_id='036', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/036_Ward.png',
-                                     'category_label': 'Counters', 'name': 'Ward', 'banner_bg_color': '2a4ca0', 'banner_stroke_color': '0', 'required_level': 10})
+                                     'category_label': 'Counters', 'name': 'Ward', 'banner_bg_color': '2a4ca0', 'banner_stroke_color': '000000', 'required_level': 10})
         Avatar.objects.get_or_create(pmc_id='037', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/037_Enrage.png',
-                                     'category_label': 'Counters', 'name': 'Enrage', 'banner_bg_color': 'f9bf75', 'banner_stroke_color': '0', 'required_level': 10})
+                                     'category_label': 'Counters', 'name': 'Enrage', 'banner_bg_color': 'f9bf75', 'banner_stroke_color': '000000', 'required_level': 10})
         Avatar.objects.get_or_create(pmc_id='038', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/038_PowerCounter.png',
                                      'category_label': 'Counters', 'name': 'Power Counter', 'banner_bg_color': 'eaebed', 'banner_stroke_color': 'c72329', 'required_level': 10})
         Avatar.objects.get_or_create(pmc_id='039', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/039_Chain.png',
-                                     'category_label': 'Counters', 'name': 'Chain', 'banner_bg_color': 'c7c5be', 'banner_stroke_color': '2.33E+98', 'required_level': 10})
+                                     'category_label': 'Counters', 'name': 'Chain', 'banner_bg_color': 'c7c5be', 'banner_stroke_color': '233e96', 'required_level': 10})
         Avatar.objects.get_or_create(pmc_id='040', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/040_Aember.png',
                                      'category_label': 'Counters', 'name': 'Æmber', 'banner_bg_color': 'fcb934', 'banner_stroke_color': 'fddb29', 'required_level': 10})
         Avatar.objects.get_or_create(pmc_id='041', defaults={'src': 'https://static.sloppylabwork.com/pmc/avatars/041_YellowKey.png',
