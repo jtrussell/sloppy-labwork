@@ -409,6 +409,7 @@ def change_background(request):
         'Logos',
         'Mars',
         'Sanctum',
+        'Shadows',
         'Untamed',
         'Saurian',
         'Star Alliance',
@@ -418,7 +419,6 @@ def change_background(request):
         'Skyborn',
         'Redemption',
         'Sets',
-        'Future Release',
         'Adventures',
         'KeyForge Community'
     ]
