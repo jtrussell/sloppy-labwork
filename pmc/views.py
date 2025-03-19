@@ -184,16 +184,6 @@ class PlaygroupMemberDetail(LoginRequiredMixin, generic.DetailView):
             return HttpResponseRedirect(reverse('pmc-pg-members', kwargs={'slug': kwargs['slug']}))
 
 
-class PlaygroupMemberManage(LoginRequiredMixin, generic.DetailView):
-    model = PlaygroupMember
-    template_name = 'pmc/pg-member-manage.html'
-
-    @method_decorator(login_required)
-    @method_decorator(is_pg_staff)
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
-
-
 class PlaygroupEventsList(LoginRequiredMixin, generic.ListView):
     context_object_name = 'events'
     template_name = 'pmc/pg-events.html'
