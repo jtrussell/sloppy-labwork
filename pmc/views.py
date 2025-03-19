@@ -174,6 +174,15 @@ class PlaygroupMemberDetail(LoginRequiredMixin, generic.DetailView):
             playgroup__slug=self.kwargs['slug']
         )
 
+    @method_decorator(is_pg_staff)
+    def post(self, request, *args, **kwargs):
+        member = self.get_object()
+        action = request.POST.get('action')
+        if action == 'remove':
+            member.delete()
+            messages.success(request, _('Member removed.'))
+            return HttpResponseRedirect(reverse('pmc-pg-members', kwargs={'slug': kwargs['slug']}))
+
 
 class PlaygroupMemberManage(LoginRequiredMixin, generic.DetailView):
     model = PlaygroupMember
@@ -570,7 +579,7 @@ def add_pg_member_by_username(request, slug):
         }))
     except User.DoesNotExist:
         messages.error(request, _(
-            'Oops! We could not find a user with that username.'))
+            'Oops! We could not find a user with that username. Usernames are case sensitive.'))
     except Exception as e:
         print(e)
         messages.error(request, _('Oops! Something went wrong.'))

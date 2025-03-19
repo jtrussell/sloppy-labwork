@@ -597,7 +597,7 @@ ul.messages {
   overflow: hidden;
  }
 
- .progress-bar > .progress {
+.progress-bar > .progress {
   height: 30px;
   border-radius: 10px;
   background-color: var(--color-primary);
