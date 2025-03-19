@@ -18,7 +18,43 @@
     </form>
   </div>
 
-  <div>
-    <em>Playgroup-public details for this person would go here.</em>
+  <div class="flex flex-col flex-gap-1">
+    <div class="banner-with-avatar" style="background-color: #{{ object.user.pmc_profile.get_avatar.banner_bg_color }}">
+      <img class="avatar" src="{{ object.user.pmc_profile.get_avatar.src }}" style="border-right: 3px solid #{{ object.user.pmc_profile.get_avatar.banner_stroke_color }}" alt="">
+      <div style="color: #{{ object.user.pmc_profile.get_avatar.banner_text_color }}">
+        <span class="banner-text">{{ object }}</span>
+        <span class="banner-sub-text">{{ object.user.pmc_profile.tagline | default:"Silence is golden." }}</span>
+      </div>
+    </div>
+
+    <table>
+      <tbody>
+        <tr>
+          <th>Playgroup Nickname</th>
+          <td>{{ object }}</td>
+        </tr>
+        <tr>
+          <th>KeyChain Username</th>
+          <td>{{ object.user }}</td>
+        </tr>
+        <tr>
+          <th>Member Since</th>
+          <td>{{ object.joined_on | date:"SHORT_DATE_FORMAT" }}</td>
+        </tr>
+        <tr>
+          <th>Events Attended</th>
+          <td>{{ object.get_events.count }}</td>
+        </tr>
+        <tr>
+          <th>Events Won</th>
+          <td>{{ object.get_events_won.count }}</td>
+        </tr>
+        <tr>
+          <th>Match Wins</th>
+          <td>{{ object.get_num_match_wins }}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
+
 {% endblock %}

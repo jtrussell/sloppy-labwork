@@ -54,6 +54,17 @@ class PlaygroupMember(models.Model):
     def __str__(self):
         return f'{self.nickname} ({self.user.username})' if self.nickname else self.user.username
 
+    def get_events(self):
+        return self.user.event_results.filter(
+            event__playgroups=self.playgroup
+        ).order_by('-event__start_date')
+
+    def get_events_won(self):
+        return self.get_events().filter(finishing_position=1)
+
+    def get_num_match_wins(self):
+        return self.get_events_won().aggregate(Sum('num_wins'))['num_wins__sum'] or 0
+
 
 class EventFormat(models.Model):
     name = models.CharField(max_length=200, unique=True)

@@ -455,12 +455,16 @@ td {
 
 tr > th {
   font-weight: 700;
+}
+
+thead th {
   padding-top: 20px;
   padding-bottom: 10px;
   border-bottom: 3px solid var(--color-lines);
 }
 
-tr:not(:last-child) > td {
+tbody tr:not(:last-child) > td,
+tbody tr:not(:last-child) > th {
   border-bottom: 2px solid var(--color-lines);
 }
 
