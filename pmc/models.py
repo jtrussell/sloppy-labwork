@@ -63,7 +63,7 @@ class PlaygroupMember(models.Model):
         return self.get_events().filter(finishing_position=1)
 
     def get_num_match_wins(self):
-        return self.get_events_won().aggregate(Sum('num_wins'))['num_wins__sum'] or 0
+        return self.get_events().aggregate(Sum('num_wins'))['num_wins__sum'] or 0
 
 
 class EventFormat(models.Model):
@@ -312,7 +312,7 @@ class PmcProfile(models.Model):
         return self.get_events().filter(finishing_position=1)
 
     def get_num_match_wins(self):
-        return self.get_events_won().aggregate(Sum('num_wins'))['num_wins__sum'] or 0
+        return self.get_events().aggregate(Sum('num_wins'))['num_wins__sum'] or 0
 
     def get_total_xp(self):
         experience_points = (
