@@ -526,6 +526,7 @@ table a {
 
 .levels-spread .current-level {
   font-size: 3rem;
+  line-height: 3rem;
 }
 
 .levels-spread .current-level::before {
@@ -536,6 +537,7 @@ table a {
 
 .levels-spread .next-level {
   font-size: 2.2rem;
+  line-height: 2.2rem;
   color: var(--color-text-muted);
 }
 
@@ -649,6 +651,10 @@ ul.messages {
 
 .flex.flex-spread {
   justify-content: space-between;
+}
+
+.flex.flex-baseline {
+  align-items: baseline;
 }
 
 .flex-spacer {

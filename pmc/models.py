@@ -305,6 +305,15 @@ class PmcProfile(models.Model):
         except Background.DoesNotExist:
             return None
 
+    def get_events(self):
+        return self.user.event_results.order_by('-event__start_date')
+
+    def get_events_won(self):
+        return self.get_events().filter(finishing_position=1)
+
+    def get_num_match_wins(self):
+        return self.get_events_won().aggregate(Sum('num_wins'))['num_wins__sum'] or 0
+
     def get_total_xp(self):
         experience_points = (
             EventResult.objects.filter(user=self.user)
@@ -330,6 +339,39 @@ class PmcProfile(models.Model):
         return LevelBreakpoint.objects.filter(
             required_xp__gt=self.get_total_xp()
         ).order_by('level').first()
+
+    def _get_level_up_info(self):
+        total_xp = self.get_total_xp()
+        current_level = self.get_level()
+        next_level = self.get_next_level()
+
+        percent_level_up = None
+        if current_level and next_level:
+            level_increment = next_level.required_xp - current_level.required_xp
+            level_increment_progress = total_xp - current_level.required_xp
+            if level_increment > 0:
+                percent_level_up = round(
+                    100 * (level_increment_progress) / (level_increment))
+        else:
+            level_increment = None
+            level_increment_progress = None
+        return {
+            'current_level': current_level,
+            'next_level': next_level,
+            'total_xp': total_xp,
+            'percent_level_up': percent_level_up,
+            'level_increment': level_increment,
+            'level_increment_progress': level_increment_progress,
+        }
+
+    def get_percent_level_up(self):
+        return self._get_level_up_info()['percent_level_up']
+
+    def get_level_increment(self):
+        return self._get_level_up_info()['level_increment']
+
+    def get_level_increment_progress(self):
+        return self._get_level_up_info()['level_increment_progress']
 
     def get_mv_qrcode_path(self):
         if not self.mv_qrcode_message:
@@ -455,7 +497,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
+            user_data = {entry["result__user"]: entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]

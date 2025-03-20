@@ -74,16 +74,15 @@
     </div>
 
     <div>
-      <div class="flex row spread levels-spread">
+      <div class="flex flex-row flex-spread flex-baseline levels-spread">
         <span class="current-level">{{ current_level }}</span>
-        <span class="flex-spacer"></span>
         <span class="next-level">{{ next_level }}</span>
       </div>
       <div class="progress-bar">
         <div class="progress" style="width: {{ percent_level_up }}%"></div>
       </div>
       <div class="text-muted">
-        {{ level_increment_progress }} / {{ level_increment }} XP
+        {{ level_increment_progress }} / {{ level_increment }}  <i class="pmc-icon icon-xp"></i>
       </div>
     </div>
 
