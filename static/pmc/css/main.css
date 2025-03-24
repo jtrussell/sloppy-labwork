@@ -683,6 +683,8 @@ ul.messages {
   overflow: hidden;
 }
 
+.no-top-margin { margin-top: 0 }
+
 /* ***********************************
  * Footer
  * *********************************** */

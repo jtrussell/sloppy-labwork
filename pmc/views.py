@@ -33,7 +33,9 @@ from .models import PlaygroupMember
 from .models import Event
 from .models import RankingPointsService
 from .models import Avatar
+from .models import AvatarCategory
 from .models import Background
+from .models import BackgroundCategory
 
 
 def is_pg_member(view):
@@ -359,21 +361,10 @@ def change_avatar(request):
         request.user.pmc_profile.save()
         return HttpResponseRedirect(reverse('pmc-manage-avatar'))
 
-    avatars = Avatar.objects.all()
-    categories = [
-        'KeyChain',
-        'Houses',
-        'Sets',
-        'Card Types',
-        'Icons',
-        'Counters',
-        'Other',
-    ]
     current_level = request.user.pmc_profile.get_level()
     return render(request, 'pmc/g-change-avatar.html', {
         'current_avatar': request.user.pmc_profile.get_avatar(),
-        'avatars': avatars,
-        'categories': categories,
+        'categories': AvatarCategory.objects.filter(is_hidden=False),
         'current_level': current_level.level,
     })
 
@@ -387,33 +378,10 @@ def change_background(request):
         request.user.pmc_profile.save()
         return HttpResponseRedirect(reverse('pmc-manage-background'))
 
-    backgrounds = Background.objects.all()
-    categories = [
-        'KeyChain',
-        'General',
-        'Brobnar',
-        'Dis',
-        'Logos',
-        'Mars',
-        'Sanctum',
-        'Shadows',
-        'Untamed',
-        'Saurian',
-        'Star Alliance',
-        'Unfathomable',
-        'Geistoid',
-        'Ekwidon',
-        'Skyborn',
-        'Redemption',
-        'Sets',
-        'Adventures',
-        'KeyForge Community'
-    ]
     current_level = request.user.pmc_profile.get_level()
     return render(request, 'pmc/g-change-background.html', {
         'current_background': request.user.pmc_profile.get_background(),
-        'backgrounds': backgrounds,
-        'categories': categories,
+        'categories': BackgroundCategory.objects.filter(is_hidden=False),
         'current_level': current_level.level,
     })
 

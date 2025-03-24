@@ -12,6 +12,8 @@ from .models import PlayerRank
 from .models import LevelBreakpoint
 from .models import Avatar
 from .models import Background
+from .models import BackgroundCategory
+from .models import AvatarCategory
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -106,15 +108,27 @@ class LevelBreakpointAdmin(admin.ModelAdmin):
 
 
 class AvatarAdmin(admin.ModelAdmin):
-    list_display = ('pmc_id', 'name', 'category_label', 'required_level')
+    list_display = ('pmc_id', 'name', 'category', 'required_level')
     search_fields = ['pmc_id', 'name']
-    list_filter = ('category_label',)
+    list_filter = ('category',)
 
 
 class BackgroundAdmin(admin.ModelAdmin):
-    list_display = ('pmc_id', 'name', 'category_label', 'required_level')
+    list_display = ('pmc_id', 'name', 'category', 'required_level')
     search_fields = ['pmc_id', 'name']
-    list_filter = ('category_label',)
+    list_filter = ('category',)
+
+
+class AvatarCategoryAdmin(admin.ModelAdmin):
+    list_display = ('sort_order', 'name', 'is_hidden')
+    search_fields = ['name']
+    list_filter = ()
+
+
+class BackgroundCategoryAdmin(admin.ModelAdmin):
+    list_display = ('sort_order', 'name', 'is_hidden')
+    search_fields = ['name']
+    list_filter = ()
 
 
 admin.site.register(Playgroup, PlaygroupAdmin)
@@ -134,3 +148,5 @@ admin.site.register(PmcProfile, PmcProfileAdmin)
 admin.site.register(LevelBreakpoint, LevelBreakpointAdmin)
 admin.site.register(Avatar, AvatarAdmin)
 admin.site.register(Background, BackgroundAdmin)
+admin.site.register(AvatarCategory, AvatarCategoryAdmin)
+admin.site.register(BackgroundCategory, BackgroundCategoryAdmin)

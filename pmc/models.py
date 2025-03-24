@@ -25,6 +25,7 @@ class Playgroup(models.Model):
     events = models.ManyToManyField(
         'Event', through='PlaygroupEvent', related_name='playgroups'
     )
+    description = models.TextField(default=None, null=True, blank=True)
 
     class Meta:
         ordering = ['-name']
@@ -497,7 +498,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -537,9 +538,35 @@ class RankingPointsService():
         return global_ranks + playgroup_ranks
 
 
+class AvatarCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    sort_order = models.PositiveSmallIntegerField(default=1)
+    is_hidden = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ('sort_order', 'name',)
+
+    def __str__(self):
+        return self.name
+
+
+class BackgroundCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    sort_order = models.PositiveSmallIntegerField(default=1)
+    is_hidden = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ('sort_order', 'name',)
+
+    def __str__(self):
+        return self.name
+
+
 class Avatar(models.Model):
     pmc_id = models.CharField(max_length=10, unique=True)
     src = models.URLField()
+    category = models.ForeignKey(
+        AvatarCategory, on_delete=models.CASCADE, related_name='avatars', default=None, null=True)
     category_label = models.CharField(max_length=25)
     name = models.CharField(max_length=100)
     banner_bg_color = models.CharField(max_length=6)
@@ -564,6 +591,8 @@ class Background(models.Model):
     pmc_id = models.CharField(max_length=10, unique=True)
     src = models.URLField()
     category_label = models.CharField(max_length=25)
+    category = models.ForeignKey(
+        BackgroundCategory, on_delete=models.CASCADE, related_name='backgrounds', default=None, null=True)
     name = models.CharField(max_length=100)
     required_level = models.PositiveIntegerField(default=0)
     artist_credit = models.CharField(

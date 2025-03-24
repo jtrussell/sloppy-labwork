@@ -21,27 +21,27 @@
   <h2>Options</h2>
   <div class="card">
     {% for cat in categories %}
-    <div class="element-category">
-      <h3>{{ cat }}</h3>
-      <ul class="element-list">
-        {% for avatar in avatars %}
-        {% if avatar.category_label == cat %}
-          <li class="element-list-item {{avatar.required_level}} {{current_level}} {% if avatar.required_level > current_level %} disabled{% endif %}">
-            <form action="{% url 'pmc-manage-avatar' %}" method="post">
-              {% csrf_token %}
-              <input type="hidden" name="avatar" value="{{ avatar.pk }}">
-              <a href="javascript:void(0)" class="element-selection-link" onclick="this.closest('form').submit()">
-                <img src="{{ avatar.src }}" alt="{{ avatar.name }}">
-              </a>
-            </form>
-            {% if avatar.required_level > current_level %}
-              <span class="element-level-requirement">{{ avatar.required_level }}</span>
-            {% endif %}
-          </li>
-        {% endif %}
-        {% endfor %}
-      </ul>
-    </div>
+      {% if cat.avatars.count %}
+      <div class="element-category">
+        <h3>{{ cat }}</h3>
+        <ul class="element-list">
+          {% for avatar in cat.avatars.all %}
+            <li class="element-list-item {{avatar.required_level}} {{current_level}} {% if avatar.required_level > current_level %} disabled{% endif %}">
+              <form action="{% url 'pmc-manage-avatar' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="avatar" value="{{ avatar.pk }}">
+                <a href="javascript:void(0)" class="element-selection-link" onclick="this.closest('form').submit()">
+                  <img src="{{ avatar.src }}" alt="{{ avatar.name }}">
+                </a>
+              </form>
+              {% if avatar.required_level > current_level %}
+                <span class="element-level-requirement">{{ avatar.required_level }}</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
     {% endfor %}
   </div>
 {% endblock %}
