@@ -19,7 +19,7 @@ import hashlib
 class PlaygroupType(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.CharField(
-        max_length=200, default=None, null=True, blank=True)
+        max_length=200, default='## Welcome!\n\nEOs may customize this space.', null=True, blank=True)
 
     class Meta:
         ordering = ('name',)
