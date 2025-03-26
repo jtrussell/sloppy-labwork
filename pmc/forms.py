@@ -39,7 +39,7 @@ class EventForm(forms.ModelForm):
 class PlaygroupForm(forms.ModelForm):
     class Meta:
         model = Playgroup
-        fields = ('name', 'slug', 'description')
+        fields = ('name', 'slug', 'type', 'description')
 
 
 class PlaygroupMemberForm(forms.ModelForm):

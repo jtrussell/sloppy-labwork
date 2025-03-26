@@ -16,8 +16,22 @@ import boto3
 import hashlib
 
 
+class PlaygroupType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.CharField(
+        max_length=200, default=None, null=True, blank=True)
+
+    class Meta:
+        ordering = ('name',)
+
+    def __str__(self):
+        return self.name
+
+
 class Playgroup(models.Model):
     name = models.CharField(max_length=200)
+    type = models.ForeignKey(
+        PlaygroupType, on_delete=models.SET_NULL, related_name='playgroups', default=None, null=True, blank=True)
     slug = models.SlugField(max_length=100, unique=True)
     logo_src = models.URLField(default=None, null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
@@ -498,7 +512,8 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
+            user_data = {entry["result__user"]
+                : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]

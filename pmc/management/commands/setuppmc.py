@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from pmc.models import LevelBreakpoint, EventFormat, Leaderboard, LeaderboardSeason, LeaderboardSeasonPeriod, Avatar, Background, AvatarCategory, BackgroundCategory
+from pmc.models import LevelBreakpoint, EventFormat, Leaderboard, LeaderboardSeason, LeaderboardSeasonPeriod, Avatar, Background, AvatarCategory, BackgroundCategory, PlaygroupType
 from datetime import date
 
 
@@ -32,6 +32,10 @@ class Command(BaseCommand):
 
         self.stdout.write('Making backgrounds... ', ending='')
         self.make_backgrounds()
+        self.stdout.write(self.style.SUCCESS('OK'))
+
+        self.stdout.write('Making playgroup types... ', ending='')
+        self.make_playgroup_types()
         self.stdout.write(self.style.SUCCESS('OK'))
 
     def make_playgroups(self):
@@ -343,3 +347,6 @@ class Command(BaseCommand):
                                          'name': 'Vindication Outpost', 'category': cat_kc, 'required_level': 13, 'artist_credit': 'Michael Angelo Dulay'})
         Background.objects.get_or_create(pmc_id='058', defaults={'src': 'https://static.sloppylabwork.com/pmc/backgrounds/058_RedeemerAmara.png',
                                          'name': 'Redeemer Amara', 'category': cat_misc, 'required_level': 5, 'artist_credit': 'Allison Capa'})
+
+    def make_playgroup_types(self):
+        PlaygroupType.objects.get_or_create(name='Game Store')
