@@ -15,6 +15,7 @@ urlpatterns = [
     path('@me/results', views.my_results, name='pmc-my-results'),
 
     path('pg/<slug:slug>/', views.PlaygroupDetail.as_view(), name='pmc-pg-detail'),
+    path('pg/<slug:slug>/manage', views.manage_playgroup, name='pmc-pg-manage'),
     path('pg/<slug:slug>/@me/manage',
          views.manage_my_playgroup_profile, name='pmc-my-pg-manage'),
     path('pg/<slug:slug>/members',

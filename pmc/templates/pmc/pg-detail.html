@@ -2,7 +2,7 @@
 {% load posts_extras %}
 
 {% block content %}
-  <div class="flex flex-row flex-col-sm flex-gap-1">
+  <div class="h1 flex flex-row flex-col-sm flex-gap-1 flex-align-center">
     {% if object.logo_src %}
       <img src="{{ object.logo_src }}" alt="{{ object.name }} logo" class="playgroup-logo">
     {% endif %}
@@ -11,14 +11,19 @@
       <div class="subheading">
         <ul class="inline-list">
           <li>
-            <a href="{% url 'pmc-pg-members' object.slug %}">{{ object.members.count }} Member(s)</a>
+            <a href="{% url 'pmc-pg-members' object.slug %}">{{ object.members.count }} Members</a>
           </li>
           <li>
-            <a href="{% url 'pmc-pg-events' object.slug %}">{{ object.events.count }} Event(s).</a>
+            <a href="{% url 'pmc-pg-events' object.slug %}">{{ object.events.count }} Events.</a>
           </li>
         </ul>
       </div>
     </div>
+  </div>
+
+  <div class="card staff-only">
+    <h2>Staff Area</h2>
+    <a href="{% url 'pmc-pg-manage' object.slug %}" class="btn btn-solid btn-block">Manage Playgroup</a>
   </div>
 
   {% if object.description %}

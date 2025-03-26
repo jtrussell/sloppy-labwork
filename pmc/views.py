@@ -22,7 +22,7 @@ from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.context_processors import playgroup
-from pmc.forms import EventForm, LeaderboardSeasonPeriodForm, PmcProfileForm
+from pmc.forms import EventForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
 from .models import EventResult, LeaderboardLog, LeaderboardSeason, LeaderboardSeasonPeriod
 from .models import PlayerRank
@@ -81,6 +81,22 @@ class PlaygroupDetail(LoginRequiredMixin, generic.DetailView):
     @method_decorator(is_pg_member)
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
+
+
+@login_required
+@is_pg_staff
+def manage_playgroup(request, slug):
+    if request.method == 'POST':
+        form = PlaygroupForm(
+            request.POST, instance=Playgroup.objects.get(slug=slug))
+        if form.is_valid():
+            pg = form.save()
+            return HttpResponseRedirect(reverse('pmc-pg-detail', kwargs={'slug': pg.slug}))
+    else:
+        form = PlaygroupForm(instance=Playgroup.objects.get(slug=slug))
+    return render(request, 'pmc/pg-manage.html', {
+        'form': form,
+    })
 
 
 @login_required

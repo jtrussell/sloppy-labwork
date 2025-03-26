@@ -1,6 +1,18 @@
 {% extends "pmc/_base.html" %}
 
 {% block content %}
-  Hello, world
+  <div class="staff-only card">
+    <h1>{{ playgroup }}</h1>
+    <div class="subheading">Manage</div>
+
+    <form method="POST">
+      {% csrf_token %}
+      {{ form.as_p }}
+    
+      <div class="card-actions">
+        <button class="btn btn-solid" type="submit">Submit</button>
+      </div>
+    </form>
+  </div>
 {% endblock %}
 

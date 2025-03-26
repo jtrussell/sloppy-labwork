@@ -1,7 +1,7 @@
 from tokenize import blank_re
 from django import forms
 from pkg_resources import require
-from .models import Event, LeaderboardSeason, LeaderboardSeasonPeriod, PmcProfile
+from .models import Event, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PmcProfile
 from .models import PlaygroupMember
 from .models import EventFormat
 from django.utils.translation import gettext_lazy as _
@@ -34,6 +34,12 @@ class EventForm(forms.ModelForm):
     def save(self, commit=True):
         event = super(EventForm, self).save(commit=commit)
         return event
+
+
+class PlaygroupForm(forms.ModelForm):
+    class Meta:
+        model = Playgroup
+        fields = ('name', 'slug', 'description')
 
 
 class PlaygroupMemberForm(forms.ModelForm):

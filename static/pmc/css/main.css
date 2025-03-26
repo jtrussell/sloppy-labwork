@@ -28,6 +28,9 @@
 
 * {
   box-sizing: border-box;
+}
+
+*:not(textarea) {
   transition: all 0.3s ease-in-out;
 }
 
@@ -46,14 +49,15 @@ a {
   color: var(--color-links);
 }
 
-h1 {
+h1, .h1 {
   color: var(--color-primary);
   font-size: 22pt;
   font-weight: 600;
   margin: 40px 0;
 }
 
-h2, h3, h4, h5, h6 {
+h2, h3, h4, h5, h6,
+.h2, .h3, .h4, .h5, .h6 {
   color: var(--color-text);
   font-weight: 500;
   margin: 30px 0 15px;
@@ -67,13 +71,14 @@ h3 > a {
   cursor: pointer;
 }
 
-h2 { font-size: 20pt; }
-h3 { font-size: 18pt; }
-h4 { font-size: 16pt; }
-h5 { font-size: 15pt; }
-h6 { font-size: 14pt; }
+h2, .h2 { font-size: 20pt; }
+h3, .h3 { font-size: 18pt; }
+h4, .h4 { font-size: 16pt; }
+h5, .h5 { font-size: 15pt; }
+h6, .h6 { font-size: 14pt; }
 
-h1 + .subheading {
+h1 + .subheading,
+.h1 + .subheading {
   margin-top: -30px;
   margin-bottom: 30px;
   text-transform: uppercase;
@@ -83,13 +88,19 @@ h1 + .subheading {
 
 @media (max-width: 680px) {
   h1 + .subheading { margin-top: -15px }
+  .h1 + .subheading { margin-top: -15px }
 }
 
 h2 + .subheading,
 h3 + .subheading,
 h4 + .subheading,
 h5 + .subheading,
-h6 + .subheading {
+h6 + .subheading,
+.h2 + .subheading,
+.h3 + .subheading,
+.h4 + .subheading,
+.h5 + .subheading,
+.h6 + .subheading {
   font-size: 12px;
   line-height: 12px;
   margin-top: -5px;
@@ -98,7 +109,8 @@ h6 + .subheading {
   color: var(--color-primary);
 }
 
-.staff-only h1 {
+.staff-only h1,
+.staff-only .h1 {
   color: var(--staff-color-accent);
 }
 
@@ -106,7 +118,12 @@ h6 + .subheading {
 .staff-only h3 + .subheading,
 .staff-only h4 + .subheading,
 .staff-only h5 + .subheading,
-.staff-only h6 + .subheading {
+.staff-only h6 + .subheading,
+.staff-only .h2 + .subheading,
+.staff-only .h3 + .subheading,
+.staff-only .h4 + .subheading,
+.staff-only .h5 + .subheading,
+.staff-only .h6 + .subheading {
   color: var(--color-accent);
 }
 
@@ -145,6 +162,7 @@ nav select {
 }
 
 input,
+textarea,
 select {
   border: var(--border-size-sm) solid var(--color-primary);
   background-color: var(--color-bg);
@@ -155,6 +173,7 @@ select {
 }
 
 .staff-only input,
+.staff-only textarea,
 .staff-only select {
   background-color: var(--staff-color-paper-bg);
   color: var(--staff-color-accent);
@@ -186,6 +205,7 @@ form > p > label {
 }
 
 form > p > input,
+form > p > textarea,
 form > p > select {
   flex: 1;
 }
@@ -653,8 +673,12 @@ ul.messages {
   justify-content: space-between;
 }
 
-.flex.flex-baseline {
+.flex.flex-align-baseline {
   align-items: baseline;
+}
+
+.flex.flex-align-center {
+  align-items: center;
 }
 
 .flex-spacer {
