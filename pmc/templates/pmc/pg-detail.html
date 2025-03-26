@@ -2,7 +2,7 @@
 {% load posts_extras %}
 
 {% block content %}
-  <div class="h1 flex flex-row flex-col-sm flex-gap-1 flex-align-center">
+  <div class="flex flex-row flex-col-sm flex-gap-1 flex-align-center {% if object.logo_src %}h1{% endif %}">
     {% if object.logo_src %}
       <img src="{{ object.logo_src }}" alt="{{ object.name }} logo" class="playgroup-logo">
     {% endif %}
