@@ -141,7 +141,10 @@ def manage_my_playgroup_profile(request, slug):
         form = PlaygroupMemberForm(request.POST, instance=member)
         if form.is_valid():
             form.save()
-            return HttpResponseRedirect(reverse('pmc-my-pg', kwargs={'slug': slug}))
+            return HttpResponseRedirect(reverse('pmc-pg-member-detail', kwargs={
+                'slug': slug,
+                'username': member.user.username
+            }))
 
     else:
         form = PlaygroupMemberForm(instance=member)
