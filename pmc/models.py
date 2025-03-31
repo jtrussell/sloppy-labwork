@@ -99,6 +99,7 @@ class Event(models.Model):
         default=None, null=True, blank=True)
     format = models.ForeignKey(EventFormat, on_delete=models.SET_NULL,
                                related_name='events', default=None, null=True, blank=True)
+    is_excluded_from_xp = models.BooleanField(default=False)
 
     class Meta:
         ordering = ('-start_date',)
@@ -143,6 +144,8 @@ class EventResult(models.Model):
         return f'{self.event.name} - {self.user} - ({self.finishing_position})'
 
     def get_xp(self):
+        if self.event.is_excluded_from_xp:
+            return 0
         xp = self.xp_for_attendance
         if self.num_wins:
             xp += self.num_wins * self.xp_for_win
@@ -331,7 +334,8 @@ class PmcProfile(models.Model):
 
     def get_total_xp(self):
         experience_points = (
-            EventResult.objects.filter(user=self.user)
+            EventResult.objects.filter(
+                user=self.user, event__is_excluded_from_xp=False)
             .annotate(
                 attendance_points=Value(EventResult.xp_for_attendance),
                 win_points=Coalesce(F('num_wins'), 0) * EventResult.xp_for_win,
@@ -512,8 +516,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]
-                : entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]

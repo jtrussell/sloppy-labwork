@@ -32,7 +32,12 @@
         <td class="stat">{{ item.num_wins | default_if_none:"-" }}</td>
         <td class="stat">{{ item.num_losses | default_if_none:"-" }}</td>
         <td class="stat">{{ item.ranking_points.first.points | default:"-" }}</td>
-        <td class="stat">{{ item.get_xp | default_if_none:"-" }}</td>
+
+        {% if item.event.is_excluded_from_xp %}
+          <td class="stat">N/A</td>
+        {% else %}
+          <td class="stat">{{ item.get_xp | default_if_none:"-" }}</td>
+        {% endif %}
       </tr>
       {% empty %}
         <td colspan="4" class="text-muted">Nothing to see here.</td>
