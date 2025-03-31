@@ -19,7 +19,7 @@
       {% for item in results %}
       <tr>
         <td class="text-left">
-          <a class="text-bold" href="{% url 'pmc-event-detail' item.event.playgroups.first.slug item.event.pk %}">
+          <a class="text-bold" href="{% url 'pmc-event-detail' item.event.pk %}">
             {{ item.event }}
           </a>
 

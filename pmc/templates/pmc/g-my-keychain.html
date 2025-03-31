@@ -23,7 +23,7 @@
             {% if my_results.first %}
             <tr>
               <td colspan="2">
-                <a href="{% url 'pmc-event-detail' my_results.first.event.playgroups.first.slug my_results.first.event.pk %}">
+                <a href="{% url 'pmc-event-detail' my_results.first.event.pk %}">
                   {{ my_results.first.event }}
                 </a>
               </td>

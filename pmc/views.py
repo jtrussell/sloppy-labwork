@@ -206,6 +206,23 @@ class PlaygroupEventsList(LoginRequiredMixin, generic.ListView):
         return super().dispatch(request, *args, **kwargs)
 
 
+@login_required
+def event_detail_generic(request, pk):
+    print(pk)
+    pg_events = PlaygroupEvent.objects.filter(
+        event__pk=pk,
+        playgroup__members__user=request.user
+    )
+    try:
+        return HttpResponseRedirect(reverse('pmc-pg-event-detail', kwargs={
+            'slug': pg_events.first().playgroup.slug,
+            'pk': pk
+        }))
+    except:
+        print('event not found')
+        return render(request, 'pmc/g-event-not-found.html')
+
+
 class EventDetail(LoginRequiredMixin, generic.DetailView):
     model = Event
     template_name = 'pmc/event-detail.html'
@@ -339,7 +356,7 @@ def submit_event_results(request, slug):
                 )
 
                 messages.success(request, _('Event results added.'))
-                return HttpResponseRedirect(reverse('pmc-event-detail', kwargs={
+                return HttpResponseRedirect(reverse('pmc-pg-event-detail', kwargs={
                     'slug': slug,
                     'pk': event.id,
                 }))
@@ -412,7 +429,8 @@ def assign_event_points(request, slug, pk):
     event = get_object_or_404(Event, pk=pk)
     # TODO verify that the event is associated with the playgroup
     RankingPointsService.assign_points_for_event(event)
-    return HttpResponseRedirect(reverse('pmc-event-detail', kwargs={'slug': slug, 'pk': pk}))
+    messages.success(request, _('Ranking points updated.'))
+    return HttpResponseRedirect(reverse('pmc-pg-event-detail', kwargs={'slug': slug, 'pk': pk}))
 
 
 @csrf_exempt

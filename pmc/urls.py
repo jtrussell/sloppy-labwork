@@ -13,7 +13,6 @@ urlpatterns = [
     path('@me/manage/mv-connect', views.set_master_vault_data,
          name='pmc-manage-mv-connect'),
     path('@me/results', views.my_results, name='pmc-my-results'),
-
     path('pg/<slug:slug>/', views.PlaygroupDetail.as_view(), name='pmc-pg-detail'),
     path('pg/<slug:slug>/manage', views.manage_playgroup, name='pmc-pg-manage'),
     path('pg/<slug:slug>/@me/manage',
@@ -34,18 +33,17 @@ urlpatterns = [
          views.PlaygroupEventsList.as_view(), name='pmc-pg-events'),
     path('pg/<slug:slug>/events/new',
          views.submit_event_results, name='pmc-pg-events-new'),
+    path('events/<int:pk>', views.event_detail_generic, name='pmc-event-detail'),
     path('pg/<slug:slug>/events/<int:pk>',
-         views.EventDetail.as_view(), name='pmc-event-detail'),
+         views.EventDetail.as_view(), name='pmc-pg-event-detail'),
     path('pg/<slug:slug>/events/<int:pk>/delete',
          views.delete_event, name='pmc-delete-event'),
     path('pg/<slug:slug>/events/<int:pk>/manage',
          views.event_manage, name='pmc-event-manage'),
     path('pg/<slug:slug>/events/<int:pk>/points',
          views.assign_event_points, name='pmc-event-assign-points'),
-
     path('leaderboard', views.global_leaderboard, name='pmc-leaderboard'),
     path('leaderboard/<int:pk>', views.global_leaderboard, name='pmc-leaderboard'),
-
     path('typography', views.typography),
     path('about', views.about, name='pmc-about'),
     path('attributions', views.attributions, name='pmc-attributions'),
