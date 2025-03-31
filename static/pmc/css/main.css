@@ -140,7 +140,7 @@ ul.bulleted-list li {
 }
 
 nav {
-  padding: 24px 0 0;
+  padding: 1.8rem 0 0;
 }
 
 nav ul {
@@ -603,6 +603,7 @@ table a {
  * Messages
  * *********************************** */
 ul.messages {
+  margin-top: 1rem;
   li {
     padding: 20px;
     margin: 10px 0;
