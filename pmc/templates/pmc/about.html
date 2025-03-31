@@ -6,7 +6,17 @@
 {% endblock %}
 
 {% block content %}
-<h1>About Keychain</h1>
+<h1>About</h1>
+
+<h2>Mission</h2>
+<p><em>Unlock your KeyForge organized play with KeyChain</em></p>
+<p>KeyChain is an unofficial, community-made platform built to supplement and
+enhance KeyForge organized play through digital rewards, record keeping, local
+and global leaderboards, personalization, and a progression system designed to
+encourage players to come back for more. </p>
+
+<h2>Progression & Ranking Systems</h2>
+
 <div id="legend">
     <div class="legend-item">
         <img class="legend-icon" src="https://static.sloppylabwork.com/pmc/global.svg" alt="Global Icon">
@@ -42,12 +52,12 @@
         <img class="legend-icon" src="https://static.sloppylabwork.com/pmc/global.svg" alt="Global Icon">
     </div>
     <div class="about-item-description">
-        <span>
+        <p>
             Experience Points (XP) are earned for general participation in KeyForge organized play across all 
             playgroups, and serve as the foundation for your overall KeyChain account progression. Earning XP 
             is how you level up. XP is awarded as such:
-        </span>
-        <ul>
+        </p>
+        <ul class="bulleted-list">
             <li><strong class="tab">Event Attended:</strong> 	25 XP</li>
             <li><strong class="tab">Match Won:</strong> 	10 XP</li>
             <li><strong class="tab">Match Lost:</strong> 	5 XP</li>
@@ -58,28 +68,38 @@
 <div class="about-item">
     <div class="about-item-header">
         <img class="about-item-icon" src="https://static.sloppylabwork.com/pmc/rp-detail.png" alt="Rank Point Detail">
-        <h2>Rank Points (RP)</h2>
+        <h2>Ranking Points (RP)</h2>
         <img class="legend-icon" src="https://static.sloppylabwork.com/pmc/global.svg" alt="Global Icon">
         <img class="legend-icon" src="https://static.sloppylabwork.com/pmc/playgroup.svg" alt="Playgroup Icon">
     </div>
     <div class="about-item-description">
         <span>
-            Rank Points (RP) are a leaderboard ranking metric used for determining player placements and standings 
-            across events. There are two types of RP:
+            Ranking Points (RP) are a leaderboard ranking metric used for
+            determining player placements and standings across events. There are
+            global leaderboards, as well as leaderboards within individual
+            playgroups.
         </span>
-        <ol>
+        <p>
+            Each leaderboard has associated periods, or timeframes, over which
+            players will collect RP and hope to be crowned champion. Currently,
+            there are three different period lengths supported in KeyChain:
+        </p>
+        <ul class="bulleted-list">
             <li>
-                <strong>Global RP:</strong> Calculated from events across all playgroups, using predefined RP value mappings.
+                <strong>Monthly </strong>leaderboards collect RP earned between the first and last day of a given month.
             </li>
             <li>
-                <strong>Playgroup RP:</strong> Calculated internally from events within a single playgroup, using RP value mappings 
-                set by the Playgroup EO.
+                <strong>Season </strong>leaderboard periods span an entire year, from December 1st through November 30th of the following year. These are timed to coincide with Ghost Galaxy’s organized play schedule, ending just after KeyForge Celebration.
             </li>
-        </ol>
-        <span>
-            RP can be filtered by Month, Year, or All-Time, allowing standings to be measured across different 
-            timeframes.
-        </span>
+            <li>
+                <strong>All Time</strong> leaderboards have a single period with no end date.
+            </li>
+        </ul>
+        <p>
+            In order for RP to be considered for a given leaderboard, it must be
+            earned and recorded between the start and end (plus one week) of the
+            relevant period.
+        </p>
     </div>
 </div>
 

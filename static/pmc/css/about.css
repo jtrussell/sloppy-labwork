@@ -29,8 +29,8 @@
 .about-item {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding-top: 75px;
+    gap: 0.8rem;
+    padding-top: 2rem;
 }
 
 .about-item-icon {
@@ -43,9 +43,8 @@
     align-items: baseline;
 }
 
-ul {
-    list-style: disc;
-    margin-left: 25px;
+.about-item-description :first-child {
+    margin-top: 0;
 }
 
 ol {
