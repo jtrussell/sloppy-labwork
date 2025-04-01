@@ -1,5 +1,7 @@
 from django.core.management.base import BaseCommand
-from pmc.models import LevelBreakpoint, EventFormat, Leaderboard, LeaderboardSeason, LeaderboardSeasonPeriod, Avatar, Background, AvatarCategory, BackgroundCategory, PlaygroupType
+from pmc.models import LevelBreakpoint, EventFormat, Leaderboard
+from pmc.models import LeaderboardSeason, LeaderboardSeasonPeriod, Avatar, Background, AvatarCategory
+from pmc.models import BackgroundCategory, PlaygroupType, RankingPointsMap
 from datetime import date
 
 
@@ -22,6 +24,13 @@ class Command(BaseCommand):
         self.stdout.write(
             'Making leaderboards, seasons, periods... ', ending='')
         self.make_leaderboards()
+        self.stdout.write(
+            self.style.SUCCESS('OK')
+        )
+
+        self.stdout.write(
+            'Making ranking points maps... ', ending='')
+        self.make_ranking_points_map()
         self.stdout.write(
             self.style.SUCCESS('OK')
         )
@@ -96,7 +105,56 @@ class Command(BaseCommand):
             name='Sealed', defaults={'sort_order': 1})
 
     def make_ranking_points_map(self):
-        pass
+        RankingPointsMap.objects.get_or_create(
+            max_players=4, finishing_position=1, defaults={"points": 1200})
+        RankingPointsMap.objects.get_or_create(
+            max_players=4, finishing_position=2, defaults={"points": 750})
+        RankingPointsMap.objects.get_or_create(
+            max_players=4, finishing_position=3, defaults={"points": 469})
+        RankingPointsMap.objects.get_or_create(
+            max_players=8, finishing_position=1, defaults={"points": 1560})
+        RankingPointsMap.objects.get_or_create(
+            max_players=8, finishing_position=2, defaults={"points": 975})
+        RankingPointsMap.objects.get_or_create(
+            max_players=8, finishing_position=3, defaults={"points": 609})
+        RankingPointsMap.objects.get_or_create(
+            max_players=8, finishing_position=5, defaults={"points": 381})
+        RankingPointsMap.objects.get_or_create(
+            max_players=16, finishing_position=1, defaults={"points": 1950})
+        RankingPointsMap.objects.get_or_create(
+            max_players=16, finishing_position=2, defaults={"points": 1248})
+        RankingPointsMap.objects.get_or_create(
+            max_players=16, finishing_position=3, defaults={"points": 799})
+        RankingPointsMap.objects.get_or_create(
+            max_players=16, finishing_position=5, defaults={"points": 511})
+        RankingPointsMap.objects.get_or_create(
+            max_players=16, finishing_position=96, defaults={"points": 327})
+        RankingPointsMap.objects.get_or_create(
+            max_players=32, finishing_position=1, defaults={"points": 2340})
+        RankingPointsMap.objects.get_or_create(
+            max_players=32, finishing_position=2, defaults={"points": 1544})
+        RankingPointsMap.objects.get_or_create(
+            max_players=32, finishing_position=3, defaults={"points": 1019})
+        RankingPointsMap.objects.get_or_create(
+            max_players=32, finishing_position=5, defaults={"points": 673})
+        RankingPointsMap.objects.get_or_create(
+            max_players=32, finishing_position=9, defaults={"points": 444})
+        RankingPointsMap.objects.get_or_create(
+            max_players=32, finishing_position=17, defaults={"points": 293})
+        RankingPointsMap.objects.get_or_create(
+            max_players=64, finishing_position=1, defaults={"points": 2730})
+        RankingPointsMap.objects.get_or_create(
+            max_players=64, finishing_position=2, defaults={"points": 1856})
+        RankingPointsMap.objects.get_or_create(
+            max_players=64, finishing_position=3, defaults={"points": 1262})
+        RankingPointsMap.objects.get_or_create(
+            max_players=64, finishing_position=5, defaults={"points": 858})
+        RankingPointsMap.objects.get_or_create(
+            max_players=64, finishing_position=9, defaults={"points": 583})
+        RankingPointsMap.objects.get_or_create(
+            max_players=64, finishing_position=17, defaults={"points": 396})
+        RankingPointsMap.objects.get_or_create(
+            max_players=64, finishing_position=33, defaults={"points": 269})
 
     def make_avatars(self):
         cat_kc, _ = AvatarCategory.objects.get_or_create(

@@ -36,6 +36,7 @@ from .models import Avatar
 from .models import AvatarCategory
 from .models import Background
 from .models import BackgroundCategory
+from .models import RankingPointsMap
 
 
 def is_pg_member(view):
@@ -382,6 +383,12 @@ def typography(request):
 
 def about(request):
     return render(request, 'pmc/about.html')
+
+
+def about_ranking_points(request):
+    return render(request, 'pmc/g-about-ranking-points.html', {
+        'ranges_by_size': RankingPointsMap.list_points_for_fp_ranges_by_event_size()
+    })
 
 
 def attributions(request):

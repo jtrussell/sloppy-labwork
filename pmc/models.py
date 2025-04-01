@@ -159,6 +159,33 @@ class RankingPointsMap(models.Model):
     finishing_position = models.PositiveSmallIntegerField()
     points = models.PositiveIntegerField()
 
+    @staticmethod
+    def list_points_for_fp_ranges(event_size):
+        ranking_data = RankingPointsMap.objects.filter(max_players=event_size).order_by(
+            "finishing_position").values("finishing_position", "points")
+        result = []
+        for index, entry in enumerate(ranking_data):
+            start_position = entry["finishing_position"]
+            points = entry["points"]
+            next_position = ranking_data[index + 1]["finishing_position"] - \
+                1 if index + 1 < len(ranking_data) else event_size
+            position_range = f"{start_position}-{next_position}" if start_position != next_position else f"{start_position}"
+            result.append({
+                "position_range": position_range,
+                "points": points
+            })
+        return result
+
+    @staticmethod
+    def list_points_for_fp_ranges_by_event_size():
+        event_sizes = (
+            RankingPointsMap.objects
+            .values_list("max_players", flat=True)
+            .distinct()
+            .order_by("max_players")
+        )
+        return {size: RankingPointsMap.list_points_for_fp_ranges(size) for size in event_sizes}
+
     class Meta:
         ordering = ('max_players', 'finishing_position',)
 
@@ -516,7 +543,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
+            user_data = {entry["result__user"]: entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]

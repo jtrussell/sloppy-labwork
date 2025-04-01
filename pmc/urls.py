@@ -46,6 +46,8 @@ urlpatterns = [
     path('leaderboard/<int:pk>', views.global_leaderboard, name='pmc-leaderboard'),
     path('typography', views.typography),
     path('about', views.about, name='pmc-about'),
+    path('about-ranking-points', views.about_ranking_points,
+         name='pmc-about-ranking-points'),
     path('attributions', views.attributions, name='pmc-attributions'),
     path('refresh-leaderboard/<int:pk>', views.refresh_leaderboard),
 ]

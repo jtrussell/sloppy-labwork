@@ -1,0 +1,34 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+  <h1>Ranking Points</h1>
+
+  <p>The tables below show the ranking points awarded for finishing positions at
+  events of various sizes.</p>
+
+  <p>In general, our philosophy is to reward consistency and
+ attendance as well as performance. A player who attends every event in a month 
+ will most likely outrank a player who attends only one event in that
+ month, even if the latter player wins their one event.</p>
+
+  {% for max_players, ranges in ranges_by_size.items %}
+  <div class="card">
+    <h2>Up to {{ max_players }} Players</h2>
+    <table>
+      <thead>
+        <th>Finishing Position</th>
+        <th>Points</th>
+      </thead>
+      <tbody>
+        {% for row in ranges %}
+          <tr>
+            <td>{{ row.position_range }}</td>
+            <td>{{ row.points }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+
+{% endblock %}
