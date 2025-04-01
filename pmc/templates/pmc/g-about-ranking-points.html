@@ -11,9 +11,9 @@
  will most likely outrank a player who attends only one event in that
  month, even if the latter player wins their one event.</p>
 
-  {% for max_players, ranges in ranges_by_size.items %}
+  {% for label, ranges in ranges_by_size %}
   <div class="card">
-    <h2>Up to {{ max_players }} Players</h2>
+    <h2>{{ label }}</h2>
     <table>
       <thead>
         <th>Finishing Position</th>

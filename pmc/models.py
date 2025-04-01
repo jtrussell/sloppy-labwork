@@ -176,16 +176,6 @@ class RankingPointsMap(models.Model):
             })
         return result
 
-    @staticmethod
-    def list_points_for_fp_ranges_by_event_size():
-        event_sizes = (
-            RankingPointsMap.objects
-            .values_list("max_players", flat=True)
-            .distinct()
-            .order_by("max_players")
-        )
-        return {size: RankingPointsMap.list_points_for_fp_ranges(size) for size in event_sizes}
-
     class Meta:
         ordering = ('max_players', 'finishing_position',)
 
