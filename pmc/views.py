@@ -563,7 +563,7 @@ def add_pg_member_by_qrcode(request, slug):
 @login_required
 @is_pg_staff
 def add_pg_member_by_username(request, slug):
-    username = request.POST.get('username')
+    username = request.POST.get('username').strip()
     try:
         User = get_user_model()
         member, _created = PlaygroupMember.objects.get_or_create(
