@@ -333,6 +333,8 @@ def submit_event_results(request, slug):
                 event_results = []
                 for row in reader:
                     username = row.pop('user')
+                    row = {key: (None if value == '' else value)
+                           for key, value in row.items()}
                     try:
                         user = User.objects.get(username=username)
                         event_results.append(EventResult(
