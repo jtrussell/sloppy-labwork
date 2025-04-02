@@ -17,13 +17,52 @@
   --border-size: 3px;
   --border-size-sm: 2px;
   --gradient-primary: linear-gradient(#FFB400, #FFF200, #FFB400);
+  --color-text-on-gradient-primary: #131313;
+  --color-border-on-gradient-primary: var(--color-primary);
   --gradient-accent: none;
+  --color-btn-text: #fff;
+  --color-btn-solid-text: #131313;
 
   --staff-color-paper-bg: #0c1d43;
   --staff-color-accent: #8FD3FA;
   --staff-color-lines: #8FD3FA;
 
   --url-wordmark-dark-alpha: url('https://static.sloppylabwork.com/pmc/brand/KC_WORDMARK_DARK_ALPHA.png');
+}
+
+/* ***********************************
+ * Theme - KeyChain Light
+ * *********************************** */
+html.pmc-theme-1 {
+  --color-bg: #eee;
+  --color-paper-bg: #ddd;
+  --color-bg-footer: #ddd;
+  --color-bg-masthead: #ddd;
+  --color-text: #000;
+  --color-text-muted: #444;
+  --color-links: #69140E;
+  --color-primary: #69140E;
+  --color-accent: #FFB400;
+  --color-success: #2BC98A;
+  --color-warning: #FFE870;
+  --color-lines: #2B2B2B;
+  --color-danger: #FF7474;
+  --border-radius: 10px;
+  --border-radius-sm: 5px;
+  --border-size: 3px;
+  --border-size-sm: 2px;
+  --gradient-primary: linear-gradient(#FFB400, #FFF200, #FFB400);
+  --color-text-on-gradient-primary: #131313;
+  --color-border-on-gradient-primary: var(--color-accent);
+  --gradient-accent: none;
+  --color-btn-text: #000;
+  --color-btn-solid-text: #fff;
+
+  --staff-color-paper-bg:#8FD3FA;
+  --staff-color-accent:  #0c1d43;
+  --staff-color-lines: #0c1d43;
+
+  --url-wordmark-dark-alpha: url('https://res.cloudinary.com/dig7eguxo/image/upload/v1743023560/KC_WORDMARK_LIGHT_ALPHA_bewlrz.png');
 }
 
 * {
@@ -53,14 +92,14 @@ h1, .h1 {
   color: var(--color-primary);
   font-size: 22pt;
   font-weight: 600;
-  margin: 40px 0;
+  margin: 2rem 0;
 }
 
 h2, h3, h4, h5, h6,
 .h2, .h3, .h4, .h5, .h6 {
   color: var(--color-text);
   font-weight: 500;
-  margin: 30px 0 15px;
+  margin: 1.5rem 0 1rem;
   text-decoration: none;
 }
 
@@ -242,7 +281,7 @@ nav a.active {
 }
 
 nav a:hover {
-  text-shadow: 0 0 3px var(--color-primary);
+  text-shadow: 0 0 2px var(--color-primary);
 }
 
 nav li + li::before {
@@ -267,7 +306,7 @@ nav li + li::before {
   padding: 10px;
   text-transform: uppercase;
   cursor: pointer;
-  color: var(--color-text);
+  color: var(--color-btn-text);
   border: var(--border-size-sm) solid var(--color-primary);
   background-color: transparent;
   border-radius: var(--border-radius-sm);
@@ -278,7 +317,8 @@ nav li + li::before {
 .btn.btn-solid {
   background-color: var(--color-primary);
   background-image: var(--gradient-primary);
-  color: var(--color-bg);
+  border-color: var(--color-border-on-gradient-primary);
+  color: var(--color-text-on-gradient-primary);
 }
 
 .btn.btn-accent {
@@ -289,15 +329,15 @@ nav li + li::before {
 
 
 .btn:hover {
-  box-shadow: 0 0 7px var(--color-primary);
+  box-shadow: 0 0 5px var(--color-primary);
 }
 
 .btn.btn-accent:hover {
-  box-shadow: 0 0 7px var(--color-accent);
+  box-shadow: 0 0 5px var(--color-accent);
 }
 
 .staff-only .btn:hover {
-  box-shadow: 0 0 7px var(--staff-color-accent);
+  box-shadow: 0 0 5px var(--staff-color-accent);
 }
 
 .btn.btn-block {
@@ -605,8 +645,8 @@ table a {
 ul.messages {
   margin-top: 1rem;
   li {
-    padding: 20px;
-    margin: 10px 0;
+    padding: 1.25rem;
+    margin: 0.6rem 0;
     border-radius: var(--border-radius-sm);
     background-color: var(--color-primary);
     color: var(--color-bg);

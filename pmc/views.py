@@ -21,10 +21,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
-from pmc.context_processors import playgroup
 from pmc.forms import EventForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
-from .models import EventResult, LeaderboardLog, LeaderboardSeason, LeaderboardSeasonPeriod
+from .models import EventResult, LeaderboardLog, LeaderboardSeasonPeriod
 from .models import PlayerRank
 from .models import Leaderboard
 from .models import Playgroup
@@ -142,6 +141,7 @@ def manage_my_playgroup_profile(request, slug):
         form = PlaygroupMemberForm(request.POST, instance=member)
         if form.is_valid():
             form.save()
+            messages.success(request, _('Profile updated.'))
             return HttpResponseRedirect(reverse('pmc-pg-member-detail', kwargs={
                 'slug': slug,
                 'username': member.user.username
@@ -497,6 +497,7 @@ def manage_my_pmc_profile(request):
         form = PmcProfileForm(request.POST, instance=profile)
         if form.is_valid():
             form.save()
+            messages.success(request, _('Profile updated.'))
             return HttpResponseRedirect(reverse('pmc-my-keychain'))
 
     else:

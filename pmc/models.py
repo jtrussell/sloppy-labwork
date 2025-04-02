@@ -313,6 +313,10 @@ class LevelBreakpoint(models.Model):
 
 
 class PmcProfile(models.Model):
+    class ThemeOptions(models.IntegerChoices):
+        KEYCHAIN_DARK = (0, _('KeyChain Dark'))
+        KEYCHAIN_LIGHT = (1, _('KeyChain Light'))
+
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name='pmc_profile')
     avatar = models.ForeignKey(
@@ -321,6 +325,8 @@ class PmcProfile(models.Model):
         'Background', on_delete=models.SET_NULL, default=None, null=True, blank=True)
     pronouns = models.CharField(
         max_length=100, default=None, null=True, blank=True)
+    theme = models.IntegerField(
+        choices=ThemeOptions.choices, default=ThemeOptions.KEYCHAIN_DARK)
     tagline = models.CharField(
         max_length=100, default=None, null=True, blank=True)
     mv_id = models.CharField(max_length=36, unique=True,

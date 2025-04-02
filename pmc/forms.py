@@ -51,7 +51,7 @@ class PlaygroupMemberForm(forms.ModelForm):
 class PmcProfileForm(forms.ModelForm):
     class Meta:
         model = PmcProfile
-        fields = ('pronouns', 'tagline',)
+        fields = ('pronouns', 'theme', 'tagline',)
 
 
 class LeaderboardSeasonPeriodForm(forms.Form):
