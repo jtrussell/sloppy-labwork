@@ -319,6 +319,8 @@ class PmcProfile(models.Model):
         'Avatar', on_delete=models.SET_NULL, default=None, null=True, blank=True)
     background = models.ForeignKey(
         'Background', on_delete=models.SET_NULL, default=None, null=True, blank=True)
+    pronouns = models.CharField(
+        max_length=100, default=None, null=True, blank=True)
     tagline = models.CharField(
         max_length=100, default=None, null=True, blank=True)
     mv_id = models.CharField(max_length=36, unique=True,
