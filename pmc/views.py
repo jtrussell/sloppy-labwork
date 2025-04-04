@@ -16,6 +16,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.translation import gettext_lazy as _
+from django.utils.safestring import mark_safe
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -549,10 +550,15 @@ def add_pg_member_by_qrcode(request, slug):
             playgroup=Playgroup.objects.get(slug=slug),
             user=User.objects.get(pmc_profile__mv_id=mv_id)
         )
-        messages.success(request, _('Member added.'))
-        return HttpResponseRedirect(reverse('pmc-pg-member-detail', kwargs={
+        href_member_detail = reverse('pmc-pg-member-detail', kwargs={
             'slug': slug,
             'username': member.user.username
+        })
+        msg = _(
+            '{} added. View <a href="{}">their profile</a>.').format(member, href_member_detail)
+        messages.success(request, mark_safe(msg))
+        return HttpResponseRedirect(reverse('pmc-pg-members', kwargs={
+            'slug': slug
         }))
     except Exception as e:
         print(e)
@@ -571,10 +577,15 @@ def add_pg_member_by_username(request, slug):
             playgroup=Playgroup.objects.get(slug=slug),
             user=User.objects.get(username=username)
         )
-        messages.success(request, _('Member added.'))
-        return HttpResponseRedirect(reverse('pmc-pg-member-detail', kwargs={
+        href_member_detail = reverse('pmc-pg-member-detail', kwargs={
             'slug': slug,
             'username': member.user.username
+        })
+        msg = _(
+            '{} added. View <a href="{}">their profile</a>.').format(member, href_member_detail)
+        messages.success(request, mark_safe(msg))
+        return HttpResponseRedirect(reverse('pmc-pg-members', kwargs={
+            'slug': slug
         }))
     except User.DoesNotExist:
         messages.error(request, _(

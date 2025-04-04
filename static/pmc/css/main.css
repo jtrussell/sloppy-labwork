@@ -649,6 +649,10 @@ ul.messages {
     border-radius: var(--border-radius-sm);
     background-color: var(--color-primary);
     color: var(--color-bg);
+
+    a {
+      color: var(--color-bg);
+    }
   }
 }
 
