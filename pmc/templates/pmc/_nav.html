@@ -8,7 +8,8 @@
       {% endfor %}
     </ul>
 
-    <select id="responsive-nav-select">
+    <select id="responsive-nav-select" placeholder="KeyChain">
+      <option value="" disabled selected hidden>KeyChain</option>
       {% for link in nav_links %}
       <option value="{{ link.url }}" {% if link.is_active %}selected{% endif %}>{{ link.name }}</option>
       {% endfor %}
