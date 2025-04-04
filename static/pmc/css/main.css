@@ -10,7 +10,8 @@
   --color-accent: #69140E;
   --color-success: #2BC98A;
   --color-warning: #FFE870;
-  --color-lines: #2B2B2B;
+  --color-gray: #2B2B2B;
+  --color-lines: var(--color-gray);
   --color-danger: #FF7474;
   --border-radius: 10px;
   --border-radius-sm: 5px;
@@ -19,15 +20,20 @@
   --gradient-primary: linear-gradient(#FFB400, #FFF200, #FFB400);
   --color-text-on-gradient-primary: #131313;
   --color-border-on-gradient-primary: var(--color-primary);
-  --gradient-accent: none;
   --color-btn-text: #fff;
   --color-btn-solid-text: #131313;
+
+  --pulse-shadow-start: 0 0 0 0px rgba(255, 180, 0, 0.2);
+  --pulse-shadow-end: 0 0 0 10px rgba(255, 180, 0, 0);
 
   --staff-color-paper-bg: #0c1d43;
   --staff-color-accent: #8FD3FA;
   --staff-color-lines: #8FD3FA;
 
   --url-wordmark-dark-alpha: url('https://static.sloppylabwork.com/pmc/brand/KC_WORDMARK_DARK_ALPHA.png');
+
+  --icon-xp: url('https://static.sloppylabwork.com/pmc/icons/XP_SIMPLE.svg');
+  --icon-rp: url('https://static.sloppylabwork.com/pmc/icons/RP_SIMPLE.svg');
 }
 
 /* ***********************************
@@ -45,24 +51,30 @@ html.pmc-theme-1 {
   --color-accent: #FFB400;
   --color-success: #2BC98A;
   --color-warning: #FFE870;
+  --color-gray: #e9e9e9;
   --color-lines: #2B2B2B;
   --color-danger: #FF7474;
   --border-radius: 10px;
   --border-radius-sm: 5px;
   --border-size: 3px;
   --border-size-sm: 2px;
-  --gradient-primary: linear-gradient(#FFB400, #FFF200, #FFB400);
-  --color-text-on-gradient-primary: #131313;
-  --color-border-on-gradient-primary: var(--color-accent);
-  --gradient-accent: none;
+  --gradient-primary: linear-gradient(#69140E, #7e1811, #69140E);
+  --color-text-on-gradient-primary: var(--color-bg);
+  --color-border-on-gradient-primary: var(--color-primary);
   --color-btn-text: #000;
   --color-btn-solid-text: #fff;
+
+  --pulse-shadow-start: 0 0 0 0px rgba(105, 20, 14, 0.2);
+  --pulse-shadow-end: 0 0 0 10px rgba(105, 20, 14, 0);
 
   --staff-color-paper-bg:#8FD3FA;
   --staff-color-accent:  #0c1d43;
   --staff-color-lines: #0c1d43;
 
   --url-wordmark-dark-alpha: url('https://res.cloudinary.com/dig7eguxo/image/upload/v1743023560/KC_WORDMARK_LIGHT_ALPHA_bewlrz.png');
+
+  --icon-xp: url('https://res.cloudinary.com/dig7eguxo/image/upload/v1743645712/XP_SIMPLE_LIGHT_mtqhqe.svg');
+  --icon-rp: url('https://res.cloudinary.com/dig7eguxo/image/upload/v1743645712/RP_SIMPLE_LIGHT_jologn.svg');
 }
 
 * {
@@ -321,20 +333,11 @@ nav li + li::before {
   color: var(--color-text-on-gradient-primary);
 }
 
-.btn.btn-accent {
-  background-image: var(--gradient-accent);
-  border-color: var(--color-accent);
-  color: var(--color-text);
-}
-
 
 .btn:hover {
   box-shadow: 0 0 5px var(--color-primary);
 }
 
-.btn.btn-accent:hover {
-  box-shadow: 0 0 5px var(--color-accent);
-}
 
 .staff-only .btn:hover {
   box-shadow: 0 0 5px var(--staff-color-accent);
@@ -344,10 +347,6 @@ nav li + li::before {
   display: block;
   text-align: center;
   width: 100%;;
-}
-
-.btn.btn-accent.btn-solid {
-  background-color: var(--color-accent);
 }
 
 .btn-group {
@@ -658,7 +657,7 @@ ul.messages {
  * Progress Bar
  * *********************************** */
 .progress-bar {
-  background-color: var(--color-lines);
+  background-color: var(--color-gray);
   padding: 10px;
   border-radius: 25px; /* 1/2 height of inner bar + padding */
   overflow: hidden;
@@ -674,10 +673,10 @@ ul.messages {
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0px rgba(255, 180, 0, 0.2);
+    box-shadow: var(--pulse-shadow-start);
   }
   100% {
-    box-shadow: 0 0 0 10px rgba(255, 180, 0, 0);
+    box-shadow: var(--pulse-shadow-end);
   }
 }
 
@@ -782,9 +781,9 @@ ul.footer-links a {
 }
 
 .pmc-icon.icon-xp {
-  background-image: url('https://static.sloppylabwork.com/pmc/icons/XP_SIMPLE.svg');
+  background-image: var(--icon-xp);
 }
 
 .pmc-icon.icon-rp {
-  background-image: url('https://static.sloppylabwork.com/pmc/icons/RP_SIMPLE.svg');
+  background-image: var(--icon-rp);
 }

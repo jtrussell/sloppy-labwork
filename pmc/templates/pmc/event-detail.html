@@ -19,14 +19,14 @@
       <!-- form for event points -->
       <form action="{% url 'pmc-delete-event' playgroup.slug object.pk %}" method="POST">
         {% csrf_token %}
-        <button class="btn btn-solid btn-accent" type="submit">
+        <button class="btn btn-solid" type="submit">
           Delete Event
         </button>
       </form>
 
       <form action="{% url 'pmc-event-assign-points' playgroup.slug object.pk %}" method="POST">
         {% csrf_token %}
-        <button class="btn btn-accent" type="submit">
+        <button class="btn" type="submit">
           Assign Points
         </button>
       </form>
