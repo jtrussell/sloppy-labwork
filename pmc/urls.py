@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from django.views.generic.base import RedirectView
 from . import views
 
@@ -50,4 +50,7 @@ urlpatterns = [
          name='pmc-about-ranking-points'),
     path('attributions', views.attributions, name='pmc-attributions'),
     path('refresh-leaderboard/<int:pk>', views.refresh_leaderboard),
+
+    # Common to all hosts
+    path('accounts/', include('allauth.urls')),
 ]

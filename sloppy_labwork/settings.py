@@ -66,9 +66,11 @@ INSTALLED_APPS = [
     'redacted',
     'transporter_platform',
     'pmc',
+    'django_hosts',
 ]
 
 MIDDLEWARE = [
+    'django_hosts.middleware.HostsRequestMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -77,9 +79,13 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'django_hosts.middleware.HostsResponseMiddleware',
 ]
 
 ROOT_URLCONF = 'sloppy_labwork.urls'
+
+ROOT_HOSTCONF = 'sloppy_labwork.hosts'
+DEFAULT_HOST = 'keychain'
 
 TEMPLATES = [
     {
@@ -93,6 +99,7 @@ TEMPLATES = [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
+                'sloppy_labwork.context_processors.base_template',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.request',
                 'sloppy_labwork.context_processors.feature_flags',
