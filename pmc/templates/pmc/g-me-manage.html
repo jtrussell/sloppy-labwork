@@ -2,14 +2,27 @@
 {% load static %}
 
 {% block content %}
-  <h1>Update Your KeyChain Profile</h1>
+  <h1>Your KeyChain Account</h1>
+
+  <div class="card">
+    <p>Welcome, {{ request.user }}.</p>
+    <div class="card-actions">
+      <form action="{% url 'account_logout' %}" method="POST">
+        {% csrf_token %}
+        <button type="submit" class="btn">
+          Sign Out
+        </button>
+      </form> 
+    </div>
+  </div>
+
   <form method="POST" enctype="multipart/form-data" class="card">
     <h2>Profile Settings</h2>
     {% csrf_token %}
     {{ form.as_p }}
     <div class="card-actions">
       <button type="submit" class="btn btn-solid">
-        Submit
+          Update
       </button>
     </div>
   </form>
