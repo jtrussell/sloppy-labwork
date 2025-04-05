@@ -24,8 +24,10 @@ below to complete your sign in.{% endblocktrans %}</p>
 {% endif %}
 
 
+{% if LOGIN_BY_CODE_ENABLED %}
 <p>
-  <a href="{{ request_login_code_url }}">{% trans "Send me a sign-in code" %}</a>
+  Or... we could <a href="{{ request_login_code_url }}">{% trans "send you a sign-in code" %}</a>.
 </p>
+{% endif %}
 
 {% endblock %}
