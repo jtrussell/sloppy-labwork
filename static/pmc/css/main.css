@@ -303,9 +303,9 @@ nav li + li::before {
 
 .container {
   width: 100%;
-  max-width: 700px;
+  max-width: 52rem;
   margin: 0 auto;
-  padding: 0 10px;
+  padding: 0 0.8rem;
 }
 
 /* ***********************************
