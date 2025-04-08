@@ -16,8 +16,8 @@ urlpatterns = [
     path('redacted/', include('redacted.urls')),
     path('kagi-live/', include('transporter_platform.urls')),
     path('pmc/', include('pmc.urls')),
-    path('admin/', admin.site.urls),
 
     # Common to all hosts
+    path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
 ]

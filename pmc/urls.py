@@ -1,3 +1,4 @@
+from django.contrib import admin
 from django.urls import path, include
 from django.views.generic.base import RedirectView
 from . import views
@@ -52,5 +53,6 @@ urlpatterns = [
     path('refresh-leaderboard/<int:pk>', views.refresh_leaderboard),
 
     # Common to all hosts
+    path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
 ]
