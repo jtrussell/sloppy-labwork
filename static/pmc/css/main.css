@@ -256,7 +256,7 @@ form > p > label {
   }
 }
 
-form > p > input:not(type="checkbox"),
+form > p > input:not([type="checkbox"]),
 form > p > textarea,
 form > p > select {
   flex: 1;
