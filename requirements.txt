@@ -12,3 +12,4 @@ pynacl
 qrcode==8.0
 colorama==0.4
 django-hosts==6.0
+django-ses==4.4

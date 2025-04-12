@@ -53,6 +53,5 @@ urlpatterns = [
     path('refresh-leaderboard/<int:pk>', views.refresh_leaderboard),
 
     # Common to all hosts
-    path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
 ]

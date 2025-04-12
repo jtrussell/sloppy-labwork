@@ -1,0 +1,24 @@
+
+
+hr {
+  margin: 3rem 0;
+}
+
+form input:not([type="checkbox"]),
+form textarea,
+form select {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.form-wide textarea {
+  font-size: 1.5rem;
+  height: 15rem;
+}
+
+form .helptext {
+  display: block;
+  width: 100%;;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}

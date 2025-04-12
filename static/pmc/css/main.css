@@ -233,6 +233,7 @@ select {
 
 form > p {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
@@ -255,7 +256,7 @@ form > p > label {
   }
 }
 
-form > p > input,
+form > p > input:not(type="checkbox"),
 form > p > textarea,
 form > p > select {
   flex: 1;
@@ -312,6 +313,7 @@ nav li + li::before {
  * Buttons
  * *********************************** */
 
+form button,
 .btn {
   font-size: 16px;
   line-height: 16px;

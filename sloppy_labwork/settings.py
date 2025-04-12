@@ -119,15 +119,19 @@ AUTHENTICATION_BACKENDS = (
 )
 
 SOCIALACCOUNT_AUTO_SIGNUP = False
-ACCOUNT_LOGIN_BY_CODE_ENABLED = False
 
 LOGIN_REDIRECT_URL = '/profile/'
 
+ACCOUNT_LOGIN_BY_CODE_ENABLED = True
+ACCOUNT_EMAIL_REQUIRED = True
+
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = os.environ['ACCOUNT_DEFAULT_HTTP_PROTOCOL']
+
 
 WSGI_APPLICATION = 'sloppy_labwork.wsgi.application'
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'no-reply@sloppylabwork.com'
+EMAIL_BACKEND = 'django_ses.SESBackend'
 
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
