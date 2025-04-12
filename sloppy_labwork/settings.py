@@ -85,7 +85,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'sloppy_labwork.urls'
 
 ROOT_HOSTCONF = 'sloppy_labwork.hosts'
-DEFAULT_HOST = 'keychain'
+DEFAULT_HOST = 'default'
 
 TEMPLATES = [
     {

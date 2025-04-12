@@ -10,9 +10,7 @@
 
 <h1>{% trans "Log In" %}</h1>
 
-<p>{% blocktrans with site.name as site_name %}Log in to
-see the fancy side of <span class="brand">{{site_name}}</span>.
-{% endblocktrans %}</p>
+<p>{% trans "Log in to get to the good stuff 😎." %}</p>
 
 <div class="card">
 <form method="post" action="{% url 'account_login' %}">
@@ -36,7 +34,7 @@ see the fancy side of <span class="brand">{{site_name}}</span>.
 
 {% if socialaccount_providers %}
 <div class="card">
-  <p>... Or, use of our of social integrations to log in.</p>
+  <p>... Or, use one of our social integrations to log in.</p>
   <div class="socialaccount_ballot">
     <ul class="socialaccount_providers">
       {% include "socialaccount/snippets/provider_list.html" with process="login" %}
