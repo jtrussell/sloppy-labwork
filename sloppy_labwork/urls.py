@@ -10,7 +10,7 @@ urlpatterns = [
     path('register/', include('register.urls')),
     path('ratings/', include('ratings.urls')),
     path('posts/', include('posts.urls')),
-    path('profile/', include('user_profile.urls')),
+    path('@me/', include('user_profile.urls')),
     path('decks/', include('decks.urls')),
     path('tournaments/', include('tournaments.urls')),
     path('redacted/', include('redacted.urls')),

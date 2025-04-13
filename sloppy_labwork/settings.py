@@ -72,6 +72,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django_hosts.middleware.HostsRequestMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -83,7 +84,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'sloppy_labwork.urls'
-
 ROOT_HOSTCONF = 'sloppy_labwork.hosts'
 DEFAULT_HOST = 'default'
 
@@ -120,7 +120,7 @@ AUTHENTICATION_BACKENDS = (
 
 SOCIALACCOUNT_AUTO_SIGNUP = False
 
-LOGIN_REDIRECT_URL = '/profile/'
+LOGIN_REDIRECT_URL = '/@me/'
 
 ACCOUNT_LOGIN_BY_CODE_ENABLED = True
 ACCOUNT_EMAIL_REQUIRED = True
@@ -187,6 +187,8 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
 
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Feature Flags
@@ -196,11 +198,8 @@ FT_USE_POSTS = os.environ['FT_USE_POSTS'] == 'True'
 FT_USE_EVENTS = os.environ['FT_USE_EVENTS'] == 'True'
 
 # Bootstrap Heroku settings
-# Note that this env variable should NOT be present in your local environment
-# config.
-if 'IS_HEROKU' in os.environ:
-    import django_heroku
+MAX_CONN_AGE = 600
+if "DATABASE_URL" in os.environ:
     import dj_database_url
-    django_heroku.settings(locals())
-    DATABASES['default'] = dj_database_url.config(
-        conn_max_age=600, ssl_require=True)
+    DATABASES["default"] = dj_database_url.config(
+        conn_max_age=MAX_CONN_AGE, ssl_require=True)
