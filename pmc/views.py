@@ -391,7 +391,8 @@ def about(request):
 def about_ranking_points(request):
     return render(request, 'pmc/g-about-ranking-points.html', {
         'ranges_by_size': [
-            ('Up to 4 Players', RankingPointsMap.list_points_for_fp_ranges(4)),
+            ('3 Players', RankingPointsMap.list_points_for_fp_ranges(3)),
+            ('4 Players', RankingPointsMap.list_points_for_fp_ranges(4)),
             ('5 to 8 Players', RankingPointsMap.list_points_for_fp_ranges(8)),
             ('9 to 16 Players', RankingPointsMap.list_points_for_fp_ranges(16)),
             ('17 to 32 Players', RankingPointsMap.list_points_for_fp_ranges(32)),
