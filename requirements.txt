@@ -4,7 +4,6 @@ markdown==3.7
 Pillow==10.3
 boto3==1.34
 gunicorn==20.1
-psycopg2==2.9
 psycopg2-binary==2.9
 requests
 sendgrid==6.7
