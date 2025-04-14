@@ -102,6 +102,7 @@ TEMPLATES = [
                 'sloppy_labwork.context_processors.base_template',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.request',
+                'django.template.context_processors.static',
                 'sloppy_labwork.context_processors.feature_flags',
                 'sloppy_labwork.context_processors.teammate_authorized',
                 'pmc.context_processors.nav_links',
