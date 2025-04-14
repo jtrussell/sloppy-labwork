@@ -187,6 +187,8 @@ STATICFILES_DIRS = [
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
 # Feature Flags
 FT_USE_REGISTER = os.environ['FT_USE_REGISTER'] == 'True'
 FT_USE_RATINGS = os.environ['FT_USE_RATINGS'] == 'True'

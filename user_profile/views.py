@@ -1,5 +1,5 @@
 from django.db.models import Q
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from allauth.account.decorators import login_required
 from django.forms.models import model_to_dict
 from register.models import DeckRegistration
