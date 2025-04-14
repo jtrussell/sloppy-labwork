@@ -1,18 +1,152 @@
 html,
 body,
 main {
-  height: 100%;
+  min-height: 100dvh;
 }
+
+body { background-color: var(--color-bg); }
+@media (min-width: 550px) {
+  body {
+    background-color: var(--color-bg-secondary);
+  }
+  main,
+  main.container
+  {
+    background-color: var(--color-bg);
+    box-sizing: content-box;
+    border-left: 8rem solid var(--color-bg);
+    border-right: 8rem solid var(--color-bg);
+  }
+}
+
+hr {
+  display: block;
+  width: 100%;
+}
+
 
 /* Misc */
 .brand {
-  font-size: 11px;
+  font-size: 1.5rem;
   font-weight: bold;
   text-transform: uppercase;
 }
 
-/* A slimmer container */
-.container { max-width: 600px; }
+section + section {
+  margin-top: 2rem;
+}
+
+form.form-inline {
+  margin-bottom: 0;
+}
+
+.form-wide input:not([type="checkbox"]),
+.form-wide textarea,
+.form-wide select {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.form-wide textarea {
+  font-size: 1.5rem;
+  height: 15rem;
+}
+
+.button-jumbo {
+  display: block;
+  width: 100%;
+  height: 76px;;
+}
+
+input:disabled {
+  color: var(--color-text-muted);
+}
+
+.input-with-button-group {
+  display: flex;
+}
+
+.input-with-button-group input {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.input-with-button-group button {
+  border: 1px solid var(--color-lines);
+  border-left: none;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+ul.flat-list, ol.flat-list {
+  list-style-type: none;
+}
+
+ul.flat-list li, ol.flat-list li {
+  margin: 0;
+}
+
+a {
+  text-decoration: var(--link-decoration);
+}
+
+.text-success { color: var(--color-text-success);  }
+.text-danger { color: var(--color-text-danger); }
+.text-muted { color: var(--color-text-muted); }
+.text-right { text-align: right; }
+
+img.icon { height: 2rem }
+
+aside {
+  border-top: 1px dotted var(--color-lines);
+  padding: 1.5em 0 0;
+  font-size: smaller;
+}
+
+table {
+  font-size: 1.5rem;
+}
+
+/* helptext is built in to Django forms */
+form .helptext {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 1.2rem;
+  margin-top: -1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.verification_nonce_display {
+  text-align: center;
+  border: 3px dashed var(--color-primary);
+  color: var(--color-primary-active);
+  margin: 2rem 0;
+  font-size: 6rem;
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: 2rem;
+}
+
+/* Notes */
+.note {
+  margin-bottom: 2.5rem;
+  border: 1px solid var(--color-text-muted);
+  border-radius: 3px;
+  padding: 1rem;
+  background-color: var(--color-bg-secondary);
+}
+
+.note *:last-child {
+  margin-bottom: 0;
+}
+
+.note-danger {
+  color: var(--color-text-danger);
+  border-color: var(--color-text-danger);
+}
+
+.note__list { margin: 0; }
+.note__list li { margin: 0; }
+.note__list li:only-child { list-style-type: none; }
 
 /*
  * Stack
@@ -23,42 +157,94 @@ main {
 .stack__spacer { flex-grow: 1; }
 
 /* Navigation */
-ul.nav {
+.nav {
   list-style-type: none;
   display: flex;
-  font-size: 11px;
+  font-size: 1.2rem;
 }
 
-ul.nav-top {
+.nav-top {
   margin: 30px 0 35px 0;
-  border-top: 1px solid #eee;
-  border-bottom: 1px solid #eee;
+  border-top: 1px solid var(--color-lines);
+  border-bottom: 1px solid var(--color-lines);
 }
 
-li.nav__item { margin: 0 1.5rem; }
-li.nav__item:first-child { margin-left: 0; }
-li.nav__item:last-child { margin-right: 0; }
+.nav__item { margin: 0 1.5rem; }
+.nav__item:first-child { margin-left: 0; }
+.nav__item:last-child { margin-right: 0; }
 
-li.nav__spacer { flex-grow: 1; }
+.nav__spacer { flex-grow: 1; }
 
 .nav__link {
-  color: #222;
+  color: var(--color-nav-links);
   letter-spacing: 0.25rem;
   line-height: 6.5rem;
   text-transform: uppercase;
   text-decoration: none;
 }
 
-.nav__brand {
-  font-weight: 600;
-}
-
 /* Footer */
 footer {
   margin-top: 30px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--color-lines);
 }
 
 .nav-footer {
-  font-size: 8px;
+  font-size: 0.9rem;
 }
+
+/* Pagination */
+.step-links {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.5rem;
+}
+
+/* Post helpers */
+.img-left { float: left; margin: 0 1rem 0 0; }
+.img-right { float: right; margin-left: 0 0 0 1rem; }
+.with-shadow img { box-shadow: 0 0 7px var(--color-primary); }
+.caption {
+  margin-top: -2rem;
+  font-size: smaller; 
+  font-style: italic;
+  text-align: center;
+}
+
+/* Markdown toc extension */
+.toctitle {
+  font-size: 3rem;
+  font-weight: 300;
+}
+
+/* Fancy Transition Junk */
+/* * { transition: background-color 0.3s linear, color 0.3s linear, border-color: 0.3s linear; } */
+* { transition: all 0.3s linear;}
+.preload * { transition: all none !important;}
+
+/* Skeleton Overrides */
+.container { max-width: 600px; }
+
+/* Responsible breakpoints */
+.d-none { display: none; }
+.d-inline { display: inline; }
+.d-block { display: block;}
+@media (min-width: 400px) {
+  .d-xs-none { display: none; }
+  .d-xs-inline { display: inline; }
+  .d-xs-block { display: block; }
+}
+@media (min-width: 550px) {
+  .d-md-none { display: none; }
+  .d-md-inline { display: inline; }
+  .d-md-block { display: block; }
+}
+@media (min-width: 750px) {
+  .d-lg-none { display: none; }
+  .d-lg-inline { display: inline; }
+  .d-lg-block { display: block; }
+}
+/*
+@media (min-width: 1000px) {}
+@media (min-width: 1200px) {} 
+*/
