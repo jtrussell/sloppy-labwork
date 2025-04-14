@@ -11,5 +11,4 @@ qrcode==8.0
 colorama==0.4
 django-hosts==6.0
 django-ses==4.4
-whitenoise==6.7
 dj-database-url==2.2
