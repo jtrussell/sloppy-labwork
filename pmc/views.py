@@ -5,6 +5,7 @@ import csv
 from datetime import date
 from datetime import timedelta
 from re import U
+from wsgiref import headers
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Sum
@@ -595,3 +596,18 @@ def add_pg_member_by_username(request, slug):
         print(e)
         messages.error(request, _('Oops! Something went wrong.'))
     return HttpResponseRedirect(reverse('pmc-pg-members', kwargs={'slug': slug}))
+
+
+@login_required
+@is_pg_staff
+def get_result_submission_template(request, slug):
+    response = HttpResponse(
+        content_type='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="results.csv"'}
+    )
+    writer = csv.writer(response)
+    writer.writerow(['user', 'finishing_position', 'num_wins', 'num_losses'])
+    members = PlaygroupMember.objects.filter(playgroup__slug=slug)
+    for member in members:
+        writer.writerow([member.user.username, '', '', ''])
+    return response

@@ -34,6 +34,8 @@ urlpatterns = [
          views.PlaygroupEventsList.as_view(), name='pmc-pg-events'),
     path('pg/<slug:slug>/events/new',
          views.submit_event_results, name='pmc-pg-events-new'),
+    path('pg/<slug:slug>/events/csv-template',
+         views.get_result_submission_template, name='pmc-pg-events-csv-template'),
     path('events/<int:pk>', views.event_detail_generic, name='pmc-event-detail'),
     path('pg/<slug:slug>/events/<int:pk>',
          views.EventDetail.as_view(), name='pmc-pg-event-detail'),
