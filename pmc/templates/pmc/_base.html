@@ -1,4 +1,5 @@
 {% load static %}
+{% load django_htmx %}
 <!DOCTYPE html>
 <html lang="en" class="pmc-theme-{{ my_profile.theme }}">
 <head>
@@ -26,7 +27,10 @@
   {% endblock %}
 </head>
 
-<body class="body {% if not playgroup_member.is_staff %}is-not-playgroup-staff{% endif %} flex flex-col">
+<body
+	class="body {% if not playgroup_member.is_staff %}is-not-playgroup-staff{% endif %} flex flex-col"
+	hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'
+>
 	<div class="masthead">
 		<div class="container">
 			{% if playgroup %}
@@ -41,15 +45,13 @@
 
 	{% include 'pmc/_nav.html' %}
 
-	{% if messages %}
-	<ul class="messages container">
+	<ul class="messages container" id="message-list">
 			{% for message in messages %}
 			<li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
 					{{ message }}
 			</li>
 			{% endfor %}
 	</ul>
-	{% endif %}
 
 	<div class="container">
 		{% block content %}
@@ -67,6 +69,20 @@
 			</ul>
 		</div>
 	</footer>
+
+	{% htmx_script %}
+	<script type="text/javascript">
+		document.addEventListener('htmx:afterRequest', function(event) {
+			const messages = JSON.parse(event.detail.xhr.getResponseHeader('HX-Trigger') || '{}')?.messages ?? []
+			const messageEls = messages.map(message => {
+				const li = document.createElement('li')
+				li.className = message.tags
+				li.innerHTML = message.message
+				return li
+			})
+			document.getElementById('message-list').replaceChildren(...messageEls)	
+		});	
+	</script>
 
 	{% block extra_body %}
 		<!-- Convenient place for script tags -->

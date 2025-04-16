@@ -644,7 +644,6 @@ table a {
  * Messages
  * *********************************** */
 ul.messages {
-  margin-top: 1rem;
   li {
     padding: 1.25rem;
     margin: 0.6rem 0;
@@ -655,6 +654,10 @@ ul.messages {
     a {
       color: var(--color-bg);
     }
+  }
+
+  li:first-child {
+    margin-top: 1.6rem;
   }
 }
 

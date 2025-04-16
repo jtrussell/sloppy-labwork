@@ -1,5 +1,24 @@
 {% extends "pmc/_base.html" %}
 {% load static %}
+{% load partials %}
+
+{% partialdef member-list-item %}
+	<li class="card">
+		<h2 class="banner-with-avatar" style="background-color: #{{ member.user.pmc_profile.get_avatar.banner_bg_color }}">
+			<img class="avatar" src="{{ member.user.pmc_profile.get_avatar.src }}" style="border-right: 3px solid #{{ member.user.pmc_profile.get_avatar.banner_stroke_color }}" alt="">
+			<div style="color: #{{ member.user.pmc_profile.get_avatar.banner_text_color }}">
+				<span class="banner-text">{{ member }}</span>
+				<span class="banner-sub-text">{{ member.user.pmc_profile.tagline | default:"Silence is golden." }}</span>
+			</div>
+		</h2>
+
+		<div class="card-actions">
+			<a class="btn btn-solid" href="{% url 'pmc-pg-member-detail' playgroup.slug member.user.username %}">
+				Profile
+			</a>
+		</div>
+	</li>
+{% endpartialdef %}
 
 {% block content %}
 	<h1>Members</h1>
@@ -9,7 +28,12 @@
 		<p>Add members to your playgroup by username or by scanning the QR code on
 		their playercard.</p>
 		<div>
-			<form action="{% url 'pmc-pg-add-member-by-username' playgroup.slug %}" method="POST" class="flex flex-row flex-gap-1">
+			<form
+				hx-post="{% url 'pmc-pg-add-member-by-username' playgroup.slug %}"
+				hx-target="#member-list"
+				hx-swap="afterbegin"
+				class="flex flex-row flex-gap-1"
+			>
 				<input type="text" class="flex-1" name="username" placeholder="Username">
 				<button class="btn btn-solid">Add</button>
 			</flex>
@@ -25,23 +49,9 @@
 		</form>
 	</div>
 
-	<ul class="card-list">
+	<ul class="card-list" id="member-list">
 		{% for member in members %}
-			<li class="card">
-				<h2 class="banner-with-avatar" style="background-color: #{{ member.user.pmc_profile.get_avatar.banner_bg_color }}">
-					<img class="avatar" src="{{ member.user.pmc_profile.get_avatar.src }}" style="border-right: 3px solid #{{ member.user.pmc_profile.get_avatar.banner_stroke_color }}" alt="">
-					<div style="color: #{{ member.user.pmc_profile.get_avatar.banner_text_color }}">
-						<span class="banner-text">{{ member }}</span>
-						<span class="banner-sub-text">{{ member.user.pmc_profile.tagline | default:"Silence is golden." }}</span>
-					</div>
-				</h2>
-
-				<div class="card-actions">
-					<a class="btn btn-solid" href="{% url 'pmc-pg-member-detail' playgroup.slug member.user.username %}">
-						Profile
-					</a>
-				</div>
-			</li>
+			{% partial member-list-item %}
 		{% empty %}
 			<li>No members yet.</li>
 		{% endfor %}

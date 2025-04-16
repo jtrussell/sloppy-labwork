@@ -575,7 +575,7 @@ def add_pg_member_by_username(request, slug):
     username = request.POST.get('username').strip()
     try:
         User = get_user_model()
-        member, _created = PlaygroupMember.objects.get_or_create(
+        member, created = PlaygroupMember.objects.get_or_create(
             playgroup=Playgroup.objects.get(slug=slug),
             user=User.objects.get(username=username)
         )
@@ -583,19 +583,27 @@ def add_pg_member_by_username(request, slug):
             'slug': slug,
             'username': member.user.username
         })
-        msg = _(
-            '{} added. View <a href="{}">their profile</a>.').format(member, href_member_detail)
-        messages.success(request, mark_safe(msg))
-        return HttpResponseRedirect(reverse('pmc-pg-members', kwargs={
-            'slug': slug
-        }))
+
+        if created:
+            msg = _(
+                '{} added. View <a href="{}">their profile</a>.').format(member, href_member_detail)
+            messages.success(request, mark_safe(msg))
+            context = {
+                'member': member,
+                'playgroup': Playgroup.objects.get(slug=slug),
+            }
+            return render(request, 'pmc/pg-members.html#member-list-item', context)
+        else:
+            msg = _(
+                '{} is already a member. View <a href="{}">their profile</a>.').format(member, href_member_detail)
+            messages.success(request, mark_safe(msg))
     except User.DoesNotExist:
         messages.error(request, _(
             'Oops! We could not find a user with that username. Usernames are case sensitive.'))
     except Exception as e:
         print(e)
         messages.error(request, _('Oops! Something went wrong.'))
-    return HttpResponseRedirect(reverse('pmc-pg-members', kwargs={'slug': slug}))
+    return HttpResponse('')
 
 
 @login_required

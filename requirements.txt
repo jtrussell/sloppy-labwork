@@ -12,3 +12,5 @@ colorama==0.4
 django-hosts==6.0
 django-ses==4.4
 dj-database-url==2.2
+django-template-partials==24.4
+django-htmx==1.23

@@ -67,6 +67,8 @@ INSTALLED_APPS = [
     'transporter_platform',
     'pmc',
     'django_hosts',
+    'django_htmx',
+    'template_partials',
 ]
 
 MIDDLEWARE = [
@@ -79,6 +81,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'django_htmx.middleware.HtmxMiddleware',
+    'common.middleware.HtmxMessageMiddleware',
     'django_hosts.middleware.HostsResponseMiddleware',
 ]
 
