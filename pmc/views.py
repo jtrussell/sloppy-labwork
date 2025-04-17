@@ -241,7 +241,7 @@ class EventDetail(LoginRequiredMixin, generic.DetailView):
 def manage_event(request, slug, pk):
     event = get_object_or_404(Event, pk=pk)
     if request.method == 'POST':
-        form = EventUpdateForm(request.POST)
+        form = EventUpdateForm(request.POST, instance=event)
         if form.is_valid():
             event = form.save()
             messages.success(request, _('Event updated.'))
