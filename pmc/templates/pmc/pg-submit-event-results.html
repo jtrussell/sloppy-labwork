@@ -4,6 +4,10 @@
 <div class="staff-only">
   <h1>Submit Event Results</h1>
 
+  <p>
+    Please refer to our <a href="https://docs.google.com/document/d/1NETJods7KAyI_HgoC_fEiH0bRIgbRP5jyNALbXNmtck">KeyChain Reporting Standards</a> for guidance on eligible play.
+  </p>
+
   {% if form_errors %}
   <div class="card card-danger">
     <h2>Ooops...</h2>
@@ -28,7 +32,7 @@
     <h2>Results File Format</h2>
     <p>
       Your results file should be in <code>CSV</code> format. I.e. it should be a
-      file with a <code>.csv</code> extension.
+      file with a <code>.csv</code> extension.  
     </p>
 
     <p>
@@ -36,6 +40,7 @@
       care to match both spelling and capitalization. The <code>user</code>
       field is required, all others are optional.
     </p>
+
     <ul class="bulleted-list">
       <li><code>user</code> - The username (not nickname) of the player.</li>
       <li><code>finishing_position</code> - The player's numeric finishing position in the event.</li>
@@ -47,8 +52,11 @@
       names. However you may report an empty value for any of these fields other
       than <code>user</code>.
     </p>
-    <p>Click <a href="{% url 'pmc-pg-events-csv-template' playgroup.slug %}">here</a> to
-    download a CSV template.</p>
+
+    <p>
+      Click <a href="{% url 'pmc-pg-events-csv-template' playgroup.slug %}">here</a>
+      to download a CSV template.
+    </p>
   </div>
 </div>
 {% endblock %}

@@ -139,6 +139,7 @@ class EventResult(models.Model):
 
     class Meta:
         ordering = ('finishing_position', '-num_wins', 'num_losses',)
+        unique_together = ('event', 'user',)
 
     def __str__(self):
         return f'{self.event.name} - {self.user} - ({self.finishing_position})'

@@ -315,9 +315,9 @@ nav li + li::before {
 
 form button,
 .btn {
-  font-size: 16px;
-  line-height: 16px;
-  padding: 10px;
+  font-size: 1rem;
+  line-height: 1rem;
+  padding: 0.6rem;
   text-transform: uppercase;
   cursor: pointer;
   color: var(--color-btn-text);
@@ -326,6 +326,10 @@ form button,
   border-radius: var(--border-radius-sm);
   font-weight: 600;
   text-decoration: none;
+}
+
+.btn.btn-small {
+  padding: 0.375rem 0.25rem 0.25rem;
 }
 
 .btn.btn-solid {
@@ -544,6 +548,10 @@ td.col-sm {
   width: 30px
 }
 
+.col-sm input {
+  width: 60px;
+}
+
 th.col-md,
 td.col-md {
   width: 100px;
@@ -574,6 +582,12 @@ table .avatar {
 }
 
 table td.stat {
+  width: 60px;
+}
+
+input.stat,
+td.stat input,
+td.col-sm input {
   width: 60px;
 }
 

@@ -1,3 +1,4 @@
+from http import HTTPStatus
 import json
 from math import e
 import os
@@ -7,7 +8,7 @@ from datetime import timedelta
 from re import U
 from wsgiref import headers
 from django.core.exceptions import PermissionDenied
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
@@ -211,7 +212,6 @@ class PlaygroupEventsList(LoginRequiredMixin, generic.ListView):
 
 @login_required
 def event_detail_generic(request, pk):
-    print(pk)
     pg_events = PlaygroupEvent.objects.filter(
         event__pk=pk,
         playgroup__members__user=request.user
@@ -228,7 +228,7 @@ def event_detail_generic(request, pk):
 
 class EventDetail(LoginRequiredMixin, generic.DetailView):
     model = Event
-    template_name = 'pmc/event-detail.html'
+    template_name = 'pmc/pg-event-detail.html'
 
     @method_decorator(login_required)
     @method_decorator(is_pg_member)
@@ -449,6 +449,71 @@ def assign_event_points(request, slug, pk):
     RankingPointsService.assign_points_for_event(event)
     messages.success(request, _('Ranking points updated.'))
     return HttpResponseRedirect(reverse('pmc-pg-event-detail', kwargs={'slug': slug, 'pk': pk}))
+
+
+@login_required
+@is_pg_staff
+def manage_event_result(request, slug, pk):
+    if request.method == 'DELETE':
+        result = get_object_or_404(EventResult, pk=pk)
+        # TODO verify that the event is associated with the playgroup
+        result.delete()
+        RankingPointsService.assign_points_for_event(result.event)
+        messages.success(request, _('Result removed.'))
+        if request.htmx:
+            context = {
+                'playgroup': Playgroup.objects.get(slug=slug),
+                'object': result.event,
+            }
+            return render(request, 'pmc/pg-event-detail.html#results-table', context)
+        return HttpResponseRedirect(reverse('pmc-pg-event-detail', kwargs={'slug': slug, 'pk': result.event.pk}))
+
+
+@login_required
+@is_pg_staff
+def add_event_result(request, slug, pk):
+    if request.method == 'POST':
+        status = HTTPStatus.OK
+        event = get_object_or_404(Event, pk=pk)
+        # TODO verify that the event is associated with the playgroup
+        post_data = request.POST.dict()
+        result_data = {key: (None if value == '' else value)
+                       for key, value in post_data.items()}
+        username = result_data.pop('username')
+        User = get_user_model()
+        try:
+            result = EventResult(
+                user=User.objects.get(username=username),
+                event=event,
+                **result_data
+            )
+            result.event = event
+            result.save()
+            RankingPointsService.assign_points_for_event(event)
+            messages.success(request, _('Result added.'))
+        except User.DoesNotExist:
+            messages.error(request, _(
+                'Oops! We could not find a user named {}. Usernames are case sensitive.'.format(username)))
+            status = HTTPStatus.BAD_REQUEST
+        except IntegrityError as e:
+            messages.error(request, _(
+                'Oops! We could not save that result, you may have one for that user already.'))
+            status = HTTPStatus.BAD_REQUEST
+        except Exception:
+            messages.error(request, _('Oops! Something went wrong.'))
+            status = HTTPStatus.INTERNAL_SERVER_ERROR
+        if request.htmx:
+            context = {
+                'playgroup': Playgroup.objects.get(slug=slug),
+                'object': event,
+            }
+            return render(
+                request,
+                'pmc/pg-event-detail.html#results-table',
+                context,
+                status=status
+            )
+        return HttpResponseRedirect(reverse('pmc-pg-event-detail', kwargs={'slug': slug, 'pk': pk}))
 
 
 @csrf_exempt
