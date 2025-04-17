@@ -244,6 +244,7 @@ def manage_event(request, slug, pk):
         form = EventUpdateForm(request.POST, instance=event)
         if form.is_valid():
             event = form.save()
+            RankingPointsService.assign_points_for_event(event)
             messages.success(request, _('Event updated.'))
             return HttpResponseRedirect(reverse('pmc-pg-event-manage', kwargs={
                 'slug': slug,
