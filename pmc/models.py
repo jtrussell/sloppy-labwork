@@ -95,8 +95,7 @@ class EventFormat(models.Model):
 class Event(models.Model):
     name = models.CharField(max_length=200)
     start_date = models.DateField(default=date.today)
-    player_count = models.SmallIntegerField(
-        default=None, null=True, blank=True)
+    player_count = models.SmallIntegerField(default=0)
     format = models.ForeignKey(EventFormat, on_delete=models.SET_NULL,
                                related_name='events', default=None, null=True, blank=True)
     is_excluded_from_xp = models.BooleanField(default=False)

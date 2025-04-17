@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 
 class EventForm(forms.ModelForm):
-    results_file = forms.FileField(required=True)
+    results_file = forms.FileField(required=False)
     format = forms.ModelChoiceField(
         queryset=EventFormat.objects.all(),
         empty_label=_('Other'),
@@ -26,14 +26,30 @@ class EventForm(forms.ModelForm):
         widgets = {
             'start_date': forms.DateInput(attrs={'type': 'date'}),
             'player_count': forms.NumberInput(attrs={
-                'min': 0,
-                'placeholder': _('Automatic')
+                'min': 2,
             }),
         }
 
     def save(self, commit=True):
         event = super(EventForm, self).save(commit=commit)
         return event
+
+
+class EventUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Event
+        fields = ('name', 'start_date', 'format', 'player_count')
+        labels = {
+            'name': _('Event Name'),
+            'start_date': _('Event Date'),
+            'player_count': _('Player Count'),
+        }
+        widgets = {
+            'start_date': forms.DateInput(attrs={'type': 'date'}),
+            'player_count': forms.NumberInput(attrs={
+                'min': 2,
+            }),
+        }
 
 
 class PlaygroupForm(forms.ModelForm):

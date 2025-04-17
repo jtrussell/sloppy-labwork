@@ -2,7 +2,7 @@
 {% load partials %}
 
 {% partialdef result-row %}
-  <tr hx-target="this">
+  <tr>
     <td class="col-sm">{{ result.finishing_position|default_if_none:"-" }}</td>
     <td>
       <div class="name-with-avatar">
@@ -13,14 +13,6 @@
     <td class="stat">{{ result.num_wins|default_if_none:"-" }}</td>
     <td class="stat">{{ result.num_losses|default_if_none:"-" }}</td>
     <td class="stat">{{ result.ranking_points.first|default_if_none:"-" }}</td>
-    <td class="staff-only col-sm">
-      <a
-        class="btn"
-        hx-delete="{% url 'pmc-pg-manage-result' playgroup.slug result.pk %}"
-        hx-swap="outerHTML"
-        hx-target="#results-table"
-      >X</a>
-    </td>
   </tr>
 {% endpartialdef %}
 
@@ -32,30 +24,11 @@
         <th title="Wins">W</th>
         <th title="Losses">L</th>
         <th title="Ranking Points">RP</th>
-        <th class="staff-only"></th>&nbsp;</th>
       </tr>
 
       {% for result in object.results.all %}
         {% partial result-row %}
       {% endfor %}
-
-      <tr class="staff-only" id="add-result-row">
-        <td colspan="6">
-          <div class="flex flex-row flex-gap-1">
-            <input id="form-entry-point" type="number" class="stat" placeholder="#" name="finishing_position" />
-            <input required type="text" class="flex-1" name="username" list="usernames-list" placeholder="Username"/>
-            <datalist id="usernames-list">
-              {% for member in playgroup.members.all %}
-                <option value="{{ member.user.username }}">
-              {% endfor %}
-            </datalist>
-
-            <input type="number" class="stat" placeholder="W" name="num_wins">
-            <input type="number" class="stat" placeholder="L" name="num_losses">
-            <button type="submit" class="btn btn-solid">Add</button>
-          </div>
-        </td>
-      </tr>
     </table>
 {% endpartialdef %}
 
@@ -74,35 +47,15 @@
 	<div class="card staff-only">
 		<h2>Staff Area</h2>
     <div class="card-actions">
-
-      <!-- form for event points -->
-      <form action="{% url 'pmc-delete-event' playgroup.slug object.pk %}" method="POST">
-        {% csrf_token %}
-        <button class="btn btn-solid" type="submit">
-          Delete Event
-        </button>
-      </form>
-
-      <form action="{% url 'pmc-event-assign-points' playgroup.slug object.pk %}" method="POST">
-        {% csrf_token %}
-        <button class="btn" type="submit">
-          Assign Points
-        </button>
-      </form>
+      <a href="{% url 'pmc-pg-event-manage' playgroup.slug object.pk %}" class="btn btn-solid">
+        Manage Event
+      </a>
     </div>
 		</a>
 	</div>
 
   <div class="card">
     <h2>Results</h2>
-    <form
-      autocomplete="off"
-      hx-post="{% url 'pmc-pg-add-event-result' playgroup.slug object.pk %}"
-      hx-target="#results-table"
-      hx-swap="outerHTML"
-      hx-on::after-request="if(event.detail.successful) { this.reset(); htmx.find('#form-entry-point').focus() }"
-    >
-      {% partial results-table %}
-    </form>
+    {% partial results-table %}
   </div>
 {% endblock %}
