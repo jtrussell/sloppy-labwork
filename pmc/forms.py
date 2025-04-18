@@ -8,7 +8,8 @@ from django.utils.translation import gettext_lazy as _
 
 
 class EventForm(forms.ModelForm):
-    results_file = forms.FileField(required=False)
+    results_file = forms.FileField(
+        required=False, help_text=_('This file is optional. See below for details.'))
     format = forms.ModelChoiceField(
         queryset=EventFormat.objects.all(),
         empty_label=_('Other'),

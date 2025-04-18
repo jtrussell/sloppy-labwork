@@ -243,6 +243,14 @@ form > p > label {
   flex-basis: 120px;
 }
 
+form > p > .helptext {
+  width: 100%;
+  text-align: right;
+  font-size: smaller;
+  margin-top: -6px;
+  color: var(--color-text-muted);
+}
+
 @media (max-width: 680px) {
   form > p {
     flex-direction: column;
