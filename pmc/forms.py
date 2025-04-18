@@ -1,3 +1,4 @@
+from operator import is_
 from tokenize import blank_re
 from django import forms
 from pkg_resources import require
@@ -18,11 +19,12 @@ class EventForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ('name', 'start_date', 'format', 'player_count')
+        fields = ('name', 'start_date', 'is_casual', 'format', 'player_count')
         labels = {
             'name': _('Event Name'),
             'start_date': _('Event Date'),
             'player_count': _('Player Count'),
+            'is_casual': _('Event Type'),
         }
         widgets = {
             'start_date': forms.DateInput(attrs={'type': 'date'}),
@@ -39,11 +41,12 @@ class EventForm(forms.ModelForm):
 class EventUpdateForm(forms.ModelForm):
     class Meta:
         model = Event
-        fields = ('name', 'start_date', 'format', 'player_count')
+        fields = ('name', 'start_date', 'is_casual', 'format', 'player_count')
         labels = {
             'name': _('Event Name'),
             'start_date': _('Event Date'),
             'player_count': _('Player Count'),
+            'is_casual': _('Event Type'),
         }
         widgets = {
             'start_date': forms.DateInput(attrs={'type': 'date'}),

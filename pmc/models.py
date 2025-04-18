@@ -93,12 +93,18 @@ class EventFormat(models.Model):
 
 
 class Event(models.Model):
+    EVENT_TYPE_CHOICES = (
+        (False, _('Tournament')),
+        (True, _('Open Play')),
+    )
+
     name = models.CharField(max_length=200)
     start_date = models.DateField(default=date.today)
     player_count = models.SmallIntegerField(default=0)
     format = models.ForeignKey(EventFormat, on_delete=models.SET_NULL,
                                related_name='events', default=None, null=True, blank=True)
     is_excluded_from_xp = models.BooleanField(default=False)
+    is_casual = models.BooleanField(default=False, choices=EVENT_TYPE_CHOICES)
 
     class Meta:
         ordering = ('-start_date',)
@@ -121,6 +127,7 @@ class PlaygroupEvent(models.Model):
 
 
 class EventResult(models.Model):
+    xp_for_casual_attendance = 50
     xp_for_attendance = 25
     xp_for_win = 10
     xp_for_loss = 5
@@ -146,6 +153,8 @@ class EventResult(models.Model):
     def get_xp(self):
         if self.event.is_excluded_from_xp:
             return 0
+        if self.event.is_casual:
+            return self.xp_for_attendance
         xp = self.xp_for_attendance
         if self.num_wins:
             xp += self.num_wins * self.xp_for_win
@@ -360,7 +369,9 @@ class PmcProfile(models.Model):
     def get_total_xp(self):
         experience_points = (
             EventResult.objects.filter(
-                user=self.user, event__is_excluded_from_xp=False)
+                user=self.user,
+                event__is_excluded_from_xp=False,
+                event__is_casual=False)
             .annotate(
                 attendance_points=Value(EventResult.xp_for_attendance),
                 win_points=Coalesce(F('num_wins'), 0) * EventResult.xp_for_win,
@@ -372,7 +383,14 @@ class PmcProfile(models.Model):
                     F('attendance_points') + F('win_points') + F('loss_points'))
             )
         )
-        return experience_points["total_experience"] or 0
+        competition_xp = experience_points["total_experience"] or 0
+
+        casual_xp = EventResult.xp_for_casual_attendance * EventResult.objects.filter(
+            user=self.user,
+            event__is_excluded_from_xp=False,
+            event__is_casual=True).count()
+
+        return competition_xp + casual_xp
 
     def get_level(self):
         return LevelBreakpoint.objects.filter(
@@ -469,6 +487,11 @@ class LeaderboardLog(models.Model):
 class RankingPointsService():
     @staticmethod
     def assign_points_for_results(event_results, player_count):
+        if event_results and event_results[0].event.is_casual:
+            RankingPoints.objects.filter(
+                result__event=event_results[0].event).delete()
+            return
+
         rp_map_entries = RankingPointsMap.objects.filter(
             max_players=RankingPointsMap.objects
             .filter(max_players__gte=player_count)
@@ -487,6 +510,10 @@ class RankingPointsService():
 
     @staticmethod
     def assign_points_for_event(event):
+        if event.is_casual:
+            RankingPoints.objects.filter(result__event=event).delete()
+            return
+
         results = event.results.all()
         RankingPoints.objects.filter(result__event=event).delete()
         return RankingPointsService.assign_points_for_results(
@@ -541,7 +568,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
