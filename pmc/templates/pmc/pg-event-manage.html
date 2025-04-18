@@ -41,8 +41,11 @@
 
       <tr class="staff-only" id="add-result-row">
         <td colspan="6">
-          <div class="flex flex-row flex-gap-1">
+          <div class="flex flex-row flex-col-sm flex-gap-1">
+            <label class="sm-only">Finishing Position</label>
             <input id="form-entry-point" type="number" class="stat" placeholder="#" name="finishing_position" />
+
+            <label class="sm-only" for="username">Username</label>
             <input required type="text" class="flex-1" name="username" list="usernames-list" placeholder="Username"/>
             <datalist id="usernames-list">
               {% for member in playgroup.members.all %}
@@ -50,7 +53,10 @@
               {% endfor %}
             </datalist>
 
+            <label class="sm-only" for="num_wins">Number of Wins</label>
             <input type="number" class="stat" placeholder="W" name="num_wins">
+
+            <label class="sm-only" for="num_losses">Number of Losses</label>
             <input type="number" class="stat" placeholder="L" name="num_losses">
             <button type="submit" class="btn btn-solid">Add</button>
           </div>

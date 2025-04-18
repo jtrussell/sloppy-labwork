@@ -591,6 +591,12 @@ td.col-sm input {
   width: 60px;
 }
 
+@media (max-width: 680px) {
+  input.stat {
+    width: 100%;
+  }
+}
+
 table a {
   text-decoration: none;
 }
@@ -729,6 +735,15 @@ ul.messages {
 @media (max-width: 680px) {
   .flex.flex-col-sm {
     flex-direction: column;
+  }
+}
+
+.sm-only {
+  display: none;
+}
+@media (max-width: 680px) {
+  .sm-only {
+    display: block;
   }
 }
 
