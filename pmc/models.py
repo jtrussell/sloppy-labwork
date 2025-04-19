@@ -154,7 +154,7 @@ class EventResult(models.Model):
         if self.event.is_excluded_from_xp:
             return 0
         if self.event.is_casual:
-            return self.xp_for_attendance
+            return self.xp_for_casual_attendance
         xp = self.xp_for_attendance
         if self.num_wins:
             xp += self.num_wins * self.xp_for_win
