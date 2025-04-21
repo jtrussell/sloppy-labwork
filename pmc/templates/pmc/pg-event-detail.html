@@ -1,7 +1,7 @@
 {% extends "pmc/_base.html" %}
 {% load partials %}
 
-{% partialdef result-row %}
+{% partialdef result-row-lg %}
   <tr>
     <td class="col-sm">{{ result.finishing_position|default_if_none:"-" }}</td>
     <td>
@@ -16,8 +16,25 @@
   </tr>
 {% endpartialdef %}
 
-{% partialdef results-table %}
-    <table id="results-table">
+{% partialdef result-row-sm %}
+  <tr>
+    <td class="col-sm text-larger">{{ result.finishing_position|default_if_none:"-" }}</td>
+    <td style="width: 100%;">
+      <div class="name-with-avatar text-larger">
+      <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
+        {{ result.user }}
+      </div>
+      <div class="flex flex-row flex-gap-1 text-muted text-smaller">
+        <span>Wins: {{ result.num_wins|default_if_none:"-" }}</span>
+        <span>Losses: {{ result.num_losses|default_if_none:"-" }}</span>
+        <span>RP: {{ result.ranking_points.first|default_if_none:"-" }}</span>
+      </div>
+    </td>
+  </tr>
+{% endpartialdef %}
+
+{% partialdef results-table-lg %}
+    <table class="lg-only">
       <tr>
         <th title="Finishing Position">#</th>
         <th class="text-left">Player</th>
@@ -27,10 +44,24 @@
       </tr>
 
       {% for result in object.results.all %}
-        {% partial result-row %}
+        {% partial result-row-lg %}
       {% endfor %}
     </table>
 {% endpartialdef %}
+
+{% partialdef results-table-sm %}
+    <table class="sm-only">
+      <tr>
+        <th title="Finishing Position">#</th>
+        <th class="text-left">Player</th>
+      </tr>
+
+      {% for result in object.results.all %}
+        {% partial result-row-sm %}
+      {% endfor %}
+    </table>
+{% endpartialdef %}
+
 
 {% block content %}
   <h1>{{ object }}</h1>
@@ -56,6 +87,8 @@
 
   <div class="card">
     <h2>Results</h2>
-    {% partial results-table %}
+    {% partial results-table-lg %}
+
+    {% partial results-table-sm %}
   </div>
 {% endblock %}

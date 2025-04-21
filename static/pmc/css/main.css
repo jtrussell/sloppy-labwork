@@ -755,6 +755,12 @@ ul.messages {
   }
 }
 
+@media (max-width: 680px) {
+  .lg-only {
+    display: none;
+  }
+}
+
 .flex.flex-spread {
   justify-content: space-between;
 }
@@ -776,6 +782,14 @@ ul.messages {
 
 .text-muted {
   color: var(--color-text-muted);
+}
+
+.text-larger {
+  font-size: 1.2rem;
+}
+
+.text-smaller {
+  font-size: 0.8rem;
 }
 
 .text-bold {
