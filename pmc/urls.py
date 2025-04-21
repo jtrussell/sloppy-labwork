@@ -1,5 +1,6 @@
 from django.urls import path, include
 from django.views.generic.base import RedirectView
+from common.urls import urlpatterns as common_urlpatterns
 from . import views
 
 urlpatterns = [
@@ -60,3 +61,5 @@ urlpatterns = [
     # Common to all hosts
     path('accounts/', include('allauth.urls')),
 ]
+
+urlpatterns += common_urlpatterns

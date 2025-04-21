@@ -6,7 +6,6 @@ import csv
 from datetime import date
 from datetime import timedelta
 from re import U
-from wsgiref import headers
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Sum

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import include, path
 from . import views
-
+from common.urls import urlpatterns as common_urlpatterns
 
 urlpatterns = [
     path('', views.index, name='home'),
@@ -21,3 +21,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
 ]
+
+urlpatterns += common_urlpatterns

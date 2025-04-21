@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'redacted',
     'transporter_platform',
     'pmc',
+    'common',
     'django_hosts',
     'django_htmx',
     'template_partials',
