@@ -47,6 +47,10 @@ class Playgroup(models.Model):
     def __str__(self):
         return self.name
 
+    def get_pending_join_requests(self):
+        return self.join_requests.filter(
+            status=PlaygroupJoinRequest.RequestStatuses.SUBMITTED).order_by('-created_on')
+
     def get_staff_email_list(self):
         return self.members.filter(is_staff=True).values_list('user__email', flat=True)
 

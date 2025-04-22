@@ -27,6 +27,9 @@
 		<h2>Staff Area</h2>
 		<p>Add members to your playgroup by username or by scanning the QR code on
 		their playercard.</p>
+		{% if playgroup.get_pending_join_requests %}
+			<p>There are <a href="{% url 'pmc-pg-manage' playgroup.slug %}">{{ playgroup.get_pending_join_requests.count }} pending join requests</a>.</p>
+		{% endif %}
 		<div>
 			<form
 				hx-post="{% url 'pmc-pg-add-member-by-username' playgroup.slug %}"
