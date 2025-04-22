@@ -47,6 +47,9 @@ class Playgroup(models.Model):
     def __str__(self):
         return self.name
 
+    def get_staff_email_list(self):
+        return self.members.filter(is_staff=True).values_list('user__email', flat=True)
+
 
 class PlaygroupMember(models.Model):
     playgroup = models.ForeignKey(
@@ -79,6 +82,28 @@ class PlaygroupMember(models.Model):
 
     def get_num_match_wins(self):
         return self.get_events().aggregate(Sum('num_wins'))['num_wins__sum'] or 0
+
+
+class PlaygroupJoinRequest(models.Model):
+    class RequestStatuses(models.IntegerChoices):
+        SUBMITTED = (0, _('Submitted'))
+        ACCEPTED = (1, _('Accepted'))
+        DECLINED = (2, _('Declined'))
+        CANCELLED = (3, _('Cancelled'))
+
+    playgroup = models.ForeignKey(
+        Playgroup, on_delete=models.CASCADE, related_name='join_requests')
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    note = models.TextField(default=None, null=True, blank=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    status = models.IntegerField(
+        choices=RequestStatuses.choices, default=RequestStatuses.SUBMITTED)
+
+    class Meta:
+        ordering = ['-created_on']
+
+    def __str__(self):
+        return f'{self.user.username} - {self.playgroup.name}'
 
 
 class EventFormat(models.Model):
@@ -568,7 +593,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
+            user_data = {entry["result__user"]: entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]

@@ -29,6 +29,16 @@
     <a href="{% url 'pmc-pg-manage' object.slug %}" class="btn btn-solid btn-block">Manage Playgroup</a>
   </div>
 
+  {% if not playgroup_member %}
+    <div class="card">
+      <h2>Hi There 👋!</h2>
+      <p>It looks like you haven't joined this group yet on KeyChain.</p>
+      <div class="card-actions">
+        <a href="{% url 'pmc-pg-join' object.slug %}" class="btn">Request to join</a>
+      </div>
+    </div>
+  {% endif %}
+
   {% if object.description %}
     <div class="card no-top-margin">
       {{ object.description | markdown | safe }}

@@ -1,17 +1,18 @@
 from http import HTTPStatus
 import json
-from math import e
 import os
 import csv
 from datetime import date
 from datetime import timedelta
-from re import U
+from django.core.mail import send_mail
+from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.views import generic
+from django.template import loader
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
@@ -23,9 +24,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
-from pmc.forms import EventForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PmcProfileForm
+from pmc.forms import EventForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
-from .models import EventResult, LeaderboardLog, LeaderboardSeasonPeriod
+from .models import EventResult, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest
 from .models import PlayerRank
 from .models import Leaderboard
 from .models import Playgroup
@@ -75,14 +76,110 @@ def api_key_required(view):
     return decorator(view)
 
 
-class PlaygroupDetail(LoginRequiredMixin, generic.DetailView):
+class PlaygroupDetail(generic.DetailView):
     model = Playgroup
-    template_name = 'pmc/pg-detail.html'
+    template_name = 'pmc/playgroup-detail.html'
 
-    @method_decorator(login_required)
-    @method_decorator(is_pg_member)
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
+
+@login_required
+def playgroup_join_request(request, slug):
+    existing_membership = PlaygroupMember.objects.filter(
+        playgroup__slug=slug, user=request.user).first()
+
+    if existing_membership:
+        messages.error(request, _(
+            'You are already a member of this playgroup.'))
+        return HttpResponseRedirect(reverse('pmc-pg-detail', kwargs={'slug': slug}))
+
+    form = PlaygroupJoinRequestForm(request.POST or None)
+    existing_request = PlaygroupJoinRequest.objects.filter(
+        playgroup__slug=slug,
+        user=request.user,
+        status=PlaygroupJoinRequest.RequestStatuses.SUBMITTED
+    ).first()
+
+    if request.method == 'POST':
+        if request.POST.get('action') == 'cancel':
+            if existing_request:
+                existing_request.status = PlaygroupJoinRequest.RequestStatuses.CANCELLED
+                existing_request.save()
+                messages.success(request, _('Join request cancelled.'))
+                return HttpResponseRedirect(reverse('pmc-pg-join', kwargs={'slug': slug}))
+        else:
+            if form.is_valid():
+                playgroup = Playgroup.objects.get(slug=slug)
+                playgroup_join_request = form.save(commit=False)
+                playgroup_join_request.playgroup = playgroup
+                playgroup_join_request.user = request.user
+                playgroup_join_request.save()
+
+                send_mail(
+                    subject=_('New join request for {}').format(
+                        playgroup.name),
+                    message='You have received a new join request on KeyChain! Please log in to accept or reject this request.',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=playgroup.get_staff_email_list(),
+                    fail_silently=True,
+                    html_message=loader.render_to_string(
+                        'pmc/email-playgroup-join-request.html',
+                        {'request': request, 'join_request': playgroup_join_request}
+                    )
+                )
+                messages.success(request, _('Join request submitted.'))
+                return HttpResponseRedirect(reverse('pmc-pg-join', kwargs={'slug': slug}))
+    context = {'form': form, 'existing_request': existing_request}
+    return render(request, 'pmc/pg-playgroup-join-request.html', context)
+
+
+@login_required
+@is_pg_staff
+def playgroup_join_request_manage(request, slug, pk):
+    join_request = get_object_or_404(
+        PlaygroupJoinRequest, pk=pk, playgroup__slug=slug)
+
+    if join_request.status != PlaygroupJoinRequest.RequestStatuses.SUBMITTED:
+        messages.success(request, _(
+            'This join request has already been handled.'))
+        return HttpResponseRedirect(reverse('pmc-pg-manage', kwargs={
+            'slug': slug,
+        }))
+
+    if request.method == 'POST':
+        if request.POST.get('action') == 'accept':
+            join_request.status = PlaygroupJoinRequest.RequestStatuses.ACCEPTED
+            join_request.save()
+            PlaygroupMember.objects.create(
+                playgroup=join_request.playgroup,
+                user=join_request.user,
+                is_staff=False
+            )
+            messages.success(request, _('Join request accepted.'))
+
+            send_mail(
+                subject=_('Join request accepted for {}').format(
+                    join_request.playgroup.name),
+                message='You have been accepted into the playgroup {}!'.format(
+                    join_request.playgroup.name),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[join_request.user.email],
+                fail_silently=True,
+                html_message=loader.render_to_string(
+                    'pmc/email-playgroup-join-request-accepted.html',
+                    {'request': request, 'join_request': join_request}
+                )
+            )
+
+        elif request.POST.get('action') == 'decline':
+            join_request.status = PlaygroupJoinRequest.RequestStatuses.DECLINED
+            join_request.save()
+            messages.success(request, _('Join request declined.'))
+
+        return HttpResponseRedirect(reverse('pmc-pg-manage', kwargs={
+            'slug': slug,
+        }))
+
+    context = {'join_request': join_request}
+    return render(request, 'pmc/pg-join-request-manage.html', context)
 
 
 @login_required
@@ -96,9 +193,15 @@ def manage_playgroup(request, slug):
             return HttpResponseRedirect(reverse('pmc-pg-detail', kwargs={'slug': pg.slug}))
     else:
         form = PlaygroupForm(instance=Playgroup.objects.get(slug=slug))
-    return render(request, 'pmc/pg-manage.html', {
+
+    context = {
         'form': form,
-    })
+        'join_requests': PlaygroupJoinRequest.objects.filter(
+            playgroup__slug=slug,
+            status=PlaygroupJoinRequest.RequestStatuses.SUBMITTED
+        )
+    }
+    return render(request, 'pmc/pg-manage.html', context)
 
 
 @login_required

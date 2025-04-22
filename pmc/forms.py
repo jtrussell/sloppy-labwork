@@ -1,8 +1,5 @@
-from operator import is_
-from tokenize import blank_re
 from django import forms
-from pkg_resources import require
-from .models import Event, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PmcProfile
+from .models import Event, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PlaygroupJoinRequest, PmcProfile
 from .models import PlaygroupMember
 from .models import EventFormat
 from django.utils.translation import gettext_lazy as _
@@ -66,6 +63,20 @@ class PlaygroupMemberForm(forms.ModelForm):
     class Meta:
         model = PlaygroupMember
         fields = ('nickname',)
+
+
+class PlaygroupJoinRequestForm(forms.ModelForm):
+    class Meta:
+        model = PlaygroupJoinRequest
+        fields = ('note',)
+        widgets = {
+            'note': forms.Textarea(
+                attrs={
+                    'rows': 3,
+                    'placeholder': _('An optional note to the playgroup EOs.')
+                }
+            )
+        }
 
 
 class PmcProfileForm(forms.ModelForm):

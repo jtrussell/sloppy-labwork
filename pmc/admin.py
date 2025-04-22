@@ -14,6 +14,7 @@ from .models import Avatar
 from .models import Background
 from .models import BackgroundCategory
 from .models import AvatarCategory
+from .models import PlaygroupJoinRequest
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -131,6 +132,12 @@ class BackgroundCategoryAdmin(admin.ModelAdmin):
     list_filter = ()
 
 
+class PlaygroupJoinRequestAdmin(admin.ModelAdmin):
+    list_display = ('playgroup', 'user', 'created_on', 'status')
+    search_fields = ['playgroup', 'user']
+    list_filter = ('playgroup',)
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
@@ -150,3 +157,4 @@ admin.site.register(Avatar, AvatarAdmin)
 admin.site.register(Background, BackgroundAdmin)
 admin.site.register(AvatarCategory, AvatarCategoryAdmin)
 admin.site.register(BackgroundCategory, BackgroundCategoryAdmin)
+admin.site.register(PlaygroupJoinRequest, PlaygroupJoinRequestAdmin)

@@ -1,0 +1,15 @@
+{% load common_extras %}
+
+<!DOCTYPE html>
+<html>
+  <head></head>
+  <body>
+    <p>Greetings EOs!</p>
+    <p>{{ join_request.user }} would like to join {{ join_request.playgroup }}
+    on KeyChain. Click <a href="{% abs_url 'pmc-pg-join-manage' join_request.playgroup.slug join_request.pk %}">here</a> to view their request.</p>
+    <p>
+      Regards,<br />
+      The KeyChain Team
+    </p>
+  </body>
+</html>

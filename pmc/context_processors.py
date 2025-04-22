@@ -91,6 +91,8 @@ def playgroup_member(request):
         )} if playgroup_slug and request.user else {}
     except PlaygroupMember.DoesNotExist:
         return {}
+    except TypeError:
+        return {}
 
 
 def pmc_profile(request):
