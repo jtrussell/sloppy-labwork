@@ -1,33 +1,11 @@
 {% extends "pmc/_base.html" %}
 {% load partials %}
 
-{% partialdef result-row-lg %}
+{% partialdef result-row %}
   <tr hx-target="this">
-    <td class="col-sm">{{ result.finishing_position|default_if_none:"-" }}</td>
-    <td>
-      <div class="name-with-avatar">
-      <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
-        {{ result.user }}
-      </div>
-    </td>
-    <td class="stat">{{ result.num_wins|default_if_none:"-" }}</td>
-    <td class="stat">{{ result.num_losses|default_if_none:"-" }}</td>
-    <td class="stat">{{ result.ranking_points.first|default_if_none:"-" }}</td>
-    <td class="staff-only col-sm">
-      <a
-        class="btn"
-        hx-delete="{% url 'pmc-pg-manage-result' playgroup.slug result.pk %}"
-        hx-swap="outerHTML"
-        hx-target="#results-table"
-      >X</a>
-    </td>
-  </tr>
-{% endpartialdef %}
-
-{% partialdef result-row-sm %}
-  <tr hx-target="this">
-    <td class="col-sm text-larger">{{ result.finishing_position|default_if_none:"-" }}</td>
-    <td style="width: 100%;">
+    <!-- Small screens -->
+    <td class="col-sm text-larger sm-only">{{ result.finishing_position|default_if_none:"-" }}</td>
+    <td class="sm-only">
       <div class="name-with-avatar text-larger">
       <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
         {{ result.user }}
@@ -38,6 +16,20 @@
         <span>RP: {{ result.ranking_points.first|default_if_none:"-" }}</span>
       </div>
     </td>
+
+    <!-- Large screens -->
+    <td class="col-sm lg-only">{{ result.finishing_position|default_if_none:"-" }}</td>
+    <td class="lg-only">
+      <div class="name-with-avatar">
+      <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
+        {{ result.user }}
+      </div>
+    </td>
+    <td class="stat lg-only">{{ result.num_wins|default_if_none:"-" }}</td>
+    <td class="stat lg-only">{{ result.num_losses|default_if_none:"-" }}</td>
+    <td class="stat lg-only">{{ result.ranking_points.first|default_if_none:"-" }}</td>
+
+
     <td class="staff-only col-sm">
       <a
         class="btn"
@@ -49,23 +41,25 @@
   </tr>
 {% endpartialdef %}
 
-{% partialdef results-table-lg %}
-    <table id="results-table" class="lg-only">
+{% partialdef results-table %}
+    <table id="results-table">
       <tr>
         <th title="Finishing Position">#</th>
         <th class="text-left">Player</th>
-        <th title="Wins">W</th>
-        <th title="Losses">L</th>
-        <th title="Ranking Points">RP</th>
-        <th class="staff-only"></th>&nbsp;</th>
+
+        <th class="lg-only" title="Wins">W</th>
+        <th class="lg-only" title="Losses">L</th>
+        <th class="lg-only" title="Ranking Points">RP</th>
+
+        <th class="staff-only">&nbsp;</th>
       </tr>
 
       {% for result in object.results.all %}
-        {% partial result-row-lg %}
+        {% partial result-row %}
       {% endfor %}
 
       <tr class="staff-only" id="add-result-row">
-        <td colspan="6">
+        <td colspan="100%">
           <div class="flex flex-row flex-col-sm flex-gap-1">
             <label class="sm-only">Finishing Position</label>
             <input id="form-entry-point" type="number" class="stat" placeholder="#" name="finishing_position" />
@@ -88,50 +82,6 @@
         </td>
       </tr>
     </table>
-{% endpartialdef %}
-
-{% partialdef results-table-sm %}
-  <table class="sm-only">
-    <tr>
-      <th title="Finishing Position">#</th>
-      <th class="text-left">Player</th>
-      <th>&nbsp;</th>
-    </tr>
-
-    {% for result in object.results.all %}
-      {% partial result-row-sm %}
-    {% endfor %}
-
-    <tr class="staff-only" id="add-result-row">
-      <td colspan="3">
-        <div class="flex flex-row flex-col-sm flex-gap-1">
-          <label class="sm-only">Finishing Position</label>
-          <input id="form-entry-point" type="number" class="stat" placeholder="#" name="finishing_position" />
-
-          <label class="sm-only" for="username">Username</label>
-          <input required type="text" class="flex-1" name="username" list="usernames-list" placeholder="Username"/>
-          <datalist id="usernames-list">
-            {% for member in playgroup.members.all %}
-              <option value="{{ member.user.username }}">
-            {% endfor %}
-          </datalist>
-
-          <label class="sm-only" for="num_wins">Number of Wins</label>
-          <input type="number" class="stat" placeholder="W" name="num_wins">
-
-          <label class="sm-only" for="num_losses">Number of Losses</label>
-          <input type="number" class="stat" placeholder="L" name="num_losses">
-          <button type="submit" class="btn btn-solid">Add</button>
-        </div>
-      </td>
-    </tr>
-  </table>
-{% endpartialdef %}
-
-
-{% partialdef results-table %}
-  {% partial results-table-sm %}
-  {% partial results-table-lg %}
 {% endpartialdef %}
 
 {% block content %}
