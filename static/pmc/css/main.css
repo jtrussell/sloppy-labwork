@@ -79,6 +79,7 @@ html.pmc-theme-1 {
 
 * {
   box-sizing: border-box;
+  font-family: 'Lexend', sans-serif;
 }
 
 *:not(textarea) {
@@ -324,8 +325,9 @@ nav li + li::before {
 form button,
 .btn {
   font-size: 1rem;
-  line-height: 1rem;
+  line-height: 1.2rem;
   padding: 0.6rem;
+  display: inline-block;
   text-transform: uppercase;
   cursor: pointer;
   color: var(--color-btn-text);
