@@ -3,6 +3,7 @@
 {% block content %}
   <h1>User Profile</h1>
   <p>Welcome, {{ user.get_username }}.</p>
+  <p>Looking to <a href="{% url 'account_change_password' %}">change your password</a> or <a href="{% url 'socialaccount_connections' %}">manage your social connections</a>?</p>
   <form action="{% url 'account_logout' %}" method="POST">
     {% csrf_token %}
     <button type="submit">

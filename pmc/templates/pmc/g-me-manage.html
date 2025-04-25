@@ -6,6 +6,7 @@
 
   <div class="card">
     <p>Welcome, {{ request.user }}.</p>
+    <p>Looking to <a href="{% url 'account_change_password' %}">change your password</a> or <a href="{% url 'socialaccount_connections' %}">manage your social connections</a>?</p>
     <div class="card-actions">
       <form action="{% url 'account_logout' %}" method="POST">
         {% csrf_token %}
