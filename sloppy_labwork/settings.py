@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+from django.utils.translation import gettext_lazy as _
 
 # Prime our environment if we've got a file to do so.
 try:
@@ -172,6 +173,16 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
+
+LANGUAGES = [
+    ('en', _('English')),
+    ('it', _('Italian')),
+    ('po', _('Polish')),
+]
 
 LANGUAGE_CODE = 'en-us'
 

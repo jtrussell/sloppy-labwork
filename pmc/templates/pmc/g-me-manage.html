@@ -20,6 +20,7 @@
   <form method="POST" enctype="multipart/form-data" class="card">
     <h2>Profile Settings</h2>
     {% csrf_token %}
+    {{ username_form.as_p }}
     {{ form.as_p }}
     <div class="card-actions">
       <button type="submit" class="btn btn-solid">

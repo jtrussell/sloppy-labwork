@@ -26,6 +26,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.forms import EventForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
+from user_profile.forms import EditUsernameForm
 from .models import EventResult, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest
 from .models import PlayerRank
 from .models import Leaderboard
@@ -455,12 +456,12 @@ def submit_event_results(request, slug):
                     'user', 'finishing_position', 'num_wins', 'num_losses']
                 if not set(reader.fieldnames).issubset(set(available_headers)):
                     form_errors.append(
-                        f'Your results file may include only these columns: {
-                            ', '.join(available_headers)}'
+                        'Your results file may include only these columns: {columns}'.format(
+                            columns=', '.join(available_headers))
                     )
                 elif not 'user' in reader.fieldnames:
                     form_errors.append(
-                        f'Your results file must include a "user" column')
+                        'Your results file must include a "user" column')
                 else:
                     User = get_user_model()
                     for row in reader:
@@ -683,16 +684,25 @@ def manage_my_pmc_profile(request):
     profile = request.user.pmc_profile
     if request.method == 'POST':
         form = PmcProfileForm(request.POST, instance=profile)
-        if form.is_valid():
+        username_form = EditUsernameForm(
+            request.POST, instance=request.user)
+        if form.is_valid() and username_form.is_valid():
             form.save()
+            username_form.save()
             messages.success(request, _('Profile updated.'))
-            return HttpResponseRedirect(reverse('pmc-my-keychain'))
+            return HttpResponseRedirect(reverse('pmc-my-keychain-manage'))
+        else:
+            messages.error(request, _(
+                'Oops! That\'s not quite right. Check the form and try again.'))
 
     else:
         form = PmcProfileForm(instance=profile)
+        username_form = EditUsernameForm(
+            instance=request.user)
 
     return render(request, 'pmc/g-me-manage.html', {
         'form': form,
+        'username_form': username_form,
     })
 
 
