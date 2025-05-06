@@ -702,3 +702,99 @@ class Background(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class AchievementBase(models.Model):
+    class RewardCategoryOptions(models.IntegerChoices):
+        PARTICIPATION = (0, _('Participation'))
+        SKILL = (1, _('Skill'))
+        TASK = (2, _('Task'))
+
+    pmc_id = models.CharField(max_length=10, unique=True)
+    name = models.CharField(max_length=100)
+    reward_category = models.IntegerField(
+        choices=RewardCategoryOptions.choices, default=RewardCategoryOptions.PARTICIPATION)
+    is_hidden = models.BooleanField(default=False)
+    sort_order = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        abstract = True
+        ordering = ('sort_order', 'name',)
+
+    def __str__(self):
+        return self.name
+
+
+class TieredAchievement(AchievementBase):
+    pass
+
+
+class TieredAchievementTier(models.Model):
+    class TierOptions(models.IntegerChoices):
+        BRONZE = (0, _('Bronze'))
+        SILVER = (1, _('Silver'))
+        GOLD = (2, _('Gold'))
+        ASCENSION = (3, _('Ascension'))
+    achievement = models.ForeignKey(
+        TieredAchievement, on_delete=models.CASCADE, related_name='tiers')
+    tier = models.IntegerField(choices=TierOptions.choices)
+    src = models.URLField(default=None, null=True, blank=True)
+
+    class Meta:
+        ordering = ('tier',)
+        constraints = [
+            UniqueConstraint(fields=['achievement', 'tier'],
+                             name='unique_tiered_achievement_tier'),
+        ]
+
+    def __str__(self):
+        return f'{self.achievement.name} - {self.tier}'
+
+
+class AchievementCriteriaBase(models.Model):
+    class CriteriaTypeOptions(models.IntegerChoices):
+        event_matches = (0, _('Event Matches'))
+        sealed_event_matches = (1, _('Sealed Event Matches'))
+        archon_event_matches = (2, _('Archon Event Matches'))
+        alliance_event_matches = (3, _('Alliance Event Matches'))
+        adaptive_event_matches = (4, _('Adaptive Event Matches'))
+        tournament_match_wins = (5, _('Tournament Match Wins'))
+        sealed_tournament_match_wins = (6, _('Sealed Tournament Match Wins'))
+        archon_tournament_match_wins = (7, _('Archon Tournament Match Wins'))
+        alliance_tournament_match_wins = (
+            8, _('Alliance Tournament Match Wins'))
+        adaptive_tournament_match_wins = (
+            9, _('Adaptive Tournament Match Wins'))
+        events = (10, _('Events'))
+
+    type = models.IntegerField(
+        choices=CriteriaTypeOptions.choices, default=CriteriaTypeOptions.event_matches)
+    amount = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        abstract = True
+
+
+class TieredAchievementCriteria(AchievementCriteriaBase):
+    achievement_tier = models.ForeignKey(
+        TieredAchievementTier, on_delete=models.CASCADE, related_name='criteria')
+
+
+class OneTimeAchievement(AchievementBase):
+    src = models.URLField(default=None, null=True, blank=True)
+    is_eo_assignable = models.BooleanField(default=True)
+
+
+class Trophy(AchievementBase):
+    src = models.URLField(default=None, null=True, blank=True)
+
+
+class TrophyCriteria(AchievementCriteriaBase):
+    trophy = models.ForeignKey(
+        Trophy, on_delete=models.CASCADE, related_name='criteria')
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['trophy'],
+                             name='unique_trophy_criteria'),
+        ]
