@@ -97,8 +97,8 @@ class PlaygroupEventAdmin(admin.ModelAdmin):
 
 
 class PmcProfileAdmin(admin.ModelAdmin):
-    list_display = ('user',)
-    search_fields = ['user']
+    list_display = ('user', 'mv_username',)
+    search_fields = ['user__username', 'mv_username']
     list_filter = ()
 
 
