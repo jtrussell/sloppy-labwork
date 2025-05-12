@@ -597,7 +597,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -798,3 +798,55 @@ class TrophyCriteria(AchievementCriteriaBase):
             UniqueConstraint(fields=['trophy'],
                              name='unique_trophy_criteria'),
         ]
+
+
+class UserTieredAchievement(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='tiered_achievements')
+    achievement_tier = models.ForeignKey(
+        TieredAchievementTier, on_delete=models.CASCADE, related_name='user_achievements')
+    date_awarded = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['user', 'achievement_tier'],
+                             name='unique_user_tiered_achievement'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} - {self.achievement_tier.achievement.name} - {self.achievement_tier.tier}'
+
+
+class UserOneTimeAchievement(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='one_time_achievements')
+    achievement = models.ForeignKey(
+        OneTimeAchievement, on_delete=models.CASCADE, related_name='user_achievements')
+    date_awarded = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['user', 'achievement'],
+                             name='unique_user_one_time_achievement'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} - {self.achievement.name}'
+
+
+class UserTrophy(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='trophies')
+    trophy = models.ForeignKey(
+        Trophy, on_delete=models.CASCADE, related_name='user_trophies')
+    date_awarded = models.DateTimeField(auto_now_add=True)
+    amount = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['user', 'trophy'],
+                             name='unique_user_trophy'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} - {self.trophy.name}'
