@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import LeaderboardLog, Playgroup, PlaygroupEvent, PmcProfile, RankingPointsMap
+from .models import Badge, LeaderboardLog, Playgroup, PlaygroupEvent, PmcProfile, RankingPointsMap
 from .models import PlaygroupMember
 from .models import Event
 from .models import EventResult
@@ -138,6 +138,12 @@ class PlaygroupJoinRequestAdmin(admin.ModelAdmin):
     list_filter = ('playgroup',)
 
 
+class BadgeAdmin(admin.ModelAdmin):
+    list_display = ('pmc_id', 'name', 'reward_category', 'is_hidden')
+    search_fields = ['name', 'pmc_id']
+    list_filter = ()
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
@@ -158,3 +164,4 @@ admin.site.register(Background, BackgroundAdmin)
 admin.site.register(AvatarCategory, AvatarCategoryAdmin)
 admin.site.register(BackgroundCategory, BackgroundCategoryAdmin)
 admin.site.register(PlaygroupJoinRequest, PlaygroupJoinRequestAdmin)
+admin.site.register(Badge, BadgeAdmin)

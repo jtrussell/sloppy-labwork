@@ -597,7 +597,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
+            user_data = {entry["result__user"]: entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -704,7 +704,7 @@ class Background(models.Model):
         return self.name
 
 
-class AchievementBase(models.Model):
+class AwardBase(models.Model):
     class RewardCategoryOptions(models.IntegerChoices):
         PARTICIPATION = (0, _('Participation'))
         SKILL = (1, _('Skill'))
@@ -712,6 +712,7 @@ class AchievementBase(models.Model):
 
     pmc_id = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
+    description = models.TextField(default=None, null=True, blank=True)
     reward_category = models.IntegerField(
         choices=RewardCategoryOptions.choices, default=RewardCategoryOptions.PARTICIPATION)
     is_hidden = models.BooleanField(default=False)
@@ -725,18 +726,18 @@ class AchievementBase(models.Model):
         return self.name
 
 
-class TieredAchievement(AchievementBase):
+class Achievement(AwardBase):
     pass
 
 
-class TieredAchievementTier(models.Model):
+class AchievementTier(models.Model):
     class TierOptions(models.IntegerChoices):
         BRONZE = (0, _('Bronze'))
         SILVER = (1, _('Silver'))
         GOLD = (2, _('Gold'))
         ASCENSION = (3, _('Ascension'))
     achievement = models.ForeignKey(
-        TieredAchievement, on_delete=models.CASCADE, related_name='tiers')
+        Achievement, on_delete=models.CASCADE, related_name='tiers')
     tier = models.IntegerField(choices=TierOptions.choices)
     src = models.URLField(default=None, null=True, blank=True)
 
@@ -744,14 +745,14 @@ class TieredAchievementTier(models.Model):
         ordering = ('tier',)
         constraints = [
             UniqueConstraint(fields=['achievement', 'tier'],
-                             name='unique_tiered_achievement_tier'),
+                             name='unique_achievement_tier'),
         ]
 
     def __str__(self):
         return f'{self.achievement.name} - {self.tier}'
 
 
-class AchievementCriteriaBase(models.Model):
+class AwardCriteriaBase(models.Model):
     class CriteriaTypeOptions(models.IntegerChoices):
         event_matches = (0, _('Event Matches'))
         sealed_event_matches = (1, _('Sealed Event Matches'))
@@ -775,21 +776,21 @@ class AchievementCriteriaBase(models.Model):
         abstract = True
 
 
-class TieredAchievementCriteria(AchievementCriteriaBase):
+class AchievementCriteria(AwardCriteriaBase):
     achievement_tier = models.ForeignKey(
-        TieredAchievementTier, on_delete=models.CASCADE, related_name='criteria')
+        AchievementTier, on_delete=models.CASCADE, related_name='criteria')
 
 
-class OneTimeAchievement(AchievementBase):
+class Badge(AwardBase):
     src = models.URLField(default=None, null=True, blank=True)
     is_eo_assignable = models.BooleanField(default=True)
 
 
-class Trophy(AchievementBase):
+class Trophy(AwardBase):
     src = models.URLField(default=None, null=True, blank=True)
 
 
-class TrophyCriteria(AchievementCriteriaBase):
+class TrophyCriteria(AwardCriteriaBase):
     trophy = models.ForeignKey(
         Trophy, on_delete=models.CASCADE, related_name='criteria')
 
@@ -800,34 +801,34 @@ class TrophyCriteria(AchievementCriteriaBase):
         ]
 
 
-class UserTieredAchievement(models.Model):
+class UserAchievementTier(models.Model):
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='tiered_achievements')
+        User, on_delete=models.CASCADE, related_name='achievement_tiers')
     achievement_tier = models.ForeignKey(
-        TieredAchievementTier, on_delete=models.CASCADE, related_name='user_achievements')
+        AchievementTier, on_delete=models.CASCADE, related_name='user_achievement_tiers')
     date_awarded = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
             UniqueConstraint(fields=['user', 'achievement_tier'],
-                             name='unique_user_tiered_achievement'),
+                             name='unique_user_achievement_tier'),
         ]
 
     def __str__(self):
         return f'{self.user.username} - {self.achievement_tier.achievement.name} - {self.achievement_tier.tier}'
 
 
-class UserOneTimeAchievement(models.Model):
+class UserBadge(models.Model):
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='one_time_achievements')
-    achievement = models.ForeignKey(
-        OneTimeAchievement, on_delete=models.CASCADE, related_name='user_achievements')
+        User, on_delete=models.CASCADE, related_name='badges')
+    badge = models.ForeignKey(
+        Badge, on_delete=models.CASCADE, related_name='user_badges')
     date_awarded = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
-            UniqueConstraint(fields=['user', 'achievement'],
-                             name='unique_user_one_time_achievement'),
+            UniqueConstraint(fields=['user', 'badge'],
+                             name='unique_user_badge'),
         ]
 
     def __str__(self):

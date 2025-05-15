@@ -1,0 +1,39 @@
+{% extends "pmc/_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/awards.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>Awards<span></span></h1>
+  <div class="subheading">Check out my Static Collection Array</div>
+
+  <div class="card">
+    <h2>Badges</h2>
+    <p>Badges are one-time awards, typically granted by an EO.</p>
+
+    <ul class="award-list flex">
+      {% for badge in badges %}
+        <li class="award-container disabled">
+          <a href="#">
+            <div class="badge flex flex-col flex-center">
+              <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award" />
+              <span class="award-description">{{ badge.name }}</span>
+            </div>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Achievements</h2>
+    <p>Earn achievements and level up by participating in events.</p>
+  </div>
+
+  <div class="card">
+    <h2>Trophies</h2>
+    <p>Collect trophies... </p>
+  </div>
+{% endblock %}

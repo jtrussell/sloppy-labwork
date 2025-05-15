@@ -27,7 +27,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.forms import EventForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
-from .models import EventResult, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest
+from .models import Badge, EventResult, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest
 from .models import PlayerRank
 from .models import Leaderboard
 from .models import Playgroup
@@ -814,3 +814,10 @@ def get_result_submission_template(request, slug):
     for member in members:
         writer.writerow([member.user.username, '', '', ''])
     return response
+
+
+def my_awards(request):
+    context = {
+        'badges': Badge.objects.all(),
+    }
+    return render(request, 'pmc/g-my-awards.html', context)
