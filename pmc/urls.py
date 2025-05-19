@@ -23,6 +23,8 @@ urlpatterns = [
          views.manage_my_playgroup_profile, name='pmc-my-pg-manage'),
     path('pg/<slug:slug>/members/',
          views.PlaygroupMembersList.as_view(), name='pmc-pg-members'),
+    path('pg/<slug:slug>/members/<username>/manage',
+         views.playgroup_member_manage, name='pmc-pg-member-manage'),
     path('pg/<slug:slug>/members/<username>/',
          views.PlaygroupMemberDetail.as_view(), name='pmc-pg-member-detail'),
     path('pg/<slug:slug>/add-member-by-qrcode/',
@@ -61,7 +63,9 @@ urlpatterns = [
     path('attributions/', views.attributions, name='pmc-attributions'),
     path('refresh-leaderboard/<int:pk>/', views.refresh_leaderboard),
 
-    path('@me/awards/', views.my_awards, name='pmc-awards'),
+    path('@me/badges/<int:pk>/', views.my_badge_detail,
+         name='pmc-my-badge-detail'),
+    path('@me/awards/', views.my_awards, name='pmc-my-awards'),
 
     # Common to all hosts
     path('accounts/', include('allauth.urls')),

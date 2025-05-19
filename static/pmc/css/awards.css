@@ -1,9 +1,8 @@
 .award-container {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 20px;
 
   a {
     text-decoration: none;
@@ -12,20 +11,25 @@
 }
 
 .award-container.disabled img.award {
-  filter: brightness(40%) grayscale(100%);
-  -webkit-filter: brightness(40%) grayscale(100%);
+  filter: brightness(40%) grayscale(1);
+  -webkit-filter: brightness(40%) grayscale(1);
 }
 
-.award-container a:hover img.award,
-.award-container.disabled a:hover img.award {
-  filter: brightness(40%) grayscale(100%) drop-shadow(0 0 7px var(--color-primary));
-  -webkit-filter: brightness(40%) grayscale(100%) drop-shadow(0 0 7px var(--color-primary));
+.award-container:hover img.award,
+.award-container.disabled:hover img.award {
+  filter: brightness(1) grayscale(0) drop-shadow(0 0 0.5rem var(--color-primary));
+  -webkit-filter: brightness(1) grayscale(0) drop-shadow(0 0 0.5rem var(--color-primary));
 }
 
 img.award {
-  width: 100px;
+  width: 10rem;
   height: auto;
-  max-width: 100%;
+  max-width: 10rem;
+}
+
+.award-container.large img.award {
+  width: 20rem;
+  max-width: 20rem;
 }
 
 .award-description {

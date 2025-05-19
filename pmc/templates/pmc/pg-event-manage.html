@@ -114,13 +114,14 @@
     <p>No take backsies.</p>
     
     <div class="card-actions">
-      <!-- form for event points -->
-      <form action="{% url 'pmc-delete-event' playgroup.slug object.pk %}" method="POST">
-        {% csrf_token %}
-        <button class="btn" type="submit">
-          Delete Event
-        </button>
-      </form>
+      <button
+        class="btn"
+        type="submit"
+        hx-post="{% url 'pmc-delete-event' playgroup.slug object.pk %}"
+        hx-confirm="Are you sure you would like to delete this event? This may impact RP and XP for participants."
+      >
+        Delete Event
+      </button>
     </div>
 		</a>
 	</div>

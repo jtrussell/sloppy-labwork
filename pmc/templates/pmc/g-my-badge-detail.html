@@ -1,0 +1,35 @@
+{% extends "pmc/_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/awards.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>{{ badge }}</h1>
+  <div class="subheading">Badge Detail</div>
+
+  <div class="card">
+    <div>
+      <div class="
+        award-container
+        large
+        {% if not my_badge %}disabled{% endif %}
+      ">
+        <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award lg" />
+        <span class="award-description">{{ badge.name }}</span>
+      </div> 
+    </div>
+
+    <p>{{ badge.description }}</p>
+
+    <div>
+      Earned on: {% if my_badge %}
+        {{ my_badge.date_awarded | date:'SHORT_DATE_FORMAT' }}
+      {% else %}
+        <span class="text-muted">-</span>
+      {% endif %}
+    </div>
+  </div>
+
+{% endblock %}

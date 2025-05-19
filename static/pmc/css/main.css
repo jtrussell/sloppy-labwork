@@ -87,7 +87,8 @@ html.pmc-theme-1 {
 }
 
 html,
-body {
+body
+.viewport {
   background-color: var(--color-bg);
   color: var(--color-text);
   font-family: 'Lexend', sans-serif;
@@ -494,6 +495,10 @@ form button,
   display: none;
 }
 
+.is-not-django-staff .preview:not(.styles-demo) {
+  display: none;
+}
+
 code {
   font-family: monospace;
   padding: 3px 6px;
@@ -732,6 +737,14 @@ ul.messages {
 /* ***********************************
  * Utilities
  * *********************************** */
+.preview {
+  border: 0.3rem dashed pink;
+}
+
+.pointer {
+  cursor: pointer;
+}
+
 .flex {
   display: flex;
 }
@@ -803,6 +816,10 @@ ul.messages {
 
 .text-bold {
   font-weight: 700;
+}
+
+.text-em {
+  font-style: italic;
 }
 
 .text-shy {

@@ -28,54 +28,61 @@
 </head>
 
 <body
-	class="body {% if not playgroup_member.is_staff %}is-not-playgroup-staff{% endif %} flex flex-col"
+	class="
+		body
+		{% if not playgroup_member.is_staff %}is-not-playgroup-staff{% endif %}
+		{% if not user.is_staff %}is-not-django-staff{% endif %}
+	"
 	hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'
 >
-	<div class="masthead">
-		<div class="container">
-			{% if playgroup %}
-				<span>
-					{{ playgroup.name }}
-				</span>
-			{% endif %}
+	<div class="viewport flex flex-col">
+		<div class="masthead">
+			<div class="container">
+				{% if playgroup %}
+					<span>
+						{{ playgroup.name }}
+					</span>
+				{% endif %}
 
-			<a href="{% url 'pmc-my-keychain' %}" class="wordmark"></a>
+				<a href="{% url 'pmc-my-keychain' %}" class="wordmark"></a>
+			</div>
 		</div>
+
+		{% include 'pmc/_nav.html' %}
+
+		<ul class="messages container" id="message-list">
+				{% for message in messages %}
+				<li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+						{{ message }}
+				</li>
+				{% endfor %}
+		</ul>
+
+		<div class="container">
+			{% block content %}
+				<!-- Silence is golden -->
+			{% endblock %}
+		</div>
+
+		<div class="flex-spacer"></div>
+
+		<footer>
+			<div class="container">
+				<ul class="footer-links inline-list">
+					<li><a href="{% url 'pmc-about' %}">About</a></li>
+					<li><a href="{% url 'pmc-attributions' %}">Attributions</a></li>
+					<li><a href="{% url 'privacy' %}">Privacy Policy</a></li>
+					<li><a href="{% url 'terms' %}">Terms of Service</a></li>
+				</ul>
+			</div>
+		</footer>
 	</div>
 
-	{% include 'pmc/_nav.html' %}
-
-	<ul class="messages container" id="message-list">
-			{% for message in messages %}
-			<li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
-					{{ message }}
-			</li>
-			{% endfor %}
-	</ul>
-
-	<div class="container">
-		{% block content %}
-			<!-- Silence is golden -->
-		{% endblock %}
-	</div>
-
-	<div class="flex-spacer"></div>
-
-	<footer>
-		<div class="container">
-			<ul class="footer-links inline-list">
-				<li><a href="{% url 'pmc-about' %}">About</a></li>
-				<li><a href="{% url 'pmc-attributions' %}">Attributions</a></li>
-				<li><a href="{% url 'privacy' %}">Privacy Policy</a></li>
-				<li><a href="{% url 'terms' %}">Terms of Service</a></li>
-			</ul>
-		</div>
-	</footer>
-
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 	{% htmx_script %}
 	<script type="text/javascript">
-		document.addEventListener('htmx:afterRequest', function(event) {
-			const messages = JSON.parse(event.detail.xhr.getResponseHeader('HX-Trigger') || '{}')?.messages ?? []
+		const showMessages = (messagesJson) => {
+			const messages = JSON.parse(messagesJson)?.messages ?? []
 			const messageEls = messages.map(message => {
 				const li = document.createElement('li')
 				li.className = message.tags
@@ -83,7 +90,45 @@
 				return li
 			})
 			document.getElementById('message-list').replaceChildren(...messageEls)	
+		}
+
+		document.addEventListener('htmx:afterRequest', function(event) {
+			const messagesJson = event.detail.xhr.getResponseHeader('HX-Trigger') || '{}'
+			const isRedirect = !!event.detail.xhr.getResponseHeader('HX-Redirect')
+			if (isRedirect) {
+				window.localStorage.setItem('flashMessages', messagesJson)
+			} else {
+				showMessages(messagesJson)
+			}
 		});	
+
+		document.addEventListener('DOMContentLoaded', function() {
+			const messagesJson = window.localStorage.getItem('flashMessages')
+			if (messagesJson) {
+				showMessages(messagesJson)
+			}
+			window.localStorage.removeItem('flashMessages')
+		});
+
+		document.addEventListener("htmx:confirm", function(e) {
+				if (!e.detail.question) { return }
+				e.preventDefault()
+				Swal.fire({
+					title: 'Please confirm',
+					html: e.detail.question,
+					showCloseButton: true,
+					showCancelButton: true,
+					theme: '{% if my_profile.theme == 1 %}light{% else %}dark{% endif %}',
+					customClass: {
+						confirmButton: 'btn btn-solid',
+						cancelButton: 'btn'
+					}
+				}).then(function(result) {
+					if (result.isConfirmed) {
+						e.detail.issueRequest(true)
+					}
+				})
+			})
 	</script>
 
 	{% block extra_body %}

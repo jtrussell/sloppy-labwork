@@ -10,17 +10,9 @@
 
   <div class="card staff-only">
     <h2>Staff Area</h2>
-    <form method="POST">
-      {% csrf_token %}
-      <input type="hidden" name="action" value="remove" />
-      <p>
-        Remove this member from the playgroup.
-      </p>
-      <span class="flex-spacer"></span>
-      <button class="btn btn-block btn-solid" type="submit">
-        Remove Member
-      </button>
-    </form>
+    <a href="{% url 'pmc-pg-member-manage' playgroup.slug object.user.username %}" class="btn btn-block btn-solid">
+      Manage Member
+    </a>
   </div>
 
   <div class="card flex flex-col flex-gap-2">

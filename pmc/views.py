@@ -27,7 +27,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.forms import EventForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
-from .models import Badge, EventResult, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest
+from .models import Badge, EventResult, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserBadge
 from .models import PlayerRank
 from .models import Leaderboard
 from .models import Playgroup
@@ -75,6 +75,15 @@ def api_key_required(view):
             raise PermissionDenied
         return wrapper
     return decorator(view)
+
+
+def redirect_to(request, url):
+    """Redirect to a URL, using HTMX if available."""
+    if request.htmx:
+        resp = HttpResponse(url)
+        resp['HX-Redirect'] = url
+        return resp
+    return HttpResponseRedirect(url)
 
 
 class PlaygroupDetail(generic.DetailView):
@@ -290,14 +299,39 @@ class PlaygroupMemberDetail(LoginRequiredMixin, generic.DetailView):
             playgroup__slug=self.kwargs['slug']
         )
 
-    @method_decorator(is_pg_staff)
-    def post(self, request, *args, **kwargs):
-        member = self.get_object()
+
+@login_required
+@is_pg_staff
+def playgroup_member_manage(request, slug, username):
+    member = get_object_or_404(
+        PlaygroupMember,
+        user__username=username,
+        playgroup__slug=slug
+    )
+
+    if request.method == 'POST':
         action = request.POST.get('action')
-        if action == 'remove':
-            member.delete()
-            messages.success(request, _('Member removed.'))
-            return HttpResponseRedirect(reverse('pmc-pg-members', kwargs={'slug': kwargs['slug']}))
+        if action == 'assign_badge':
+            pk = request.POST.get('badge_id')
+            badge = get_object_or_404(Badge, pk=pk)
+            UserBadge.objects.get_or_create(
+                user=member.user,
+                badge=badge
+            )
+            messages.success(request, _('Badge assigned.'))
+            return redirect_to(request, reverse('pmc-pg-member-manage', kwargs={
+                'slug': slug,
+                'username': username
+            }))
+
+    if request.method == 'DELETE':
+        member.delete()
+        messages.success(request, _('Member removed.'))
+        return redirect_to(request, reverse('pmc-pg-members', kwargs={'slug': slug}))
+
+    badges = Badge.with_user_badges(member.user).all()
+    context = {'member': member, 'badges': badges}
+    return render(request, 'pmc/pg-member-manage.html', context)
 
 
 class PlaygroupEventsList(LoginRequiredMixin, generic.ListView):
@@ -370,7 +404,7 @@ def delete_event(request, slug, pk):
     # TODO - ensure that the event is associated with the playgroup
     event.delete()
     messages.success(request, _('Event deleted.'))
-    return HttpResponseRedirect(reverse('pmc-pg-events', kwargs={'slug': slug}))
+    return redirect_to(request, reverse('pmc-pg-events', kwargs={'slug': slug}))
 
 
 @login_required
@@ -816,8 +850,20 @@ def get_result_submission_template(request, slug):
     return response
 
 
+@login_required
 def my_awards(request):
     context = {
-        'badges': Badge.objects.all(),
+        'badges': Badge.with_user_badges(request.user).all()
     }
     return render(request, 'pmc/g-my-awards.html', context)
+
+
+@login_required
+def my_badge_detail(request, pk):
+    badge = get_object_or_404(Badge, pk=pk)
+    try:
+        my_badge = UserBadge.objects.get(badge=badge, user=request.user)
+    except UserBadge.DoesNotExist:
+        my_badge = None
+    context = {'badge': badge, 'my_badge': my_badge}
+    return render(request, 'pmc/g-my-badge-detail.html', context)

@@ -1,7 +1,7 @@
 from colorama import Back
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models import UniqueConstraint
+from django.db.models import UniqueConstraint, OuterRef, Subquery
 from datetime import date
 from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
@@ -597,7 +597,8 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            user_data = {entry["result__user"]
+                : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -785,6 +786,17 @@ class Badge(AwardBase):
     src = models.URLField(default=None, null=True, blank=True)
     is_eo_assignable = models.BooleanField(default=True)
 
+    @classmethod
+    def with_user_badges(cls, user):
+        user_badges = UserBadge.objects.filter(
+            user=user,
+            badge=OuterRef('pk')
+        )
+
+        return cls.objects.annotate(
+            user_badge_id=Subquery(user_badges.values('id')[:1])
+        )
+
 
 class Trophy(AwardBase):
     src = models.URLField(default=None, null=True, blank=True)
@@ -832,7 +844,7 @@ class UserBadge(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.user.username} - {self.achievement.name}'
+        return f'{self.user.username} - {self.badge.name}'
 
 
 class UserTrophy(models.Model):
