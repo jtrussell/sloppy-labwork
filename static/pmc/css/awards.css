@@ -27,8 +27,8 @@
   -webkit-filter: brightness(40%) grayscale(1);
 }
 
-.award-container:hover img.award,
-.award-container.disabled:hover img.award {
+.award-container:not(.no-hover):hover img.award,
+.award-container.disabled:not(.no-hover):hover img.award {
   filter: brightness(1) grayscale(0) drop-shadow(0 0 0.5rem var(--color-primary));
   -webkit-filter: brightness(1) grayscale(0) drop-shadow(0 0 0.5rem var(--color-primary));
 }
