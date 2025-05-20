@@ -1,8 +1,20 @@
+.award-list {
+  @media (max-width: 680px) {
+    justify-content: space-around;
+  }
+}
+
 .award-container {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  margin-bottom: 1rem;
+
+  @media (max-width: 680px) {
+    width: 8rem;
+    max-width: 8rem;
+  }
 
   a {
     text-decoration: none;
@@ -22,14 +34,26 @@
 }
 
 img.award {
-  width: 10rem;
+  width: 9rem;
   height: auto;
-  max-width: 10rem;
+  max-width: 9rem;
 }
 
 .award-container.large img.award {
   width: 20rem;
   max-width: 20rem;
+}
+
+@media (max-width: 680px) {
+  img.award {
+    width: 7rem;
+    max-width: 7rem;
+  }
+
+  .award-container.large img.award {
+    width: 12rem;
+    max-width: 12rem;
+  }
 }
 
 .award-description {

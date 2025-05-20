@@ -749,6 +749,10 @@ ul.messages {
   display: flex;
 }
 
+.flex.flex-wrap {
+  flex-wrap: wrap;
+}
+
 .flex.flex-row {
   flex-direction: row;
 }
