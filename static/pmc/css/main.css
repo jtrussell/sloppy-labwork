@@ -413,6 +413,7 @@ form button,
   border-radius: var(--border-radius);
   padding: 20px 20px;
   margin: 20px 0;
+  overflow-x: auto;
 }
 
 .staff-only .card,
