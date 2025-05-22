@@ -63,9 +63,12 @@ urlpatterns = [
     path('attributions/', views.attributions, name='pmc-attributions'),
     path('refresh-leaderboard/<int:pk>/', views.refresh_leaderboard),
 
+    path('@me/trophies/<int:pk>/', views.my_trophy_detail,
+         name='pmc-my-trophy-detail'),
     path('@me/badges/<int:pk>/', views.my_badge_detail,
          name='pmc-my-badge-detail'),
     path('@me/awards/', views.my_awards, name='pmc-my-awards'),
+    path('refresh-trophies/', views.refresh_trophies),
 
     # Common to all hosts
     path('accounts/', include('allauth.urls')),

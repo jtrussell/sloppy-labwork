@@ -15,6 +15,7 @@ from .models import Background
 from .models import BackgroundCategory
 from .models import AvatarCategory
 from .models import PlaygroupJoinRequest
+from .models import Trophy, UserTrophy
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -150,6 +151,24 @@ class UserBadgeAdmin(admin.ModelAdmin):
     list_filter = ()
 
 
+class TrophyAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+    search_fields = ['name']
+    list_filter = ()
+
+
+class UserTrophyAdmin(admin.ModelAdmin):
+    list_display = ('user', 'trophy')
+    search_fields = ['user__username', 'trophy']
+    list_filter = ()
+
+
+class AwardCriteriaAdmin(admin.ModelAdmin):
+    list_display = ('type',)
+    search_fields = []
+    list_filter = ()
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
@@ -172,3 +191,5 @@ admin.site.register(BackgroundCategory, BackgroundCategoryAdmin)
 admin.site.register(PlaygroupJoinRequest, PlaygroupJoinRequestAdmin)
 admin.site.register(Badge, BadgeAdmin)
 admin.site.register(UserBadge, UserBadgeAdmin)
+admin.site.register(Trophy, TrophyAdmin)
+admin.site.register(UserTrophy, UserTrophyAdmin)

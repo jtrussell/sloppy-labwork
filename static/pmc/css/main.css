@@ -826,9 +826,13 @@ ul.messages {
   font-style: italic;
 }
 
+.text-center {
+  text-align: center;
+}
+
 .text-shy {
   font-weight: 300;
-  font-size: 12px;
+  font-size: 0.8rem;
 }
 
 .elide {

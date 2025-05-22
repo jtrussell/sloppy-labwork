@@ -19,7 +19,7 @@
           <li>
             <a href="{% url 'pmc-my-badge-detail' badge.pk %}"  class="award-container {% if not badge.user_badge_id %}disabled{% endif %}">
               <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award" />
-              <span class="award-description">{{ badge.name }}</span>
+              <span class="text-shy text-center">{{ badge.name }}</span>
             </a>
           </li>
         {% endif %}
@@ -33,9 +33,24 @@
     <p><img src="https://static.sloppylabwork.com/c/full/it-s-coming-logos.png" alt=""></p>
   </div>
 
-  <div class="card preview">
+  <div class="card">
     <h2>Trophies</h2>
     <p>Collect trophies... </p>
-    <p><img src="https://static.sloppylabwork.com/c/full/it-s-coming-saurian.png" alt=""></p>
+
+    <ul class="award-list flex flex-wrap">
+      {% for trophy in trophies %}
+        {% if trophy.user_trophy_amount or not trophy.is_hidden %}
+          <li>
+            <a href="{% url 'pmc-my-trophy-detail' trophy.pk %}"  class="award-container {% if not trophy.user_trophy_amount %}disabled{% endif %}">
+              <img src="{{ trophy.src }}" alt="{{ trophy.name }} trophy" class="award" />
+              <span class="text-shy text-center">{{ trophy.name }}</span>
+              <span class="trophy-amount">
+                {{ trophy.user_trophy_amount | default:"0" }}
+              </span>
+            </a>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
   </div>
 {% endblock %}

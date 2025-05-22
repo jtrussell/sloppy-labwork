@@ -711,6 +711,23 @@ class AwardBase(models.Model):
         SKILL = (1, _('Skill'))
         TASK = (2, _('Task'))
 
+    class CriteriaTypeOptions(models.IntegerChoices):
+        event_matches = (0, _('Event Matches'))
+        sealed_event_matches = (1, _('Sealed Event Matches'))
+        archon_event_matches = (2, _('Archon Event Matches'))
+        alliance_event_matches = (3, _('Alliance Event Matches'))
+        adaptive_event_matches = (4, _('Adaptive Event Matches'))
+        tournament_match_wins = (5, _('Tournament Match Wins'))
+        sealed_tournament_match_wins = (6, _('Sealed Tournament Match Wins'))
+        archon_tournament_match_wins = (7, _('Archon Tournament Match Wins'))
+        alliance_tournament_match_wins = (
+            8, _('Alliance Tournament Match Wins'))
+        adaptive_tournament_match_wins = (
+            9, _('Adaptive Tournament Match Wins'))
+        events = (10, _('Events'))
+        win_a_tournament_3_to_5 = (11, _('Win a Tournament (3-5 Players)'))
+        win_a_tournament_6_plus = (12, _('Win a Tournament (6+ Players)'))
+
     pmc_id = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
     description = models.TextField(default=None, null=True, blank=True)
@@ -728,7 +745,13 @@ class AwardBase(models.Model):
 
 
 class Achievement(AwardBase):
-    pass
+    """ Achievements are tiered awards.
+
+    They will have a single type of criteria with levels of achievement.
+    Individual tiers will express the criteria levels to be achieved.
+    """
+    criteria = models.IntegerField(
+        choices=AwardBase.CriteriaTypeOptions.choices)
 
 
 class AchievementTier(models.Model):
@@ -740,6 +763,7 @@ class AchievementTier(models.Model):
     achievement = models.ForeignKey(
         Achievement, on_delete=models.CASCADE, related_name='tiers')
     tier = models.IntegerField(choices=TierOptions.choices)
+    criteria_value = models.PositiveIntegerField(default=0)
     src = models.URLField(default=None, null=True, blank=True)
 
     class Meta:
@@ -753,36 +777,9 @@ class AchievementTier(models.Model):
         return f'{self.achievement.name} - {self.tier}'
 
 
-class AwardCriteriaBase(models.Model):
-    class CriteriaTypeOptions(models.IntegerChoices):
-        event_matches = (0, _('Event Matches'))
-        sealed_event_matches = (1, _('Sealed Event Matches'))
-        archon_event_matches = (2, _('Archon Event Matches'))
-        alliance_event_matches = (3, _('Alliance Event Matches'))
-        adaptive_event_matches = (4, _('Adaptive Event Matches'))
-        tournament_match_wins = (5, _('Tournament Match Wins'))
-        sealed_tournament_match_wins = (6, _('Sealed Tournament Match Wins'))
-        archon_tournament_match_wins = (7, _('Archon Tournament Match Wins'))
-        alliance_tournament_match_wins = (
-            8, _('Alliance Tournament Match Wins'))
-        adaptive_tournament_match_wins = (
-            9, _('Adaptive Tournament Match Wins'))
-        events = (10, _('Events'))
-
-    type = models.IntegerField(
-        choices=CriteriaTypeOptions.choices, default=CriteriaTypeOptions.event_matches)
-    amount = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        abstract = True
-
-
-class AchievementCriteria(AwardCriteriaBase):
-    achievement_tier = models.ForeignKey(
-        AchievementTier, on_delete=models.CASCADE, related_name='criteria')
-
-
 class Badge(AwardBase):
+    """One-time awards, typically granted by an EO
+    """
     src = models.URLField(default=None, null=True, blank=True)
     is_eo_assignable = models.BooleanField(default=True)
 
@@ -792,25 +789,31 @@ class Badge(AwardBase):
             user=user,
             badge=OuterRef('pk')
         )
-
         return cls.objects.annotate(
             user_badge_id=Subquery(user_badges.values('id')[:1])
         )
 
 
 class Trophy(AwardBase):
+    """Trohpies are baed on stats and may be earned any number of times.
+    """
+    criteria = models.IntegerField(
+        choices=AwardBase.CriteriaTypeOptions.choices)
+    criteria_value = models.PositiveIntegerField(default=0)
     src = models.URLField(default=None, null=True, blank=True)
 
-
-class TrophyCriteria(AwardCriteriaBase):
-    trophy = models.ForeignKey(
-        Trophy, on_delete=models.CASCADE, related_name='criteria')
+    @classmethod
+    def with_user_trophies(cls, user):
+        user_trophies = UserTrophy.objects.filter(
+            user=user,
+            trophy=OuterRef('pk')
+        )
+        return cls.objects.annotate(
+            user_trophy_amount=Subquery(user_trophies.values('amount')[:1])
+        )
 
     class Meta:
-        constraints = [
-            UniqueConstraint(fields=['trophy'],
-                             name='unique_trophy_criteria'),
-        ]
+        verbose_name_plural = _('Trophies')
 
 
 class UserAchievementTier(models.Model):
@@ -860,6 +863,103 @@ class UserTrophy(models.Model):
             UniqueConstraint(fields=['user', 'trophy'],
                              name='unique_user_trophy'),
         ]
+        verbose_name_plural = _('User trophies')
 
     def __str__(self):
         return f'{self.user.username} - {self.trophy.name}'
+
+
+class TrophyAssignmentService():
+    """
+    Helper for assigning trophies to users based on their stats and trophy criteria.
+    """
+
+    @staticmethod
+    def refresh_all_user_trophies():
+        """
+        Refreshes all user trophies by re-evaluating the criteria for each trophy.
+        """
+        trophies = Trophy.objects.all()
+        users = User.objects.all()
+        for user in users:
+            for trophy in trophies:
+                TrophyAssignmentService.assign_trophy(user, trophy)
+
+    @staticmethod
+    def assign_trophy(user, trophy):
+        """
+        Assigns or updates a UserTrophy for the given user and trophy.
+        """
+        if not trophy.criteria:
+            return None
+
+        criteria_type = trophy.criteria
+        value = 0
+        qs = EventResult.objects.filter(user=user)
+        if criteria_type == AwardBase.CriteriaTypeOptions.event_matches:
+            value = qs.aggregate(
+                total=Coalesce(Sum('num_wins'), 0) +
+                Coalesce(Sum('num_losses'), 0)
+            )['total']
+        elif criteria_type == AwardBase.CriteriaTypeOptions.sealed_event_matches:
+            value = qs.filter(event__format__name__icontains='Sealed').aggregate(
+                total=Coalesce(Sum('num_wins'), 0) +
+                Coalesce(Sum('num_losses'), 0)
+            )['total']
+        elif criteria_type == AwardBase.CriteriaTypeOptions.archon_event_matches:
+            value = qs.filter(event__format__name__icontains='Archon').aggregate(
+                total=Coalesce(Sum('num_wins'), 0) +
+                Coalesce(Sum('num_losses'), 0)
+            )['total']
+        elif criteria_type == AwardBase.CriteriaTypeOptions.alliance_event_matches:
+            value = qs.filter(event__format__name__icontains='Alliance').aggregate(
+                total=Coalesce(Sum('num_wins'), 0) +
+                Coalesce(Sum('num_losses'), 0)
+            )['total']
+        elif criteria_type == AwardBase.CriteriaTypeOptions.adaptive_event_matches:
+            value = qs.filter(event__format__name__icontains='Adaptive').aggregate(
+                total=Coalesce(Sum('num_wins'), 0) +
+                Coalesce(Sum('num_losses'), 0)
+            )['total']
+        elif criteria_type == AwardBase.CriteriaTypeOptions.tournament_match_wins:
+            value = qs.filter(event__is_casual=False).aggregate(
+                total=Coalesce(Sum('num_wins'), 0)
+            )['total']
+        elif criteria_type == AwardBase.CriteriaTypeOptions.sealed_tournament_match_wins:
+            value = qs.filter(event__is_casual=False, event__format__name__icontains="Sealed").aggregate(
+                total=Coalesce(Sum('num_wins'), 0)
+            )['total']
+        elif criteria_type == AwardBase.CriteriaTypeOptions.archon_tournament_match_wins:
+            value = qs.filter(event__is_casual=False, event__format__name__icontains="Archon").aggregate(
+                total=Coalesce(Sum('num_wins'), 0)
+            )['total']
+        elif criteria_type == AwardBase.CriteriaTypeOptions.alliance_tournament_match_wins:
+            value = qs.filter(event__is_casual=False, event__format__name__icontains="Alliance").aggregate(
+                total=Coalesce(Sum('num_wins'), 0)
+            )['total']
+        elif criteria_type == AwardBase.CriteriaTypeOptions.adaptive_tournament_match_wins:
+            value = qs.filter(event__is_casual=False, event__format__name__icontains="Adaptive").aggregate(
+                total=Coalesce(Sum('num_wins'), 0)
+            )['total']
+        elif criteria_type == AwardBase.CriteriaTypeOptions.win_a_tournament_3_to_5:
+            value = qs.filter(
+                finishing_position=1,
+                event__is_casual=False,
+                event__player_count__range=(3, 5)
+            ).count()
+        elif criteria_type == AwardBase.CriteriaTypeOptions.win_a_tournament_6_plus:
+            value = qs.filter(
+                finishing_position=1,
+                event__is_casual=False,
+                event__player_count__gte=6
+            ).count()
+        elif criteria_type == AwardBase.CriteriaTypeOptions.events:
+            value = qs.count()
+
+        amount = value // trophy.criteria_value if trophy.criteria_value else 0
+        obj, created = UserTrophy.objects.update_or_create(
+            user=user,
+            trophy=trophy,
+            defaults={'amount': amount}
+        )
+        return obj

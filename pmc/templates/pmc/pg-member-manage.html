@@ -11,7 +11,7 @@
 
   <div class="card staff-only preview">
     <h2>Assign Badges</h2>
-    <ul class="flex flex-row flex-gap-1">
+    <ul class="flex flex-row flex-gap-1 flex-wrap">
       {% for badge in badges %}
         {% if badge.user_badge_id or not badge.is_hidden %}
           <li>
@@ -24,7 +24,7 @@
               <input type="hidden" name="action" value="assign_badge" />
               <input type="hidden" name="badge_id" value="{{ badge.pk }}" />
               <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award" />
-              <span class="award-description">{{ badge.name }}</span>
+              <span class="text-shy text-center">{{ badge.name }}</span>
             </form>
           </li>
         {% endif %}

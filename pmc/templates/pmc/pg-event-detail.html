@@ -21,7 +21,7 @@
     <td class="col-sm text-larger">{{ result.finishing_position|default_if_none:"-" }}</td>
     <td style="width: 100%;">
       <div class="name-with-avatar text-larger">
-      <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
+        <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
         {{ result.user }}
       </div>
       <div class="flex flex-row flex-gap-1 text-muted text-smaller">

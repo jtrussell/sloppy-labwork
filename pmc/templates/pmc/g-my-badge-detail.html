@@ -18,11 +18,11 @@
         {% if not my_badge %}disabled{% endif %}
       ">
         <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award lg" />
-        <span class="award-description">{{ badge.name }}</span>
+        <span class="text-shy text-center">{{ badge.name }}</span>
       </div> 
     </div>
 
-    <p>{{ badge.description }}</p>
+    <p class="text-center">{{ badge.description }}</p>
 
     <div>
       Earned on: {% if my_badge %}

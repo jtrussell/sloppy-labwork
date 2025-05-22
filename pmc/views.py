@@ -27,7 +27,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.forms import EventForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
-from .models import Badge, EventResult, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserBadge
+from .models import Badge, EventResult, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserBadge, Trophy, UserTrophy
 from .models import PlayerRank
 from .models import Leaderboard
 from .models import Playgroup
@@ -40,6 +40,7 @@ from .models import AvatarCategory
 from .models import Background
 from .models import BackgroundCategory
 from .models import RankingPointsMap
+from .models import TrophyAssignmentService
 
 
 def is_pg_member(view):
@@ -853,7 +854,8 @@ def get_result_submission_template(request, slug):
 @login_required
 def my_awards(request):
     context = {
-        'badges': Badge.with_user_badges(request.user).all()
+        'badges': Badge.with_user_badges(request.user).all(),
+        'trophies': Trophy.with_user_trophies(request.user).all(),
     }
     return render(request, 'pmc/g-my-awards.html', context)
 
@@ -867,3 +869,21 @@ def my_badge_detail(request, pk):
         my_badge = None
     context = {'badge': badge, 'my_badge': my_badge}
     return render(request, 'pmc/g-my-badge-detail.html', context)
+
+
+@login_required
+def my_trophy_detail(request, pk):
+    my_trophy = get_object_or_404(UserTrophy, trophy__pk=pk, user=request.user)
+    top_user_trophies = UserTrophy.objects.filter(
+        trophy=my_trophy.trophy).order_by('-amount')[:5]
+    context = {'my_trophy': my_trophy, 'top_user_trophies': top_user_trophies}
+    return render(request, 'pmc/g-my-trophy-detail.html', context)
+
+
+@csrf_exempt
+@require_POST
+@api_key_required
+@transaction.atomic
+def refresh_trophies(request):
+    TrophyAssignmentService.refresh_all_user_trophies()
+    return HttpResponse('Done.', content_type='text/plain')
