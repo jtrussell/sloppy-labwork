@@ -973,7 +973,7 @@ class TrophyAssignmentService():
             value = qs.filter(
                 finishing_position=3,
                 event__is_casual=False,
-                event__player_count__gte=6
+                event__player_count__range=(6, 11)
             ).count()
         elif criteria_type == AwardBase.CriteriaTypeOptions.top_four_a_tournament_12_plus:
             value = qs.filter(
