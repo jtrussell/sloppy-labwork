@@ -25,7 +25,7 @@
     <p class="text-center">{{ trophy.description }}</p>
     
   <p>You've earned this trophy a total of
-    <span class="text-primary text-bold text-larger">{{ my_trophy.amount }}</span> times.</p>
+    <span class="text-primary text-bold text-larger">{{ my_trophy.amount | default:0 }}</span> times.</p>
   </div>
 
   <div class="card">
