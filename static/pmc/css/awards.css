@@ -13,14 +13,16 @@
   text-decoration: none;
   cursor: pointer;
 
-  @media (max-width: 680px) {
-    width: 8rem;
-    max-width: 8rem;
-  }
-
   a {
     text-decoration: none;
     cursor: pointer;
+  }
+}
+
+@media (max-width: 680px) {
+  .award-container:not(.large) {
+    width: 8rem;
+    max-width: 8rem;
   }
 }
 
