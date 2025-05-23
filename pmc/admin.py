@@ -15,7 +15,7 @@ from .models import Background
 from .models import BackgroundCategory
 from .models import AvatarCategory
 from .models import PlaygroupJoinRequest
-from .models import Trophy, UserTrophy
+from .models import Trophy, UserTrophy, AwardCredit
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -169,6 +169,12 @@ class AwardCriteriaAdmin(admin.ModelAdmin):
     list_filter = ()
 
 
+class AwardCreditAdmin(admin.ModelAdmin):
+    list_display = ('user', 'criteria', 'added_on')
+    search_fields = ['user__username']
+    list_filter = ()
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
@@ -193,3 +199,4 @@ admin.site.register(Badge, BadgeAdmin)
 admin.site.register(UserBadge, UserBadgeAdmin)
 admin.site.register(Trophy, TrophyAdmin)
 admin.site.register(UserTrophy, UserTrophyAdmin)
+admin.site.register(AwardCredit, AwardCreditAdmin)

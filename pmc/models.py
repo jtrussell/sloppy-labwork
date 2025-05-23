@@ -735,6 +735,9 @@ class AwardBase(models.Model):
             15, _('Top Four in a Tournament (12+ Players)'))
         top_eight_a_tournament_24_plus = (
             16, _('Top Eight in a Tournament (24+ Players)'))
+        store_champion = (17, _('Store Champion'))
+        vault_warrior = (18, _('Vault Warrior'))
+        world_champion = (19, _('World Champion'))
 
     pmc_id = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
@@ -750,6 +753,16 @@ class AwardBase(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class AwardCredit(models.Model):
+    criteria = models.IntegerField(
+        choices=AwardBase.CriteriaTypeOptions.choices)
+    amount = models.PositiveIntegerField(default=1)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='award_credits')
+    added_on = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(default=None, null=True, blank=True)
 
 
 class Achievement(AwardBase):
@@ -987,6 +1000,11 @@ class TrophyAssignmentService():
                 event__is_casual=False,
                 event__player_count__gte=24
             ).count()
+
+        value += AwardCredit.objects.filter(
+            user=user,
+            criteria=trophy.criteria
+        ).aggregate(total=Coalesce(Sum('amount'), 0))['total'] or 0
 
         amount = value // trophy.criteria_value if trophy.criteria_value else 0
         obj, created = UserTrophy.objects.update_or_create(
