@@ -152,7 +152,7 @@ class UserBadgeAdmin(admin.ModelAdmin):
 
 
 class TrophyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'description')
+    list_display = ('name', 'description', 'sort_order', 'is_hidden')
     search_fields = ['name']
     list_filter = ()
 

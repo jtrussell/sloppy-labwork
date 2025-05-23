@@ -879,7 +879,7 @@ def my_trophy_detail(request, pk):
     except UserTrophy.DoesNotExist:
         my_trophy = None
     top_user_trophies = UserTrophy.objects.filter(
-        trophy=my_trophy.trophy).order_by('-amount')[:5]
+        trophy=trophy).order_by('-amount')[:5]
     context = {
         'trophy': trophy,
         'my_trophy': my_trophy,

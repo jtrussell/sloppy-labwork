@@ -784,7 +784,7 @@ class AchievementTier(models.Model):
     achievement = models.ForeignKey(
         Achievement, on_delete=models.CASCADE, related_name='tiers')
     tier = models.IntegerField(choices=TierOptions.choices)
-    criteria_value = models.PositiveIntegerField(default=0)
+    criteria_value = models.PositiveIntegerField(default=1)
     src = models.URLField(default=None, null=True, blank=True)
 
     class Meta:
@@ -820,7 +820,7 @@ class Trophy(AwardBase):
     """
     criteria = models.IntegerField(
         choices=AwardBase.CriteriaTypeOptions.choices)
-    criteria_value = models.PositiveIntegerField(default=0)
+    criteria_value = models.PositiveIntegerField(default=1)
     src = models.URLField(default=None, null=True, blank=True)
 
     @classmethod
