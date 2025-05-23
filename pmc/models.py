@@ -727,6 +727,14 @@ class AwardBase(models.Model):
         events = (10, _('Events'))
         win_a_tournament_3_to_5 = (11, _('Win a Tournament (3-5 Players)'))
         win_a_tournament_6_plus = (12, _('Win a Tournament (6+ Players)'))
+        second_place_a_tournament_6_plus = (
+            13, _('Second Place in a Tournament (6+ Players)'))
+        third_place_a_tournament_6_plus = (
+            14, _('Third Place in a Tournament (6+ Players)'))
+        top_four_a_tournament_12_plus = (
+            15, _('Top Four in a Tournament (12+ Players)'))
+        top_eight_a_tournament_24_plus = (
+            16, _('Top Eight in a Tournament (24+ Players)'))
 
     pmc_id = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
@@ -955,6 +963,30 @@ class TrophyAssignmentService():
             ).count()
         elif criteria_type == AwardBase.CriteriaTypeOptions.events:
             value = qs.count()
+        elif criteria_type == AwardBase.CriteriaTypeOptions.second_place_a_tournament_6_plus:
+            value = qs.filter(
+                finishing_position=2,
+                event__is_casual=False,
+                event__player_count__gte=6
+            ).count()
+        elif criteria_type == AwardBase.CriteriaTypeOptions.third_place_a_tournament_6_plus:
+            value = qs.filter(
+                finishing_position=3,
+                event__is_casual=False,
+                event__player_count__gte=6
+            ).count()
+        elif criteria_type == AwardBase.CriteriaTypeOptions.top_four_a_tournament_12_plus:
+            value = qs.filter(
+                finishing_position__range=(3, 4),
+                event__is_casual=False,
+                event__player_count__gte=12
+            ).count()
+        elif criteria_type == AwardBase.CriteriaTypeOptions.top_eight_a_tournament_24_plus:
+            value = qs.filter(
+                finishing_position__range=(5, 8),
+                event__is_casual=False,
+                event__player_count__gte=24
+            ).count()
 
         amount = value // trophy.criteria_value if trophy.criteria_value else 0
         obj, created = UserTrophy.objects.update_or_create(

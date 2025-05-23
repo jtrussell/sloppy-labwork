@@ -873,10 +873,18 @@ def my_badge_detail(request, pk):
 
 @login_required
 def my_trophy_detail(request, pk):
-    my_trophy = get_object_or_404(UserTrophy, trophy__pk=pk, user=request.user)
+    trophy = get_object_or_404(Trophy, pk=pk)
+    try:
+        my_trophy = UserTrophy.objects.get(trophy=trophy, user=request.user)
+    except UserTrophy.DoesNotExist:
+        my_trophy = None
     top_user_trophies = UserTrophy.objects.filter(
         trophy=my_trophy.trophy).order_by('-amount')[:5]
-    context = {'my_trophy': my_trophy, 'top_user_trophies': top_user_trophies}
+    context = {
+        'trophy': trophy,
+        'my_trophy': my_trophy,
+        'top_user_trophies': top_user_trophies
+    }
     return render(request, 'pmc/g-my-trophy-detail.html', context)
 
 
