@@ -730,11 +730,11 @@ class AwardBase(models.Model):
         second_place_a_tournament_6_plus = (
             13, _('Second Place in a Tournament (6+ Players)'))
         third_place_a_tournament_6_plus = (
-            14, _('Third Place in a Tournament (6+ Players)'))
-        top_four_a_tournament_12_plus = (
-            15, _('Top Four in a Tournament (12+ Players)'))
-        top_eight_a_tournament_24_plus = (
-            16, _('Top Eight in a Tournament (24+ Players)'))
+            14, _('Third Place in a Tournament (6-10 Players)'))
+        top_four_a_tournament_11_plus = (
+            15, _('Top Four in a Tournament (11+ Players)'))
+        top_eight_a_tournament_11_plus = (
+            16, _('Top Eight in a Tournament (11+ Players)'))
         store_champion = (17, _('Store Champion'))
         vault_warrior = (18, _('Vault Warrior'))
         world_champion = (19, _('World Champion'))
@@ -1033,19 +1033,19 @@ class AwardAssignmentService():
             value = qs.filter(
                 finishing_position=3,
                 event__is_casual=False,
-                event__player_count__range=(6, 11)
+                event__player_count__range=(6, 10)
             ).count()
-        elif criteria_type == AwardBase.CriteriaTypeOptions.top_four_a_tournament_12_plus:
+        elif criteria_type == AwardBase.CriteriaTypeOptions.top_four_a_tournament_11_plus:
             value = qs.filter(
                 finishing_position__range=(3, 4),
                 event__is_casual=False,
-                event__player_count__gte=12
+                event__player_count__gte=11
             ).count()
-        elif criteria_type == AwardBase.CriteriaTypeOptions.top_eight_a_tournament_24_plus:
+        elif criteria_type == AwardBase.CriteriaTypeOptions.top_eight_a_tournament_11_plus:
             value = qs.filter(
                 finishing_position__range=(5, 8),
                 event__is_casual=False,
-                event__player_count__gte=24
+                event__player_count__gte=11
             ).count()
 
         value += AwardCredit.objects.filter(

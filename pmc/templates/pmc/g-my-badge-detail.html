@@ -22,15 +22,15 @@
       </div> 
     </div>
 
-    <p class="text-center">{{ badge.description }}</p>
+    <p class="text-center text-larger">{{ badge.description }}</p>
 
-    <div>
+    <p class="text-center">
       Earned on: {% if my_badge %}
         {{ my_badge.date_awarded | date:'SHORT_DATE_FORMAT' }}
       {% else %}
         <span class="text-muted">-</span>
       {% endif %}
-    </div>
+    </p>
   </div>
 
 {% endblock %}

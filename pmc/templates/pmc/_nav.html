@@ -2,8 +2,16 @@
   <div class="container">
     <ul>
       {% for link in nav_links %}
-      <li>
-        <a href="{{ link.url }}" {% if link.is_active %}class="active"{% endif %}>{{ link.name }}</a>
+      <li
+        class="
+          {% if link.is_preview %}preview{% endif %}"
+      >
+        <a
+          href="{{ link.url }}"
+          class="
+            {% if link.is_active %}active{% endif %}
+          "
+        >{{ link.name }}</a>
       </li>
       {% endfor %}
     </ul>
