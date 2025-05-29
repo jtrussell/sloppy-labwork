@@ -15,7 +15,7 @@ from .models import Background
 from .models import BackgroundCategory
 from .models import AvatarCategory
 from .models import PlaygroupJoinRequest
-from .models import Trophy, UserTrophy, AwardCredit
+from .models import Trophy, UserTrophy, AwardCredit, Achievement, AchievementTier, UserAchievementTier
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -175,6 +175,24 @@ class AwardCreditAdmin(admin.ModelAdmin):
     list_filter = ()
 
 
+class AchievementAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description', 'sort_order', 'is_hidden')
+    search_fields = ['name']
+    list_filter = ()
+
+
+class AchievementTierAdmin(admin.ModelAdmin):
+    list_display = ('achievement', 'tier', 'criteria_value')
+    search_fields = ['achievement__name']
+    list_filter = ('achievement',)
+
+
+class UserAchievementTierAdmin(admin.ModelAdmin):
+    list_display = ('user', 'achievement_tier', 'date_awarded')
+    search_fields = ['user__username']
+    list_filter = ('achievement_tier__achievement',)
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
@@ -200,3 +218,6 @@ admin.site.register(UserBadge, UserBadgeAdmin)
 admin.site.register(Trophy, TrophyAdmin)
 admin.site.register(UserTrophy, UserTrophyAdmin)
 admin.site.register(AwardCredit, AwardCreditAdmin)
+admin.site.register(Achievement, AchievementAdmin)
+admin.site.register(AchievementTier, AchievementTierAdmin)
+admin.site.register(UserAchievementTier, UserAchievementTierAdmin)

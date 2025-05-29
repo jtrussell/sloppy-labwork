@@ -43,9 +43,16 @@ img.award {
   max-width: 9rem;
 }
 
-.award-container.large img.award {
-  width: 20rem;
-  max-width: 20rem;
+.award-container.large {
+  img.award {
+    width: 20rem;
+    max-width: 20rem;
+  }
+
+  img.award.tier-0 { width: 12rem; max-width: 12rem; }
+  img.award.tier-1 { width: 14rem; max-width: 14rem; }
+  img.award.tier-2 { width: 16rem; max-width: 16rem; }
+  img.award.tier-3 { width: 18rem; max-width: 18rem; }
 }
 
 @media (max-width: 680px) {
@@ -54,9 +61,16 @@ img.award {
     max-width: 7rem;
   }
 
-  .award-container.large img.award {
-    width: 12rem;
-    max-width: 12rem;
+  .award-container.large {
+    img.award {
+      width: 12rem;
+      max-width: 12rem;
+    }
+
+    img.award.tier-0 { width: 8rem; max-width: 8rem; }
+    img.award.tier-1 { width: 10rem; max-width: 10rem; }
+    img.award.tier-2 { width: 12rem; max-width: 12rem; }
+    img.award.tier-3 { width: 14rem; max-width: 14rem; }
   }
 }
 
@@ -72,6 +86,15 @@ img.award {
   align-items: center;
   border: 0.3rem solid var(--color-lines);
   box-shadow: 0 0 5px var(--color-primary);
+}
+
+.tier-label {
+  font-size: 1rem;
+  margin-top: -0.5rem;
+}
+  
+:not(.disabled) .tier-label {
+  color: var(--color-primary);
 }
 
 .award-container:hover .trophy-amount {

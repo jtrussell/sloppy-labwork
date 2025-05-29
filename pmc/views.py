@@ -27,7 +27,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.forms import EventForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
-from .models import Badge, EventResult, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserBadge, Trophy, UserTrophy
+from .models import AchievementTier, Badge, EventResult, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserAchievementTier, UserBadge, Trophy, UserTrophy, Achievement
 from .models import PlayerRank
 from .models import Leaderboard
 from .models import Playgroup
@@ -40,7 +40,7 @@ from .models import AvatarCategory
 from .models import Background
 from .models import BackgroundCategory
 from .models import RankingPointsMap
-from .models import TrophyAssignmentService
+from .models import AwardAssignmentService
 
 
 def is_pg_member(view):
@@ -855,6 +855,7 @@ def get_result_submission_template(request, slug):
 def my_awards(request):
     context = {
         'badges': Badge.with_user_badges(request.user).all(),
+        'achievements': Achievement.with_highest_user_achievements_tier(request.user).all(),
         'trophies': Trophy.with_user_trophies(request.user).all(),
     }
     return render(request, 'pmc/g-my-awards.html', context)
@@ -869,6 +870,18 @@ def my_badge_detail(request, pk):
         my_badge = None
     context = {'badge': badge, 'my_badge': my_badge}
     return render(request, 'pmc/g-my-badge-detail.html', context)
+
+
+@login_required
+def my_achievement_detail(request, pk):
+    achievement = get_object_or_404(Achievement, pk=pk)
+    context = {
+        'achievement': achievement.with_highest_user_achievements_tier(request.user).first(),
+        'tiers': AchievementTier.with_earned_count(achievement).all(),
+        'my_stat': AwardAssignmentService.get_user_criteria_value(
+            request.user, achievement.criteria),
+    }
+    return render(request, 'pmc/g-my-achievement-detail.html', context)
 
 
 @login_required
@@ -893,5 +906,13 @@ def my_trophy_detail(request, pk):
 @api_key_required
 @transaction.atomic
 def refresh_trophies(request):
-    TrophyAssignmentService.refresh_all_user_trophies()
+    AwardAssignmentService.refresh_all_user_trophies()
+    return HttpResponse('Done.', content_type='text/plain')
+
+
+@csrf_exempt
+@require_POST
+@transaction.atomic
+def refresh_achievements(request):
+    AwardAssignmentService.refresh_user_achievements()
     return HttpResponse('Done.', content_type='text/plain')

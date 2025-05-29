@@ -774,6 +774,27 @@ class Achievement(AwardBase):
     criteria = models.IntegerField(
         choices=AwardBase.CriteriaTypeOptions.choices)
 
+    @classmethod
+    def with_highest_user_achievements_tier(cls, user):
+        user_achievement_tiers = UserAchievementTier.objects.filter(
+            user=user,
+            achievement_tier__achievement=OuterRef('pk')
+        )
+        return cls.objects.annotate(
+            user_achievement_tier=Subquery(
+                user_achievement_tiers.order_by('-achievement_tier__tier').values('achievement_tier__tier')[:1]),
+            user_achievement_tier_src=Subquery(
+                user_achievement_tiers.order_by('-achievement_tier__tier').values('achievement_tier__src')[:1]),
+            lowest_tier_src=Subquery(
+                AchievementTier.objects.filter(
+                    achievement=OuterRef('pk')
+                ).order_by('tier').values('src')[:1]
+            )
+        )
+
+    def get_bronze_tier_src(self):
+        return self.tiers.filter(tier=AchievementTier.TierOptions.BRONZE).first().src
+
 
 class AchievementTier(models.Model):
     class TierOptions(models.IntegerChoices):
@@ -786,6 +807,16 @@ class AchievementTier(models.Model):
     tier = models.IntegerField(choices=TierOptions.choices)
     criteria_value = models.PositiveIntegerField(default=1)
     src = models.URLField(default=None, null=True, blank=True)
+
+    @classmethod
+    def with_earned_count(cls, achievement):
+        user_achievement_tiers = UserAchievementTier.objects.filter(
+            achievement_tier=OuterRef('pk')
+        )
+        return cls.objects.filter(achievement=achievement).annotate(
+            earned_count=Subquery(user_achievement_tiers.values('id').annotate(
+                count=Count('id')).values('count')[:1])
+        )
 
     class Meta:
         ordering = ('tier',)
@@ -890,7 +921,7 @@ class UserTrophy(models.Model):
         return f'{self.user.username} - {self.trophy.name}'
 
 
-class TrophyAssignmentService():
+class AwardAssignmentService():
     """
     Helper for assigning trophies to users based on their stats and trophy criteria.
     """
@@ -900,21 +931,37 @@ class TrophyAssignmentService():
         """
         Refreshes all user trophies by re-evaluating the criteria for each trophy.
         """
+        UserTrophy.objects.all().delete()
         trophies = Trophy.objects.all()
         users = User.objects.all()
         for user in users:
             for trophy in trophies:
-                TrophyAssignmentService.assign_trophy(user, trophy)
+                value = AwardAssignmentService.get_user_criteria_value(
+                    user, trophy.criteria)
+                amount = value // trophy.criteria_value if trophy.criteria_value else 0
+                if amount > 0:
+                    UserTrophy.objects.update_or_create(
+                        user=user,
+                        trophy=trophy,
+                        defaults={'amount': amount}
+                    )
 
     @staticmethod
-    def assign_trophy(user, trophy):
-        """
-        Assigns or updates a UserTrophy for the given user and trophy.
-        """
-        if not trophy.criteria:
-            return None
+    def refresh_user_achievements():
+        UserAchievementTier.objects.all().delete()
+        tiers = AchievementTier.objects.all()
+        users = User.objects.all()
+        for user in users:
+            for tier in tiers:
+                if AwardAssignmentService.get_user_criteria_value(
+                        user, tier.achievement.criteria) >= tier.criteria_value:
+                    UserAchievementTier.objects.update_or_create(
+                        user=user,
+                        achievement_tier=tier
+                    )
 
-        criteria_type = trophy.criteria
+    @staticmethod
+    def get_user_criteria_value(user, criteria_type):
         value = 0
         qs = EventResult.objects.filter(user=user)
         if criteria_type == AwardBase.CriteriaTypeOptions.event_matches:
@@ -1003,13 +1050,7 @@ class TrophyAssignmentService():
 
         value += AwardCredit.objects.filter(
             user=user,
-            criteria=trophy.criteria
+            criteria=criteria_type
         ).aggregate(total=Coalesce(Sum('amount'), 0))['total'] or 0
 
-        amount = value // trophy.criteria_value if trophy.criteria_value else 0
-        obj, created = UserTrophy.objects.update_or_create(
-            user=user,
-            trophy=trophy,
-            defaults={'amount': amount}
-        )
-        return obj
+        return value

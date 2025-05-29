@@ -17,8 +17,11 @@
         no-hover
         {% if not my_trophy %}disabled{% endif %}
       ">
-        <img src="{{ trophy.src }}" alt="{{ trophy }} trophy" class="award lg" />
-        <span class="text-shy text-center">{{ trophy }}</span>
+        <img src="{{ achievement.user_achievement_tier_src | default:achievement.lowest_tier_src }}" alt="{{ achievement.name }} trophy" class="award" />
+        <span class="text-shy text-center">{{ achievement.name }}</span>
+        <span>
+          {{ achievement.user_achievement_tier | achievement_tier_label }}
+        </span>
       </div> 
     </div>
 

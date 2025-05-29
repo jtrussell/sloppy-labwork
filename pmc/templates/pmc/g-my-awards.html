@@ -1,5 +1,6 @@
 {% extends "pmc/_base.html" %}
 {% load static %}
+{% load pmc_extras %}
 
 {% block extra_head %}
   <link rel="stylesheet" href="{% static 'pmc/css/awards.css' %}">
@@ -27,10 +28,25 @@
     </ul>
   </div>
 
-  <div class="card preview">
+  <div class="card">
     <h2>Achievements</h2>
     <p>Earn achievements and level up by participating in events.</p>
-    <p><img src="https://static.sloppylabwork.com/c/full/it-s-coming-logos.png" alt=""></p>
+
+    <ul class="award-list flex flex-wrap">
+      {% for achievement in achievements %}
+        {% if achievement.user_trophy_amount or not achievement.is_hidden %}
+          <li>
+            <a href="{% url 'pmc-my-achievement-detail' achievement.pk %}"  class="award-container {% if not achievement.user_achievement_tier_src %}disabled{% endif %}">
+              <img src="{{ achievement.user_achievement_tier_src | default:achievement.lowest_tier_src }}" alt="{{ achievement.name }} trophy" class="award" />
+              <span class="text-shy text-center">{{ achievement.name }}</span>
+              <span>
+                {{ achievement.user_achievement_tier | achievement_tier_label }}
+              </span>
+            </a>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
   </div>
 
   <div class="card">
