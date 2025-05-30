@@ -19,6 +19,11 @@
   }
 }
 
+.award-container:not(.large) {
+  width: 10rem;
+  max-width: 10rem;
+}
+
 @media (max-width: 680px) {
   .award-container:not(.large) {
     width: 8rem;
