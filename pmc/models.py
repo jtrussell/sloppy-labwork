@@ -596,7 +596,8 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            user_data = {entry["result__user"]
+                : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -951,16 +952,19 @@ class AwardAssignmentService():
     @staticmethod
     def refresh_user_achievements():
         UserAchievementTier.objects.all().delete()
-        tiers = AchievementTier.objects.all()
         users = User.objects.all()
-        for user in users:
-            for tier in tiers:
-                if AwardAssignmentService.get_user_criteria_value(
-                        user, tier.achievement.criteria) >= tier.criteria_value:
-                    UserAchievementTier.objects.update_or_create(
-                        user=user,
-                        achievement_tier=tier
-                    )
+        achievements = Achievement.objects.all()
+        for achievement in achievements:
+            tiers = achievement.tiers.all()
+            for user in users:
+                user_value = AwardAssignmentService.get_user_criteria_value(
+                    user, achievement.criteria)
+                for tier in tiers:
+                    if user_value >= tier.criteria_value:
+                        UserAchievementTier.objects.update_or_create(
+                            user=user,
+                            achievement_tier=tier
+                        )
 
     @staticmethod
     def get_user_criteria_value(user, criteria_type):
