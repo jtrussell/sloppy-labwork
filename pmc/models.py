@@ -597,8 +597,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]
-                : entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -738,6 +737,7 @@ class AwardBase(models.Model):
         store_champion = (17, _('Store Champion'))
         vault_warrior = (18, _('Vault Warrior'))
         world_champion = (19, _('World Champion'))
+        level = (20, _('Level'))
 
     pmc_id = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
@@ -1048,6 +1048,9 @@ class AwardAssignmentService():
                 event__is_casual=False,
                 event__player_count__gte=11
             ).count()
+        elif criteria_type == AwardBase.CriteriaTypeOptions.level:
+            current_level = user.pmc_profile.get_level()
+            value = current_level.level if current_level else 0
 
         value += AwardCredit.objects.filter(
             user=user,

@@ -40,7 +40,7 @@
         </tr>
       </thead>
       <tbody>
-        {% with next_tier=achievement.user_achievement_tier|add:1 %}
+        {% with next_tier=achievement.user_achievement_tier|add:1|default:0 %}
         {% for tier in tiers %}
           <tr>
             <td
