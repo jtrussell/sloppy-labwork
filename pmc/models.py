@@ -866,6 +866,7 @@ class Trophy(AwardBase):
 
     class Meta:
         verbose_name_plural = _('Trophies')
+        ordering = ('sort_order', 'name',)
 
 
 class UserAchievementTier(models.Model):
