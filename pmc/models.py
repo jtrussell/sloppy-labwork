@@ -1,4 +1,3 @@
-from colorama import Back
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import UniqueConstraint, OuterRef, Subquery
@@ -597,7 +596,8 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
+            user_data = {entry["result__user"]
+                : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -738,6 +738,8 @@ class AwardBase(models.Model):
         vault_warrior = (18, _('Vault Warrior'))
         world_champion = (19, _('World Champion'))
         level = (20, _('Level'))
+        events_at_group_in_calendar_month = (
+            21, _('Events at Group in Calendar Month'))
 
     pmc_id = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
@@ -1051,6 +1053,19 @@ class AwardAssignmentService():
         elif criteria_type == AwardBase.CriteriaTypeOptions.level:
             current_level = user.pmc_profile.get_level()
             value = current_level.level if current_level else 0
+        elif criteria_type == AwardBase.CriteriaTypeOptions.events_at_group_in_calendar_month:
+            from django.db.models.functions import TruncMonth
+            monthly_counts = (
+                EventResult.objects
+                .filter(user=user)
+                .filter(event__playgroups__isnull=False)
+                .annotate(month=TruncMonth('event__start_date'), playgroup_id=F('event__playgroups'))
+                .values('month', 'playgroup_id')
+                .annotate(event_count=Count('id'))
+                .order_by('-event_count')
+            )
+            value = monthly_counts.first(
+            )['event_count'] if monthly_counts else 0
 
         value += AwardCredit.objects.filter(
             user=user,
