@@ -876,7 +876,7 @@ def my_badge_detail(request, pk):
 def my_achievement_detail(request, pk):
     achievement = get_object_or_404(Achievement, pk=pk)
     context = {
-        'achievement': achievement.with_highest_user_achievements_tier(request.user).first(),
+        'achievement': Achievement.with_highest_user_achievements_tier(request.user).filter(pk=pk).first(),
         'tiers': AchievementTier.with_earned_count(achievement).all(),
         'my_stat': AwardAssignmentService.get_user_criteria_value(
             request.user, achievement.criteria),
