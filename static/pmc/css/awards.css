@@ -20,8 +20,8 @@
 }
 
 .award-container:not(.large) {
-  width: 10rem;
-  max-width: 10rem;
+  width: 9.5rem;
+  max-width: 9.5rem;
 }
 
 @media (max-width: 680px) {
