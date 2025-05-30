@@ -912,6 +912,7 @@ def refresh_trophies(request):
 
 @csrf_exempt
 @require_POST
+@api_key_required
 @transaction.atomic
 def refresh_achievements(request):
     AwardAssignmentService.refresh_user_achievements()

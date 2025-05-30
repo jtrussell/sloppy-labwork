@@ -1053,22 +1053,21 @@ class AwardAssignmentService():
             current_level = user.pmc_profile.get_level()
             value = current_level.level if current_level else 0
         elif criteria_type == AwardBase.CriteriaTypeOptions.events_at_group_in_calendar_month:
-            pass
-            # from django.db.models.functions import TruncMonth
-            # qualifying_months = (
-            #    EventResult.objects
-            #    .filter(user=user)
-            #    .filter(event__playgroups__isnull=False)
-            #    .annotate(
-            #        month=TruncMonth('event__start_date'),
-            #        playgroup_id=F('event__playgroups')
-            #    )
-            #    .values('month', 'playgroup_id')
-            #    .annotate(event_count=Count('id'))
-            #    .filter(event_count__gte=4)
-            #    .count()
-            # )
-            # value = qualifying_months
+            from django.db.models.functions import TruncMonth
+            qualifying_months = (
+                EventResult.objects
+                .filter(user=user)
+                .filter(event__playgroups__isnull=False)
+                .annotate(
+                    month=TruncMonth('event__start_date'),
+                    playgroup_id=F('event__playgroups')
+                )
+                .values('month', 'playgroup_id')
+                .annotate(event_count=Count('id'))
+                .filter(event_count__gte=4)
+                .count()
+            )
+            value = qualifying_months
 
         value += AwardCredit.objects.filter(
             user=user,
