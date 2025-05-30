@@ -810,16 +810,6 @@ class AchievementTier(models.Model):
     criteria_value = models.PositiveIntegerField(default=1)
     src = models.URLField(default=None, null=True, blank=True)
 
-    @classmethod
-    def with_earned_count(cls, achievement):
-        user_achievement_tiers = UserAchievementTier.objects.filter(
-            achievement_tier=OuterRef('pk')
-        )
-        return cls.objects.filter(achievement=achievement).annotate(
-            earned_count=Subquery(user_achievement_tiers.values('id').annotate(
-                count=Count('id')).values('count')[:1])
-        )
-
     class Meta:
         ordering = ('tier',)
         constraints = [

@@ -8,7 +8,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
-from django.db.models import Sum
+from django.db.models import Sum, Count
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.views import generic
@@ -877,7 +877,9 @@ def my_achievement_detail(request, pk):
     achievement = get_object_or_404(Achievement, pk=pk)
     context = {
         'achievement': Achievement.with_highest_user_achievements_tier(request.user).filter(pk=pk).first(),
-        'tiers': AchievementTier.with_earned_count(achievement).all(),
+        'tiers': AchievementTier.filter(achievement=achievement).annotate(
+            earned_count=Count('user_achievement_tiers', distinct=True)
+        ),
         'my_stat': AwardAssignmentService.get_user_criteria_value(
             request.user, achievement.criteria),
     }
