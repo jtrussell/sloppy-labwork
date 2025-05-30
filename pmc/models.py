@@ -596,8 +596,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]
-                : entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -1055,17 +1054,20 @@ class AwardAssignmentService():
             value = current_level.level if current_level else 0
         elif criteria_type == AwardBase.CriteriaTypeOptions.events_at_group_in_calendar_month:
             from django.db.models.functions import TruncMonth
-            monthly_counts = (
+            qualifying_months = (
                 EventResult.objects
                 .filter(user=user)
                 .filter(event__playgroups__isnull=False)
-                .annotate(month=TruncMonth('event__start_date'), playgroup_id=F('event__playgroups'))
+                .annotate(
+                    month=TruncMonth('event__start_date'),
+                    playgroup_id=F('event__playgroups')
+                )
                 .values('month', 'playgroup_id')
                 .annotate(event_count=Count('id'))
-                .order_by('-event_count')
+                .filter(event_count__gte=4)
+                .count()
             )
-            value = monthly_counts.first(
-            )['event_count'] if monthly_counts else 0
+            value = qualifying_months
 
         value += AwardCredit.objects.filter(
             user=user,
