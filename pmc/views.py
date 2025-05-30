@@ -877,7 +877,7 @@ def my_achievement_detail(request, pk):
     achievement = get_object_or_404(Achievement, pk=pk)
     context = {
         'achievement': Achievement.with_highest_user_achievements_tier(request.user).filter(pk=pk).first(),
-        'tiers': AchievementTier.filter(achievement=achievement).annotate(
+        'tiers': AchievementTier.objects.filter(achievement=achievement).annotate(
             earned_count=Count('user_achievement_tiers', distinct=True)
         ),
         'my_stat': AwardAssignmentService.get_user_criteria_value(
