@@ -19,7 +19,9 @@
     <select id="responsive-nav-select" placeholder="KeyChain">
       <option value="" disabled selected hidden>KeyChain</option>
       {% for link in nav_links %}
+      {% if not link.is_preview %}
       <option value="{{ link.url }}" {% if link.is_active %}selected{% endif %}>{{ link.name }}</option>
+      {% endif %}
       {% endfor %}
     </select>
     <script>
