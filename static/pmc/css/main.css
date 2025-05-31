@@ -390,7 +390,7 @@ form button,
 }
 
 .btn-group .btn + .btn {
-  margin-left: calc(0px - var(--border-size));
+  margin-left: -1px;
 }
 
 .staff-only .btn {
