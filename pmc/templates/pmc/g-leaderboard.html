@@ -32,6 +32,7 @@
     </tbody>
   </table>
 
+  {% if rankings_page.paginator.num_pages > 1 %}
   <div class="btn-group btn-group-center" role="group" aria-label="Item pagination">
     {% if rankings_page.has_previous %}
         <a hx-get="?page={{ rankings_page.previous_page_number }}" class="btn">&laquo;</a>
@@ -57,6 +58,7 @@
         <span disabled class="btn">&raquo;</span>
     {% endif %}
   </div>
+  {% endif %}
 {% endpartialdef %}
 
 
