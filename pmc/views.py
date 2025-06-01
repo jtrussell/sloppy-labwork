@@ -432,11 +432,26 @@ def playgroup_leaderboard(request, slug, pk=None):
     except KeyError:
         pass
 
-    return render(request, 'pmc/pg-leaderboard.html', {
+    rankings = PlayerRank.objects.filter(**rank_filters)
+    paginator = Paginator(rankings, 25)
+    page_number = request.GET.get('page', 1)
+    try:
+        rankings_page = paginator.page(page_number)
+    except Paginator.PageNotAnInteger:
+        rankings_page = paginator.page(1)
+    except Paginator.EmptyPage:
+        rankings_page = paginator.page(paginator.num_pages)
+
+    if request.htmx:
+        template = 'pmc/pg-leaderboard.html#rankings-card'
+    else:
+        template = 'pmc/pg-leaderboard.html'
+
+    return render(request, template, {
         'leaderboards': Leaderboard.objects.all(),
         'season_period_form': season_period_form,
-        'rankings': PlayerRank.objects.filter(**rank_filters),
-        'slug': slug,
+        'rankings_page': rankings_page,
+        'total_count': rankings.count(),
         'pk': pk,
     })
 
@@ -480,7 +495,6 @@ def global_leaderboard(request, pk=None):
     return render(request, template, {
         'leaderboards': Leaderboard.objects.all(),
         'season_period_form': season_period_form,
-        'rankings': PlayerRank.objects.filter(**rank_filters),
         'rankings_page': rankings_page,
         'total_count': rankings.count(),
         'pk': pk,

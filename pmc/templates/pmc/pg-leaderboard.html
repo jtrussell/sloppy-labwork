@@ -1,21 +1,7 @@
 {% extends "pmc/_base.html" %}
+{% load partials %}
 
-{% block content %}
-<h1>Leaderboards</h1>
-
-<div class="btn-group btn-group-center">
-  {% for lb in leaderboards %}
-  <a href="{% url 'pmc-pg-leaderboard' slug lb.pk %}" class="btn{% if lb.pk == pk %} btn-solid{% endif %}">
-    {{ lb }}
-  </a>
-  {% endfor %}
-</div>
-
-<form method="GET">
-  {{ season_period_form.as_p }}
-</form>
-
-<div class="card">
+{% partialdef rankings-card %}
   <table>
     <thead>
       <th class="col-sm">#</th>
@@ -24,7 +10,7 @@
       <th class="col-md">Events</th>
     </thead>
     <tbody>
-      {% for item in rankings %}
+      {% for item in rankings_page %}
       <tr>
         <td class="col-sm">{{ item.rank }}</td>
         <td class="text-left">
@@ -45,5 +31,54 @@
       {% endfor %}
     </tbody>
   </table>
+
+  {% if rankings_page.paginator.num_pages > 1 %}
+  <div class="btn-group btn-group-center" role="group" aria-label="Item pagination">
+    {% if rankings_page.has_previous %}
+        <a hx-get="?page={{ rankings_page.previous_page_number }}" class="btn">&laquo;</a>
+    {% else %}
+        <span disabled class="btn">&laquo;</span>
+    {% endif %}
+
+    {% for page_number in rankings_page.paginator.page_range %}
+        {% if rankings_page.number == page_number %}
+            <button class="btn btn-solid">
+                {{ page_number }}
+            </button>
+        {% else %}
+            <a hx-get="?page={{ page_number }}" class="btn">
+                {{ page_number }}
+            </a>
+        {% endif %}
+    {% endfor %}
+
+    {% if rankings_page.has_next %}
+        <a hx-get="?page={{ rankings_page.next_page_number }}" class="btn">&raquo;</a>
+    {% else %}
+        <span disabled class="btn">&raquo;</span>
+    {% endif %}
+  </div>
+  {% endif %}
+{% endpartialdef %}
+
+
+{% block content %}
+<h1>Leaderboards</h1>
+
+<div class="btn-group btn-group-center">
+  {% for lb in leaderboards %}
+  <a href="{% url 'pmc-pg-leaderboard' playgroup.slug lb.pk %}" class="btn{% if lb.pk == pk %} btn-solid{% endif %}">
+
+    {{ lb }}
+  </a>
+  {% endfor %}
+</div>
+
+<form method="GET">
+  {{ season_period_form.as_p }}
+</form>
+
+<div class="card" hx-target="this">
+  {% partial rankings-card %}
 </div>
 {% endblock %}
