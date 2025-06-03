@@ -66,7 +66,6 @@ def nav_links(request):
             'name': _('Awards'),
             'url': reverse('pmc-my-awards'),
             'is_active': False,
-            'is_preview': True,
         })
 
     longest_matched_path = ''
