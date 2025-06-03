@@ -65,7 +65,7 @@
 {% block content %}
 <h1>Leaderboards</h1>
 
-<div hx-boost="true" class="btn-group btn-group-center">
+<div class="btn-group btn-group-center" hx-boost="true">
   {% for lb in leaderboards %}
   <a href="{% url 'pmc-pg-leaderboard' playgroup.slug lb.pk %}" class="btn{% if lb.pk == pk %} btn-solid{% endif %}">
     {{ lb }}
