@@ -6,7 +6,7 @@ from datetime import date
 from datetime import timedelta
 from django.core.mail import send_mail
 from django.conf import settings
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Sum, Count
@@ -437,17 +437,12 @@ def playgroup_leaderboard(request, slug, pk=None):
     page_number = request.GET.get('page', 1)
     try:
         rankings_page = paginator.page(page_number)
-    except Paginator.PageNotAnInteger:
+    except PageNotAnInteger:
         rankings_page = paginator.page(1)
-    except Paginator.EmptyPage:
+    except EmptyPage:
         rankings_page = paginator.page(paginator.num_pages)
 
-    if request.htmx:
-        template = 'pmc/pg-leaderboard.html#rankings-card'
-    else:
-        template = 'pmc/pg-leaderboard.html'
-
-    return render(request, template, {
+    return render(request, 'pmc/pg-leaderboard.html', {
         'leaderboards': Leaderboard.objects.all(),
         'season_period_form': season_period_form,
         'rankings_page': rankings_page,
@@ -482,17 +477,12 @@ def global_leaderboard(request, pk=None):
     page_number = request.GET.get('page', 1)
     try:
         rankings_page = paginator.page(page_number)
-    except Paginator.PageNotAnInteger:
+    except PageNotAnInteger:
         rankings_page = paginator.page(1)
-    except Paginator.EmptyPage:
+    except EmptyPage:
         rankings_page = paginator.page(paginator.num_pages)
 
-    if request.htmx:
-        template = 'pmc/g-leaderboard.html#rankings-card'
-    else:
-        template = 'pmc/g-leaderboard.html'
-
-    return render(request, template, {
+    return render(request, 'pmc/g-leaderboard.html', {
         'leaderboards': Leaderboard.objects.all(),
         'season_period_form': season_period_form,
         'rankings_page': rankings_page,

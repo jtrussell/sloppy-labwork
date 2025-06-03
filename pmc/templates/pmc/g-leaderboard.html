@@ -35,27 +35,27 @@
   {% if rankings_page.paginator.num_pages > 1 %}
   <div class="btn-group btn-group-center" role="group" aria-label="Item pagination">
     {% if rankings_page.has_previous %}
-        <a hx-get="?page={{ rankings_page.previous_page_number }}" class="btn">&laquo;</a>
+        <button type="submit" name="page" value="{{ rankings_page.previous_page_number }}" class="btn">&laquo;</a>
     {% else %}
-        <span disabled class="btn">&laquo;</span>
+        <button type="button" class="btn">&laquo;</span>
     {% endif %}
 
     {% for page_number in rankings_page.paginator.page_range %}
         {% if rankings_page.number == page_number %}
-            <button class="btn btn-solid">
+            <button type="button" class="btn btn-solid">
                 {{ page_number }}
             </button>
         {% else %}
-            <a hx-get="?page={{ page_number }}" class="btn">
+            <button type="submit" name="page" value="{{ page_number }}" class="btn">
                 {{ page_number }}
             </a>
         {% endif %}
     {% endfor %}
 
     {% if rankings_page.has_next %}
-        <a hx-get="?page={{ rankings_page.next_page_number }}" class="btn">&raquo;</a>
+        <button type="submit" name="page" value="{{ rankings_page.next_page_number }}" class="btn">&raquo;</a>
     {% else %}
-        <span disabled class="btn">&raquo;</span>
+        <span type="button" class="btn">&raquo;</span>
     {% endif %}
   </div>
   {% endif %}
@@ -73,11 +73,10 @@
   {% endfor %}
 </div>
 
-<form method="GET">
+<form method="GET" hx-boost="true">
   {{ season_period_form.as_p }}
+  <div class="card">
+    {% partial rankings-card %}
+  </div>
 </form>
-
-<div class="card" hx-target="this">
-  {% partial rankings-card %}
-</div>
 {% endblock %}
