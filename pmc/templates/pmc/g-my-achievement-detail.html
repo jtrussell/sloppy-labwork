@@ -48,7 +48,11 @@
             >{{ tier.tier | achievement_tier_label }}</td>
             <td>
               {% if tier.tier == next_tier %}<span class="text-muted">{{ my_stat }} /</span>{% endif %}
-              {{ tier.criteria_value }}
+              {% if tier.tier > next_tier %}
+                &#128274;
+              {% else %}
+                {{ tier.criteria_value }}
+              {% endif %}
               {% if my_stat >= tier.criteria_value %}<span class="text-primary">&#10004;</span>{% endif %}
             </td>
             <td>
