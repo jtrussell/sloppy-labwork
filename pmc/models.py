@@ -13,7 +13,7 @@ from io import BytesIO
 import qrcode
 import boto3
 import hashlib
-from common.utils import find_first_index, find_last_index, get_rank_display_with_ties
+from common.utils import find_first_index, find_last_index
 
 class PlaygroupType(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -621,10 +621,9 @@ class RankingPointsService():
                 key=lambda pr: (-getattr(pr, order_by), -pr.num_results))
 
             for pr in player_ranks:
-                pr.rank = get_rank_display_with_ties(
-                    find_first_index(player_ranks, lambda p: p.total_points == pr.total_points and p.num_results == pr.num_results),
-                    find_last_index(player_ranks, lambda p: p.total_points == pr.total_points and p.num_results == pr.num_results)
-                )
+                first_index = find_first_index(player_ranks, lambda p: p.total_points == pr.total_points and p.num_results == pr.num_results)
+                last_index = find_last_index(player_ranks, lambda p: p.total_points == pr.total_points and p.num_results == pr.num_results)
+                pr.rank = f"{'T' if first_index != last_index else ''}{first_index + 1}"
 
             return player_ranks
 
