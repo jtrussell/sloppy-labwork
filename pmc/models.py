@@ -13,7 +13,7 @@ from io import BytesIO
 import qrcode
 import boto3
 import hashlib
-
+from common.utils import find_first_index, find_last_index, get_rank_display_with_ties
 
 class PlaygroupType(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -321,7 +321,7 @@ class PlayerRank(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     playgroup = models.ForeignKey(
         Playgroup, on_delete=models.CASCADE, default=None, null=True, blank=True)
-    rank = models.PositiveIntegerField()
+    rank = models.TextField()
     average_points = models.FloatField(default=0)
     num_results = models.PositiveIntegerField(default=0)
     total_points = models.FloatField(default=0)
@@ -619,8 +619,24 @@ class RankingPointsService():
 
             player_ranks.sort(
                 key=lambda pr: (-getattr(pr, order_by), -pr.num_results))
-            for rank, pr in enumerate(player_ranks, start=1):
-                pr.rank = rank
+
+            # Transform player_ranks with rank display using list comprehension
+            player_ranks = [
+                PlayerRank(
+                    user_id=pr.user_id,
+                    playgroup=pr.playgroup,
+                    rank=get_rank_display_with_ties(
+                        find_first_index(player_ranks, lambda p: p.total_points == pr.total_points and p.num_results == pr.num_results),
+                        find_last_index(player_ranks, lambda p: p.total_points == pr.total_points and p.num_results == pr.num_results)
+                    ),
+                    average_points=pr.average_points,
+                    total_points=pr.total_points,
+                    num_results=pr.num_results,
+                    leaderboard=pr.leaderboard,
+                    period=pr.period
+                )
+                for pr in player_ranks
+            ]
 
             return player_ranks
 
