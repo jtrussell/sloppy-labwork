@@ -620,23 +620,11 @@ class RankingPointsService():
             player_ranks.sort(
                 key=lambda pr: (-getattr(pr, order_by), -pr.num_results))
 
-            # Transform player_ranks with rank display using list comprehension
-            player_ranks = [
-                PlayerRank(
-                    user_id=pr.user_id,
-                    playgroup=pr.playgroup,
-                    rank=get_rank_display_with_ties(
-                        find_first_index(player_ranks, lambda p: p.total_points == pr.total_points and p.num_results == pr.num_results),
-                        find_last_index(player_ranks, lambda p: p.total_points == pr.total_points and p.num_results == pr.num_results)
-                    ),
-                    average_points=pr.average_points,
-                    total_points=pr.total_points,
-                    num_results=pr.num_results,
-                    leaderboard=pr.leaderboard,
-                    period=pr.period
+            for pr in player_ranks:
+                pr.rank = get_rank_display_with_ties(
+                    find_first_index(player_ranks, lambda p: p.total_points == pr.total_points and p.num_results == pr.num_results),
+                    find_last_index(player_ranks, lambda p: p.total_points == pr.total_points and p.num_results == pr.num_results)
                 )
-                for pr in player_ranks
-            ]
 
             return player_ranks
 
