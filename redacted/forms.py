@@ -1,3 +1,4 @@
+from re import search
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
@@ -17,6 +18,9 @@ EXPANSION_CHOICES = [
     (800, _('Æmber Skies')),
     (855, _('Tokens of Change')),
     (874, _('More Mutation')),
+    (886, _('Prophetic Visions')),
+    (907, _('Discovery')),
+    (918, _('Crucible Clash')),
 ]
 
 
