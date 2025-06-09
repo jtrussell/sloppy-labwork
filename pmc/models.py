@@ -321,7 +321,8 @@ class PlayerRank(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     playgroup = models.ForeignKey(
         Playgroup, on_delete=models.CASCADE, default=None, null=True, blank=True)
-    rank = models.TextField()
+    rank = models.PositiveIntegerField()
+    rank_with_ties_display = models.TextField()
     average_points = models.FloatField(default=0)
     num_results = models.PositiveIntegerField(default=0)
     total_points = models.FloatField(default=0)
@@ -619,11 +620,11 @@ class RankingPointsService():
 
             player_ranks.sort(
                 key=lambda pr: (-getattr(pr, order_by), -pr.num_results))
-
-            for pr in player_ranks:
-                first_index = find_first_index(player_ranks, lambda p: p.total_points == pr.total_points and p.num_results == pr.num_results)
-                last_index = find_last_index(player_ranks, lambda p: p.total_points == pr.total_points and p.num_results == pr.num_results)
-                pr.rank = f"{'T' if first_index != last_index else ''}{first_index + 1}"
+            for rank, pr in enumerate(player_ranks, start=1):
+                pr.rank = rank
+                first_index = find_first_index(player_ranks, lambda p: getattr(p, order_by) == getattr(pr, order_by) and p.num_results == pr.num_results)
+                last_index = find_last_index(player_ranks, lambda p: getattr(p, order_by) == getattr(pr, order_by) and p.num_results == pr.num_results)
+                pr.rank_with_ties_display = f"{'T' if first_index != last_index else ''}{first_index + 1}"
 
             return player_ranks
 

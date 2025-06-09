@@ -12,7 +12,7 @@
     <tbody>
       {% for item in rankings_page %}
       <tr>
-        <td class="col-sm">{{ item.rank }}</td>
+        <td class="col-sm">{{ item.rank_with_ties_display }}</td>
         <td class="text-left">
           <div class="name-with-avatar">
             <img class="avatar" src="{{ item.user.pmc_profile.get_avatar.src}}" alt="">
