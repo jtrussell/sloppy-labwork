@@ -619,8 +619,14 @@ class RankingPointsService():
 
             player_ranks.sort(
                 key=lambda pr: (-getattr(pr, order_by), -pr.num_results))
-            for rank, pr in enumerate(player_ranks, start=1):
-                pr.rank = rank
+            rank_with_ties = 1
+            prev_value = None
+            for ix, pr in enumerate(player_ranks, start=1):
+                current_value = getattr(pr, order_by)
+                if current_value != prev_value:
+                    rank_with_ties = ix
+                prev_value = current_value
+                pr.rank = rank_with_ties
 
             return player_ranks
 
