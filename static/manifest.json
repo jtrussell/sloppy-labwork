@@ -1,0 +1,72 @@
+{
+  "short_name": "KeyChain",
+  "name": "KeyChain",
+  "icons": [
+    {
+      "src": "https://res.cloudinary.com/dig7eguxo/image/upload/v1750266102/KC_SQUARE_DARK_192px_jndnrl.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://res.cloudinary.com/dig7eguxo/image/upload/v1750266102/KC_SQUARE_DARK_512px_gxfgyp.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "id": "https://keychain.sloppylabwork.com",
+  "start_url": "https://keychain.sloppylabwork.com",
+  "background_color": "#131313",
+  "display": "standalone",
+  "scope": "https://keychain.sloppylabwork.com",
+  "theme_color": "#FFB400",
+  "shortcuts": [
+    {
+      "name": "Leaderboards",
+      "short_name": "Leaderboards",
+      "description": "View leaderboard standings on KeyChain.",
+      "url": "/leaderboard",
+      "icons": [
+        {
+          "src": "https://res.cloudinary.com/dig7eguxo/image/upload/v1743023567/RP_SIMPLE_lqpbsu.svg",
+          "type": "image/svg+xml",
+          "sizes": "150x150"
+        }
+      ]
+    },
+    {
+      "name": "Event Results",
+      "short_name": "Events",
+      "description": "View event results from events you've attended.",
+      "url": "/@me/results",
+      "icons": [
+        {
+          "src": "https://res.cloudinary.com/dig7eguxo/image/upload/v1743023564/Event_jq2hlj.svg",
+          "type": "image/svg+xml",
+          "sizes": "150x150"
+        }
+      ]
+    },
+    {
+      "name": "Awards",
+      "short_name": "Awards",
+      "description": "View your unlocked awards.",
+      "url": "/@me/awards",
+      "icons": [
+        {
+          "src": "https://res.cloudinary.com/dig7eguxo/image/upload/v1747153117/Awards_SIMPLE_iswvxx.svg",
+          "type": "image/svg+xml",
+          "sizes": "150x150"
+        }
+      ]
+    }
+  ],
+  "description": "KeyChain is an unofficial, community-made platform built to supplement and enhance KeyForge organized play through digital rewards, record keeping, local and global leaderboards, personalization, and a progression system designed to encourage players to come back for more.",
+  "screenshots": [
+    {
+      "src": " ",
+      "type": " ",
+      "sizes": " ",
+      "form_factor": "narrow"
+    }
+  ]
+}
