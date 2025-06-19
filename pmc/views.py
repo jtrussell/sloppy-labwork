@@ -376,6 +376,17 @@ class EventDetail(LoginRequiredMixin, generic.DetailView):
 
 
 @login_required
+@is_pg_member
+def result_detail(request, slug, pk):
+    event_result = get_object_or_404(EventResult, pk=pk)
+    # todo - ensure that the event is associated with the playgroup
+    context = {
+        'event_result': event_result,
+    }
+    return render(request, 'pmc/pg-result-detail.html', context)
+
+
+@login_required
 @is_pg_staff
 def manage_event(request, slug, pk):
     event = get_object_or_404(Event, pk=pk)

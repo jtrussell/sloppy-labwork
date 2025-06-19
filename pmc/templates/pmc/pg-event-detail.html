@@ -5,10 +5,12 @@
   <tr>
     <td class="col-sm">{{ result.finishing_position|default_if_none:"-" }}</td>
     <td>
-      <div class="name-with-avatar">
-      <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
-        {{ result.user }}
-      </div>
+      <a href="{% url 'pmc-result-detail' playgroup.slug result.pk %}">
+        <div class="name-with-avatar">
+          <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
+          {{ result.user }}
+        </div>
+      </a>
     </td>
     <td class="stat">{{ result.num_wins|default_if_none:"-" }}</td>
     <td class="stat">{{ result.num_losses|default_if_none:"-" }}</td>
@@ -20,10 +22,12 @@
   <tr>
     <td class="col-sm text-larger">{{ result.finishing_position|default_if_none:"-" }}</td>
     <td style="width: 100%;">
-      <div class="name-with-avatar text-larger">
-        <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
-        {{ result.user }}
-      </div>
+      <a href="{% url 'pmc-result-detail' playgroup.slug result.pk %}">
+        <div class="name-with-avatar text-larger">
+          <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
+          {{ result.user }}
+        </div>
+      </a>
       <div class="flex flex-row flex-gap-1 text-muted text-smaller">
         <span>Wins: {{ result.num_wins|default_if_none:"-" }}</span>
         <span>Losses: {{ result.num_losses|default_if_none:"-" }}</span>

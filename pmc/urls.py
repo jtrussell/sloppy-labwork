@@ -54,6 +54,8 @@ urlpatterns = [
          views.delete_event, name='pmc-delete-event'),
     path('pg/<slug:slug>/events/<int:pk>/points/',
          views.assign_event_points, name='pmc-event-assign-points'),
+    path('pg/<slug:slug>/results/<int:pk>',
+         views.result_detail, name='pmc-result-detail'),
     path('leaderboard/', views.global_leaderboard, name='pmc-leaderboard'),
     path('leaderboard/<int:pk>/', views.global_leaderboard, name='pmc-leaderboard'),
     path('typography/', views.typography),

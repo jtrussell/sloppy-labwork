@@ -78,6 +78,8 @@
 		</footer>
 	</div>
 
+	<script id="dialog" type="text/template"></script>
+
 	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 	{% htmx_script %}
 	<script type="text/javascript">
@@ -99,6 +101,23 @@
 				window.localStorage.setItem('flashMessages', messagesJson)
 			} else {
 				showMessages(messagesJson)
+			}
+
+			if (event.detail.target.id === 'dialog') {
+				const dialog = document.getElementById('dialog')
+				if (dialog) {
+					Swal.fire({
+						title: dialog.dataset.title || 'Dialog',
+						html: dialog.innerHTML,
+						showCloseButton: true,
+						showCancelButton: true,
+						theme: '{% if my_profile.theme == 1 %}light{% else %}dark{% endif %}',
+						customClass: {
+							confirmButton: 'btn btn-solid',
+							cancelButton: 'btn'
+						}
+					})
+				}
 			}
 		});	
 
