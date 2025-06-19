@@ -82,7 +82,9 @@
 
 	<script id="dialog" type="text/template"></script>
 
-	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/datalist-polyfill@1.25.1/datalist-polyfill.min.js" integrity="sha256-etIKZ7e5TG2zsqLx+M4lFv97QYvplQUfbcEtuGsrBB4=" crossorigin="anonymous"></script>
+
 	{% htmx_script %}
 	<script type="text/javascript">
 		const showMessages = (messagesJson) => {
