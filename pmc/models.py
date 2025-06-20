@@ -191,6 +191,20 @@ class EventResult(models.Model):
         return xp
 
 
+class EventResultDeck(models.Model):
+    event_result = models.ForeignKey(
+        EventResult, on_delete=models.CASCADE, related_name='event_result_decks')
+    deck = models.ForeignKey(
+        'decks.Deck', on_delete=models.CASCADE, related_name='event_results')
+
+    class Meta:
+        unique_together = ('event_result', 'deck',)
+        ordering = ('event_result__event__start_date', 'deck__name',)
+
+    def __str__(self):
+        return f'{self.event_result.event.name} - {self.deck}'
+
+
 class RankingPointsMap(models.Model):
     max_players = models.PositiveSmallIntegerField()
     finishing_position = models.PositiveSmallIntegerField()

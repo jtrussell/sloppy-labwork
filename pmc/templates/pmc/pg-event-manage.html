@@ -68,7 +68,7 @@
             <input required type="text" class="flex-1" name="username" list="usernames-list" placeholder="Username"/>
             <datalist id="usernames-list">
               {% for member in playgroup.members.all %}
-                <option value="{{ member.user.username }}">
+                <option value="{{ member.user.username }}"></option>
               {% endfor %}
             </datalist>
 

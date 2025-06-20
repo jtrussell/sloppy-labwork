@@ -1,16 +1,87 @@
 {% extends "pmc/_base.html" %}
+{% load partials %}
+
+{% partialdef deck-list-item %}
+  <li>It's a deck!</li>
+{% endpartialdef %}
+
 
 {% block content %}
   <h1>Result Detail</h1>
+  <div class="subheading">
+    <ul class="inline-list">
+      <li>{{ event_result.event }}</li>
+      <li>{{ event_result.event.start_date | date:"SHORT_DATE_FORMAT" }}</li>
+    </ul>
+  </div>  
 
-  <p>Event info... record...</p>
+  <div class="card">
+    <table>
+      <tbody>
+        <tr>
+          <th>Player</th>
+          <td>
+            <div class="name-with-avatar" style="justify-content: flex-end">
+              <img class="avatar" src="{{ event_result.user.pmc_profile.get_avatar.src}}" alt="">
+              {{ event_result.user }}
+            </div>
+            </td>  
+        </tr>
+        <tr>
+          <th>Event</th>
+          <td>{{ event_result.event }}</td>
+        </tr>
+        <tr>
+          <th>Date</th>
+          <td>{{ event_result.event.start_date | date:"SHORT_DATE_FORMAT" }}</td>
+        </tr>
+        <tr>
+          <th>Finishing Position</th>
+          <td>{{ event_result.finishing_position | default_if_none:"-" }}</td>
+        </tr>
+        <tr>
+          <th>Wins</th>
+          <td>{{ event_result.num_wins | default_if_none:"-" }}</td>
+        </tr>
+        <tr>
+          <th>Losses</th>
+          <td>{{ event_result.num_losses | default_if_none:"-" }}</td>
+        </tr>
+        <tr>
+          <th>Ranking Points</th>
+          <td>{{ event_result.ranking_points.first.points | default_if_none:"-" }}</td>
+        </tr>
+        <tr>
+          <th>Experience</th>
+          <td>{{ event_result.get_xp | default_if_none:"-" }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
-  <button
-    class="btn btn-solid"
-    hx-get
-    hx-target="#dialog"
-  >
-    Add deck
-  </button>
+  <div class="card preview">
+    <h2>Decks</h2>
+
+    <ul id="decks-list">
+      {% for deck in event_result.decks.all %}
+        {% partial deck-list-item %}
+      {% empty %}
+        <li class="text-muted">No decks submitted.</li>
+      {% endfor %}
+    </ul>
+
+    <form>
+      {{ form.as_p }}
+      <div class="card-actions">
+        <button
+          class="btn btn-solid"
+          type="submit"
+          hx-post
+        >
+          Add Deck
+        </button>
+      </div>
+    </form>
+  </div>
 
 {% endblock %}

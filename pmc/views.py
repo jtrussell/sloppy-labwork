@@ -25,7 +25,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
-from pmc.forms import EventForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm
+from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
 from .models import AchievementTier, Badge, EventResult, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserAchievementTier, UserBadge, Trophy, UserTrophy, Achievement
@@ -380,8 +380,21 @@ class EventDetail(LoginRequiredMixin, generic.DetailView):
 def result_detail(request, slug, pk):
     event_result = get_object_or_404(EventResult, pk=pk)
     # todo - ensure that the event is associated with the playgroup
+    if request.method == 'POST':
+        form = EventResultDeckForm(request.POST)
+        if form.is_valid():
+            print('got a clean form!')
+
+        if request.htmx:
+            context = {}
+            return render(request, 'pmc/pg-result-detail.html#deck-list-item', context)
+
+    else:
+        form = EventResultDeckForm()
+
     context = {
         'event_result': event_result,
+        'form': form,
     }
     return render(request, 'pmc/pg-result-detail.html', context)
 

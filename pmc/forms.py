@@ -1,5 +1,7 @@
 from django import forms
-from .models import Event, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PlaygroupJoinRequest, PmcProfile
+
+from decks.models import Deck
+from .models import Event, EventResultDeck, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PlaygroupJoinRequest, PmcProfile
 from .models import PlaygroupMember
 from .models import EventFormat
 from django.utils.translation import gettext_lazy as _
@@ -51,6 +53,26 @@ class EventUpdateForm(forms.ModelForm):
                 'min': 2,
             }),
         }
+
+
+class EventResultDeckForm(forms.ModelForm):
+    deck_link = forms.URLField(required=True, help_text=_('MV or DoK URL'))
+
+    class Meta:
+        model = Deck
+        fields = ()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        deck_link = cleaned_data.get('deck_link')
+        deck = Deck(
+            id=Deck.get_id_from_master_vault_url(deck_link)
+        )
+        deck.hydrate_from_master_vault(save=False)
+
+        # Add deck info to cleaned data?
+
+        return cleaned_data
 
 
 class PlaygroupForm(forms.ModelForm):
