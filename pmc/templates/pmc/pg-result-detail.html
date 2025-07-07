@@ -2,7 +2,36 @@
 {% load partials %}
 
 {% partialdef deck-list-item %}
-  <li>It's a deck!</li>
+  <li class="flex" hx-target="this">
+    <div
+      class="pmc-icon icon-lg icon-set"
+      style="background-image: url('{{ deck.set.src }}');"
+    ></div>
+    <div class="deck-details flex-spacer">
+      <span class="text-larger">{{ deck }}</span>
+      <div class="flex flex-gap-1">
+        <ul class="flex flex-gap-1">
+          <li><img class="pmc-icon pmc-icon-md" src="{{ deck.house_1.src }}" alt="house 1"></li>
+          <li><img class="pmc-icon pmc-icon-md" src="{{ deck.house_2.src }}" alt="house 2"></li>
+          <li><img class="pmc-icon pmc-icon-md" src="{{ deck.house_3.src }}" alt="house 3"></li>
+        </ul>
+        <ul class="inline-list">
+          <li><a href="{{ deck.get_mv_url }}">MV</a></li>
+          <li><a href="{{ deck.get_dok_url }}">DoK</a></li>
+          <span class="flex-spacer"></span>
+        </ul>
+      </div>
+    </div>
+    {% if is_allowed_to_edit %}
+      <form hx-post hx-swap="delete">
+        <input type="hidden" name="action" value="remove">
+        <input type="hidden" name="deck_id" value="{{ deck.id }}">
+        <div class="flex flex-col flex-align-center">
+          <button class="btn btn-x">&times;</button>
+        </div>
+      </form>
+    {% endif %}
+  </li>
 {% endpartialdef %}
 
 
@@ -10,7 +39,7 @@
   <h1>Result Detail</h1>
   <div class="subheading">
     <ul class="inline-list">
-      <li>{{ event_result.event }}</li>
+      <li><a href="{% url 'pmc-pg-event-detail' playgroup.slug event_result.event.pk %}">{{ event_result.event }}</a></li>
       <li>{{ event_result.event.start_date | date:"SHORT_DATE_FORMAT" }}</li>
     </ul>
   </div>  
@@ -61,27 +90,41 @@
 
   <div class="card preview">
     <h2>Decks</h2>
+    <div class="subheading text-staff-only">
+      Editing as an event organizer
+    </div>
 
-    <ul id="decks-list">
-      {% for deck in event_result.decks.all %}
-        {% partial deck-list-item %}
+    <ul
+      id="decks-list"
+      class="flex flex-col lined-list"
+      hx-confirm="Are you sure you want to remove this deck?"
+    >
+      {% for result_deck in event_result.event_result_decks.all %}
+        {% with deck=result_deck.deck %}
+          {% partial deck-list-item %}
+        {% endwith %}
       {% empty %}
         <li class="text-muted">No decks submitted.</li>
       {% endfor %}
     </ul>
 
-    <form>
-      {{ form.as_p }}
-      <div class="card-actions">
-        <button
-          class="btn btn-solid"
-          type="submit"
-          hx-post
-        >
-          Add Deck
-        </button>
-      </div>
-    </form>
+    {% if is_allowed_to_edit %}
+      <form hx-on::after-request="if(event.detail.successful) this.reset()">
+        <input type="hidden" name="action" value="add">
+        {{ form.as_p }}
+        <div class="card-actions">
+          <button
+            class="btn btn-solid"
+            type="submit"
+            hx-post
+            hx-target="#decks-list"
+            hx-swap="beforeend"
+          >
+            Add Deck
+          </button>
+        </div>
+      </form>
+    {% endif %}
   </div>
 
 {% endblock %}

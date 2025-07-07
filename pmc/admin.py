@@ -16,6 +16,7 @@ from .models import BackgroundCategory
 from .models import AvatarCategory
 from .models import PlaygroupJoinRequest
 from .models import Trophy, UserTrophy, AwardCredit, Achievement, AchievementTier, UserAchievementTier
+from .models import EventResultDeck
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -193,6 +194,12 @@ class UserAchievementTierAdmin(admin.ModelAdmin):
     list_filter = ('achievement_tier__achievement',)
 
 
+class EventResultDeckAdmin(admin.ModelAdmin):
+    list_display = ('deck', 'event_result__event')
+    search_fields = ['deck__name', 'event_result__event__name']
+    list_filter = ()
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
@@ -221,3 +228,4 @@ admin.site.register(AwardCredit, AwardCreditAdmin)
 admin.site.register(Achievement, AchievementAdmin)
 admin.site.register(AchievementTier, AchievementTierAdmin)
 admin.site.register(UserAchievementTier, UserAchievementTierAdmin)
+admin.site.register(EventResultDeck, EventResultDeckAdmin)

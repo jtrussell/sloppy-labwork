@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import UniqueConstraint, OuterRef, Subquery
-from datetime import date
+from datetime import date, datetime
 from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
 from django.dispatch import receiver
@@ -196,6 +196,8 @@ class EventResultDeck(models.Model):
         EventResult, on_delete=models.CASCADE, related_name='event_result_decks')
     deck = models.ForeignKey(
         'decks.Deck', on_delete=models.CASCADE, related_name='event_results')
+    was_played = models.BooleanField(default=True)
+    added_on = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('event_result', 'deck',)

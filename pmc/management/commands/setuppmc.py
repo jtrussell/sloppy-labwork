@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from pmc.models import LevelBreakpoint, EventFormat, Leaderboard
 from pmc.models import LeaderboardSeason, LeaderboardSeasonPeriod, Avatar, Background, AvatarCategory
 from pmc.models import BackgroundCategory, PlaygroupType, RankingPointsMap
+from decks.models import Set, House
 from datetime import date
 
 
@@ -46,6 +47,48 @@ class Command(BaseCommand):
         self.stdout.write('Making playgroup types... ', ending='')
         self.make_playgroup_types()
         self.stdout.write(self.style.SUCCESS('OK'))
+
+    def make_sets(self):
+        Set.objects.get_or_create(
+            id=341, defaults={'name': 'Call of the Archons'})
+        Set.objects.get_or_create(
+            id=435, defaults={'name': 'Age of Ascension'})
+        Set.objects.get_or_create(id=452, defaults={'name': 'Worlds Collide'})
+        Set.objects.get_or_create(id=479, defaults={'name': 'Mass Mutation'})
+        Set.objects.get_or_create(id=496, defaults={'name': 'Dark Tidings'})
+        Set.objects.get_or_create(
+            id=600, defaults={'name': 'Winds of Exchange'})
+        Set.objects.get_or_create(id=601, defaults={'name': 'Unchained 2022'})
+        Set.objects.get_or_create(
+            id=609, defaults={'name': 'Vault Masters 2023'})
+        Set.objects.get_or_create(id=700, defaults={'name': 'Grim Reminders'})
+        Set.objects.get_or_create(id=722, defaults={'name': 'Menagerie'})
+        Set.objects.get_or_create(
+            id=737, defaults={'name': 'Vault Masters 2024'})
+        Set.objects.get_or_create(id=800, defaults={'name': 'Æmber Skies'})
+        Set.objects.get_or_create(
+            id=855, defaults={'name': 'Tokens of Change'})
+        Set.objects.get_or_create(id=874, defaults={'name': 'More Mutation'})
+        Set.objects.get_or_create(
+            id=886, defaults={'name': 'Prophetic Visions'})
+        Set.objects.get_or_create(id=907, defaults={'name': 'Discovery'})
+        Set.objects.get_or_create(id=918, defaults={'name': 'Crucible Clash'})
+
+    def make_houses(self):
+        House.objects.get_or_create(name='Brobnar')
+        House.objects.get_or_create(name='Dis')
+        House.objects.get_or_create(name='Ekwidon')
+        House.objects.get_or_create(name='Geistoid')
+        House.objects.get_or_create(name='Logos')
+        House.objects.get_or_create(name='Mars')
+        House.objects.get_or_create(name='Redemption')
+        House.objects.get_or_create(name='Sanctum')
+        House.objects.get_or_create(name='Saurian')
+        House.objects.get_or_create(name='Shadows')
+        House.objects.get_or_create(name='Skyborn')
+        House.objects.get_or_create(name='Star Alliance')
+        House.objects.get_or_create(name='Unfathomable')
+        House.objects.get_or_create(name='Untamed')
 
     def make_playgroups(self):
         pass

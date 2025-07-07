@@ -39,30 +39,38 @@
 
 {% partialdef results-table-lg %}
     <table class="lg-only">
-      <tr>
-        <th title="Finishing Position">#</th>
-        <th class="text-left">Player</th>
-        <th title="Wins">W</th>
-        <th title="Losses">L</th>
-        <th title="Ranking Points">RP</th>
-      </tr>
+      <thead>
+        <tr>
+          <th title="Finishing Position">#</th>
+          <th class="text-left">Player</th>
+          <th title="Wins">W</th>
+          <th title="Losses">L</th>
+          <th title="Ranking Points">RP</th>
+        </tr>
+      </thead>
 
-      {% for result in object.results.all %}
-        {% partial result-row-lg %}
-      {% endfor %}
+      <tbody>
+        {% for result in object.results.all %}
+          {% partial result-row-lg %}
+        {% endfor %}
+      </tbody>
     </table>
 {% endpartialdef %}
 
 {% partialdef results-table-sm %}
     <table class="sm-only">
-      <tr>
-        <th title="Finishing Position">#</th>
-        <th class="text-left">Player</th>
-      </tr>
+      <thead>
+        <tr>
+          <th title="Finishing Position">#</th>
+          <th class="text-left">Player</th>
+        </tr>
+      </thead>
 
-      {% for result in object.results.all %}
-        {% partial result-row-sm %}
-      {% endfor %}
+      <tbody>
+        {% for result in object.results.all %}
+          {% partial result-row-sm %}
+        {% endfor %}
+      </tbody>
     </table>
 {% endpartialdef %}
 

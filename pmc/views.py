@@ -28,7 +28,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
-from .models import AchievementTier, Badge, EventResult, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserAchievementTier, UserBadge, Trophy, UserTrophy, Achievement
+from .models import AchievementTier, Badge, EventResult, EventResultDeck, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserAchievementTier, UserBadge, Trophy, UserTrophy, Achievement
 from .models import PlayerRank
 from .models import Leaderboard
 from .models import Playgroup
@@ -380,14 +380,50 @@ class EventDetail(LoginRequiredMixin, generic.DetailView):
 def result_detail(request, slug, pk):
     event_result = get_object_or_404(EventResult, pk=pk)
     # todo - ensure that the event is associated with the playgroup
-    if request.method == 'POST':
-        form = EventResultDeckForm(request.POST)
-        if form.is_valid():
-            print('got a clean form!')
+    is_allowed_to_edit = request.user == event_result.user or PlaygroupMember.objects.filter(
+        user=request.user, playgroup__slug=slug, is_staff=True).exists()
 
-        if request.htmx:
-            context = {}
-            return render(request, 'pmc/pg-result-detail.html#deck-list-item', context)
+    if request.method == 'POST':
+        if not is_allowed_to_edit:
+            messages.error(request, _(
+                'You are not allowed to edit this result.'))
+            return HttpResponse('', content_type='text/plain')
+
+        if request.POST.get('action') == 'add':
+            if event_result.event_result_decks.count() >= 6:
+                messages.error(request, _(
+                    'Hold up! You\'re maxed out on decks for this result.'))
+                return HttpResponse('', content_type='text/plain')
+
+            try:
+                form = EventResultDeckForm(request.POST)
+                if form.is_valid():
+                    deck = form.save()
+                    try:
+                        EventResultDeck.objects.create(
+                            event_result=event_result,
+                            deck=deck
+                        )
+                    except IntegrityError:
+                        messages.error(request, _(
+                            'Hold up, you may have already added that deck!'))
+                        return HttpResponse('', content_type='text/plain')
+            except:
+                messages.error(request, _(
+                    'Oops! Something went wrong. Please check your deck link and try again.'))
+                return HttpResponse('', content_type='text/plain')
+
+            if request.htmx:
+                context = {
+                    'deck': deck,
+                    'is_allowed_to_edit': is_allowed_to_edit,
+                }
+                return render(request, 'pmc/pg-result-detail.html#deck-list-item', context)
+
+        elif request.POST.get('action') == 'remove':
+            deck_id = request.POST.get('deck_id')
+            event_result.event_result_decks.filter(deck__id=deck_id).delete()
+            return HttpResponse('Done.', content_type='text/plain')
 
     else:
         form = EventResultDeckForm()
@@ -395,6 +431,7 @@ def result_detail(request, slug, pk):
     context = {
         'event_result': event_result,
         'form': form,
+        'is_allowed_to_edit': is_allowed_to_edit,
     }
     return render(request, 'pmc/pg-result-detail.html', context)
 
@@ -810,7 +847,6 @@ def set_master_vault_data(request):
         profile.save()
         messages.success(request, _('Master Vault account connected.'))
     except Exception as e:
-        print(e)
         messages.error(request, _('Oops! Something went wrong.'))
     return HttpResponseRedirect(reverse('pmc-my-keychain-manage'))
 

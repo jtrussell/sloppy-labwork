@@ -1,7 +1,7 @@
 from django import forms
 
 from decks.models import Deck
-from .models import Event, EventResultDeck, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PlaygroupJoinRequest, PmcProfile
+from .models import Event, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PlaygroupJoinRequest, PmcProfile
 from .models import PlaygroupMember
 from .models import EventFormat
 from django.utils.translation import gettext_lazy as _
@@ -69,9 +69,16 @@ class EventResultDeckForm(forms.ModelForm):
             id=Deck.get_id_from_master_vault_url(deck_link)
         )
         deck.hydrate_from_master_vault(save=False)
-
-        # Add deck info to cleaned data?
-
+        self.instance, _created = Deck.objects.get_or_create(
+            id=deck.id,
+            defaults={
+                'name': deck.name,
+                'set': deck.set,
+                'house_1': deck.house_1,
+                'house_2': deck.house_2,
+                'house_3': deck.house_3
+            }
+        )
         return cleaned_data
 
 
