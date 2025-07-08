@@ -12,6 +12,20 @@
         </div>
       </a>
     </td>
+    <td>
+      <a href="{% url 'pmc-result-detail' playgroup.slug result.pk %}">
+        {% if result.event_result_decks.first %}
+          <i
+            class="pmc-icon pmc-icon-md icon-set"
+            style="background-image: url('{{ result.event_result_decks.first.deck.set.src }}');"
+          ></i>
+        {% else %}
+          {% if result.user == user or playgroup_member.is_staff %}
+            <i class="pmc-icon pmc-icon-md icon-set-empty"></i>
+          {% endif %}
+        {% endif %}
+      </a>
+    </td>
     <td class="stat">{{ result.num_wins|default_if_none:"-" }}</td>
     <td class="stat">{{ result.num_losses|default_if_none:"-" }}</td>
     <td class="stat">{{ result.ranking_points.first|default_if_none:"-" }}</td>
@@ -43,6 +57,7 @@
         <tr>
           <th title="Finishing Position">#</th>
           <th class="text-left">Player</th>
+          <th>&nbsp;</th>
           <th title="Wins">W</th>
           <th title="Losses">L</th>
           <th title="Ranking Points">RP</th>

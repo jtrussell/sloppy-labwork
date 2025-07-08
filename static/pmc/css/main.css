@@ -36,6 +36,7 @@
   --icon-rp: url('https://static.sloppylabwork.com/pmc/icons/RP_SIMPLE.svg');
 
   --icon-set-generic: url('https://res.cloudinary.com/dig7eguxo/image/upload/v1750447189/OTHER_wltacg.png');
+  --icon-set-empty: url('https://res.cloudinary.com/dig7eguxo/image/upload/v1750446466/ADD_nex8zp.png');
 }
 
 /* ***********************************
@@ -437,6 +438,27 @@ form button,
   overflow-x: auto;
 }
 
+.card.card-closable {
+  position: relative;
+}
+
+.card .close-button.btn,
+.card .close-button .btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.card .card {
+  border: 1px solid var(--color-lines);
+  background-color: var(--color-lines);
+  margin: 0;
+  padding: 1rem;
+}
+
 .staff-only .card,
 .card.staff-only {
   background-color: var(--staff-color-paper-bg);
@@ -801,6 +823,7 @@ ul.messages {
   flex-direction: column;
 }
 
+.flex-gap-0 { gap: 0.4rem; }
 .flex-gap-1 { gap: 0.6rem; }
 .flex-gap-2 { gap: 1.2rem; }
 
@@ -947,8 +970,8 @@ ul.footer-links a {
 }
 
 .pmc-icon.icon-lg {
-  height: 4rem;
-  width: 4rem;
+  height: 6rem;
+  width: 6rem;
 }
 
 .pmc-icon.icon-xp {
@@ -961,4 +984,8 @@ ul.footer-links a {
 
 .pmc-icon.icon-set {
   background-image: var(--icon-set-generic);
+}
+
+.pmc-icon.icon-set-empty {
+  background-image: var(--icon-set-empty);
 }
