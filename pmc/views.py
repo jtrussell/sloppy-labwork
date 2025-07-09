@@ -571,19 +571,33 @@ def submit_event_results(request, slug):
                 decoded_file = csv_file.read().decode('utf-8')
                 reader = csv.DictReader(decoded_file.splitlines())
                 available_headers = [
-                    'user', 'finishing_position', 'num_wins', 'num_losses']
+                    'user', 'username', 'finishing_position', 'place', 'num_wins', 'wins', 'num_losses', 'losses']
                 if not set(reader.fieldnames).issubset(set(available_headers)):
                     form_errors.append(
                         'Your results file may include only these columns: {columns}'.format(
                             columns=', '.join(available_headers))
                     )
-                elif not 'user' in reader.fieldnames:
+                elif not 'user' in reader.fieldnames and not 'username' in reader.fieldnames:
                     form_errors.append(
                         'Your results file must include a "user" column')
                 else:
                     User = get_user_model()
+                    playstile_aliases = [
+                        ('username', 'user'),
+                        ('place', 'finishing_position'),
+                        ('wins', 'num_wins'),
+                        ('losses', 'num_losses'),
+                    ]
+
                     for row in reader:
+                        for old_key, new_key in playstile_aliases:
+                            if old_key in row:
+                                row[new_key] = row.pop(old_key)
                         username = row.pop('user')
+
+                        # TODO: Create decks as needed, hydrate them, then assign them to results
+                        deck = row.pop('deck', None)
+
                         row = {key: (None if value == '' else value)
                                for key, value in row.items()}
                         try:
