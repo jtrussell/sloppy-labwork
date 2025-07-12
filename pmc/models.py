@@ -170,6 +170,9 @@ class EventResult(models.Model):
         default=None, null=True, blank=True)
     num_losses = models.PositiveSmallIntegerField(
         default=None, null=True, blank=True)
+    uploaded_deck_link = models.URLField(
+        default=None, null=True, blank=True)
+    uploaded_deck_lookup_attempts = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         ordering = ('finishing_position', '-num_wins', 'num_losses',)

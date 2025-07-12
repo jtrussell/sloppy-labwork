@@ -404,6 +404,10 @@ def result_detail(request, slug, pk):
                             event_result=event_result,
                             deck=deck
                         )
+
+                        event_result.uploaded_deck_link = None
+                        event_result.uploaded_deck_lookup_attempts = 0
+                        event_result.save()
                     except IntegrityError:
                         messages.error(request, _(
                             'Hold up, you may have already added that deck!'))
@@ -571,7 +575,7 @@ def submit_event_results(request, slug):
                 decoded_file = csv_file.read().decode('utf-8')
                 reader = csv.DictReader(decoded_file.splitlines())
                 available_headers = [
-                    'user', 'username', 'finishing_position', 'place', 'num_wins', 'wins', 'num_losses', 'losses']
+                    'user', 'username', 'finishing_position', 'place', 'num_wins', 'wins', 'num_losses', 'losses', 'deck']
                 if not set(reader.fieldnames).issubset(set(available_headers)):
                     form_errors.append(
                         'Your results file may include only these columns: {columns}'.format(
@@ -595,8 +599,7 @@ def submit_event_results(request, slug):
                                 row[new_key] = row.pop(old_key)
                         username = row.pop('user')
 
-                        # TODO: Create decks as needed, hydrate them, then assign them to results
-                        deck = row.pop('deck', None)
+                        row['uploaded_deck_link'] = row.pop('deck', None)
 
                         row = {key: (None if value == '' else value)
                                for key, value in row.items()}
@@ -940,7 +943,8 @@ def get_result_submission_template(request, slug):
         headers={'Content-Disposition': 'attachment; filename="results.csv"'}
     )
     writer = csv.writer(response)
-    writer.writerow(['user', 'finishing_position', 'num_wins', 'num_losses'])
+    writer.writerow(['user', 'finishing_position',
+                    'num_wins', 'num_losses', 'deck'])
     members = PlaygroupMember.objects.filter(playgroup__slug=slug)
     for member in members:
         writer.writerow([member.user.username, '', '', ''])
