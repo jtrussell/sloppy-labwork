@@ -1,7 +1,7 @@
 from re import search
 from django import forms
 from django.utils.translation import gettext_lazy as _
-from decks.models import EXPANSION_CHOICES
+from decks.models import Set
 
 
 class RandomDecksFromDokForm(forms.Form):
@@ -20,8 +20,9 @@ class RandomDecksFromDokForm(forms.Form):
             attrs={
                 'placeholder': _('Any')}
         ))
-    expansion = forms.IntegerField(
+    expansion = forms.ModelChoiceField(
+        queryset=Set.objects.all(),
         required=False,
-        widget=forms.Select(
-            choices=EXPANSION_CHOICES)
+        label=_('Set'),
+        empty_label=_('Any'),
     )

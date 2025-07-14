@@ -3,63 +3,6 @@ from requests import get
 from django.utils.translation import gettext_lazy as _
 
 
-EXPANSION_CHOICES = [
-    (None, _('Any')),
-    (341, _('Call of the Archons')),
-    (435, _('Age of Ascension')),
-    (452, _('Worlds Collide')),
-    (479, _('Mass Mutation')),
-    (496, _('Dark Tidings')),
-    (600, _('Winds of Exchange')),
-    (601, _('Unchained 2022')),
-    (609, _('Vault Masters 2023')),
-    (700, _('Grim Reminders')),
-    (722, _('Menagerie')),
-    (737, _('Vault Masters 2024')),
-    (800, _('Æmber Skies')),
-    (855, _('Tokens of Change')),
-    (874, _('More Mutation')),
-    (886, _('Prophetic Visions')),
-    (907, _('Discovery')),
-    (918, _('Crucible Clash')),
-]
-
-MV_HOUSE_IDS = [
-    'Brobnar',
-    'Dis',
-    'Ekwidon',
-    'Geistoid',
-    'Logos',
-    'Mars',
-    'Redemption',
-    'Sanctum',
-    'Saurian',
-    'Shadows',
-    'Skyborn',
-    'Star Alliance',
-    'Unfathomable',
-    'Untamed',
-]
-
-HOUSE_CHOICES = [
-    (None, _('Unknown')),
-    (0, _('Brobnar')),
-    (1, _('Dis')),
-    (2, _('Ekwidon')),
-    (3, _('Geistoid')),
-    (4, _('Logos')),
-    (5, _('Mars')),
-    (6, _('Redemption')),
-    (7, _('Sanctum')),
-    (8, _('Saurian')),
-    (9, _('Shadows')),
-    (10, _('Skyborn')),
-    (11, _('Star Alliance')),
-    (12, _('Unfathomable')),
-    (13, _('Untamed')),
-]
-
-
 class Set(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     name = models.CharField(max_length=200, unique=True)
@@ -144,9 +87,6 @@ class Deck(models.Model):
         else:
             raise ValueError(
                 f'Failed to fetch deck data: {r.status_code} {r.reason}')
-
-    def set_display(self):
-        return dict(EXPANSION_CHOICES).get(self.set, _('Unknown'))
 
     def __str__(self):
         return self.name

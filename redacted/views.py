@@ -54,8 +54,8 @@ def get_random_deck_from_dok(filters={}):
     page = ix_random_deck // DOK_PAGE_SIZE
     req_filter = post(
         'https://decksofkeyforge.com/api/decks/filter',
-        json=(filter_payload | { 'page': page }),
-        headers={ 'timezone': '-300' })
+        json=(filter_payload | {'page': page}),
+        headers={'timezone': '-300'})
     json_req_filter = req_filter.json()
     ix_deck_in_page = ix_random_deck % DOK_PAGE_SIZE
     json_the_deck = json_req_filter['decks'][ix_deck_in_page]
@@ -76,24 +76,25 @@ def discord_webhook_ingress(request):
         body = raw_body.decode('utf-8')
 
         try:
-            verify_key.verify(f'{timestamp}{body}'.encode(), bytes.fromhex(signature))
+            verify_key.verify(f'{timestamp}{body}'.encode(),
+                              bytes.fromhex(signature))
         except BadSignatureError:
             return HttpResponse('Unauthorized', 401)
 
         body_json = json.loads(body)
 
         if body_json['type'] == 1:
-            return JsonResponse({ 'type': 1, })
+            return JsonResponse({'type': 1, })
         else:
             try:
                 if 'options' in body_json['data']:
                     options = body_json['data'].get('options')
                 else:
                     options = []
-                owner=from_options('dok', options)
-                min_sas=from_options('min', options)
-                max_sas=from_options('max', options)
-                expansion=from_options('set', options)
+                owner = from_options('dok', options)
+                min_sas = from_options('min', options)
+                max_sas = from_options('max', options)
+                expansion = from_options('set', options)
                 if not owner:
                     sa_id = int(body_json['member']['user']['id'])
                     sa = SocialAccount.objects.get(uid=sa_id)
@@ -112,7 +113,7 @@ def discord_webhook_ingress(request):
                 return JsonResponse({
                     'type': 4,
                     'data': {
-                        'flags': 1<<6,
+                        'flags': 1 << 6,
                         'content': 'Oops! That didn\'t work. Are there decks matching your filter?',
                     }
                 })
@@ -123,6 +124,7 @@ def from_options(opt_name, options=[]):
         if opt['name'] == opt_name:
             return opt['value']
     return None
+
 
 def get_filters(owner, min_sas=None, max_sas=None, expansion=None):
     expansions = []
@@ -158,7 +160,8 @@ def random_access_archives(request):
             dok_username = form.cleaned_data['dok_username']
             min_sas = form.cleaned_data['min_sas']
             max_sas = form.cleaned_data['max_sas']
-            expansion = form.cleaned_data['expansion']
+            set = form.cleaned_data['expansion']
+            expansion = set.id if set else None
             filters = get_filters(
                 owner=dok_username,
                 min_sas=min_sas,
