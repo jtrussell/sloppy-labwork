@@ -74,6 +74,7 @@ urlpatterns = [
     path('@me/awards/', views.my_awards, name='pmc-my-awards'),
     path('refresh-trophies/', views.refresh_trophies),
     path('refresh-achievements/', views.refresh_achievements),
+    path('hydrate-result-decks/', views.hydrate_result_decks),
 
     # Common to all hosts
     path('accounts/', include('allauth.urls')),

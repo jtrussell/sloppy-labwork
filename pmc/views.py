@@ -383,6 +383,12 @@ def result_detail(request, slug, pk):
     is_allowed_to_edit = request.user == event_result.user or PlaygroupMember.objects.filter(
         user=request.user, playgroup__slug=slug, is_staff=True).exists()
 
+    if event_result.uploaded_deck_link and event_result.uploaded_deck_lookup_attempts < event_result.max_deck_lookup_attempts:
+        try:
+            event_result.add_deck_by_uploaded_link()
+        except Exception:
+            pass
+
     if request.method == 'POST':
         if not is_allowed_to_edit:
             messages.error(request, _(
@@ -1018,4 +1024,21 @@ def refresh_trophies(request):
 @transaction.atomic
 def refresh_achievements(request):
     AwardAssignmentService.refresh_user_achievements()
+    return HttpResponse('Done.', content_type='text/plain')
+
+
+@csrf_exempt
+@require_POST
+@api_key_required
+@transaction.atomic
+def hydrate_result_decks(request):
+    results = EventResult.objects.filter(
+        uploaded_deck_link__isnull=False,
+        uploaded_deck_lookup_attempts__lt=EventResult.max_deck_lookup_attempts
+    )[:20]
+    for result in results:
+        try:
+            result.add_deck_by_uploaded_link()
+        except Exception:
+            pass
     return HttpResponse('Done.', content_type='text/plain')

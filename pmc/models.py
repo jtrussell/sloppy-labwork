@@ -14,6 +14,8 @@ import qrcode
 import boto3
 import hashlib
 
+from decks.models import Deck
+
 
 class PlaygroupType(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -159,6 +161,7 @@ class EventResult(models.Model):
     xp_for_attendance = 25
     xp_for_win = 10
     xp_for_loss = 5
+    max_deck_lookup_attempts = 3
 
     event = models.ForeignKey(
         Event, on_delete=models.CASCADE, related_name='results')
@@ -192,6 +195,27 @@ class EventResult(models.Model):
         if self.num_losses:
             xp += self.num_losses * self.xp_for_loss
         return xp
+
+    def add_deck_by_uploaded_link(self):
+        if not self.uploaded_deck_link or self.uploaded_deck_lookup_attempts >= self.max_deck_lookup_attempts:
+            raise ValueError(
+                _('Deck link is required and lookup attempts exceeded.'))
+
+        try:
+            mv_id = Deck.get_id_from_master_vault_url(self.uploaded_deck_link)
+            deck, _created = Deck.objects.get_or_create(id=mv_id)
+            deck.hydrate_from_master_vault(save=True)
+            EventResultDeck.objects.create(
+                event_result=self,
+                deck=deck
+            )
+            self.uploaded_deck_link = None
+            self.uploaded_deck_lookup_attempts = 0
+            self.save()
+        except Exception as e:
+            self.uploaded_deck_lookup_attempts += 1
+            self.save()
+            raise e
 
 
 class EventResultDeck(models.Model):
@@ -615,8 +639,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]
-                : entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
