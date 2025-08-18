@@ -194,7 +194,7 @@ class EventResult(models.Model):
             xp += self.num_wins * self.xp_for_win
         if self.num_losses:
             xp += self.num_losses * self.xp_for_loss
-        return xp
+        return min(xp, 100)
 
     def add_deck_by_uploaded_link(self):
         if not self.uploaded_deck_link or self.uploaded_deck_lookup_attempts >= self.max_deck_lookup_attempts:
@@ -438,30 +438,15 @@ class PmcProfile(models.Model):
         return self.get_events().aggregate(Sum('num_wins'))['num_wins__sum'] or 0
 
     def get_total_xp(self):
-        experience_points = (
-            EventResult.objects.filter(
-                user=self.user,
-                event__is_excluded_from_xp=False,
-                event__is_casual=False)
-            .annotate(
-                attendance_points=Value(EventResult.xp_for_attendance),
-                win_points=Coalesce(F('num_wins'), 0) * EventResult.xp_for_win,
-                loss_points=Coalesce(F('num_losses'), 0) *
-                EventResult.xp_for_loss
-            )
-            .aggregate(
-                total_experience=Sum(
-                    F('attendance_points') + F('win_points') + F('loss_points'))
-            )
-        )
-        competition_xp = experience_points["total_experience"] or 0
-
-        casual_xp = EventResult.xp_for_casual_attendance * EventResult.objects.filter(
+        event_results = EventResult.objects.filter(
             user=self.user,
-            event__is_excluded_from_xp=False,
-            event__is_casual=True).count()
+            event__is_excluded_from_xp=False
+        )
+        total_xp = 0
+        for result in event_results:
+            total_xp += result.get_xp()
 
-        return competition_xp + casual_xp
+        return total_xp
 
     def get_level(self):
         return LevelBreakpoint.objects.filter(
