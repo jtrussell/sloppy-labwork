@@ -123,3 +123,8 @@ local_environment.py
 !/staticfiles/.gitkeep
 
 venv
+
+# Claude
+.claude
+CLAUDE.local.md
+TASKS.md
