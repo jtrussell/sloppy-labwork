@@ -15,18 +15,21 @@ class EventForm(forms.ModelForm):
         empty_label=_('Other'),
         required=False
     )
+    start_date = forms.DateField(
+        required=True,
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        label=_('Event Date')
+    )
 
     class Meta:
         model = Event
         fields = ('name', 'start_date', 'is_casual', 'format', 'player_count')
         labels = {
             'name': _('Event Name'),
-            'start_date': _('Event Date'),
             'player_count': _('Player Count'),
             'is_casual': _('Event Type'),
         }
         widgets = {
-            'start_date': forms.DateInput(attrs={'type': 'date'}),
             'player_count': forms.NumberInput(attrs={
                 'min': 2,
             }),
@@ -38,17 +41,21 @@ class EventForm(forms.ModelForm):
 
 
 class EventUpdateForm(forms.ModelForm):
+    start_date = forms.DateField(
+        required=True,
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        label=_('Event Date')
+    )
+    
     class Meta:
         model = Event
         fields = ('name', 'start_date', 'is_casual', 'format', 'player_count')
         labels = {
             'name': _('Event Name'),
-            'start_date': _('Event Date'),
             'player_count': _('Player Count'),
             'is_casual': _('Event Type'),
         }
         widgets = {
-            'start_date': forms.DateInput(attrs={'type': 'date'}),
             'player_count': forms.NumberInput(attrs={
                 'min': 2,
             }),
