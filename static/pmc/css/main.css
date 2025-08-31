@@ -733,6 +733,45 @@ table a {
   width: 100px;
 }
 
+.banner-with-avatar .member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.banner-with-avatar .member-info .banner-text {
+  display: block;
+  font-weight: bold;
+  font-size: 1.6rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+  padding-bottom: 2px;
+}
+
+@media (max-width: 680px) {
+  .banner-with-avatar .member-info .banner-text {
+    font-size: 1.4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .banner-with-avatar .member-info .banner-text {
+    font-size: 1.2rem
+  }
+}
+
+.card-list .card {
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.card-list .card .banner-with-avatar {
+  max-width: 100%;
+  overflow: hidden;
+}
+
 .banner-sub-text {
   display: block;
   font-size: 10pt;
