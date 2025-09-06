@@ -41,6 +41,7 @@ class Playgroup(models.Model):
         'Event', through='PlaygroupEvent', related_name='playgroups'
     )
     description = models.TextField(default=None, null=True, blank=True)
+    is_global = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-name']

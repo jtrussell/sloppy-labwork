@@ -127,10 +127,38 @@
         </a>
       </div>
     </div>
-  {% empty %}
+  {% endfor %}
+
+  {% for global_playgroup in global_playgroups %}
+    <div class="card">
+      <div class="flex flex-row flex-gap-2">
+        {% if global_playgroup.logo_src %}
+          <img src="{{ global_playgroup.logo_src }}" alt="{{ global_playgroup.name }} logo" class="playgroup-logo">
+        {% endif %}
+        <div class="flex-1">
+          <h3>
+            <a href="{% url 'pmc-pg-detail' global_playgroup.slug %}">{{ global_playgroup.name }}</a>
+          </h3>
+          <div class="subheading">Global Playgroup</div>
+
+          <p class="text-em">
+            Available to all KeyChain users
+          </p>
+        </div>
+      </div>
+      
+      <div class="card-actions">
+        <a href="{% url 'pmc-pg-events' global_playgroup.slug %}" class="btn">Events</a>
+        <a href="{% url 'pmc-pg-leaderboard' global_playgroup.slug %}" class="btn">Leaderboards</a>
+        <span class="flex-spacer"></span>
+      </div>
+    </div>
+  {% endfor %}
+
+  {% if not memberships and not global_playgroups %}
     <div class="card">
       <p class="text-muted">No playgroups yet.</p>
     </div>
-  {% endfor %}
+  {% endif %}
 
 {% endblock %}

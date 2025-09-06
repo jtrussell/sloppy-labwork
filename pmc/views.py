@@ -47,6 +47,10 @@ from .models import AwardAssignmentService
 def is_pg_member(view):
     def decorator(view_func):
         def wrapper(request, *args, **kwargs):
+            playgroup = Playgroup.objects.filter(slug=kwargs['slug']).first()
+            if playgroup and playgroup.is_global:
+                return view_func(request, *args, **kwargs)
+            
             is_member = PlaygroupMember.objects.filter(
                 user=request.user, playgroup__slug=kwargs['slug']).exists()
             if is_member:
@@ -242,7 +246,8 @@ def my_keychain(request):
         'level_increment_progress': level_up_info['level_increment_progress'],
         'memberships': PlaygroupMember.objects.filter(
             user=request.user
-        )
+        ),
+        'global_playgroups': Playgroup.objects.filter(is_global=True)
     })
 
 
@@ -283,6 +288,9 @@ class PlaygroupMembersList(LoginRequiredMixin, generic.ListView):
     @method_decorator(login_required)
     @method_decorator(is_pg_member)
     def dispatch(self, request, *args, **kwargs):
+        playgroup = Playgroup.objects.filter(slug=self.kwargs['slug']).first()
+        if playgroup and playgroup.is_global:
+            return HttpResponseRedirect(reverse('pmc-pg-detail', kwargs={'slug': self.kwargs['slug']}))
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -293,6 +301,9 @@ class PlaygroupMemberDetail(LoginRequiredMixin, generic.DetailView):
     @method_decorator(login_required)
     @method_decorator(is_pg_member)
     def dispatch(self, request, *args, **kwargs):
+        playgroup = Playgroup.objects.filter(slug=self.kwargs['slug']).first()
+        if playgroup and playgroup.is_global:
+            return HttpResponseRedirect(reverse('pmc-pg-detail', kwargs={'slug': self.kwargs['slug']}))
         return super().dispatch(request, *args, **kwargs)
 
     def get_object(self, queryset=None):

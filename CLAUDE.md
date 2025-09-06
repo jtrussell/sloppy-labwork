@@ -41,6 +41,8 @@ by function:
 - `forms.py` - While we do have some SPA like behavior, we try to lean toward
   SSR style pages with forms to drive data changes.
 - `models.py` - The model definitions for each app, we prefer to keep most
+- `management/commands.py` - Custom Django commands get registered here. This is
+  useful for setup and maintenance scripts that need to be run manually.
   business logic close to the models themselves.
 - `views.py` - Our controllers/route handlers.
 - `templates/` - Page templates

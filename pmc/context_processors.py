@@ -25,6 +25,11 @@ def nav_links(request):
     })
 
     if playgroup_slug:
+        try:
+            current_playgroup = Playgroup.objects.get(slug=playgroup_slug)
+        except Playgroup.DoesNotExist:
+            current_playgroup = None
+
         nav_links.append({
             'name': _('Home'),
             'url': reverse('pmc-pg-detail', args=[playgroup_slug]),
@@ -37,11 +42,13 @@ def nav_links(request):
             'is_active': False,
         })
 
-        nav_links.append({
-            'name': _('Members'),
-            'url': reverse('pmc-pg-members', args=[playgroup_slug]),
-            'is_active': False,
-        })
+        # Only show Members nav for non-global playgroups
+        if current_playgroup and not current_playgroup.is_global:
+            nav_links.append({
+                'name': _('Members'),
+                'url': reverse('pmc-pg-members', args=[playgroup_slug]),
+                'is_active': False,
+            })
 
         nav_links.append({
             'name': _('Leaderboards'),
