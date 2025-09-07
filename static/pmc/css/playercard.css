@@ -44,6 +44,7 @@ img.qrcode {
   font-weight: bold;
   font-size: 2.2em;
   margin-bottom: 12px;
+  padding-right: 3px;
 }
 
 .banner .banner-sub-text {
@@ -74,7 +75,6 @@ img.qrcode {
 
   .banner .banner-sub-text {
     font-size: 0.8em;
-    line-height: 0.8em;
   }
 }
 
@@ -139,4 +139,11 @@ ul.element-list {
   font-size: 20px;
   text-align: center ;
   z-index: 100;
+}
+
+.elide {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
 }
