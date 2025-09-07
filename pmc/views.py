@@ -462,7 +462,7 @@ def result_detail(request, slug, pk):
 def manage_event(request, slug, pk):
     event = get_object_or_404(Event, pk=pk)
     if request.method == 'POST':
-        form = EventUpdateForm(request.POST, instance=event)
+        form = EventUpdateForm(request.POST, instance=event, user=request.user)
         if form.is_valid():
             event = form.save()
             RankingPointsService.assign_points_for_event(event)
@@ -475,7 +475,7 @@ def manage_event(request, slug, pk):
             messages.error(request, _(
                 'Oops! That\'s not quite right. Check the form and try again.'))
     else:
-        form = EventUpdateForm(instance=event)
+        form = EventUpdateForm(instance=event, user=request.user)
     context = {'object': event, 'form': form}
     return render(request, 'pmc/pg-event-manage.html', context)
 
@@ -579,7 +579,7 @@ def global_leaderboard(request, pk=None):
 def submit_event_results(request, slug):
     form_errors = []
     if request.method == 'POST':
-        form = EventForm(request.POST, request.FILES)
+        form = EventForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             event = form.save()
             PlaygroupEvent.objects.create(
@@ -647,7 +647,7 @@ def submit_event_results(request, slug):
         else:
             print(form.errors)
     else:
-        form = EventForm()
+        form = EventForm(user=request.user)
     return render(request, 'pmc/pg-submit-event-results.html', {
         'form_errors': form_errors,
         'form': form,

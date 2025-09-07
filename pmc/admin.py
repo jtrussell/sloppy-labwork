@@ -32,9 +32,9 @@ class PlaygroupMemberAdmin(admin.ModelAdmin):
 
 
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('name', 'start_date')
+    list_display = ('name', 'start_date', 'is_excluded_from_global_rankings')
     search_fields = ['name']
-    list_filter = ('start_date',)
+    list_filter = ('start_date', 'is_excluded_from_global_rankings')
 
 
 class EventResultAdmin(admin.ModelAdmin):

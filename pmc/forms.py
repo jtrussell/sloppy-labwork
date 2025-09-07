@@ -23,20 +23,40 @@ class EventForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ('name', 'start_date', 'is_casual', 'format', 'player_count')
+        fields = ('name', 'start_date', 'is_casual', 'format',
+                  'player_count', 'is_excluded_from_global_rankings')
         labels = {
             'name': _('Event Name'),
             'player_count': _('Player Count'),
             'is_casual': _('Event Type'),
+            'is_excluded_from_global_rankings': _('PG Only RP'),
         }
         widgets = {
             'player_count': forms.NumberInput(attrs={
                 'min': 2,
             }),
         }
+        help_texts = {
+            'is_excluded_from_global_rankings': _('If checked, this event will not contribute RP towards global leaderboards. Only available to Django staff.'),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        # Hide global rankings exclusion field for non-staff users
+        if not (self.user and self.user.is_staff):
+            self.fields.pop('is_excluded_from_global_rankings', None)
 
     def save(self, commit=True):
-        event = super(EventForm, self).save(commit=commit)
+        event = super(EventForm, self).save(commit=False)
+
+        # Only allow staff users to set the global rankings exclusion field
+        if not (self.user and self.user.is_staff):
+            event.is_excluded_from_global_rankings = False
+
+        if commit:
+            event.save()
         return event
 
 
@@ -46,20 +66,49 @@ class EventUpdateForm(forms.ModelForm):
         widget=forms.DateInput(attrs={'type': 'date'}),
         label=_('Event Date')
     )
-    
+
     class Meta:
         model = Event
-        fields = ('name', 'start_date', 'is_casual', 'format', 'player_count')
+        fields = ('name', 'start_date', 'is_casual', 'format',
+                  'player_count', 'is_excluded_from_global_rankings')
         labels = {
             'name': _('Event Name'),
             'player_count': _('Player Count'),
             'is_casual': _('Event Type'),
+            'is_excluded_from_global_rankings': _('PG Only RP'),
         }
         widgets = {
             'player_count': forms.NumberInput(attrs={
                 'min': 2,
             }),
         }
+        help_texts = {
+            'is_excluded_from_global_rankings': _('If checked, this event will not contribute RP towards global leaderboards. Only available to Django staff.'),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        # Hide global rankings exclusion field for non-staff users
+        if not (self.user and self.user.is_staff):
+            self.fields.pop('is_excluded_from_global_rankings', None)
+
+    def save(self, commit=True):
+        event = super().save(commit=False)
+
+        # Only allow staff users to modify the global rankings exclusion field
+        if not (self.user and self.user.is_staff):
+            # Preserve the existing value if user is not staff
+            if self.instance.pk:
+                original_event = Event.objects.get(pk=self.instance.pk)
+                event.is_excluded_from_global_rankings = original_event.is_excluded_from_global_rankings
+            else:
+                event.is_excluded_from_global_rankings = False
+
+        if commit:
+            event.save()
+        return event
 
 
 class EventResultDeckForm(forms.ModelForm):

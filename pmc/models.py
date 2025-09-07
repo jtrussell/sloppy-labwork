@@ -136,6 +136,7 @@ class Event(models.Model):
                                related_name='events', default=None, null=True, blank=True)
     is_excluded_from_xp = models.BooleanField(default=False)
     is_casual = models.BooleanField(default=False, choices=EVENT_TYPE_CHOICES)
+    is_excluded_from_global_rankings = models.BooleanField(default=False)
 
     class Meta:
         ordering = ('-start_date',)
@@ -615,6 +616,9 @@ class RankingPointsService():
             filters = {}
             if playgroup:
                 filters["result__event__playgroups"] = playgroup
+            else:
+                # For global rankings, exclude events marked as excluded from global rankings
+                filters["result__event__is_excluded_from_global_rankings"] = False
 
             all_user_points = ranking_points_qs.filter(**filters).values("result__user").annotate(
                 total_points=Sum("points"),
