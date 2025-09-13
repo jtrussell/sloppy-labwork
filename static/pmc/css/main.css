@@ -561,6 +561,10 @@ em {
   font-style: italic;
 }
 
+strong {
+  font-weight: bolder;
+}
+
 ul.inline-list {
   display: flex;
   flex-direction: row;
@@ -1029,6 +1033,9 @@ ul.footer-links a {
   background-image: var(--icon-set-empty);
 }
 
+/* ***********************************
+ * Markdown
+ * *********************************** */
 .markdown {
   ul, ol {
     margin: revert;
