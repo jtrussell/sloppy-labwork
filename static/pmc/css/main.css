@@ -1028,3 +1028,11 @@ ul.footer-links a {
 .pmc-icon.icon-set-empty {
   background-image: var(--icon-set-empty);
 }
+
+.markdown {
+  ul, ol {
+    margin: revert;
+    padding: revert;
+    list-style: revert;
+  }
+}
