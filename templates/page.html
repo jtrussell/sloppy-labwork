@@ -1,4 +1,5 @@
 {% load static %}
+{% load django_htmx %}
 <!doctype html>
 <html class="no-js" lang="">
 
@@ -23,7 +24,7 @@
   {% endblock %}
 </head>
 
-<body class="preload">
+<body class="preload" hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
   {% block body %}
   <!--[if IE]>
     <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience and security.</p>
@@ -33,25 +34,27 @@
   <main role="main" class="container stack">
     {% include 'nav-top.html' %}
 
-    {% if messages %}
-    <div class="note">
-      <ul class="note__list">
-        {% for message in messages %}
-        <li>{{message}}</li>
-        {% endfor %}
-      </ul>
-    </div>
-    {% endif %}
+    <div id="message-list">
+      {% if messages %}
+      <div class="note">
+        <ul class="note__list">
+          {% for message in messages %}
+          <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{message}}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
 
-    {% if error_messages %}
-    <div class="note note-danger">
-      <ul class="note__list">
-        {% for message in error_messages %}
-        <li>{{message}}</li>
-        {% endfor %}
-      </ul>
+      {% if error_messages %}
+      <div class="note note-danger">
+        <ul class="note__list">
+          {% for message in error_messages %}
+          <li>{{message}}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
 
     {% block content %}
       <!-- Silence is golden -->
@@ -64,12 +67,104 @@
     {% endblock %}
   </main>
 
-  <script>
+  <script id="dialog" type="text/template"></script>
+
+  {% htmx_script %}
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"></script>
+  <script type="text/javascript">
     // Used to avoid CSS animations on the initial load
     setTimeout(function () {
       document.querySelector('body').classList.remove('preload')
     }, 500)
+
+    window.sloppyShowMessages = window.sloppyShowMessages || function(messagesJson) {
+      const messages = JSON.parse(messagesJson)?.messages ?? []
+      if (messages.length === 0) {
+        document.getElementById('message-list').innerHTML = ''
+        return
+      }
+      
+      const noteDiv = document.createElement('div')
+      noteDiv.className = 'note'
+      
+      const ul = document.createElement('ul')
+      ul.className = 'note__list'
+      
+      messages.forEach(message => {
+        const li = document.createElement('li')
+        if (message.tags) {
+          li.className = message.tags
+          if (message.tags.includes('error')) {
+            noteDiv.className = 'note note-danger'
+          }
+        }
+        li.innerHTML = message.message
+        ul.appendChild(li)
+      })
+      
+      noteDiv.appendChild(ul)
+      document.getElementById('message-list').innerHTML = ''
+      document.getElementById('message-list').appendChild(noteDiv)
+    }
+
+    document.addEventListener('htmx:afterRequest', function(event) {
+      const messagesJson = event.detail.xhr.getResponseHeader('HX-Trigger') || '{}'
+      const isRedirect = !!event.detail.xhr.getResponseHeader('HX-Redirect')
+      if (isRedirect) {
+        window.localStorage.setItem('flashMessages', messagesJson)
+      } else {
+        window.sloppyShowMessages(messagesJson)
+      }
+
+      if (event.detail.target.id === 'dialog') {
+        const dialog = document.getElementById('dialog')
+        if (dialog) {
+          Swal.fire({
+            title: dialog.dataset.title || 'Dialog',
+            html: dialog.innerHTML,
+            showCloseButton: true,
+            showCancelButton: true,
+            customClass: {
+              confirmButton: 'button button-primary',
+              cancelButton: 'button'
+            }
+          })
+        }
+      }
+    });	
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const messagesJson = window.localStorage.getItem('flashMessages')
+      if (messagesJson) {
+        window.sloppyShowMessages(messagesJson)
+      }
+      window.localStorage.removeItem('flashMessages')
+    });
+
+    document.addEventListener("htmx:confirm", function(e) {
+      if (!e.detail.question) { return }
+      e.preventDefault()
+      Swal.fire({
+        title: 'Please confirm',
+        html: e.detail.question,
+        showCloseButton: true,
+        showCancelButton: true,
+        theme: 'dark',
+        customClass: {
+          confirmButton: 'button button-primary',
+          cancelButton: 'button'
+        }
+      }).then(function(result) {
+        if (result.isConfirmed) {
+          e.detail.issueRequest(true)
+        }
+      })
+    })
   </script>
+
+  {% block extra_body %}
+    <!-- Convenient place for script tags -->
+  {% endblock %}
 </body>
 
 </html>

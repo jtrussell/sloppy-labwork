@@ -1,0 +1,7 @@
+{% extends base_template %}
+{% load static %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'tourney/main.css' %}">
+  {{ block.super }}
+{% endblock %}

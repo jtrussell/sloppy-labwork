@@ -1,0 +1,62 @@
+<div id="tournament-content">
+<section>
+    {% if standings %}
+        <h2>Current Standings</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    {% for criterion in enabled_criteria %}
+                        <th>{{ criterion.get_name }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for standing in standings %}
+                <tr>
+                    <td><strong>{{ standing.rank }}</strong></td>
+                    <td>{{ standing.stage_player.player.get_display_name }}</td>
+                    {% for criterion in enabled_criteria %}
+                        <td>
+                            {% with key=criterion.get_key %}
+                                {% if key == 'points' %}
+                                    {{ standing.points }}
+                                {% elif key == 'wins' %}
+                                    {{ standing.wins }}
+                                {% elif key == 'losses' %}
+                                    {{ standing.losses }}
+                                {% elif key == 'strength_of_schedule' %}
+                                    {{ standing.strength_of_schedule|floatformat:2 }}
+                                {% elif key == 'seed' %}
+                                    {{ standing.seed }}
+                                {% elif key == 'head_to_head' %}
+                                    {{ standing.head_to_head_value|default:"-" }}
+                                {% elif key == 'random' %}
+                                    <span class="text-muted">🕵️</span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="text-muted">No standings available yet. Tournament needs to begin.</p>
+    {% endif %}
+</section>
+
+{% if is_admin %}
+<section>
+    <h2>Player Management</h2>
+    <div class="hstack">
+        <div class="nav__item">
+            <a href="{% url 'tourney-manage-players' tournament.id %}" class="button">Manage Players</a>
+        </div>
+    </div>
+</section>
+{% endif %}
+</div>

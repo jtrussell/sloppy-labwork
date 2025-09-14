@@ -50,7 +50,7 @@ def is_pg_member(view):
             playgroup = Playgroup.objects.filter(slug=kwargs['slug']).first()
             if playgroup and playgroup.is_global:
                 return view_func(request, *args, **kwargs)
-            
+
             is_member = PlaygroupMember.objects.filter(
                 user=request.user, playgroup__slug=kwargs['slug']).exists()
             if is_member:

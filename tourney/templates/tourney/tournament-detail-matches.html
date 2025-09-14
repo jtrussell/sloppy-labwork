@@ -1,0 +1,97 @@
+{% extends "tourney/tournament-detail-base.html" %}
+
+{% block tab_content %}
+{% include "tourney/partials/tournament-detail-matches-content.html" %}
+{% endblock %}
+
+{% block extra_body %}
+    {{ block.super }}
+
+    <script>
+    // Stage and Round data for cascading menus
+    const stageRoundData = {
+        {% for stage in stages %}
+            "{{ stage.id }}": {
+                name: "{{ stage.name|escapejs }}",
+                rounds: [
+                    {% for round in stage.rounds.all %}
+                        {id: {{ round.id }}, order: {{ round.order }}},
+                    {% endfor %}
+                ]
+            },
+        {% endfor %}
+    };
+
+    function updateRounds() {
+        const stageSelect = document.getElementById('stageSelect');
+        const roundSelect = document.getElementById('roundSelect');
+        const stageMessage = document.getElementById('stageMessage');
+        const selectedStageId = stageSelect.value;
+
+        // Clear round options
+        roundSelect.innerHTML = '';
+
+        if (!selectedStageId) {
+            // No stage selected
+            roundSelect.disabled = true;
+            roundSelect.innerHTML = '<option value="">Select a stage first...</option>';
+            stageMessage.style.display = 'none';
+            return;
+        }
+
+        const stageData = stageRoundData[selectedStageId];
+        roundSelect.disabled = false;
+
+        if (stageData.rounds.length === 0) {
+            // Stage has no rounds
+            roundSelect.innerHTML = '<option value="">No rounds available</option>';
+            roundSelect.disabled = true;
+            stageMessage.innerHTML = 'This stage has not begun yet.';
+            stageMessage.style.display = 'block';
+        } else {
+            // Stage has rounds
+            roundSelect.innerHTML = '<option value="">Choose a round...</option>';
+            stageData.rounds.forEach(round => {
+                const option = document.createElement('option');
+                option.value = round.id;
+                option.textContent = `Round ${round.order}`;
+                {% if selected_round %}
+                    if (round.id === {{ selected_round.id }}) {
+                        option.selected = true;
+                    }
+                {% endif %}
+                roundSelect.appendChild(option);
+            });
+            stageMessage.style.display = 'none';
+        }
+    }
+
+    function navigateToMatch() {
+        const stageSelect = document.getElementById('stageSelect');
+        const roundSelect = document.getElementById('roundSelect');
+        const selectedStageId = stageSelect.value;
+        const selectedRoundId = roundSelect.value;
+
+        if (selectedStageId && selectedRoundId) {
+            const url = `{% url 'tourney-detail-matches' tournament.id %}?stage=${selectedStageId}&round=${selectedRoundId}`;
+            window.location = url;
+
+        } else if (selectedStageId && !selectedRoundId) {
+            // Show stage selected but no round message
+            const stageData = stageRoundData[selectedStageId];
+            if (stageData.rounds.length > 0) {
+                // Stage has rounds, just need to select one
+                const stageMessage = document.getElementById('stageMessage');
+                stageMessage.innerHTML = 'Please select a round to view matches.';
+                stageMessage.style.display = 'block';
+            }
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateRounds();
+    });
+    </script>
+
+{% endblock %}

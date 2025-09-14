@@ -1,0 +1,138 @@
+{% extends "tourney/_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'tourney/ranking-criteria.css' %}">
+    {{ block.super }}
+{% endblock %}
+
+{% block content %}
+<h1>Create Tournament</h1>
+
+<form method="post" class="form-wide">
+    {% csrf_token %}
+    
+    <section>
+        <h2>Tournament Details</h2>
+        
+        <div class="row">
+            <div class="twelve columns">
+                <label for="{{ form.name.id_for_label }}">Tournament Name</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                    <div class="form-error">{{ form.name.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="twelve columns">
+                <label for="{{ form.description.id_for_label }}">Description</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <div class="form-error">{{ form.description.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="twelve columns">
+                <label>
+                    {{ form.is_accepting_registrations }}
+                    Accept registrations immediately
+                </label>
+                {% if form.is_accepting_registrations.errors %}
+                    <div class="form-error">{{ form.is_accepting_registrations.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+    
+    <section>
+        <h2>Main Stage</h2>
+        
+        <div class="row">
+            <div class="six columns">
+                <label for="{{ form.main_pairing_strategy.id_for_label }}">{{ form.main_pairing_strategy.label }}</label>
+                {{ form.main_pairing_strategy }}
+                {% if form.main_pairing_strategy.errors %}
+                    <div class="form-error">{{ form.main_pairing_strategy.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="six columns">
+                <label for="{{ form.main_max_players.id_for_label }}">{{ form.main_max_players.label }}</label>
+                {{ form.main_max_players }}
+                {% if form.main_max_players.help_text %}
+                    <small class="form-help">{{ form.main_max_players.help_text }}</small>
+                {% endif %}
+                {% if form.main_max_players.errors %}
+                    <div class="form-error">{{ form.main_max_players.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+    
+    <section>
+        <h2>Main Stage Ranking Criteria</h2>
+        <p>Drag to reorder the criteria by importance. Toggle criteria on/off with the switches.</p>
+        
+        {{ form.ranking_criteria_json }}
+        {% if form.ranking_criteria_json.errors %}
+            <div class="form-error">{{ form.ranking_criteria_json.errors }}</div>
+        {% endif %}
+        
+        <div id="ranking-criteria-list" class="ranking-criteria-container">
+            <!-- Criteria items will be populated by JavaScript -->
+        </div>
+    </section>
+    
+    <section>
+        <h2>Playoff Stage</h2>
+        
+        <div class="row">
+            <div class="twelve columns">
+                <label>
+                    {{ form.enable_playoffs }}
+                    {{ form.enable_playoffs.label }}
+                </label>
+                {% if form.enable_playoffs.errors %}
+                    <div class="form-error">{{ form.enable_playoffs.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row" id="playoff-options" style="display: none;">
+            <div class="twelve columns">
+                <label for="{{ form.playoff_max_players.id_for_label }}">{{ form.playoff_max_players.label }}</label>
+                {{ form.playoff_max_players }}
+                {% if form.playoff_max_players.help_text %}
+                    <small class="form-help">{{ form.playoff_max_players.help_text }}</small>
+                {% endif %}
+                {% if form.playoff_max_players.errors %}
+                    <div class="form-error">{{ form.playoff_max_players.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+    
+    <section>
+        <button type="submit" class="button button-primary">Create Tournament</button>
+        <a href="{% url 'tourney-my-tournaments' %}" class="button">Cancel</a>
+    </section>
+</form>
+
+{% endblock %}
+
+{% block extra_body %}
+{{ block.super }}
+<script src="{% static 'tourney/ranking-criteria.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Setup playoff toggle functionality
+    setupPlayoffToggle('#{{ form.enable_playoffs.id_for_label }}', '#playoff-options');
+    
+    // Initialize ranking criteria manager
+    new RankingCriteriaManager('#ranking-criteria-list', '#{{ form.ranking_criteria_json.id_for_label }}');
+});
+</script>
+{% endblock %}

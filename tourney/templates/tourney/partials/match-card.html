@@ -1,0 +1,113 @@
+<div id="match-{{ match.id }}" class="match-card {% if match.has_result %}match-card--completed{% endif %}">
+    {% if show_match_number %}
+        <div class="match-number">{{ match_number|default:forloop.counter }}</div>
+    {% else %}
+        {% comment %}For pending matches, calculate match position{% endcomment %}
+        {% with match_round_matches=match.round.matches.all %}
+            {% for round_match in match_round_matches %}
+                {% if round_match == match %}
+                    <div class="match-number">{{ forloop.counter }}</div>
+                {% endif %}
+            {% endfor %}
+        {% endwith %}
+    {% endif %}
+
+    <div class="match-players">
+        {% if match.is_bye %}
+            <div class="match-player match-player--winner">
+                {{ match.player_one.player.get_display_name }}
+                {% if match.player_one.player.is_guest %}
+                    <span class="player-guest-badge">(Guest)</span>
+                {% endif %}
+            </div>
+            <div class="match-player match-player--bye">
+                BYE
+            </div>
+        {% else %}
+            {% if match.has_result %}
+                {% if match.result.winner == match.player_one %}
+                    <div class="match-player match-player--winner">
+                        {{ match.player_one.player.get_display_name }}
+                        {% if match.player_one.player.is_guest %}
+                            <span class="player-guest-badge">(Guest)</span>
+                        {% endif %}
+                    </div>
+                    <div class="match-player match-player--loser">
+                        {{ match.player_two.player.get_display_name }}
+                        {% if match.player_two.player.is_guest %}
+                            <span class="player-guest-badge">(Guest)</span>
+                        {% endif %}
+                    </div>
+                {% elif match.result.winner == match.player_two %}
+                    <div class="match-player match-player--loser">
+                        {{ match.player_one.player.get_display_name }}
+                        {% if match.player_one.player.is_guest %}
+                            <span class="player-guest-badge">(Guest)</span>
+                        {% endif %}
+                    </div>
+                    <div class="match-player match-player--winner">
+                        {{ match.player_two.player.get_display_name }}
+                        {% if match.player_two.player.is_guest %}
+                            <span class="player-guest-badge">(Guest)</span>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <!-- Tie -->
+                    <div class="match-player">
+                        {{ match.player_one.player.get_display_name }}
+                        {% if match.player_one.player.is_guest %}
+                            <span class="player-guest-badge">(Guest)</span>
+                        {% endif %}
+                    </div>
+                    <div class="match-player">
+                        {{ match.player_two.player.get_display_name }}
+                        {% if match.player_two.player.is_guest %}
+                            <span class="player-guest-badge">(Guest)</span>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <!-- Pending match -->
+                <div class="match-player match-player--pending">
+                    {{ match.player_one.player.get_display_name }}
+                    {% if match.player_one.player.is_guest %}
+                        <span class="player-guest-badge">(Guest)</span>
+                    {% endif %}
+                </div>
+                <div class="match-player match-player--pending">
+                    {% if match.player_two %}
+                        {{ match.player_two.player.get_display_name }}
+                        {% if match.player_two.player.is_guest %}
+                            <span class="player-guest-badge">(Guest)</span>
+                        {% endif %}
+                    {% else %}
+                        <em>TBD</em>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <div class="match-actions">
+        {% if not match.is_bye %}
+            {% comment %} Check if user can edit this match {% endcomment %}
+            {% if is_admin or match.player_one.player.user == user or match.player_two.player.user == user %}
+                <button class="match-edit-btn"
+                        data-match-id="{{ match.id }}"
+                        data-update-action="{% url 'tourney-report-result' tournament.id match.id %}"
+                        data-match-player-one="{{ match.player_one.player.get_display_name }}"
+                        data-match-player-one-id="{{ match.player_one.id }}"
+                        {% if match.player_two %}
+                        data-match-player-two="{{ match.player_two.player.get_display_name }}"
+                        data-match-player-two-id="{{ match.player_two.id }}"
+                        {% endif %}
+                        data-match-has-result="{% if match.has_result %}true{% else %}false{% endif %}"
+                        {% if match.has_result %}
+                        data-match-winner-id="{% if match.result.winner %}{{ match.result.winner.id }}{% endif %}"
+                        {% endif %}
+                        onclick="openMatchModal(this)">
+                </button>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>

@@ -1,0 +1,109 @@
+<div id="tournament-content">
+<section>
+    <!-- Stage and Round Selection -->
+    {% if stages %}
+        <section>
+            <h2>Select Stage and Round</h2>
+            <div class="stage-round-controls">
+                <div class="stage-round-item">
+                    <label for="stageSelect" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Stage:</label>
+                    <select id="stageSelect" style="width: 100%;" onchange="updateRounds()">
+                        <option value="">Choose a stage...</option>
+                        {% for stage in stages %}
+                            <option value="{{ stage.id }}" {% if stage == selected_stage %}selected{% endif %}>
+                                {{ stage.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="stage-round-item">
+                    <label for="roundSelect" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Round:</label>
+                    <select id="roundSelect" style="width: 100%;" onchange="navigateToMatch()" disabled>
+                        <option value="">Select a stage first...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="stageMessage" style="display: none; text-align: center; color: var(--color-text-muted); margin-bottom: 1rem;">
+                <!-- Dynamic message will be inserted here -->
+            </div>
+        </section>
+    {% endif %}
+
+    <!-- Current Round Matches -->
+    {% if selected_round %}
+        <section>
+            <h2>{{ selected_stage.name }} - Round {{ selected_round.order }}</h2>
+
+            {% if matches %}
+                <div class="match-grid">
+                    {% for match in matches %}
+                        {% include 'tourney/partials/match-card.html' with match=match is_admin=is_admin show_match_number=True match_number=forloop.counter %}
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p id="noMatchesMessage" class="text-muted">There are no matches within this round.</p>
+            {% endif %}
+        </section>
+    {% else %}
+        {% if stages %}
+            <p id="selectMessage" class="text-muted" style="text-align: center;">Select a stage and round to view matches.</p>
+        {% else %}
+            <p class="text-muted" style="text-align: center;">No stages have been created yet.</p>
+        {% endif %}
+    {% endif %}
+</section>
+
+<section>
+    {% if is_admin %}
+        <h2>Tournament Control</h2>
+        <div class="hstack gap-1">
+            {% if can_start_next_stage and next_stage %}
+            <form method="post"
+                    action="{% url 'tourney-start-next-stage' tournament.id %}"
+                    style="display:inline;"
+                    hx-confirm="Are you sure you want to start {{ next_stage.name }}? This will seed players based on current standings."
+                    hx-post="{% url 'tourney-start-next-stage' tournament.id %}"
+                    hx-target="#tournament-content"
+                    hx-swap="outerHTML">
+                {% csrf_token %}
+                <button type="submit" class="button button-primary">Start {{ next_stage.name }}</button>
+            </form>
+            {% endif %}
+
+            <form method="post"
+                  action="{% url 'tourney-create-round' tournament.id %}"
+                  style="display:inline;"
+                  hx-post="{% url 'tourney-create-round' tournament.id %}"
+                  hx-target="#tournament-content"
+                  hx-swap="outerHTML">
+                {% csrf_token %}
+                <button
+                    type="submit"
+                    class="button button-primary"
+                    {% if not can_create_round %}
+                        disabled="true"
+                    {% endif %}
+                >Create New Round</button>
+            </form>
+
+            <form method="post"
+                    style="display:inline;"
+                    hx-target="#tournament-content"
+                    hx-swap="outerHTML"
+                    hx-post="{% url 'tourney-delete-latest-round' tournament.id %}"
+                    hx-confirm="Are you sure you want to delete the latest round? This action cannot be undone and will remove all matches in the round.">
+                {% csrf_token %}
+                <button
+                    type="submit"
+                    class="button button-danger"
+                    {% if not can_delete_latest_round %}
+                        disabled="true"
+                    {% endif %}
+                >Delete Latest Round</button>
+            </form>
+        </div>
+    {% endif %}
+</section>
+</div>

@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'redacted',
     'transporter_platform',
     'pmc',
+    'tourney',
     'common',
     'django_hosts',
     'django_htmx',
@@ -224,6 +225,7 @@ FT_USE_REGISTER = os.environ['FT_USE_REGISTER'] == 'True'
 FT_USE_RATINGS = os.environ['FT_USE_RATINGS'] == 'True'
 FT_USE_POSTS = os.environ['FT_USE_POSTS'] == 'True'
 FT_USE_EVENTS = os.environ['FT_USE_EVENTS'] == 'True'
+FT_USE_TOURNEYS = os.environ['FT_USE_TOURNEYS'] == 'True'
 
 # Bootstrap Heroku settings
 MAX_CONN_AGE = 600

@@ -1,0 +1,154 @@
+{% extends "tourney/_base.html" %}
+{% load partials %}
+
+{% block content %}
+    <h1>{{ tournament.name }}</h1>
+
+    {% include "tourney/partials/tournament-detail-registration-status.html" %}
+
+    <!-- Pending Matches for Current User -->
+    {% if user.is_authenticated and is_active_player and pending_matches %}
+    <section style="margin-bottom: 2rem;">
+        <h2>Your Pending Matches</h2>
+        {% for match in pending_matches %}
+            <div style="margin-bottom: 1rem;">
+                {% include 'tourney/partials/match-card.html' with match=match is_admin=is_admin show_match_number=False %}
+
+                <div style="text-align: center; color: var(--color-text-muted); font-size: 1.2rem; margin-top: 0.5rem;">
+                    {{ match.round.stage.name }} - Round {{ match.round.order }}
+                </div>
+            </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+
+    <!-- Tab Navigation -->
+    <ul
+        class="nav short"
+        style="justify-content: center;"
+    >
+        <li class="nav__item">
+            <a href="{% url 'tourney-detail-home' tournament.id %}" 
+            class="nav__link {% if current_tab == 'home' %}nav__link--active{% endif %}">
+                Info
+            </a>
+        </li>
+        <li class="nav__item">
+            <a href="{% url 'tourney-detail-matches' tournament.id %}" 
+            class="nav__link {% if current_tab == 'matches' %}nav__link--active{% endif %}">
+                Matches
+            </a>
+        </li>
+        <li class="nav__item">
+            <a href="{% url 'tourney-detail-standings' tournament.id %}" 
+            class="nav__link {% if current_tab == 'standings' %}nav__link--active{% endif %}">
+                Standings
+            </a>
+        </li>
+    </ul>
+
+    {% block tab_content %}
+    {% endblock %}
+
+    <!-- Match Result Modal -->
+    <div id="matchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Report Match Result</h3>
+                <button class="modal-close" onclick="closeMatchModal()"></button>
+            </div>
+            
+            <form id="matchForm" class="form-wide">
+                <div>
+                    <label for="matchWinner">Winner:</label>
+                    <select id="matchWinner" name="winner" required>
+                        <option value="">Select Winner</option>
+                    </select>
+                </div>
+                
+                <div style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: center;">
+                    <button type="submit" class="button button-primary">Submit</button>
+                    <button type="button" class="button" onclick="closeMatchModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function openMatchModal(button) {
+        const modal = document.getElementById('matchModal');
+        const form = document.getElementById('matchForm');
+        const title = document.getElementById('modalTitle');
+        const winnerSelect = document.getElementById('matchWinner');
+        
+        const matchId = button.dataset.matchId;
+        const updateAction = button.dataset.updateAction;
+        const playerOne = button.dataset.matchPlayerOne;
+        const playerOneId = button.dataset.matchPlayerOneId;
+        const playerTwo = button.dataset.matchPlayerTwo;
+        const playerTwoId = button.dataset.matchPlayerTwoId;
+        const hasResult = button.dataset.matchHasResult === 'true';
+        const currentWinnerId = button.dataset.matchWinnerId;
+        
+        form.setAttribute('hx-post', updateAction);
+        form.setAttribute('hx-target', `#match-${matchId}`);
+        form.setAttribute('hx-swap', 'outerHTML');
+        htmx.process(form);
+        
+        // Set modal title
+        title.textContent = hasResult ? 'Update Match Result' : 'Report Match Result';
+        
+        // Clear and populate winner select
+        winnerSelect.innerHTML = '<option value="">Select Winner</option>';
+
+        
+        if (playerOne) {
+            const option1 = new Option(playerOne, playerOneId);
+            if (currentWinnerId === playerOneId) option1.selected = true;
+            winnerSelect.appendChild(option1);
+        }
+        
+        if (playerTwo) {
+            const option2 = new Option(playerTwo, playerTwoId);
+            if (currentWinnerId === playerTwoId) option2.selected = true;
+            winnerSelect.appendChild(option2);
+        }
+        
+        // Add tie option
+        const tieOption = new Option('Tie', '');
+        if (!currentWinnerId && hasResult) tieOption.selected = true;
+        winnerSelect.appendChild(tieOption);
+        
+        // Show modal
+        modal.classList.add('modal--active');
+    }
+
+    function closeMatchModal() {
+        const modal = document.getElementById('matchModal');
+        modal.classList.remove('modal--active');
+    }
+
+    // Close modal when clicking outside
+    document.addEventListener('click', function(e) {
+        const modal = document.getElementById('matchModal');
+        if (e.target === modal) {
+            closeMatchModal();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeMatchModal();
+        }
+    });
+
+    document.addEventListener('htmx:afterRequest', function(e) {
+        // Close modal on successful htmx request
+        if (e.detail.elt && e.detail.elt.id === 'matchForm' && e.detail.successful) {
+            closeMatchModal();
+        }
+    });
+    </script>
+{% endblock %}
