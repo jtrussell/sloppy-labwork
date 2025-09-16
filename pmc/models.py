@@ -629,7 +629,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
+            user_data = {entry["result__user"]: entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -778,6 +778,10 @@ class AwardBase(models.Model):
         level = (20, _('Level'))
         events_at_group_in_calendar_month = (
             21, _('Events at Group in Calendar Month'))
+        tournament_match_wins_with_house = (
+            22, _('Tournament Match Wins with House'))
+        sets_with_ten_tournament_match_wins = (
+            23, _('Sets with Ten Tournament Match Wins'))
 
     pmc_id = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
@@ -786,6 +790,8 @@ class AwardBase(models.Model):
         choices=RewardCategoryOptions.choices, default=RewardCategoryOptions.PARTICIPATION)
     is_hidden = models.BooleanField(default=False)
     sort_order = models.PositiveSmallIntegerField(default=1)
+    house = models.ForeignKey(
+        'decks.House', on_delete=models.SET_NULL, default=None, null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -968,7 +974,7 @@ class AwardAssignmentService():
         for user in users:
             for trophy in trophies:
                 value = AwardAssignmentService.get_user_criteria_value(
-                    user, trophy.criteria)
+                    user, trophy)
                 amount = value // trophy.criteria_value if trophy.criteria_value else 0
                 if amount > 0:
                     UserTrophy.objects.update_or_create(
@@ -986,7 +992,7 @@ class AwardAssignmentService():
             tiers = achievement.tiers.all()
             for user in users:
                 user_value = AwardAssignmentService.get_user_criteria_value(
-                    user, achievement.criteria)
+                    user, achievement)
                 for tier in tiers:
                     if user_value >= tier.criteria_value:
                         UserAchievementTier.objects.update_or_create(
@@ -995,7 +1001,8 @@ class AwardAssignmentService():
                         )
 
     @staticmethod
-    def get_user_criteria_value(user, criteria_type):
+    def get_user_criteria_value(user, award):
+        criteria_type = award.criteria
         value = 0
         qs = EventResult.objects.filter(user=user)
         if criteria_type == AwardBase.CriteriaTypeOptions.event_matches:
@@ -1100,6 +1107,35 @@ class AwardAssignmentService():
                 .count()
             )
             value = qualifying_months
+        elif criteria_type == AwardBase.CriteriaTypeOptions.tournament_match_wins_with_house:
+            if not getattr(award, 'house', None):
+                return 0
+            house = award.house
+            value = (
+                EventResultDeck.objects
+                .filter(event_result__user=user, was_played=True)
+                .filter(
+                    models.Q(deck__house_1=house) |
+                    models.Q(deck__house_2=house) |
+                    models.Q(deck__house_3=house)
+                )
+                .aggregate(total=Coalesce(Sum('event_result__num_wins'), 0))
+            )['total'] or 0
+        elif criteria_type == AwardBase.CriteriaTypeOptions.sets_with_ten_tournament_match_wins:
+            sets_with_10_wins = (
+                EventResultDeck.objects
+                .filter(
+                    event_result__user=user,
+                    event_result__event__is_casual=False,
+                    was_played=True,
+                    deck__set__isnull=False
+                )
+                .values('deck__set')
+                .annotate(total_wins=Sum('event_result__num_wins'))
+                .filter(total_wins__gte=10)
+                .count()
+            )
+            value = sets_with_10_wins
 
         value += AwardCredit.objects.filter(
             user=user,
