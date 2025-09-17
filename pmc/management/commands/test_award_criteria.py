@@ -6,12 +6,13 @@ from decks.models import House
 
 class DummyAward:
     """Dummy award object for testing criteria"""
+
     def __init__(self, criteria, house=None):
         self.criteria = criteria
         self.house = house
         self.name = f"Test Award (Criteria {criteria})"
         self.pmc_id = f"test_{criteria}"
-    
+
     def get_criteria_display(self):
         return dict(AwardBase.CriteriaTypeOptions.choices).get(self.criteria, f"Unknown ({self.criteria})")
 
@@ -20,11 +21,14 @@ class Command(BaseCommand):
     help = 'Test the get_user_criteria_value method for awards'
 
     def add_arguments(self, parser):
-        parser.add_argument('username', type=str, help='Username to test criteria for')
-        parser.add_argument('award_type', type=str, choices=['achievement', 'trophy', 'criteria'], 
-                          help='Type of award (achievement, trophy, or criteria)')
-        parser.add_argument('award_id', type=str, help='Award ID (pmc_id) or criteria ID for testing')
-        parser.add_argument('--house', type=str, help='House name for house-based criteria', required=False)
+        parser.add_argument('username', type=str,
+                            help='Username to test criteria for')
+        parser.add_argument('award_type', type=str, choices=['achievement', 'trophy', 'criteria'],
+                            help='Type of award (achievement, trophy, or criteria)')
+        parser.add_argument('award_id', type=str,
+                            help='Award ID (pmc_id) or criteria ID for testing')
+        parser.add_argument(
+            '--house', type=str, help='House name for house-based criteria', required=False)
 
     def handle(self, *args, **options):
         username = options['username']
@@ -56,7 +60,8 @@ class Command(BaseCommand):
                 award = DummyAward(criteria_id, house)
             except ValueError:
                 self.stdout.write(
-                    self.style.ERROR(f'Criteria ID "{award_id}" must be a number')
+                    self.style.ERROR(
+                        f'Criteria ID "{award_id}" must be a number')
                 )
                 return
         elif award_type == 'achievement':
@@ -64,7 +69,8 @@ class Command(BaseCommand):
                 award = Achievement.objects.get(pmc_id=award_id)
             except Achievement.DoesNotExist:
                 self.stdout.write(
-                    self.style.ERROR(f'Achievement with ID "{award_id}" does not exist')
+                    self.style.ERROR(
+                        f'Achievement with ID "{award_id}" does not exist')
                 )
                 return
         elif award_type == 'trophy':
@@ -72,12 +78,14 @@ class Command(BaseCommand):
                 award = Trophy.objects.get(pmc_id=award_id)
             except Trophy.DoesNotExist:
                 self.stdout.write(
-                    self.style.ERROR(f'Trophy with ID "{award_id}" does not exist')
+                    self.style.ERROR(
+                        f'Trophy with ID "{award_id}" does not exist')
                 )
                 return
 
-        criteria_value = AwardAssignmentService.get_user_criteria_value(user, award)
-        
+        criteria_value = AwardAssignmentService.get_user_criteria_value(
+            user, award)
+
         self.stdout.write(
             self.style.SUCCESS(
                 f'User: {user.username}\n'
