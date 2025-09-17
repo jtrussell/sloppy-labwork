@@ -1111,21 +1111,22 @@ class AwardAssignmentService():
             if not getattr(award, 'house', None):
                 return 0
             house = award.house
-            # Only include EventResults where at least one played deck matches the house
-            value = (
+            event_results = (
                 EventResult.objects
                 .filter(
                     user=user,
                     event__is_casual=False,
                     event_result_decks__was_played=True
-                ).filter(
+                )
+                .filter(
                     models.Q(event_result_decks__deck__house_1=house) |
                     models.Q(event_result_decks__deck__house_2=house) |
                     models.Q(event_result_decks__deck__house_3=house)
                 )
+                .values('id', 'num_wins')
                 .distinct()
-                .aggregate(total=Coalesce(Sum('num_wins'), 0))
-            )['total'] or 0
+            )
+            value = sum(er['num_wins'] for er in event_results)
         elif criteria_type == AwardBase.CriteriaTypeOptions.sets_with_ten_tournament_match_wins:
             sets_with_10_wins = (
                 EventResultDeck.objects
