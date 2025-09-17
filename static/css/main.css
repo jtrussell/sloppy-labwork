@@ -193,6 +193,18 @@ footer {
   font-size: 0.9rem;
 }
 
+@media (max-width: 750px) {
+  .nav-footer {
+    margin-top: 1rem;;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .nav-footer .nav__item {
+    margin: 0;
+  }
+}
+
 /* Pagination */
 .step-links {
   display: flex;
