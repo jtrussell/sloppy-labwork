@@ -95,6 +95,7 @@
                 <button class="match-edit-btn"
                         data-match-id="{{ match.id }}"
                         data-update-action="{% url 'tourney-report-result' tournament.id match.id %}"
+                        data-delete-action="{% url 'tourney-delete-match' tournament.id match.id %}"
                         data-match-player-one="{{ match.player_one.player.get_display_name }}"
                         data-match-player-one-id="{{ match.player_one.id }}"
                         {% if match.player_two %}
@@ -109,14 +110,6 @@
                 </button>
             {% endif %}
 
-            {% comment %} Delete button - only for admins {% endcomment %}
-            {% if is_admin %}
-                <button class="match-delete-btn"
-                        hx-post="{% url 'tourney-delete-match' tournament.id match.id %}"
-                        hx-confirm="Are you sure you want to delete this match between {{ match.player_one.player.get_display_name }}{% if match.player_two %} and {{ match.player_two.player.get_display_name }}{% endif %}?"
-                        title="Delete match">
-                </button>
-            {% endif %}
         {% endif %}
     </div>
 </div>

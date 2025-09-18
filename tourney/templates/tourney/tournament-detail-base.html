@@ -71,6 +71,15 @@
                     <button type="submit" class="button button-primary">Submit</button>
                     <button type="button" class="button" onclick="closeMatchModal()">Cancel</button>
                 </div>
+
+                {% if is_admin %}
+                <div style="margin-top: 2rem">
+                    <h4>Danger Zone</h4>
+                    <div style="display: flex; gap: 1rem; justify-content: center;">
+                        <button type="button" id="deleteMatchBtn" class="button button-danger text-danger" onclick="deleteMatch()" style="display: none;">Delete Match</button>
+                    </div>
+                </div>
+                {% endif %}
             </form>
         </div>
     </div>
@@ -113,45 +122,59 @@
         const form = document.getElementById('matchForm');
         const title = document.getElementById('modalTitle');
         const winnerSelect = document.getElementById('matchWinner');
-        
+        const deleteBtn = document.getElementById('deleteMatchBtn');
+
         const matchId = button.dataset.matchId;
         const updateAction = button.dataset.updateAction;
+        const deleteAction = button.dataset.deleteAction;
         const playerOne = button.dataset.matchPlayerOne;
         const playerOneId = button.dataset.matchPlayerOneId;
         const playerTwo = button.dataset.matchPlayerTwo;
         const playerTwoId = button.dataset.matchPlayerTwoId;
         const hasResult = button.dataset.matchHasResult === 'true';
         const currentWinnerId = button.dataset.matchWinnerId;
-        
+
+        // Store match info for delete function
+        window.currentDeleteAction = deleteAction;
+        window.currentMatchPlayerOne = playerOne;
+        window.currentMatchPlayerTwo = playerTwo;
+
         form.setAttribute('hx-post', updateAction);
         form.setAttribute('hx-target', `#match-${matchId}`);
         form.setAttribute('hx-swap', 'outerHTML');
         htmx.process(form);
-        
+
         // Set modal title
         title.textContent = hasResult ? 'Update Match Result' : 'Report Match Result';
-        
+
+        // Show/hide delete button for admins only
+        {% if is_admin %}
+        if (deleteBtn) {
+            deleteBtn.style.display = 'inline-block';
+        }
+        {% endif %}
+
         // Clear and populate winner select
         winnerSelect.innerHTML = '<option value="">Select Winner</option>';
 
-        
+
         if (playerOne) {
             const option1 = new Option(playerOne, playerOneId);
             if (currentWinnerId === playerOneId) option1.selected = true;
             winnerSelect.appendChild(option1);
         }
-        
+
         if (playerTwo) {
             const option2 = new Option(playerTwo, playerTwoId);
             if (currentWinnerId === playerTwoId) option2.selected = true;
             winnerSelect.appendChild(option2);
         }
-        
+
         // Add tie option
         const tieOption = new Option('Tie', '');
         if (!currentWinnerId && hasResult) tieOption.selected = true;
         winnerSelect.appendChild(tieOption);
-        
+
         // Show modal
         modal.classList.add('modal--active');
     }
@@ -160,6 +183,25 @@
         const modal = document.getElementById('matchModal');
         modal.classList.remove('modal--active');
     }
+
+    {% if is_admin %}
+    function deleteMatch() {
+        if (!window.currentDeleteAction) return;
+
+        const deleteBtn = document.getElementById('deleteMatchBtn');
+        const playerNames = window.currentMatchPlayerTwo
+            ? `${window.currentMatchPlayerOne} and ${window.currentMatchPlayerTwo}`
+            : window.currentMatchPlayerOne;
+
+        // Set up HTMX attributes on the delete button
+        deleteBtn.setAttribute('hx-post', window.currentDeleteAction);
+        deleteBtn.setAttribute('hx-confirm', `Are you sure you want to delete this match between ${playerNames}? Our lawyers insist that we ask.`);
+
+        // Process the button with HTMX and trigger the click
+        htmx.process(deleteBtn);
+        deleteBtn.click();
+    }
+    {% endif %}
 
     // Close modal when clicking outside
     document.addEventListener('click', function(e) {

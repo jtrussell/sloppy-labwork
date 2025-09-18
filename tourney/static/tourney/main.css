@@ -96,15 +96,13 @@
 
 .match-actions {
   flex-shrink: 0;
-  width: 7.8rem;
+  width: 3.9rem;
   border-left: 1px solid var(--color-lines);
-  display: flex;
-  flex-direction: row;
 }
 
 .match-edit-btn {
   width: 100%;
-  flex: 1;
+  height: 100%;
   padding: 0;
   display: flex;
   align-items: center;
@@ -114,7 +112,6 @@
   cursor: pointer;
   text-decoration: none;
   color: var(--color-text);
-  border-right: 1px solid var(--color-lines);
 }
 
 .match-edit-btn:hover {
@@ -125,39 +122,6 @@
 .match-edit-btn:before {
   content: "✎";
   font-size: 1.4rem;
-}
-
-.match-delete-btn {
-  width: 100%;
-  flex: 1;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background-color: var(--color-bg-secondary);
-  cursor: pointer;
-  text-decoration: none;
-  color: var(--color-text);
-}
-
-.match-delete-btn:hover {
-  background-color: var(--color-primary);
-  color: var(--color-bg);
-}
-
-.match-delete-btn:before {
-  content: "🗑";
-  font-size: 1.4rem;
-}
-
-/* When only edit button exists, adjust container and button */
-.match-actions:has(.match-edit-btn:only-child) {
-  width: 3.9rem;
-}
-
-.match-actions .match-edit-btn:only-child {
-  border-right: none;
 }
 
 /* Player Management Cards */
