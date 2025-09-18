@@ -106,6 +106,15 @@
                 >Create New Round</button>
             </form>
 
+            {% comment %} Add Match button {% endcomment %}
+            {% if selected_round and unmatched_players.count >= 2 %}
+            <button
+                type="button"
+                class="button button-primary"
+                onclick="openAddMatchModal()"
+            >Add Match</button>
+            {% endif %}
+
             <form method="post"
                     style="display:inline;"
                     hx-target="#tournament-content"

@@ -75,6 +75,38 @@
         </div>
     </div>
 
+    <!-- Add Match Modal -->
+    <div id="addMatchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="addMatchModalTitle">Add Match</h3>
+                <button class="modal-close" onclick="closeAddMatchModal()"></button>
+            </div>
+
+            <form id="addMatchForm" class="form-wide">
+                {% csrf_token %}
+                <div>
+                    <label for="addMatchPlayerOne">Player One:</label>
+                    <select id="addMatchPlayerOne" name="player_one" required>
+                        <option value="">Select Player One</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="addMatchPlayerTwo">Player Two:</label>
+                    <select id="addMatchPlayerTwo" name="player_two" required>
+                        <option value="">Select Player Two</option>
+                    </select>
+                </div>
+
+                <div style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: center;">
+                    <button type="submit" class="button button-primary">Create Match</button>
+                    <button type="button" class="button" onclick="closeAddMatchModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
     function openMatchModal(button) {
         const modal = document.getElementById('matchModal');
@@ -148,6 +180,56 @@
         // Close modal on successful htmx request
         if (e.detail.elt && e.detail.elt.id === 'matchForm' && e.detail.successful) {
             closeMatchModal();
+        }
+        if (e.detail.elt && e.detail.elt.id === 'addMatchForm' && e.detail.successful) {
+            closeAddMatchModal();
+        }
+    });
+
+    // Add Match Modal Functions
+    function openAddMatchModal() {
+        const modal = document.getElementById('addMatchModal');
+        const form = document.getElementById('addMatchForm');
+        const playerOneSelect = document.getElementById('addMatchPlayerOne');
+        const playerTwoSelect = document.getElementById('addMatchPlayerTwo');
+
+        // Set up form action
+        form.setAttribute('hx-post', '{% url "tourney-add-match" tournament.id %}');
+        htmx.process(form);
+
+        // Clear and populate player selects with unmatched players
+        playerOneSelect.innerHTML = '<option value="">Select Player One</option>';
+        playerTwoSelect.innerHTML = '<option value="">Select Player Two</option>';
+
+        {% if unmatched_players %}
+        {% for stage_player in unmatched_players %}
+        const option1_{{ stage_player.id }} = new Option('{{ stage_player.player.get_display_name|escapejs }}', '{{ stage_player.id }}');
+        const option2_{{ stage_player.id }} = new Option('{{ stage_player.player.get_display_name|escapejs }}', '{{ stage_player.id }}');
+        playerOneSelect.appendChild(option1_{{ stage_player.id }});
+        playerTwoSelect.appendChild(option2_{{ stage_player.id }});
+        {% endfor %}
+        {% endif %}
+
+        // Show modal
+        modal.classList.add('modal--active');
+    }
+
+    function closeAddMatchModal() {
+        const modal = document.getElementById('addMatchModal');
+        modal.classList.remove('modal--active');
+    }
+
+    // Close add match modal when clicking outside or pressing Escape
+    document.addEventListener('click', function(e) {
+        const modal = document.getElementById('addMatchModal');
+        if (e.target === modal) {
+            closeAddMatchModal();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeAddMatchModal();
         }
     });
     </script>

@@ -196,3 +196,48 @@ class MatchResultForm(forms.ModelForm):
 
 class PlayerRegistrationForm(forms.Form):
     nickname = forms.CharField(max_length=100, required=False)
+
+
+class AddMatchForm(forms.Form):
+    player_one = forms.ChoiceField(
+        choices=[],
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Player One'
+    )
+    player_two = forms.ChoiceField(
+        choices=[],
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Player Two'
+    )
+
+    def __init__(self, *args, **kwargs):
+        available_players = kwargs.pop('available_players', [])
+        super().__init__(*args, **kwargs)
+
+        choices = [('', 'Select a player...')]
+        for stage_player in available_players:
+            choices.append((stage_player.id, stage_player.player.get_display_name()))
+
+        self.fields['player_one'].choices = choices
+        self.fields['player_two'].choices = choices
+
+    def clean(self):
+        cleaned_data = super().clean()
+        player_one_id = cleaned_data.get('player_one')
+        player_two_id = cleaned_data.get('player_two')
+
+        if player_one_id and player_two_id:
+            if player_one_id == player_two_id:
+                raise forms.ValidationError('Please select two different players.')
+
+        return cleaned_data
+
+    def get_selected_players(self):
+        from .models import StagePlayer
+        player_one_id = self.cleaned_data.get('player_one')
+        player_two_id = self.cleaned_data.get('player_two')
+
+        player_one = StagePlayer.objects.get(id=player_one_id) if player_one_id else None
+        player_two = StagePlayer.objects.get(id=player_two_id) if player_two_id else None
+
+        return player_one, player_two

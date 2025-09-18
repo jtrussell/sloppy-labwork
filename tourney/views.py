@@ -16,7 +16,7 @@ from .models import (
     Match, MatchResult, TournamentActionLog, StandingCalculator,
     get_pairing_strategy
 )
-from .forms import TournamentForm, PlayerForm, StageForm, MatchResultForm, PlayerRegistrationForm
+from .forms import TournamentForm, PlayerForm, StageForm, MatchResultForm, PlayerRegistrationForm, AddMatchForm
 
 
 def is_tournament_admin(view_func):
@@ -858,5 +858,68 @@ def delete_match(request, tournament_id, match_id):
 
     messages.success(
         request, f'Match between {player_one_name} and {player_two_name} deleted successfully!')
+
+    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+
+@login_required
+@require_POST
+@is_tournament_admin
+def add_match(request, tournament_id):
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+    current_stage = tournament.get_current_stage()
+
+    if not current_stage:
+        messages.error(request, 'No active stage found.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    current_round = current_stage.get_current_round()
+    if not current_round:
+        messages.error(request, 'No active round found. Please create a round first.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    # Get unmatched players for this round
+    stage_players = current_stage.stage_players.filter(
+        player__status=Player.PlayerStatus.ACTIVE)
+    matched_player_ids = set()
+    for match in current_round.matches.all():
+        if match.player_one:
+            matched_player_ids.add(match.player_one.id)
+        if match.player_two:
+            matched_player_ids.add(match.player_two.id)
+
+    available_players = stage_players.exclude(id__in=matched_player_ids)
+
+    if available_players.count() < 2:
+        messages.error(request, 'Not enough unmatched players to create a new match.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    form = AddMatchForm(request.POST, available_players=available_players)
+    if form.is_valid():
+        player_one, player_two = form.get_selected_players()
+
+        with transaction.atomic():
+            match = Match.objects.create(
+                round=current_round,
+                player_one=player_one,
+                player_two=player_two
+            )
+
+            TournamentActionLog.objects.create(
+                tournament=tournament,
+                user=request.user,
+                action_type=TournamentActionLog.ActionType.CREATE_ROUND,
+                description=f'Added match: {player_one.player.get_display_name()} vs {player_two.player.get_display_name()} in {current_round.stage.name} Round {current_round.order}'
+            )
+
+        messages.success(
+            request, f'Match between {player_one.player.get_display_name()} and {player_two.player.get_display_name()} created successfully!')
+    else:
+        if form.errors:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, error)
+        else:
+            messages.error(request, 'Error creating match. Please check your selections.')
 
     return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
