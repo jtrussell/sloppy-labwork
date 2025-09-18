@@ -45,6 +45,24 @@
             {% else %}
                 <p id="noMatchesMessage" class="text-muted">There are no matches within this round.</p>
             {% endif %}
+
+            {% comment %} Show unmatched players if any {% endcomment %}
+            {% if unmatched_players %}
+                <div class="unmatched-players-section">
+                    <h3>Players Not Matched</h3>
+                    <div class="unmatched-players-grid">
+                        {% for stage_player in unmatched_players %}
+                            <div class="unmatched-player-card">
+                                <span class="player-name">{{ stage_player.player.get_display_name }}</span>
+                                {% if stage_player.player.is_guest %}
+                                    <span class="player-guest-badge">(Guest)</span>
+                                {% endif %}
+                                <span class="player-seed">Seed {{ stage_player.seed }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
         </section>
     {% else %}
         {% if stages %}

@@ -321,10 +321,24 @@ def tournament_detail_matches(request, tournament_id):
         selected_round = None
         matches = []
 
+    unmatched_players = []
+    if selected_round and selected_stage:
+        stage_players = selected_stage.stage_players.filter(
+            player__status=Player.PlayerStatus.ACTIVE)
+        matched_player_ids = set()
+        for match in matches:
+            if match.player_one:
+                matched_player_ids.add(match.player_one.id)
+            if match.player_two:
+                matched_player_ids.add(match.player_two.id)
+
+        unmatched_players = stage_players.exclude(id__in=matched_player_ids)
+
     context.update({
         'selected_stage': selected_stage,
         'selected_round': selected_round,
         'matches': matches,
+        'unmatched_players': unmatched_players,
     })
 
     if request.htmx:
@@ -812,5 +826,37 @@ def delete_latest_round(request, tournament_id):
 
     messages.success(
         request, f'Round {round_number} deleted successfully from {stage_name}!')
+
+    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+
+@login_required
+@require_POST
+@is_tournament_admin
+def delete_match(request, tournament_id, match_id):
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+    match = get_object_or_404(
+        Match, id=match_id, round__stage__tournament=tournament)
+
+    if match.is_bye():
+        messages.error(request, 'Cannot delete bye matches.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    player_one_name = match.player_one.player.get_display_name() if match.player_one else "Unknown"
+    player_two_name = match.player_two.player.get_display_name() if match.player_two else "Unknown"
+    round_info = f"Round {match.round.order} in {match.round.stage.name}"
+
+    with transaction.atomic():
+        match.delete()
+
+        TournamentActionLog.objects.create(
+            tournament=tournament,
+            user=request.user,
+            action_type=TournamentActionLog.ActionType.DELETE_ROUND,
+            description=f'Deleted match: {player_one_name} vs {player_two_name} from {round_info}'
+        )
+
+    messages.success(
+        request, f'Match between {player_one_name} and {player_two_name} deleted successfully!')
 
     return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))

@@ -17,4 +17,5 @@ urlpatterns = [
     path('<int:tournament_id>/round/delete/', views.delete_latest_round, name='tourney-delete-latest-round'),
     path('<int:tournament_id>/stage/advance/', views.start_next_stage, name='tourney-start-next-stage'),
     path('<int:tournament_id>/match/<int:match_id>/report/', views.report_match_result, name='tourney-report-result'),
+    path('<int:tournament_id>/match/<int:match_id>/delete/', views.delete_match, name='tourney-delete-match'),
 ]
