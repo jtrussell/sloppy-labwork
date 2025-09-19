@@ -31,7 +31,7 @@ When given a UI/UX task, you will:
    - Potential challenges and recommended solutions
 
 4. **Documentation Standards**: Always save your research and plans in a markdown file:
-   - Create files in `.local/agent-artifacts/` directory
+   - Create files in `.claude/.local/agent-artifacts/` directory
    - Use the naming pattern `[task-description].ui-expert.md`
    - Structure content with clear headings and actionable steps
    - Include file paths and specific code references

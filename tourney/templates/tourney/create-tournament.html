@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
+    <link rel="stylesheet" href="{% static 'tourney/drag-drop.css' %}">
     <link rel="stylesheet" href="{% static 'tourney/ranking-criteria.css' %}">
     {{ block.super }}
 {% endblock %}
@@ -81,7 +82,7 @@
             <div class="form-error">{{ form.ranking_criteria_json.errors }}</div>
         {% endif %}
         
-        <div id="ranking-criteria-list" class="ranking-criteria-container">
+        <div id="ranking-criteria-list" class="drag-drop-container ranking-criteria-container">
             <!-- Criteria items will be populated by JavaScript -->
         </div>
     </section>

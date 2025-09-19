@@ -1,40 +1,12 @@
 /* Ranking Criteria Configuration Interface */
+/* Extends base drag-drop styles */
 
 .ranking-criteria-container {
-    border: 1px solid var(--color-lines);
-    border-radius: 3px;
-    padding: 10px;
-    background-color: var(--color-bg-secondary);
+    /* Uses base drag-drop-container styles */
 }
 
 .ranking-criteria-item {
-    background: var(--color-bg);
-    border: 1px solid var(--color-lines);
-    border-radius: 3px;
-    padding: 8px 10px; /* Reduced from 12px to ~8px (33% reduction) */
-    margin-bottom: 6px; /* Reduced from 8px */
-    cursor: grab;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    transition: box-shadow 0.2s, border-color 0.2s;
-}
-
-.ranking-criteria-item:hover {
-    border-color: var(--color-lines-active);
-    box-shadow: 0 2px 4px rgba(133, 92, 214, 0.2); /* Purple shadow with transparency */
-}
-
-.ranking-criteria-item.dragging {
-    opacity: 0.5;
-    cursor: grabbing;
-    border-color: var(--color-primary);
-}
-
-.ranking-criteria-item.disabled {
-    opacity: 0.6;
-    background-color: var(--color-bg-secondary);
-    border-color: var(--color-text-muted);
+    /* Uses base drag-drop-item styles */
 }
 
 .criteria-info {
@@ -87,26 +59,4 @@
     transform: translateX(24px); /* Adjusted for smaller size */
 }
 
-.drag-handle {
-    color: var(--color-text-muted);
-    margin-right: 8px; /* Slightly reduced */
-    cursor: grab;
-    font-size: 1.2rem;
-}
-
-.drag-handle:hover {
-    color: var(--color-nav-links);
-}
-
-.drop-indicator {
-    height: 2px;
-    background-color: var(--color-primary);
-    margin: 3px 0; /* Reduced from 4px */
-    opacity: 0;
-    transition: opacity 0.2s;
-    border-radius: 1px;
-}
-
-.drop-indicator.active {
-    opacity: 1;
-}
+/* Drop indicators and drag handles now use base styles */

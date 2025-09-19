@@ -79,17 +79,19 @@
         <div class="hstack gap-1">
             {% if can_start_next_stage and next_stage %}
             <form method="post"
-                    action="{% url 'tourney-start-next-stage' tournament.id %}"
-                    style="display:inline;"
-                    hx-confirm="Are you sure you want to start {{ next_stage.name }}? This will seed players based on current standings."
-                    hx-post="{% url 'tourney-start-next-stage' tournament.id %}"
-                    hx-target="#tournament-content"
-                    hx-swap="outerHTML">
+                    action="{% url 'tourney-prepare-stage-seeding' tournament.id %}"
+                    style="display:inline;">
                 {% csrf_token %}
                 <button type="submit" class="button button-primary">Start {{ next_stage.name }}</button>
             </form>
-            {% endif %}
-
+            {% elif can_start_current_stage and current_stage %}
+            <form method="post"
+                    action="{% url 'tourney-prepare-current-stage-seeding' tournament.id %}"
+                    style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="button button-primary">Start {{ current_stage.name }}</button>
+            </form>
+            {% else %}
             <form method="post"
                   action="{% url 'tourney-create-round' tournament.id %}"
                   style="display:inline;"
@@ -105,6 +107,7 @@
                     {% endif %}
                 >Create New Round</button>
             </form>
+            {% endif %}
 
             {% comment %} Add Match button {% endcomment %}
             {% if selected_round and unmatched_players.count >= 2 %}

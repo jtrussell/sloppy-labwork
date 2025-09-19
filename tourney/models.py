@@ -51,7 +51,7 @@ class Tournament(models.Model):
                 pairing_strategy=main_pairing_strategy,
                 max_players=main_max_players
             )
-            
+
             stage.set_ranking_criteria(get_default_main_stage_criteria())
 
             for i, player in enumerate(self.get_active_players()):
@@ -75,7 +75,7 @@ class Tournament(models.Model):
             pairing_strategy='single_elimination',
             max_players=max_players
         )
-        
+
         stage.set_ranking_criteria(get_default_playoff_stage_criteria())
         return stage
 
@@ -117,16 +117,20 @@ class Tournament(models.Model):
         # Next stage must not have any rounds yet
         return not next_stage.rounds.exists()
 
-    def advance_to_next_stage(self):
+    def prepare_next_stage_seeding(self):
         """
-        Advances tournament to the next stage by seeding players based on 
-        current standings and creating the first round.
+        Prepares the next stage by creating preliminary StagePlayer records
+        based on current standings. No rounds are created yet.
         """
         current_stage = self.get_current_stage()
         next_stage = self.get_next_stage()
 
         if not self.can_start_next_stage():
-            raise ValueError("Cannot advance to next stage at this time")
+            raise ValueError("Cannot prepare next stage at this time")
+
+        # Clear any existing preliminary seeding (in case admin re-prepares)
+        if not next_stage.rounds.exists():
+            next_stage.stage_players.all().delete()
 
         # Get current standings from the current stage
         standings = StandingCalculator.get_stage_standings(current_stage)
@@ -135,13 +139,40 @@ class Tournament(models.Model):
         max_players = next_stage.max_players or len(standings)
         top_standings = standings[:max_players]
 
-        # Create stage players with proper seeding
+        # Create preliminary stage players with seeding based on standings
         for i, standing in enumerate(top_standings):
             StagePlayer.objects.create(
                 player=standing['stage_player'].player,
                 stage=next_stage,
                 seed=i + 1  # Seed 1 for 1st place, seed 2 for 2nd place, etc.
             )
+
+        return next_stage
+
+    def can_modify_next_stage_seeding(self):
+        """
+        Returns True if the next stage seeding can be modified (no rounds exist yet).
+        """
+        next_stage = self.get_next_stage()
+        if not next_stage:
+            return False
+        return not next_stage.rounds.exists()
+
+    def advance_to_next_stage(self):
+        """
+        Finalizes advancement to the next stage by creating the first round.
+        Assumes StagePlayer records already exist (from prepare_next_stage_seeding).
+        """
+        next_stage = self.get_next_stage()
+
+        if not next_stage:
+            raise ValueError("No next stage found")
+
+        if next_stage.rounds.exists():
+            raise ValueError("Next stage already has rounds")
+
+        if not next_stage.stage_players.exists():
+            raise ValueError("No players seeded for next stage")
 
         # Create first round in next stage
         pairing_strategy = get_pairing_strategy(next_stage.pairing_strategy)
@@ -501,18 +532,20 @@ class Stage(models.Model):
 
     def get_ranking_criteria(self):
         criteria_qs = self.stage_ranking_criteria.all()
-        
+
         if criteria_qs.exists():
             criteria_list = []
-            available_keys = [c.get_key() for c in get_available_ranking_criteria()]
-            
+            available_keys = [c.get_key()
+                              for c in get_available_ranking_criteria()]
+
             for criterion in criteria_qs:
-                criteria_list.append({'key': criterion.criterion_key, 'enabled': True})
-            
+                criteria_list.append(
+                    {'key': criterion.criterion_key, 'enabled': True})
+
             for key in available_keys:
                 if not any(c['key'] == key for c in criteria_list):
                     criteria_list.append({'key': key, 'enabled': False})
-            
+
             return criteria_list
         else:
             if self.order == 1:
@@ -524,7 +557,8 @@ class Stage(models.Model):
         self.stage_ranking_criteria.all().delete()
 
         # Filter enabled criteria and sort by their order property
-        enabled_criteria = [c for c in criteria_list if c.get('enabled', False)]
+        enabled_criteria = [
+            c for c in criteria_list if c.get('enabled', False)]
         enabled_criteria.sort(key=lambda x: x.get('order', 999))
 
         # Create StageRankingCriteria records with sequential order starting from 1
@@ -540,7 +574,8 @@ class Stage(models.Model):
         criteria_objects = []
 
         for criterion in criteria_list:
-            criterion_obj = get_ranking_criterion_by_key(criterion.criterion_key)
+            criterion_obj = get_ranking_criterion_by_key(
+                criterion.criterion_key)
             if criterion_obj:
                 criteria_objects.append(criterion_obj)
 
@@ -549,7 +584,7 @@ class Stage(models.Model):
                 default_criteria = get_default_main_stage_criteria()
             else:
                 default_criteria = get_default_playoff_stage_criteria()
-            
+
             for config in default_criteria:
                 if config.get('enabled', True):
                     criterion = get_ranking_criterion_by_key(config['key'])
@@ -568,9 +603,9 @@ class StageRankingCriteria(models.Model):
     class Meta:
         constraints = [
             UniqueConstraint(fields=['stage', 'criterion_key'],
-                           name='unique_stage_criterion'),
+                             name='unique_stage_criterion'),
             UniqueConstraint(fields=['stage', 'order'],
-                           name='unique_stage_criterion_order'),
+                             name='unique_stage_criterion_order'),
         ]
         ordering = ['order']
 
@@ -696,6 +731,13 @@ class PairingStrategy:
         current_round = stage.get_current_round()
         return current_round is None or current_round.is_complete()
 
+    def is_seeding_required(self):
+        """ Returns True if the pairing strategy requires seeding.
+
+        This will cause the UI to confirm seeding before starting a stage.
+        """
+        return False
+
 
 class SwissPairingStrategy(PairingStrategy):
     def make_pairings_for_round(self, round):
@@ -767,6 +809,9 @@ class SwissPairingStrategy(PairingStrategy):
 
 
 class SingleEliminationPairingStrategy(PairingStrategy):
+    def is_seeding_required(self):
+        return True
+
     def make_pairings_for_round(self, round):
         stage = round.stage
 

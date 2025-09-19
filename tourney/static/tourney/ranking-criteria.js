@@ -50,18 +50,17 @@ class RankingCriteriaManager {
             if (!criteriaData) return;
             
             const item = document.createElement('div');
-            item.className = `ranking-criteria-item ${criterion.enabled ? '' : 'disabled'}`;
-            item.draggable = true;
+            item.className = `drag-drop-item ranking-criteria-item ${criterion.enabled ? '' : 'disabled'}`;
             item.dataset.index = index;
             item.dataset.key = criterion.key;
-            
+
             item.innerHTML = `
                 <div class="drag-handle">⋮⋮</div>
-                <div class="criteria-info">
+                <div class="drag-drop-content criteria-info">
                     <div class="criteria-name">${criteriaData.name}</div>
                     <div class="criteria-description">${criteriaData.description}</div>
                 </div>
-                <div class="criteria-toggle">
+                <div class="drag-drop-actions criteria-toggle">
                     <div class="toggle-switch ${criterion.enabled ? 'enabled' : ''}" data-index="${index}">
                         <div class="toggle-slider"></div>
                     </div>

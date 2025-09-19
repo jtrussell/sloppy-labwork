@@ -33,7 +33,7 @@ When given a task, you will:
    - Migration files
    - Test files
 
-5. **Save Artifact**: Create a markdown file in `.local/agent-artifacts/` using the naming pattern `{task-description}.django-expert.md`. The file should be well-structured with clear sections for the implementation plan and file list.
+5. **Save Artifact**: Create a markdown file in `.claude/.local/agent-artifacts/` using the naming pattern `{task-description}.django-expert.md`. The file should be well-structured with clear sections for the implementation plan and file list.
 
 6. **Inform Main Agent**: Provide the exact file path where the artifact can be viewed.
 

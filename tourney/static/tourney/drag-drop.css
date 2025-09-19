@@ -1,0 +1,189 @@
+/* Consolidated Drag and Drop Styles */
+
+/* Base drag-drop container */
+.drag-drop-container {
+    border: 1px solid var(--color-lines);
+    border-radius: 3px;
+    padding: 10px;
+    background-color: var(--color-bg-secondary);
+}
+
+/* Base drag-drop item */
+.drag-drop-item {
+    background: var(--color-bg);
+    border: 1px solid var(--color-lines);
+    border-radius: 3px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: box-shadow 0.2s, border-color 0.2s;
+    min-height: 44px; /* Ensure consistent height for proper alignment */
+}
+
+.drag-drop-item:last-child {
+    margin-bottom: 0;
+}
+
+.drag-drop-item:hover {
+    border-color: var(--color-lines-active);
+    box-shadow: 0 2px 4px rgba(133, 92, 214, 0.2);
+}
+
+.drag-drop-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+    border-color: var(--color-primary);
+}
+
+.drag-drop-item.disabled {
+    opacity: 0.6;
+    background-color: var(--color-bg-secondary);
+    border-color: var(--color-text-muted);
+}
+
+/* Drag handle */
+.drag-handle {
+    color: var(--color-text-muted);
+    margin-right: 8px;
+    cursor: grab;
+    font-size: 1.2rem;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.drag-handle:hover {
+    color: var(--color-nav-links);
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Drop indicator for between-item drops */
+.drop-indicator {
+    height: 2px;
+    background-color: var(--color-primary);
+    margin: 3px 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+    border-radius: 1px;
+}
+
+.drop-indicator.active {
+    opacity: 1;
+}
+
+/* Content area for item info */
+.drag-drop-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 100%;
+}
+
+/* Item actions area */
+.drag-drop-actions {
+    margin-left: 10px;
+}
+
+/* Specific styling for ranking criteria items */
+.ranking-criteria-item {
+    /* Uses base drag-drop-item styles */
+}
+
+.criteria-info {
+    flex-grow: 1;
+}
+
+.criteria-name {
+    font-weight: bold;
+    margin-bottom: 2px;
+    color: var(--color-text-active);
+    font-size: 1.4rem;
+}
+
+.criteria-description {
+    font-size: 1.1rem;
+    color: var(--color-text-muted);
+    line-height: 1.2;
+}
+
+.criteria-toggle {
+    margin-left: 10px;
+}
+
+/* Toggle switch component */
+.toggle-switch {
+    position: relative;
+    width: 46px;
+    height: 22px;
+    background-color: var(--color-lines);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.toggle-switch.enabled {
+    background-color: var(--color-primary);
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background-color: var(--color-text-active);
+    border-radius: 50%;
+    transition: transform 0.3s;
+}
+
+.toggle-switch.enabled .toggle-slider {
+    transform: translateX(24px);
+}
+
+/* Specific styling for seeding items */
+.seeding-item {
+    /* Uses base drag-drop-item styles */
+}
+
+.seed-number {
+    font-weight: bold;
+    color: var(--color-text);
+    min-width: 40px;
+    background: var(--color-bg);
+    padding: 6px 10px;
+    border-radius: 12px;
+    font-size: 1.4rem;
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.player-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.player-name {
+    font-weight: 500;
+    color: var(--color-text);
+    line-height: 1.3;
+}
+
+.player-guest-badge {
+    color: var(--color-text-muted);
+    font-size: 0.9em;
+    margin-left: 4px;
+}

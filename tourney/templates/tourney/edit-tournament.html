@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
+    <link rel="stylesheet" href="{% static 'tourney/drag-drop.css' %}">
     <link rel="stylesheet" href="{% static 'tourney/ranking-criteria.css' %}">
     {{ block.super }}
 {% endblock %}
@@ -86,7 +87,7 @@
             <input type="hidden" id="criterion_{{ criterion.get_key }}_order" name="criterion_{{ criterion.get_key }}_order" value="">
         {% endfor %}
 
-        <div id="ranking-criteria-list" class="ranking-criteria-container">
+        <div id="ranking-criteria-list" class="drag-drop-container ranking-criteria-container">
             <!-- Criteria items will be populated by JavaScript -->
         </div>
     </section>

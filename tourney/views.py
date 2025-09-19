@@ -4,6 +4,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction, IntegrityError
 from django.db import models
+from django.db.models import F
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
@@ -215,11 +216,17 @@ def get_tournament_base_context(request, tournament):
     can_create_round = False
     can_start_next_stage = False
     can_delete_latest_round = False
+    can_start_current_stage = False
     next_stage = None
     if is_admin:
         can_create_round = tournament.can_create_round_in_current_stage()
         can_start_next_stage = tournament.can_start_next_stage()
         next_stage = tournament.get_next_stage()
+
+        # Check if current stage needs seeding confirmation (no rounds yet)
+        if current_stage and not current_stage.rounds.exists():
+            can_start_current_stage = True
+            can_create_round = False  # Override - we want seeding confirmation instead
 
         if current_stage:
             latest_round = current_stage.rounds.order_by('-order').first()
@@ -259,6 +266,7 @@ def get_tournament_base_context(request, tournament):
         'can_create_round': can_create_round,
         'can_start_next_stage': can_start_next_stage,
         'can_delete_latest_round': can_delete_latest_round,
+        'can_start_current_stage': can_start_current_stage,
         'next_stage': next_stage,
         'current_stage': current_stage,
         'current_round': current_round,
@@ -596,27 +604,292 @@ def create_round(request, tournament_id):
 @login_required
 @require_POST
 @is_tournament_admin
-def start_next_stage(request, tournament_id):
+def prepare_stage_seeding(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
 
     if not tournament.can_start_next_stage():
         messages.error(request, 'Cannot start next stage at this time.')
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
 
+    next_stage = tournament.get_next_stage()
+    pairing_strategy = get_pairing_strategy(next_stage.pairing_strategy)
+
+    # Check if seeding is required for this pairing strategy
+    if not pairing_strategy.is_seeding_required():
+        # Skip seeding confirmation and start the stage directly
+        try:
+            with transaction.atomic():
+                tournament.advance_to_next_stage()
+
+                TournamentActionLog.objects.create(
+                    tournament=tournament,
+                    user=request.user,
+                    action_type=TournamentActionLog.ActionType.ADVANCE_STAGE,
+                    description=f'Started {next_stage.name} (no seeding required)'
+                )
+
+            messages.success(request, f'{next_stage.name} started successfully!')
+            return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+        except ValueError as e:
+            messages.error(request, str(e))
+            return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    # Seeding is required, proceed with confirmation workflow
     try:
         with transaction.atomic():
-            next_stage = tournament.advance_to_next_stage()
+            next_stage = tournament.prepare_next_stage_seeding()
 
             TournamentActionLog.objects.create(
                 tournament=tournament,
                 user=request.user,
                 action_type=TournamentActionLog.ActionType.ADVANCE_STAGE,
-                description=f'Advanced to {next_stage.name}'
+                description=f'Prepared seeding for {next_stage.name}'
             )
 
-        messages.success(request, f'{next_stage.name} started successfully!')
+        return redirect_to(request, reverse('tourney-confirm-seeding', kwargs={'tournament_id': tournament.id}))
     except ValueError as e:
         messages.error(request, str(e))
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+
+@login_required
+@require_POST
+@is_tournament_admin
+def prepare_current_stage_seeding(request, tournament_id):
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+    current_stage = tournament.get_current_stage()
+
+    if not current_stage:
+        messages.error(request, 'No current stage found.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    if current_stage.rounds.exists():
+        messages.error(request, 'Current stage already has rounds.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    pairing_strategy = get_pairing_strategy(current_stage.pairing_strategy)
+
+    # Ensure StagePlayer records exist
+    if not current_stage.stage_players.exists():
+        # Create stage players if they don't exist
+        for i, player in enumerate(tournament.get_active_players()):
+            StagePlayer.objects.create(
+                player=player,
+                stage=current_stage,
+                seed=i + 1
+            )
+
+    # Check if seeding is required for this pairing strategy
+    if not pairing_strategy.is_seeding_required():
+        # Skip seeding confirmation and start the stage directly
+        try:
+            with transaction.atomic():
+                # Create first round in current stage
+                new_round = Round.objects.create(stage=current_stage, order=1)
+                pairing_strategy.make_pairings_for_round(new_round)
+
+                TournamentActionLog.objects.create(
+                    tournament=tournament,
+                    user=request.user,
+                    action_type=TournamentActionLog.ActionType.ADVANCE_STAGE,
+                    description=f'Started {current_stage.name} (no seeding required)'
+                )
+
+            messages.success(request, f'{current_stage.name} started successfully!')
+            return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+        except ValueError as e:
+            messages.error(request, str(e))
+            return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    # Seeding is required, proceed with confirmation workflow
+    try:
+        with transaction.atomic():
+            TournamentActionLog.objects.create(
+                tournament=tournament,
+                user=request.user,
+                action_type=TournamentActionLog.ActionType.ADVANCE_STAGE,
+                description=f'Prepared seeding for {current_stage.name}'
+            )
+
+        return redirect_to(request, reverse('tourney-confirm-seeding', kwargs={'tournament_id': tournament.id}))
+    except ValueError as e:
+        messages.error(request, str(e))
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+
+@login_required
+@is_tournament_admin
+def confirm_seeding(request, tournament_id):
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+    current_stage = tournament.get_current_stage()
+    next_stage = tournament.get_next_stage()
+
+    # Determine which stage we're confirming seeding for
+    if current_stage and not current_stage.rounds.exists():
+        # We're confirming seeding for the current stage (first time starting it)
+        target_stage = current_stage
+        stage_name = current_stage.name
+    elif next_stage and tournament.can_modify_next_stage_seeding():
+        # We're confirming seeding for the next stage
+        target_stage = next_stage
+        stage_name = next_stage.name
+    else:
+        messages.error(request, 'No stage available for seeding confirmation.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    stage_players = target_stage.stage_players.order_by('seed')
+
+    context = {
+        'tournament': tournament,
+        'next_stage': target_stage,  # Keep same template variable name for compatibility
+        'stage_players': stage_players,
+        'is_current_stage': target_stage == current_stage,
+    }
+
+    return render(request, 'tourney/confirm-seeding.html', context)
+
+
+@login_required
+@require_POST
+@is_tournament_admin
+def update_seeding_order(request, tournament_id):
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+    current_stage = tournament.get_current_stage()
+    next_stage = tournament.get_next_stage()
+
+    # Determine which stage we're updating seeding for
+    if current_stage and not current_stage.rounds.exists():
+        target_stage = current_stage
+    elif next_stage and tournament.can_modify_next_stage_seeding():
+        target_stage = next_stage
+    else:
+        return HttpResponse(status=400)
+
+    try:
+        player_ids = request.POST.get('player_order', '').split(',')
+        player_ids = [int(pid) for pid in player_ids if pid.strip()]
+
+        with transaction.atomic():
+            # Calculate safe increment to avoid constraint conflicts
+            max_seed = target_stage.stage_players.aggregate(models.Max('seed'))['seed__max'] or 0
+            safe_increment = max(100, max_seed + 100)
+
+            # First, increment all seeds by safe amount to avoid conflicts
+            target_stage.stage_players.update(seed=F('seed') + safe_increment)
+
+            # Then update to final values in the correct order
+            for i, player_id in enumerate(player_ids):
+                StagePlayer.objects.filter(
+                    id=player_id,
+                    stage=target_stage
+                ).update(seed=i + 1)
+
+        stage_players = target_stage.stage_players.order_by('seed')
+        context = {
+            'tournament': tournament,
+            'next_stage': target_stage,  # Keep same template variable name for compatibility
+            'stage_players': stage_players,
+        }
+
+        return render(request, 'tourney/partials/seeding-list.html', context)
+    except (ValueError, StagePlayer.DoesNotExist):
+        return HttpResponse(status=400)
+
+
+@login_required
+@require_POST
+@is_tournament_admin
+def randomize_seeding(request, tournament_id):
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+    current_stage = tournament.get_current_stage()
+    next_stage = tournament.get_next_stage()
+
+    # Determine which stage we're randomizing seeding for
+    if current_stage and not current_stage.rounds.exists():
+        target_stage = current_stage
+    elif next_stage and tournament.can_modify_next_stage_seeding():
+        target_stage = next_stage
+    else:
+        return HttpResponse(status=400)
+
+    import random
+
+    with transaction.atomic():
+        stage_players = list(target_stage.stage_players.all())
+        random.shuffle(stage_players)
+
+        # Calculate safe increment to avoid constraint conflicts
+        max_seed = target_stage.stage_players.aggregate(models.Max('seed'))['seed__max'] or 0
+        safe_increment = max(100, max_seed + 100)
+
+        # First, increment all seeds by safe amount to avoid conflicts
+        target_stage.stage_players.update(seed=F('seed') + safe_increment)
+
+        # Then set to final randomized values
+        for i, stage_player in enumerate(stage_players):
+            stage_player.seed = i + 1
+            stage_player.save()
+
+    stage_players = target_stage.stage_players.order_by('seed')
+    context = {
+        'tournament': tournament,
+        'next_stage': target_stage,  # Keep same template variable name for compatibility
+        'stage_players': stage_players,
+    }
+
+    return render(request, 'tourney/partials/seeding-list.html', context)
+
+
+@login_required
+@require_POST
+@is_tournament_admin
+def start_next_stage(request, tournament_id):
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+    current_stage = tournament.get_current_stage()
+    next_stage = tournament.get_next_stage()
+
+    # Determine which stage we're starting
+    if current_stage and not current_stage.rounds.exists():
+        # Starting the current stage for the first time
+        target_stage = current_stage
+        stage_name = current_stage.name
+
+        try:
+            with transaction.atomic():
+                # Create first round in current stage using existing StagePlayer records
+                pairing_strategy = get_pairing_strategy(current_stage.pairing_strategy)
+                new_round = Round.objects.create(stage=current_stage, order=1)
+                pairing_strategy.make_pairings_for_round(new_round)
+
+                TournamentActionLog.objects.create(
+                    tournament=tournament,
+                    user=request.user,
+                    action_type=TournamentActionLog.ActionType.ADVANCE_STAGE,
+                    description=f'Started {stage_name} with confirmed seeding'
+                )
+
+            messages.success(request, f'{stage_name} started successfully!')
+        except ValueError as e:
+            messages.error(request, str(e))
+
+    elif next_stage and tournament.can_modify_next_stage_seeding():
+        # Starting the next stage (existing logic)
+        try:
+            with transaction.atomic():
+                tournament.advance_to_next_stage()
+
+                TournamentActionLog.objects.create(
+                    tournament=tournament,
+                    user=request.user,
+                    action_type=TournamentActionLog.ActionType.ADVANCE_STAGE,
+                    description=f'Started {next_stage.name} with confirmed seeding'
+                )
+
+            messages.success(request, f'{next_stage.name} started successfully!')
+        except ValueError as e:
+            messages.error(request, str(e))
+    else:
+        messages.error(request, 'Cannot start stage at this time.')
 
     return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
 

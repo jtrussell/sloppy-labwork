@@ -1,0 +1,19 @@
+{% csrf_token %}
+<div id="sortable-seeding" class="drag-drop-container">
+    {% for stage_player in stage_players %}
+        <div class="drag-drop-item seeding-item" data-player-id="{{ stage_player.id }}">
+            <div class="drag-handle">⋮⋮</div>
+            <span class="seed-number">{{ stage_player.seed }}</span>
+            <div class="drag-drop-content player-info">
+                <div>
+                    <span class="player-name">{{ stage_player.player.get_display_name }}</span>
+                    {% if stage_player.player.is_guest %}
+                        <span class="player-guest-badge">(Guest)</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <p class="text-muted">No players found for seeding.</p>
+    {% endfor %}
+</div>
