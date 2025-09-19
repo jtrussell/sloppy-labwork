@@ -31,11 +31,17 @@
                         {% if match.player_one.player.is_guest %}
                             <span class="player-guest-badge">(Guest)</span>
                         {% endif %}
+                        {% if match.result.player_one_score is not None and match.result.player_two_score is not None %}
+                            <span class="match-score match-score--winner">{{ match.result.player_one_score }}</span>
+                        {% endif %}
                     </div>
                     <div class="match-player match-player--loser">
                         {{ match.player_two.player.get_display_name }}
                         {% if match.player_two.player.is_guest %}
                             <span class="player-guest-badge">(Guest)</span>
+                        {% endif %}
+                        {% if match.result.player_one_score is not None and match.result.player_two_score is not None %}
+                            <span class="match-score match-score--loser">{{ match.result.player_two_score }}</span>
                         {% endif %}
                     </div>
                 {% elif match.result.winner == match.player_two %}
@@ -44,11 +50,17 @@
                         {% if match.player_one.player.is_guest %}
                             <span class="player-guest-badge">(Guest)</span>
                         {% endif %}
+                        {% if match.result.player_one_score is not None and match.result.player_two_score is not None %}
+                            <span class="match-score match-score--loser">{{ match.result.player_one_score }}</span>
+                        {% endif %}
                     </div>
                     <div class="match-player match-player--winner">
                         {{ match.player_two.player.get_display_name }}
                         {% if match.player_two.player.is_guest %}
                             <span class="player-guest-badge">(Guest)</span>
+                        {% endif %}
+                        {% if match.result.player_one_score is not None and match.result.player_two_score is not None %}
+                            <span class="match-score match-score--winner">{{ match.result.player_two_score }}</span>
                         {% endif %}
                     </div>
                 {% else %}
@@ -58,11 +70,17 @@
                         {% if match.player_one.player.is_guest %}
                             <span class="player-guest-badge">(Guest)</span>
                         {% endif %}
+                        {% if match.result.player_one_score is not None and match.result.player_two_score is not None %}
+                            <span class="match-score match-score--tie">({{ match.result.player_one_score }})</span>
+                        {% endif %}
                     </div>
                     <div class="match-player">
                         {{ match.player_two.player.get_display_name }}
                         {% if match.player_two.player.is_guest %}
                             <span class="player-guest-badge">(Guest)</span>
+                        {% endif %}
+                        {% if match.result.player_one_score is not None and match.result.player_two_score is not None %}
+                            <span class="match-score match-score--tie">({{ match.result.player_two_score }})</span>
                         {% endif %}
                     </div>
                 {% endif %}
@@ -105,6 +123,8 @@
                         data-match-has-result="{% if match.has_result %}true{% else %}false{% endif %}"
                         {% if match.has_result %}
                         data-match-winner-id="{% if match.result.winner %}{{ match.result.winner.id }}{% endif %}"
+                        data-match-player-one-score="{% if match.result.player_one_score is not None %}{{ match.result.player_one_score }}{% endif %}"
+                        data-match-player-two-score="{% if match.result.player_two_score is not None %}{{ match.result.player_two_score }}{% endif %}"
                         {% endif %}
                         onclick="openMatchModal(this)">
                 </button>

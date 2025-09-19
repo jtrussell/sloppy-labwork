@@ -94,6 +94,42 @@
   background-color: var(--color-bg);
 }
 
+/* Match Score Display */
+.match-score {
+  margin-left: 0 0.3rem;
+  font-weight: normal;
+  color: var(--color-text-muted);
+}
+
+.match-score--winner {
+  color: var(--color-text);
+}
+
+.match-score--loser {
+  color: var(--color-text-muted);
+}
+
+.match-score--tie {
+  color: var(--color-text);
+}
+
+/* Desktop: Position scores toward center */
+@media (min-width: 750px) {
+  .match-player {
+    position: relative;
+  }
+
+  .match-score {
+    position: absolute;
+    right: 1rem;
+  }
+
+  .match-player + .match-player .match-score {
+    right: auto;
+    left: 1rem;
+  }
+}
+
 .match-actions {
   flex-shrink: 0;
   width: 3.9rem;
@@ -319,3 +355,4 @@
     flex: none;
   }
 }
+

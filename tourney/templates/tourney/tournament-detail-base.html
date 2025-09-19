@@ -66,7 +66,21 @@
                         <option value="">Select Winner</option>
                     </select>
                 </div>
-                
+
+                <div id="scoreInputs" style="margin-top: 1rem;">
+                    <h4 style="margin-bottom: 1rem; text-align: center; color: var(--color-text-muted);">Scores (Optional)</h4>
+                    <div style="display: flex; gap: 1rem;">
+                        <div style="flex: 1;">
+                            <label for="playerOneScore" id="playerOneScoreLabel">Player One Score:</label>
+                            <input type="number" id="playerOneScore" name="player_one_score" min="0" step="1" style="width: 100%;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label for="playerTwoScore" id="playerTwoScoreLabel">Player Two Score:</label>
+                            <input type="number" id="playerTwoScore" name="player_two_score" min="0" step="1" style="width: 100%;">
+                        </div>
+                    </div>
+                </div>
+
                 <div style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: center;">
                     <button type="submit" class="button button-primary">Submit</button>
                     <button type="button" class="button" onclick="closeMatchModal()">Cancel</button>
@@ -175,9 +189,32 @@
         if (!currentWinnerId && hasResult) tieOption.selected = true;
         winnerSelect.appendChild(tieOption);
 
+        // Update score input labels and populate existing scores
+        const playerOneScoreLabel = document.getElementById('playerOneScoreLabel');
+        const playerTwoScoreLabel = document.getElementById('playerTwoScoreLabel');
+        const playerOneScoreInput = document.getElementById('playerOneScore');
+        const playerTwoScoreInput = document.getElementById('playerTwoScore');
+
+        if (playerOneScoreLabel && playerOne) {
+            playerOneScoreLabel.textContent = `${playerOne}`;
+        }
+        if (playerTwoScoreLabel && playerTwo) {
+            playerTwoScoreLabel.textContent = `${playerTwo}`;
+        } else if (playerTwoScoreLabel) {
+            playerTwoScoreLabel.textContent = 'Player Two';
+        }
+
+        // Populate existing scores if available
+        const playerOneScore = button.dataset.matchPlayerOneScore || '';
+        const playerTwoScore = button.dataset.matchPlayerTwoScore || '';
+
+        if (playerOneScoreInput) playerOneScoreInput.value = playerOneScore;
+        if (playerTwoScoreInput) playerTwoScoreInput.value = playerTwoScore;
+
         // Show modal
         modal.classList.add('modal--active');
     }
+
 
     function closeMatchModal() {
         const modal = document.getElementById('matchModal');

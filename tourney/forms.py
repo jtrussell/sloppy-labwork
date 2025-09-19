@@ -167,9 +167,51 @@ class MatchResultForm(forms.ModelForm):
         model = MatchResult
         fields = ['winner', 'player_one_score', 'player_two_score']
 
+    def clean_winner(self):
+        winner_id = self.cleaned_data.get('winner')
+        if winner_id:
+            from .models import StagePlayer
+            return StagePlayer.objects.get(id=winner_id)
+        return None
+
+    def clean(self):
+        cleaned_data = super().clean()
+        winner = cleaned_data.get('winner')
+        player_one_score = cleaned_data.get('player_one_score')
+        player_two_score = cleaned_data.get('player_two_score')
+
+        # If scores are provided, validate they make sense with the winner
+        if player_one_score is not None and player_two_score is not None:
+            # Both scores provided - validate against winner
+            if winner and hasattr(self, 'match'):
+                match = getattr(self, 'match', None)
+                if match:
+                    if winner == match.player_one and player_one_score <= player_two_score:
+                        raise forms.ValidationError(
+                            "Player one is selected as winner but has a lower or equal score."
+                        )
+                    elif winner == match.player_two and player_two_score <= player_one_score:
+                        raise forms.ValidationError(
+                            "Player two is selected as winner but has a lower or equal score."
+                        )
+            elif not winner and player_one_score != player_two_score:
+                raise forms.ValidationError(
+                    "Scores indicate a clear winner, but 'Tie' is selected. Please select the appropriate winner or adjust scores."
+                )
+        elif (player_one_score is not None) != (player_two_score is not None):
+            # Only one score provided
+            raise forms.ValidationError(
+                "Please provide both player scores or leave both blank."
+            )
+
+        return cleaned_data
+
     def __init__(self, *args, **kwargs):
         match = kwargs.pop('match', None)
         super().__init__(*args, **kwargs)
+
+        # Store match for validation
+        self.match = match
 
         if match:
             choices = [('', 'Tie')]
@@ -185,13 +227,6 @@ class MatchResultForm(forms.ModelForm):
                 required=False,
                 widget=forms.Select(attrs={'class': 'form-select'})
             )
-
-    def clean_winner(self):
-        winner_id = self.cleaned_data.get('winner')
-        if winner_id:
-            from .models import StagePlayer
-            return StagePlayer.objects.get(id=winner_id)
-        return None
 
 
 class PlayerRegistrationForm(forms.Form):
