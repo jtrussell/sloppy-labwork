@@ -472,6 +472,94 @@ class RandomRankingCriterion(RankingCriterion):
         return False
 
 
+class PlayerScoreRankingCriterion(RankingCriterion):
+    def get_key(self):
+        return 'player_score'
+
+    def get_name(self):
+        return 'Player Score'
+
+    def get_description(self):
+        return 'Sum of player scores in current stage'
+
+    def calculate_value(self, stage_player, stage, standings_cache=None):
+        if standings_cache and stage_player.id in standings_cache:
+            return standings_cache[stage_player.id].get('player_score', 0)
+
+        player_one_score = MatchResult.objects.filter(
+            match__round__stage=stage,
+            match__player_one=stage_player
+        ).aggregate(total=models.Sum('player_one_score'))['total'] or 0
+
+        player_two_score = MatchResult.objects.filter(
+            match__round__stage=stage,
+            match__player_two=stage_player
+        ).aggregate(total=models.Sum('player_two_score'))['total'] or 0
+
+        return player_one_score + player_two_score
+
+    def is_descending(self):
+        return True
+
+
+class OpponentScoreRankingCriterion(RankingCriterion):
+    def get_key(self):
+        return 'opponent_score'
+
+    def get_name(self):
+        return 'Opponent Score'
+
+    def get_description(self):
+        return 'Sum of opponent scores (lower is better)'
+
+    def calculate_value(self, stage_player, stage, standings_cache=None):
+        if standings_cache and stage_player.id in standings_cache:
+            return standings_cache[stage_player.id].get('opponent_score', 0)
+
+        opponent_score_as_player_one = MatchResult.objects.filter(
+            match__round__stage=stage,
+            match__player_one=stage_player
+        ).aggregate(total=models.Sum('player_two_score'))['total'] or 0
+
+        opponent_score_as_player_two = MatchResult.objects.filter(
+            match__round__stage=stage,
+            match__player_two=stage_player
+        ).aggregate(total=models.Sum('player_one_score'))['total'] or 0
+
+        return opponent_score_as_player_one + opponent_score_as_player_two
+
+    def is_descending(self):
+        return False
+
+
+class ScoreDifferentialRankingCriterion(RankingCriterion):
+    def get_key(self):
+        return 'score_differential'
+
+    def get_name(self):
+        return 'Score Differential'
+
+    def get_description(self):
+        return 'Player score minus opponent score'
+
+    def calculate_value(self, stage_player, stage, standings_cache=None):
+        if standings_cache and stage_player.id in standings_cache:
+            player_score = standings_cache[stage_player.id].get('player_score', 0)
+            opponent_score = standings_cache[stage_player.id].get('opponent_score', 0)
+            return player_score - opponent_score
+
+        player_criterion = PlayerScoreRankingCriterion()
+        opponent_criterion = OpponentScoreRankingCriterion()
+
+        player_score = player_criterion.calculate_value(stage_player, stage, standings_cache)
+        opponent_score = opponent_criterion.calculate_value(stage_player, stage, standings_cache)
+
+        return player_score - opponent_score
+
+    def is_descending(self):
+        return True
+
+
 def get_available_ranking_criteria():
     return [
         WinsRankingCriterion(),
@@ -481,6 +569,9 @@ def get_available_ranking_criteria():
         HeadToHeadRankingCriterion(),
         SeedRankingCriterion(),
         RandomRankingCriterion(),
+        PlayerScoreRankingCriterion(),
+        OpponentScoreRankingCriterion(),
+        ScoreDifferentialRankingCriterion(),
     ]
 
 

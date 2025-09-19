@@ -8,7 +8,10 @@ class RankingCriteriaManager {
             { key: 'strength_of_schedule', name: 'Strength of Schedule', description: 'Average points of opponents faced' },
             { key: 'head_to_head', name: 'Head-to-Head', description: 'Wins against tied opponents' },
             { key: 'seed', name: 'Seed', description: 'Original tournament seed (lower is better)' },
-            { key: 'random', name: 'Random', description: 'Random tiebreaker' }
+            { key: 'random', name: 'Random', description: 'Random tiebreaker' },
+            { key: 'player_score', name: 'Player Score', description: 'Sum of player scores in current stage' },
+            { key: 'opponent_score', name: 'Opponent Score', description: 'Sum of opponent scores (lower is better)' },
+            { key: 'score_differential', name: 'Score Differential', description: 'Player score minus opponent score' }
         ];
 
         this.criteriaContainer = document.querySelector(containerSelector);
