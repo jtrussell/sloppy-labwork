@@ -21,6 +21,11 @@
     justify-content: space-between;
     transition: box-shadow 0.2s, border-color 0.2s;
     min-height: 44px; /* Ensure consistent height for proper alignment */
+    user-select: none; /* Prevent text selection during drag */
+    -webkit-user-select: none; /* Safari */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* IE/Edge */
+    touch-action: none;
 }
 
 .drag-drop-item:last-child {
@@ -36,6 +41,7 @@
     opacity: 0.5;
     cursor: grabbing;
     border-color: var(--color-primary);
+    box-shadow: 0 4px 8px rgba(133, 92, 214, 0.3);
 }
 
 .drag-drop-item.disabled {
@@ -49,12 +55,20 @@
     color: var(--color-text-muted);
     margin-right: 8px;
     cursor: grab;
-    font-size: 1.2rem;
     padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+    border-radius: 2px;
+    transition: background-color 0.2s, color 0.2s;
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.drag-handle:hover {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text);
+}
+
+.drag-drop-item.dragging .drag-handle {
+    cursor: grabbing;
 }
 
 .drag-handle:hover {

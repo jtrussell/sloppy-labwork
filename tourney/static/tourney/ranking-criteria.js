@@ -96,8 +96,10 @@ class RankingCriteriaManager {
     
     setupDragAndDrop() {
         const items = this.criteriaContainer.querySelectorAll('.ranking-criteria-item');
-        
+
         items.forEach(item => {
+            item.draggable = true; // Enable dragging
+
             item.addEventListener('dragstart', (e) => {
                 item.classList.add('dragging');
                 e.dataTransfer.setData('text/plain', item.dataset.index);

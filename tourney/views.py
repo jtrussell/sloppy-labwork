@@ -119,7 +119,7 @@ def create_tournament(request):
     else:
         form = TournamentForm()
 
-    return render(request, 'tourney/create-tournament.html', {'form': form})
+    return render(request, 'tourney/tournament-form.html', {'form': form})
 
 
 @login_required
@@ -199,7 +199,7 @@ def edit_tournament(request, tournament_id):
         'available_criteria': available_criteria,
         'current_criteria_json': json.dumps(current_criteria)
     }
-    return render(request, 'tourney/edit-tournament.html', context)
+    return render(request, 'tourney/tournament-form.html', context)
 
 
 def get_tournament_base_context(request, tournament):

@@ -8,17 +8,21 @@
 {% endblock %}
 
 {% block content %}
-<h1>{{ tournament.name }}</h1>
-<div class="subheading">
-    <a href="{% url 'tourney-detail-home' tournament.id %}">&larr; Back</a> • Edit Tournament
-</div>
+{% if tournament %}
+    <h1>{{ tournament.name }}</h1>
+    <div class="subheading">
+        <a href="{% url 'tourney-detail-home' tournament.id %}">&larr; Back</a> • Edit Tournament
+    </div>
+{% else %}
+    <h1>Create Tournament</h1>
+{% endif %}
 
 <form method="post" class="form-wide">
     {% csrf_token %}
-    
+
     <section>
         <h2>Tournament Details</h2>
-        
+
         <div class="row">
             <div class="twelve columns">
                 <label for="{{ form.name.id_for_label }}">Tournament Name</label>
@@ -28,23 +32,25 @@
                 {% endif %}
             </div>
         </div>
-        
+
         <div class="row">
             <div class="twelve columns">
                 <label for="{{ form.description.id_for_label }}">Description</label>
                 {{ form.description }}
-                <span class="helptext">Markdown formatted. Start with h3's (###) for section headers.</span>
+                {% if tournament %}
+                    <span class="helptext">Markdown formatted. Start with h3's (###) for section headers.</span>
+                {% endif %}
                 {% if form.description.errors %}
                     <div class="form-error">{{ form.description.errors }}</div>
                 {% endif %}
             </div>
         </div>
-        
+
         <div class="row">
             <div class="twelve columns">
                 <label>
                     {{ form.is_accepting_registrations }}
-                    Accept registrations
+                    {% if tournament %}Accept registrations{% else %}Accept registrations immediately{% endif %}
                 </label>
                 {% if form.is_accepting_registrations.errors %}
                     <div class="form-error">{{ form.is_accepting_registrations.errors }}</div>
@@ -52,10 +58,10 @@
             </div>
         </div>
     </section>
-    
+
     <section>
         <h2>Main Stage</h2>
-        
+
         <div class="row">
             <div class="twelve columns">
                 <label for="{{ form.main_pairing_strategy.id_for_label }}">{{ form.main_pairing_strategy.label }}</label>
@@ -97,25 +103,33 @@
             </div>
         </div>
     </section>
-    
+
     <section>
         <h2>Main Stage Ranking Criteria</h2>
         <p>Drag to reorder the criteria by importance. Toggle criteria on/off with the switches.</p>
 
-        <!-- Hidden fields for each criterion -->
-        {% for criterion in available_criteria %}
-            <input type="hidden" id="criterion_{{ criterion.get_key }}_enabled" name="criterion_{{ criterion.get_key }}_enabled" value="">
-            <input type="hidden" id="criterion_{{ criterion.get_key }}_order" name="criterion_{{ criterion.get_key }}_order" value="">
-        {% endfor %}
+        {% if tournament %}
+            <!-- Hidden fields for each criterion (editing mode) -->
+            {% for criterion in available_criteria %}
+                <input type="hidden" id="criterion_{{ criterion.get_key }}_enabled" name="criterion_{{ criterion.get_key }}_enabled" value="">
+                <input type="hidden" id="criterion_{{ criterion.get_key }}_order" name="criterion_{{ criterion.get_key }}_order" value="">
+            {% endfor %}
+        {% else %}
+            <!-- Direct field for creation mode -->
+            {{ form.ranking_criteria_json }}
+            {% if form.ranking_criteria_json.errors %}
+                <div class="form-error">{{ form.ranking_criteria_json.errors }}</div>
+            {% endif %}
+        {% endif %}
 
         <div id="ranking-criteria-list" class="drag-drop-container ranking-criteria-container">
             <!-- Criteria items will be populated by JavaScript -->
         </div>
     </section>
-    
+
     <section>
         <h2>Playoff Stage</h2>
-        
+
         <div class="row">
             <div class="twelve columns">
                 <label>
@@ -127,8 +141,8 @@
                 {% endif %}
             </div>
         </div>
-        
-        <div class="row" id="playoff-options">
+
+        <div class="row" id="playoff-options"{% if not tournament %} style="display: none;"{% endif %}>
             <div class="six columns">
                 <label for="{{ form.playoff_max_players.id_for_label }}">{{ form.playoff_max_players.label }}</label>
                 {{ form.playoff_max_players }}
@@ -151,10 +165,15 @@
             </div>
         </div>
     </section>
-    
+
     <section>
-        <button type="submit" class="button button-primary">Update Tournament</button>
-        <a href="{% url 'tourney-detail-home' tournament.id %}" class="button">Back</a>
+        {% if tournament %}
+            <button type="submit" class="button button-primary">Update Tournament</button>
+            <a href="{% url 'tourney-detail-home' tournament.id %}" class="button">Back</a>
+        {% else %}
+            <button type="submit" class="button button-primary">Create Tournament</button>
+            <a href="{% url 'tourney-my-tournaments' %}" class="button">Cancel</a>
+        {% endif %}
     </section>
 </form>
 
@@ -164,15 +183,21 @@
 {{ block.super }}
 <script src="{% static 'tourney/ranking-criteria.js' %}"></script>
 <script>
-// Pass criteria data to JavaScript
+{% if tournament %}
+// Pass criteria data to JavaScript (editing mode)
 window.currentCriteriaData = {{ current_criteria_json|safe }};
+{% endif %}
 
 document.addEventListener('DOMContentLoaded', function() {
     // Setup playoff toggle functionality
     setupPlayoffToggle('#{{ form.enable_playoffs.id_for_label }}', '#playoff-options');
 
     // Initialize ranking criteria manager
-    new RankingCriteriaManager('#ranking-criteria-list', null);
+    {% if tournament %}
+        new RankingCriteriaManager('#ranking-criteria-list', null);
+    {% else %}
+        new RankingCriteriaManager('#ranking-criteria-list', '#{{ form.ranking_criteria_json.id_for_label }}');
+    {% endif %}
 });
 </script>
 {% endblock %}
