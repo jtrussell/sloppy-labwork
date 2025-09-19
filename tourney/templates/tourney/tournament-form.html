@@ -193,11 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupPlayoffToggle('#{{ form.enable_playoffs.id_for_label }}', '#playoff-options');
 
     // Initialize ranking criteria manager
-    {% if tournament %}
-        new RankingCriteriaManager('#ranking-criteria-list', null);
-    {% else %}
-        new RankingCriteriaManager('#ranking-criteria-list', '#{{ form.ranking_criteria_json.id_for_label }}');
-    {% endif %}
+    new RankingCriteriaManager('#ranking-criteria-list', null);
 });
 </script>
 {% endblock %}
