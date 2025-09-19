@@ -88,7 +88,9 @@ def create_tournament(request):
                 # Create main stage
                 main_stage = tournament.create_initial_stage(
                     main_pairing_strategy=form.cleaned_data['main_pairing_strategy'],
-                    main_max_players=form.cleaned_data['main_max_players']
+                    main_max_players=form.cleaned_data['main_max_players'],
+                    main_allow_ties=form.cleaned_data['main_allow_ties'],
+                    main_score_reporting=form.cleaned_data['main_score_reporting']
                 )
 
                 # Set ranking criteria for main stage
@@ -100,7 +102,8 @@ def create_tournament(request):
                 # Create playoff stage if enabled
                 if form.cleaned_data['enable_playoffs']:
                     tournament.create_playoff_stage(
-                        max_players=form.cleaned_data['playoff_max_players']
+                        max_players=form.cleaned_data['playoff_max_players'],
+                        playoff_score_reporting=form.cleaned_data['playoff_score_reporting']
                     )
 
                 TournamentActionLog.objects.create(
@@ -135,6 +138,8 @@ def edit_tournament(request, tournament_id):
                 if main_stage:
                     main_stage.pairing_strategy = form.cleaned_data['main_pairing_strategy']
                     main_stage.max_players = form.cleaned_data['main_max_players']
+                    main_stage.are_ties_allowed = form.cleaned_data['main_allow_ties']
+                    main_stage.report_full_scores = form.cleaned_data['main_score_reporting']
 
                     # Update ranking criteria for main stage
                     ranking_criteria = form.get_ranking_criteria_from_post(
@@ -146,7 +151,9 @@ def edit_tournament(request, tournament_id):
                     # Create main stage if it doesn't exist
                     main_stage = tournament.create_initial_stage(
                         main_pairing_strategy=form.cleaned_data['main_pairing_strategy'],
-                        main_max_players=form.cleaned_data['main_max_players']
+                        main_max_players=form.cleaned_data['main_max_players'],
+                        main_allow_ties=form.cleaned_data['main_allow_ties'],
+                        main_score_reporting=form.cleaned_data['main_score_reporting']
                     )
 
                     # Set ranking criteria for new main stage
@@ -160,10 +167,12 @@ def edit_tournament(request, tournament_id):
                 if form.cleaned_data['enable_playoffs']:
                     if playoff_stage:
                         playoff_stage.max_players = form.cleaned_data['playoff_max_players']
+                        playoff_stage.report_full_scores = form.cleaned_data['playoff_score_reporting']
                         playoff_stage.save()
                     else:
                         tournament.create_playoff_stage(
-                            max_players=form.cleaned_data['playoff_max_players']
+                            max_players=form.cleaned_data['playoff_max_players'],
+                            playoff_score_reporting=form.cleaned_data['playoff_score_reporting']
                         )
                 elif playoff_stage:
                     # Remove playoff stage if it exists but is disabled

@@ -20,6 +20,16 @@ class TournamentForm(forms.ModelForm):
         label='Main Stage Max Players',
         help_text='Leave empty for no limit'
     )
+    main_allow_ties = forms.BooleanField(
+        required=False,
+        initial=False,
+        label='Allow Ties in Main Stage'
+    )
+    main_score_reporting = forms.ChoiceField(
+        choices=Stage.SCORE_REPORTING_CHOICES,
+        initial=Stage.SCORE_REPORTING_DISABLED,
+        label='Score Reporting in Main Stage'
+    )
 
     # Playoff Stage fields
     enable_playoffs = forms.BooleanField(
@@ -32,6 +42,12 @@ class TournamentForm(forms.ModelForm):
         initial=8,
         label='Playoff Stage Max Players',
         help_text='Number of players advancing to playoffs'
+    )
+    playoff_score_reporting = forms.ChoiceField(
+        choices=Stage.SCORE_REPORTING_CHOICES,
+        initial=Stage.SCORE_REPORTING_DISABLED,
+        label='Score Reporting in Playoffs',
+        help_text='Ties are never allowed in playoffs'
     )
 
     # Ranking Criteria fields - these will be processed from POST data
@@ -54,11 +70,14 @@ class TournamentForm(forms.ModelForm):
             if main_stage:
                 self.fields['main_pairing_strategy'].initial = main_stage.pairing_strategy
                 self.fields['main_max_players'].initial = main_stage.max_players
+                self.fields['main_allow_ties'].initial = main_stage.are_ties_allowed
+                self.fields['main_score_reporting'].initial = main_stage.report_full_scores
 
             playoff_stage = instance.stages.filter(order=2).first()
             if playoff_stage:
                 self.fields['enable_playoffs'].initial = True
                 self.fields['playoff_max_players'].initial = playoff_stage.max_players
+                self.fields['playoff_score_reporting'].initial = playoff_stage.report_full_scores
 
     def get_ranking_criteria_from_post(self, post_data):
         """Extract and validate ranking criteria from POST data"""
@@ -180,29 +199,44 @@ class MatchResultForm(forms.ModelForm):
         player_one_score = cleaned_data.get('player_one_score')
         player_two_score = cleaned_data.get('player_two_score')
 
+        if not hasattr(self, 'match') or not self.match:
+            return cleaned_data
+
+        stage = self.match.round.stage
+
+        # Validate winner selection based on stage settings
+        if not stage.are_ties_allowed and not winner:
+            raise forms.ValidationError("A winner must be selected - ties are not allowed in this stage.")
+
+        # Validate scores based on stage settings
+        if stage.report_full_scores == Stage.SCORE_REPORTING_REQUIRED:
+            if player_one_score is None or player_two_score is None:
+                raise forms.ValidationError("Scores are required for this stage.")
+
         # If scores are provided, validate they make sense with the winner
         if player_one_score is not None and player_two_score is not None:
             # Both scores provided - validate against winner
-            if winner and hasattr(self, 'match'):
-                match = getattr(self, 'match', None)
-                if match:
-                    if winner == match.player_one and player_one_score <= player_two_score:
-                        raise forms.ValidationError(
-                            "Player one is selected as winner but has a lower or equal score."
-                        )
-                    elif winner == match.player_two and player_two_score <= player_one_score:
-                        raise forms.ValidationError(
-                            "Player two is selected as winner but has a lower or equal score."
-                        )
+            if winner:
+                if winner == self.match.player_one and player_one_score <= player_two_score:
+                    raise forms.ValidationError(
+                        "Player one is selected as winner but has a lower or equal score."
+                    )
+                elif winner == self.match.player_two and player_two_score <= player_one_score:
+                    raise forms.ValidationError(
+                        "Player two is selected as winner but has a lower or equal score."
+                    )
             elif not winner and player_one_score != player_two_score:
+                # Only validate this if ties are allowed
+                if stage.are_ties_allowed:
+                    raise forms.ValidationError(
+                        "Scores indicate a clear winner, but 'Tie' is selected. Please select the appropriate winner or adjust scores."
+                    )
+        elif stage.report_full_scores == Stage.SCORE_REPORTING_OPTIONAL:
+            # For optional scoring, either both scores or neither
+            if (player_one_score is not None) != (player_two_score is not None):
                 raise forms.ValidationError(
-                    "Scores indicate a clear winner, but 'Tie' is selected. Please select the appropriate winner or adjust scores."
+                    "Please provide both player scores or leave both blank."
                 )
-        elif (player_one_score is not None) != (player_two_score is not None):
-            # Only one score provided
-            raise forms.ValidationError(
-                "Please provide both player scores or leave both blank."
-            )
 
         return cleaned_data
 
@@ -214,7 +248,13 @@ class MatchResultForm(forms.ModelForm):
         self.match = match
 
         if match:
-            choices = [('', 'Tie')]
+            stage = match.round.stage
+
+            # Build winner choices based on stage settings
+            choices = []
+            if stage.are_ties_allowed:
+                choices.append(('', 'Tie'))
+
             if match.player_one:
                 choices.append(
                     (match.player_one.id, match.player_one.player.get_display_name()))
@@ -224,9 +264,19 @@ class MatchResultForm(forms.ModelForm):
 
             self.fields['winner'] = forms.ChoiceField(
                 choices=choices,
-                required=False,
+                required=True if not stage.are_ties_allowed else False,
                 widget=forms.Select(attrs={'class': 'form-select'})
             )
+
+            # Configure score fields based on stage settings
+            if stage.report_full_scores == Stage.SCORE_REPORTING_DISABLED:
+                # Remove score fields entirely
+                del self.fields['player_one_score']
+                del self.fields['player_two_score']
+            elif stage.report_full_scores == Stage.SCORE_REPORTING_REQUIRED:
+                # Make score fields required
+                self.fields['player_one_score'].required = True
+                self.fields['player_two_score'].required = True
 
 
 class PlayerRegistrationForm(forms.Form):

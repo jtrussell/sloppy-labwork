@@ -184,32 +184,58 @@
             winnerSelect.appendChild(option2);
         }
 
-        // Add tie option
-        const tieOption = new Option('Tie', '');
-        if (!currentWinnerId && hasResult) tieOption.selected = true;
-        winnerSelect.appendChild(tieOption);
-
-        // Update score input labels and populate existing scores
-        const playerOneScoreLabel = document.getElementById('playerOneScoreLabel');
-        const playerTwoScoreLabel = document.getElementById('playerTwoScoreLabel');
-        const playerOneScoreInput = document.getElementById('playerOneScore');
-        const playerTwoScoreInput = document.getElementById('playerTwoScore');
-
-        if (playerOneScoreLabel && playerOne) {
-            playerOneScoreLabel.textContent = `${playerOne}`;
-        }
-        if (playerTwoScoreLabel && playerTwo) {
-            playerTwoScoreLabel.textContent = `${playerTwo}`;
-        } else if (playerTwoScoreLabel) {
-            playerTwoScoreLabel.textContent = 'Player Two';
+        // Add tie option only if stage allows ties
+        const stageAllowTies = button.dataset.stageAllowTies === 'true';
+        if (stageAllowTies) {
+            const tieOption = new Option('Tie', '');
+            if (!currentWinnerId && hasResult) tieOption.selected = true;
+            winnerSelect.appendChild(tieOption);
         }
 
-        // Populate existing scores if available
-        const playerOneScore = button.dataset.matchPlayerOneScore || '';
-        const playerTwoScore = button.dataset.matchPlayerTwoScore || '';
+        // Handle score inputs based on stage settings
+        const stageScoreReporting = parseInt(button.dataset.stageScoreReporting);
+        const scoreInputsSection = document.getElementById('scoreInputs');
 
-        if (playerOneScoreInput) playerOneScoreInput.value = playerOneScore;
-        if (playerTwoScoreInput) playerTwoScoreInput.value = playerTwoScore;
+        if (stageScoreReporting === 0) {
+            // Score reporting disabled - hide score section
+            if (scoreInputsSection) scoreInputsSection.style.display = 'none';
+        } else {
+            // Score reporting enabled (optional or required) - show score section
+            if (scoreInputsSection) scoreInputsSection.style.display = 'block';
+
+            const playerOneScoreLabel = document.getElementById('playerOneScoreLabel');
+            const playerTwoScoreLabel = document.getElementById('playerTwoScoreLabel');
+            const playerOneScoreInput = document.getElementById('playerOneScore');
+            const playerTwoScoreInput = document.getElementById('playerTwoScore');
+
+            // Update labels with player names
+            if (playerOneScoreLabel && playerOne) {
+                playerOneScoreLabel.textContent = `${playerOne}`;
+            }
+            if (playerTwoScoreLabel && playerTwo) {
+                playerTwoScoreLabel.textContent = `${playerTwo}`;
+            } else if (playerTwoScoreLabel) {
+                playerTwoScoreLabel.textContent = 'Player Two';
+            }
+
+            // Set required attribute based on stage settings
+            if (stageScoreReporting === 2) {
+                // Required
+                if (playerOneScoreInput) playerOneScoreInput.required = true;
+                if (playerTwoScoreInput) playerTwoScoreInput.required = true;
+            } else {
+                // Optional
+                if (playerOneScoreInput) playerOneScoreInput.required = false;
+                if (playerTwoScoreInput) playerTwoScoreInput.required = false;
+            }
+
+            // Populate existing scores if available
+            const playerOneScore = button.dataset.matchPlayerOneScore || '';
+            const playerTwoScore = button.dataset.matchPlayerTwoScore || '';
+
+            if (playerOneScoreInput) playerOneScoreInput.value = playerOneScore;
+            if (playerTwoScoreInput) playerTwoScoreInput.value = playerTwoScore;
+        }
 
         // Show modal
         modal.classList.add('modal--active');

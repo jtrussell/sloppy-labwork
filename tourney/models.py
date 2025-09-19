@@ -42,14 +42,17 @@ class Tournament(models.Model):
     def get_active_players(self):
         return self.players.filter(status=Player.PlayerStatus.ACTIVE)
 
-    def create_initial_stage(self, main_pairing_strategy='swiss', main_max_players=None):
+    def create_initial_stage(self, main_pairing_strategy='swiss', main_max_players=None,
+                           main_allow_ties=False, main_score_reporting=0):
         if not self.stages.exists():
             stage = Stage.objects.create(
                 tournament=self,
                 name='Main Stage',
                 order=1,
                 pairing_strategy=main_pairing_strategy,
-                max_players=main_max_players
+                max_players=main_max_players,
+                are_ties_allowed=main_allow_ties,
+                report_full_scores=main_score_reporting
             )
 
             stage.set_ranking_criteria(get_default_main_stage_criteria())
@@ -64,7 +67,7 @@ class Tournament(models.Model):
             return stage
         return self.get_current_stage()
 
-    def create_playoff_stage(self, max_players=8):
+    def create_playoff_stage(self, max_players=8, playoff_score_reporting=0):
         if self.stages.filter(order=2).exists():
             return self.stages.get(order=2)
 
@@ -73,7 +76,9 @@ class Tournament(models.Model):
             name='Playoff Stage',
             order=2,
             pairing_strategy='single_elimination',
-            max_players=max_players
+            max_players=max_players,
+            are_ties_allowed=False,  # Playoffs never allow ties
+            report_full_scores=playoff_score_reporting
         )
 
         stage.set_ranking_criteria(get_default_playoff_stage_criteria())
@@ -503,6 +508,16 @@ def get_default_playoff_stage_criteria():
 
 
 class Stage(models.Model):
+    SCORE_REPORTING_DISABLED = 0
+    SCORE_REPORTING_OPTIONAL = 1
+    SCORE_REPORTING_REQUIRED = 2
+
+    SCORE_REPORTING_CHOICES = [
+        (SCORE_REPORTING_DISABLED, 'Disabled'),
+        (SCORE_REPORTING_OPTIONAL, 'Optional'),
+        (SCORE_REPORTING_REQUIRED, 'Required'),
+    ]
+
     name = models.CharField(max_length=200)
     description = models.TextField(default=None, null=True, blank=True)
     order = models.PositiveIntegerField(default=1)
@@ -511,6 +526,9 @@ class Stage(models.Model):
     pairing_strategy = models.CharField(max_length=50, default='swiss')
     max_players = models.PositiveIntegerField(
         default=None, null=True, blank=True)
+    are_ties_allowed = models.BooleanField(default=False)
+    report_full_scores = models.PositiveSmallIntegerField(
+        choices=SCORE_REPORTING_CHOICES, default=SCORE_REPORTING_DISABLED)
     created_on = models.DateTimeField(auto_now_add=True)
 
     class Meta:
