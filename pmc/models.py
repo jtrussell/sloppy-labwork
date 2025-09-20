@@ -629,7 +629,8 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            user_data = {entry["result__user"]
+                : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -984,10 +985,24 @@ class AwardAssignmentService():
                     )
 
     @staticmethod
-    def refresh_user_achievements():
-        UserAchievementTier.objects.all().delete()
+    def refresh_user_achievements(
+        pmc_id_min=None,
+        pmc_id_max=None
+    ):
+        qs = UserAchievementTier.objects.all()
+        if pmc_id_min is not None:
+            qs = qs.filter(
+                achievement_tier__achievement__pmc_id__gte=pmc_id_min)
+        if pmc_id_max is not None:
+            qs = qs.filter(
+                achievement_tier__achievement__pmc_id__lte=pmc_id_max)
+        qs.delete()
         users = User.objects.all()
         achievements = Achievement.objects.all()
+        if pmc_id_min is not None:
+            achievements = achievements.filter(pmc_id__gte=pmc_id_min)
+        if pmc_id_max is not None:
+            achievements = achievements.filter(pmc_id__lte=pmc_id_max)
         for achievement in achievements:
             tiers = achievement.tiers.all()
             for user in users:
