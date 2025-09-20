@@ -4,6 +4,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction, IntegrityError
 from django.db import models
+from django.db.models import Q
 from django.db.models import F
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
@@ -36,6 +37,25 @@ def is_tournament_admin_or_player(view_func):
                 tournament.players.filter(user=request.user).exists()):
             raise PermissionDenied
         return view_func(request, tournament_id, *args, **kwargs)
+    return wrapper
+
+
+def can_add_match(view_func):
+    def wrapper(request, tournament_id, *args, **kwargs):
+        tournament = get_object_or_404(Tournament, id=tournament_id)
+        current_stage = tournament.get_current_stage()
+
+        # Allow admins always
+        if tournament.is_user_admin(request.user):
+            return view_func(request, tournament_id, *args, **kwargs)
+
+        # Allow players only in self-scheduled stages
+        if (current_stage and
+            current_stage.get_pairing_strategy().is_self_scheduled() and
+            tournament.players.filter(user=request.user).exists()):
+            return view_func(request, tournament_id, *args, **kwargs)
+
+        raise PermissionDenied
     return wrapper
 
 
@@ -351,11 +371,20 @@ def tournament_detail_matches(request, tournament_id):
 
         unmatched_players = stage_players.exclude(id__in=matched_player_ids)
 
+    # Check if current user can add matches
+    can_add_match = False
+    if selected_stage:
+        is_admin = tournament.is_user_admin(request.user)
+        is_self_scheduled = selected_stage.get_pairing_strategy().is_self_scheduled()
+        is_player = tournament.players.filter(user=request.user).exists()
+        can_add_match = is_admin or (is_self_scheduled and is_player)
+
     context.update({
         'selected_stage': selected_stage,
         'selected_round': selected_round,
         'matches': matches,
         'unmatched_players': unmatched_players,
+        'can_add_match': can_add_match,
     })
 
     if request.htmx:
@@ -1146,7 +1175,7 @@ def delete_match(request, tournament_id, match_id):
 
 @login_required
 @require_POST
-@is_tournament_admin
+@can_add_match
 def add_match(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
     current_stage = tournament.get_current_stage()
@@ -1172,6 +1201,14 @@ def add_match(request, tournament_id):
 
     available_players = stage_players.exclude(id__in=matched_player_ids)
 
+    # For non-admin players, restrict to only include themselves
+    is_admin = tournament.is_user_admin(request.user)
+    if not is_admin:
+        user_stage_player = available_players.filter(player__user=request.user).first()
+        if not user_stage_player:
+            messages.error(request, 'You are not available to create a match in this round.')
+            return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
     if available_players.count() < 2:
         messages.error(request, 'Not enough unmatched players to create a new match.')
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
@@ -1179,6 +1216,13 @@ def add_match(request, tournament_id):
     form = AddMatchForm(request.POST, available_players=available_players)
     if form.is_valid():
         player_one, player_two = form.get_selected_players()
+
+        # For non-admin players, ensure they are one of the participants
+        if not is_admin:
+            user_stage_player = current_stage.stage_players.filter(player__user=request.user).first()
+            if user_stage_player not in [player_one, player_two]:
+                messages.error(request, 'You can only create matches where you are a participant.')
+                return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
 
         with transaction.atomic():
             match = Match.objects.create(
@@ -1203,5 +1247,137 @@ def add_match(request, tournament_id):
                     messages.error(request, error)
         else:
             messages.error(request, 'Error creating match. Please check your selections.')
+
+    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+
+@login_required
+@require_POST
+@can_add_match
+def player_add_match_result(request, tournament_id):
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+    current_stage = tournament.get_current_stage()
+
+    if not current_stage:
+        messages.error(request, 'No active stage found.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    current_round = current_stage.get_current_round()
+    if not current_round:
+        messages.error(request, 'No active round found. Please create a round first.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    # Get current user's stage player
+    user_stage_player = current_stage.stage_players.filter(player__user=request.user).first()
+    if not user_stage_player:
+        messages.error(request, 'You are not a participant in this stage.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    # Get opponent stage player
+    opponent_id = request.POST.get('opponent')
+    if not opponent_id:
+        messages.error(request, 'Please select an opponent.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    try:
+        opponent_stage_player = current_stage.stage_players.get(id=opponent_id)
+    except StagePlayer.DoesNotExist:
+        messages.error(request, 'Invalid opponent selected.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    # Check if these players already have a match in this round
+    existing_match = current_round.matches.filter(
+        Q(player_one=user_stage_player, player_two=opponent_stage_player) |
+        Q(player_one=opponent_stage_player, player_two=user_stage_player)
+    ).first()
+
+    if existing_match:
+        messages.error(request, 'You already have a match against this opponent in this round.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    # Get winner information
+    winner_choice = request.POST.get('winner')
+    if not winner_choice:
+        messages.error(request, 'Please select a winner.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    # Determine winner based on choice
+    if winner_choice == 'me':
+        winner = user_stage_player
+    elif winner_choice == 'them':
+        winner = opponent_stage_player
+    elif winner_choice == 'tie':
+        if not current_stage.are_ties_allowed:
+            messages.error(request, 'Ties are not allowed in this stage.')
+            return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+        winner = None
+    else:
+        messages.error(request, 'Invalid winner selection.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+    # Get scores if provided
+    my_score = request.POST.get('my_score')
+    their_score = request.POST.get('their_score')
+
+    player_one_score = None
+    player_two_score = None
+
+    if current_stage.report_full_scores > 0:
+        # Score reporting is enabled
+        if current_stage.report_full_scores == 2:
+            # Required
+            if not my_score or not their_score:
+                messages.error(request, 'Scores are required for this stage.')
+                return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+        if my_score:
+            try:
+                my_score = int(my_score)
+                if my_score < 0:
+                    raise ValueError()
+            except (ValueError, TypeError):
+                messages.error(request, 'Invalid score entered.')
+                return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+        if their_score:
+            try:
+                their_score = int(their_score)
+                if their_score < 0:
+                    raise ValueError()
+            except (ValueError, TypeError):
+                messages.error(request, 'Invalid score entered.')
+                return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+        # Assign scores based on player positions (user is always player_one in this setup)
+        player_one_score = my_score
+        player_two_score = their_score
+
+    with transaction.atomic():
+        # Create the match
+        match = Match.objects.create(
+            round=current_round,
+            player_one=user_stage_player,
+            player_two=opponent_stage_player
+        )
+
+        # Create the match result
+        MatchResult.objects.create(
+            match=match,
+            winner=winner,
+            player_one_score=player_one_score,
+            player_two_score=player_two_score
+        )
+
+        # Log the action
+        TournamentActionLog.objects.create(
+            tournament=tournament,
+            user=request.user,
+            action_type=TournamentActionLog.ActionType.CREATE_ROUND,
+            description=f'Player reported match result: {user_stage_player.player.get_display_name()} vs {opponent_stage_player.player.get_display_name()} in {current_round.stage.name} Round {current_round.order}'
+        )
+
+    winner_name = winner.player.get_display_name() if winner else "Tie"
+    messages.success(
+        request, f'Match result submitted successfully! Winner: {winner_name}')
 
     return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))

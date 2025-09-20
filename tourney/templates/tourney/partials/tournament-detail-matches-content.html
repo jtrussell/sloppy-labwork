@@ -109,14 +109,6 @@
             </form>
             {% endif %}
 
-            {% comment %} Add Match button {% endcomment %}
-            {% if selected_round and unmatched_players.count >= 2 %}
-            <button
-                type="button"
-                class="button button-primary"
-                onclick="openAddMatchModal()"
-            >Add Match</button>
-            {% endif %}
 
             <form method="post"
                     style="display:inline;"
@@ -136,4 +128,25 @@
         </div>
     {% endif %}
 </section>
+
+{% comment %} Add Match section for players in self-scheduled stages {% endcomment %}
+{% if can_add_match and selected_round and unmatched_players.count >= 2 %}
+<section>
+    <h2>Quick Actions</h2>
+    <div class="hstack gap-1">
+        {% if is_admin %}
+        <button
+            type="button"
+            class="button button-primary"
+            onclick="openAddMatchModal()"
+        >Add Match</button>
+        {% endif %}
+        <button
+            type="button"
+            class="button button-primary"
+            onclick="openPlayerMatchReportModal()"
+        >Report Match Result</button>
+    </div>
+</section>
+{% endif %}
 </div>

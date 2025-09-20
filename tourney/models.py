@@ -43,7 +43,7 @@ class Tournament(models.Model):
         return self.players.filter(status=Player.PlayerStatus.ACTIVE)
 
     def create_initial_stage(self, main_pairing_strategy='swiss', main_max_players=None,
-                           main_allow_ties=False, main_score_reporting=0):
+                             main_allow_ties=False, main_score_reporting=0):
         if not self.stages.exists():
             stage = Stage.objects.create(
                 tournament=self,
@@ -544,15 +544,19 @@ class ScoreDifferentialRankingCriterion(RankingCriterion):
 
     def calculate_value(self, stage_player, stage, standings_cache=None):
         if standings_cache and stage_player.id in standings_cache:
-            player_score = standings_cache[stage_player.id].get('player_score', 0)
-            opponent_score = standings_cache[stage_player.id].get('opponent_score', 0)
+            player_score = standings_cache[stage_player.id].get(
+                'player_score', 0)
+            opponent_score = standings_cache[stage_player.id].get(
+                'opponent_score', 0)
             return player_score - opponent_score
 
         player_criterion = PlayerScoreRankingCriterion()
         opponent_criterion = OpponentScoreRankingCriterion()
 
-        player_score = player_criterion.calculate_value(stage_player, stage, standings_cache)
-        opponent_score = opponent_criterion.calculate_value(stage_player, stage, standings_cache)
+        player_score = player_criterion.calculate_value(
+            stage_player, stage, standings_cache)
+        opponent_score = opponent_criterion.calculate_value(
+            stage_player, stage, standings_cache)
 
         return player_score - opponent_score
 
@@ -638,6 +642,9 @@ class Stage(models.Model):
 
     def get_current_round(self):
         return self.rounds.order_by('-order').first()
+
+    def get_pairing_strategy(self):
+        return get_pairing_strategy(self.pairing_strategy)
 
     def get_ranking_criteria(self):
         criteria_qs = self.stage_ranking_criteria.all()
@@ -738,6 +745,7 @@ class Group(models.Model):
 
 class StagePlayer(models.Model):
     player = models.ForeignKey(
+
         Player, on_delete=models.CASCADE, related_name='stage_participations')
     stage = models.ForeignKey(
         Stage, on_delete=models.CASCADE, related_name='stage_players')
@@ -844,6 +852,13 @@ class PairingStrategy:
         """ Returns True if the pairing strategy requires seeding.
 
         This will cause the UI to confirm seeding before starting a stage.
+        """
+        return False
+
+    def is_self_scheduled(self):
+        """ Returns True if the pairing strategy is self-scheduled.
+
+        This will allow players to create matches against each other manually.
         """
         return False
 
@@ -989,6 +1004,9 @@ class RoundRobinSelfScheduledPairingStrategy(PairingStrategy):
 
     def can_create_new_round(self, stage):
         return False
+
+    def is_self_scheduled(self):
+        return True
 
 
 PAIRING_STRATEGIES = {

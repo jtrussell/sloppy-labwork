@@ -130,6 +130,54 @@
         </div>
     </div>
 
+    <!-- Player Match Report Modal -->
+    <div id="playerMatchReportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="playerMatchReportModalTitle">Report Match Result</h3>
+                <button class="modal-close" onclick="closePlayerMatchReportModal()"></button>
+            </div>
+
+            <form id="playerMatchReportForm" class="form-wide">
+                {% csrf_token %}
+                <div>
+                    <label for="playerMatchOpponent">Opponent:</label>
+                    <select id="playerMatchOpponent" name="opponent" required>
+                        <option value="">Select your opponent</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="playerMatchWinner">Winner:</label>
+                    <select id="playerMatchWinner" name="winner" required>
+                        <option value="">Select winner</option>
+                        <option value="me">I won</option>
+                        <option value="them">They won</option>
+                    </select>
+                </div>
+
+                <div id="playerScoreInputs" style="margin-top: 1rem; display: none;">
+                    <h4 style="margin-bottom: 1rem; text-align: center; color: var(--color-text-muted);">Match Scores</h4>
+                    <div style="display: flex; gap: 1rem;">
+                        <div style="flex: 1;">
+                            <label for="playerMyScore">My Score:</label>
+                            <input type="number" id="playerMyScore" name="my_score" min="0" step="1" style="width: 100%;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label for="playerTheirScore">Their Score:</label>
+                            <input type="number" id="playerTheirScore" name="their_score" min="0" step="1" style="width: 100%;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: center;">
+                    <button type="submit" class="button button-primary">Submit Result</button>
+                    <button type="button" class="button" onclick="closePlayerMatchReportModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
     function openMatchModal(button) {
         const modal = document.getElementById('matchModal');
@@ -307,12 +355,29 @@
         playerTwoSelect.innerHTML = '<option value="">Select Player Two</option>';
 
         {% if unmatched_players %}
+        const isAdmin = {{ is_admin|yesno:"true,false" }};
+        const currentUserId = {{ user.id|default:"null" }};
+        let currentUserStagePlayerId = null;
+
         {% for stage_player in unmatched_players %}
         const option1_{{ stage_player.id }} = new Option('{{ stage_player.player.get_display_name|escapejs }}', '{{ stage_player.id }}');
         const option2_{{ stage_player.id }} = new Option('{{ stage_player.player.get_display_name|escapejs }}', '{{ stage_player.id }}');
+
+        {% if stage_player.player.user %}
+        if ({{ stage_player.player.user.id }} === currentUserId) {
+            currentUserStagePlayerId = '{{ stage_player.id }}';
+        }
+        {% endif %}
+
         playerOneSelect.appendChild(option1_{{ stage_player.id }});
         playerTwoSelect.appendChild(option2_{{ stage_player.id }});
         {% endfor %}
+
+        // For non-admin players, pre-select themselves as player one
+        if (!isAdmin && currentUserStagePlayerId) {
+            playerOneSelect.value = currentUserStagePlayerId;
+            playerOneSelect.disabled = true;
+        }
         {% endif %}
 
         // Show modal
@@ -321,6 +386,13 @@
 
     function closeAddMatchModal() {
         const modal = document.getElementById('addMatchModal');
+        const playerOneSelect = document.getElementById('addMatchPlayerOne');
+
+        // Re-enable player one select in case it was disabled
+        if (playerOneSelect) {
+            playerOneSelect.disabled = false;
+        }
+
         modal.classList.remove('modal--active');
     }
 
@@ -335,6 +407,96 @@
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeAddMatchModal();
+            closePlayerMatchReportModal();
+        }
+    });
+
+    // Player Match Report Modal Functions
+    function openPlayerMatchReportModal() {
+        const modal = document.getElementById('playerMatchReportModal');
+        const form = document.getElementById('playerMatchReportForm');
+        const opponentSelect = document.getElementById('playerMatchOpponent');
+        const winnerSelect = document.getElementById('playerMatchWinner');
+        const scoreInputsSection = document.getElementById('playerScoreInputs');
+
+        // Set up form action
+        form.setAttribute('hx-post', '{% url "tourney-player-add-match-result" tournament.id %}');
+        htmx.process(form);
+
+        // Clear opponent select
+        opponentSelect.innerHTML = '<option value="">Select your opponent</option>';
+
+        // Populate opponent options with unmatched players (excluding current user)
+        {% if unmatched_players %}
+        const currentUserId = {{ user.id|default:"null" }};
+
+        {% for stage_player in unmatched_players %}
+        {% if stage_player.player.user %}
+        if ({{ stage_player.player.user.id }} !== currentUserId) {
+            const option = new Option('{{ stage_player.player.get_display_name|escapejs }}', '{{ stage_player.id }}');
+            opponentSelect.appendChild(option);
+        }
+        {% else %}
+        // Guest player - always include
+        const option = new Option('{{ stage_player.player.get_display_name|escapejs }}', '{{ stage_player.id }}');
+        opponentSelect.appendChild(option);
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+
+        // Handle score inputs and tie option based on stage settings
+        const stageAllowTies = {{ selected_stage.are_ties_allowed|yesno:"true,false"|default:"false" }};
+        const stageScoreReporting = {{ selected_stage.report_full_scores|default:"0" }};
+
+        // Clear and setup winner select
+        winnerSelect.innerHTML = '<option value="">Select winner</option>';
+        winnerSelect.innerHTML += '<option value="me">I won</option>';
+        winnerSelect.innerHTML += '<option value="them">They won</option>';
+
+        if (stageAllowTies) {
+            winnerSelect.innerHTML += '<option value="tie">Tie</option>';
+        }
+
+        // Handle score inputs
+        if (stageScoreReporting > 0) {
+            scoreInputsSection.style.display = 'block';
+            const myScoreInput = document.getElementById('playerMyScore');
+            const theirScoreInput = document.getElementById('playerTheirScore');
+
+            if (stageScoreReporting === 2) {
+                // Required
+                myScoreInput.required = true;
+                theirScoreInput.required = true;
+            } else {
+                // Optional
+                myScoreInput.required = false;
+                theirScoreInput.required = false;
+            }
+        } else {
+            scoreInputsSection.style.display = 'none';
+        }
+
+        // Show modal
+        modal.classList.add('modal--active');
+    }
+
+    function closePlayerMatchReportModal() {
+        const modal = document.getElementById('playerMatchReportModal');
+        modal.classList.remove('modal--active');
+    }
+
+    // Close player match report modal when clicking outside
+    document.addEventListener('click', function(e) {
+        const modal = document.getElementById('playerMatchReportModal');
+        if (e.target === modal) {
+            closePlayerMatchReportModal();
+        }
+    });
+
+    // Handle form submission success
+    document.addEventListener('htmx:afterRequest', function(e) {
+        if (e.detail.elt && e.detail.elt.id === 'playerMatchReportForm' && e.detail.successful) {
+            closePlayerMatchReportModal();
         }
     });
     </script>
