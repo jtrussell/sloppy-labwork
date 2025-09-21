@@ -1,7 +1,7 @@
 <div id="tournament-content">
 <section>
     {% if standings %}
-        <h2>Current Standings</h2>
+        <h2>Tournament Standings</h2>
         <table>
             <thead>
                 <tr>
@@ -14,28 +14,41 @@
             </thead>
             <tbody>
                 {% for standing in standings %}
-                <tr>
-                    <td><strong>{{ standing.rank }}</strong></td>
-                    <td>{{ standing.stage_player.player.get_display_name }}</td>
+                <tr{% if standing.is_dropped %} class="text-muted"{% endif %}>
+                    <td><strong>{{ standing.tournament_rank }}</strong></td>
+                    <td>
+                        {{ standing.player.get_display_name }}
+                        {% if standing.is_dropped %}
+                            <span class="text-muted">(Dropped)</span>
+                        {% endif %}
+                    </td>
                     {% for criterion in enabled_criteria %}
                         <td>
                             {% with key=criterion.get_key %}
-                                {% if key == 'points' %}
-                                    {{ standing.points }}
+                                {% if not standing.is_in_current_stage %}
+                                    <span class="text-muted">-</span>
+                                {% elif key == 'points' %}
+                                    {% if standing.points is not None %}{{ standing.points }}{% else %}<span class="text-muted">-</span>{% endif %}
                                 {% elif key == 'wins' %}
-                                    {{ standing.wins }}
+                                    {% if standing.wins is not None %}{{ standing.wins }}{% else %}<span class="text-muted">-</span>{% endif %}
                                 {% elif key == 'losses' %}
-                                    {{ standing.losses }}
+                                    {% if standing.losses is not None %}{{ standing.losses }}{% else %}<span class="text-muted">-</span>{% endif %}
                                 {% elif key == 'strength_of_schedule' %}
-                                    {{ standing.strength_of_schedule|floatformat:2 }}
+                                    {% if standing.strength_of_schedule is not None %}{{ standing.strength_of_schedule|floatformat:2 }}{% else %}<span class="text-muted">-</span>{% endif %}
                                 {% elif key == 'seed' %}
-                                    {{ standing.seed }}
+                                    {% if standing.seed is not None %}{{ standing.seed }}{% else %}<span class="text-muted">-</span>{% endif %}
                                 {% elif key == 'head_to_head' %}
-                                    {{ standing.head_to_head_value|default:"-" }}
+                                    {% if standing.head_to_head_value is not None %}{{ standing.head_to_head_value }}{% else %}<span class="text-muted">-</span>{% endif %}
                                 {% elif key == 'random' %}
-                                    <span class="text-muted">🕵️</span>
+                                    {% if standing.is_in_current_stage %}<span class="text-muted">🕵️</span>{% else %}<span class="text-muted">-</span>{% endif %}
+                                {% elif key == 'player_score' %}
+                                    {% if standing.player_score_value is not None %}{{ standing.player_score_value }}{% else %}<span class="text-muted">-</span>{% endif %}
+                                {% elif key == 'opponent_score' %}
+                                    {% if standing.opponent_score_value is not None %}{{ standing.opponent_score_value }}{% else %}<span class="text-muted">-</span>{% endif %}
+                                {% elif key == 'score_differential' %}
+                                    {% if standing.score_differential_value is not None %}{{ standing.score_differential_value }}{% else %}<span class="text-muted">-</span>{% endif %}
                                 {% else %}
-                                    -
+                                    <span class="text-muted">-</span>
                                 {% endif %}
                             {% endwith %}
                         </td>

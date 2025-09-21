@@ -13,7 +13,9 @@
     <div class="page-header">
         <h1>Confirm Seeding</h1>
         <div class="subheading">{{ next_stage.name }}</div>
-        <p class="text-muted">Drag and drop players to adjust seeding.</p>
+        <p class="text-muted">
+            Drag and drop players to adjust seeding.
+        </p>
     </div>
 
     <div class="seeding-confirmation">
@@ -31,6 +33,12 @@
         <div id="seeding-list">
             {% include 'tourney/partials/seeding-list.html' %}
         </div>
+
+        {% if all_players_advance %}
+            <p class="text-muted">All {{ total_players }} players will advance to {{ next_stage.name }}.</p>
+        {% else %}
+            <p class="text-muted">The top {{ players_advancing }} of {{ total_players }} players will advance to {{ next_stage.name }}.</p>
+        {% endif %}
 
         <div class="seeding-actions">
             <a href="{% url 'tourney-detail-matches' tournament.id %}" class="button button-secondary">Cancel</a>
@@ -61,24 +69,4 @@ function initializeSeedingDragDrop() {
     seedingManager = new SeedingDragDropManager('#sortable-seeding', updateUrl);
 }
 </script>
-
-<style>
-.seeding-confirmation {
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-.seeding-controls {
-    margin-bottom: 1rem;
-    text-align: center;
-}
-
-.seeding-actions {
-    margin-top: 2rem;
-    text-align: center;
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-}
-</style>
 {% endblock %}

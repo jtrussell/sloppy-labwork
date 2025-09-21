@@ -140,12 +140,17 @@ class Tournament(models.Model):
         # Get current standings from the current stage
         standings = StandingCalculator.get_stage_standings(current_stage)
 
-        # Take top players up to max_players limit of next stage
-        max_players = next_stage.max_players or len(standings)
-        top_standings = standings[:max_players]
+        # Set ranks on current stage players before advancement
+        for i, standing in enumerate(standings):
+            standing['stage_player'].rank = i + 1
+            standing['stage_player'].save()
 
-        # Create preliminary stage players with seeding based on standings
-        for i, standing in enumerate(top_standings):
+        # For seeding confirmation, show ALL active players initially
+        # Filtering to max_players will happen when the stage actually starts
+        active_standings = [s for s in standings if s['stage_player'].player.status == Player.PlayerStatus.ACTIVE]
+
+        # Create preliminary stage players for ALL active players (for seeding confirmation)
+        for i, standing in enumerate(active_standings):
             StagePlayer.objects.create(
                 player=standing['stage_player'].player,
                 stage=next_stage,
@@ -178,6 +183,13 @@ class Tournament(models.Model):
 
         if not next_stage.stage_players.exists():
             raise ValueError("No players seeded for next stage")
+
+        # Apply max_players limit now (remove excess players if needed)
+        if next_stage.max_players:
+            stage_players = next_stage.stage_players.order_by('seed')
+            players_to_remove = stage_players[next_stage.max_players:]
+            for stage_player in players_to_remove:
+                stage_player.delete()
 
         # Create first round in next stage
         pairing_strategy = get_pairing_strategy(next_stage.pairing_strategy)
@@ -369,7 +381,7 @@ class StrengthOfScheduleRankingCriterion(RankingCriterion):
         return 'strength_of_schedule'
 
     def get_name(self):
-        return 'Strength of Schedule'
+        return 'SoS'
 
     def get_description(self):
         return 'Average points of opponents faced'
@@ -1245,6 +1257,126 @@ class StandingCalculator:
             total_opponent_points += (opponent_wins * 2 + opponent_ties * 1)
 
         return total_opponent_points / len(opponents) if opponents else 0
+
+    @staticmethod
+    def get_tournament_standings(tournament):
+        """
+        Get comprehensive tournament standings for all players registered.
+
+        Logic:
+        1. Players who advance to later stages rank ahead of those who didn't
+        2. Active players rank ahead of dropped players
+        3. Standing is determined by rank in highest stage achieved, or current live standings
+        """
+        from django.db.models import Count, Q, Max
+
+        current_stage = tournament.get_current_stage()
+        if not current_stage:
+            return []
+
+        # Get all players registered for the tournament
+        all_players = tournament.players.all()
+        if not all_players:
+            return []
+
+        # Get current stage standings first (properly sorted)
+        current_standings = StandingCalculator.get_stage_standings(
+            current_stage)
+
+        # Build final standings starting with current stage players
+        final_standings = []
+        current_stage_player_ids = set()
+        current_stage_active_players = []
+        current_stage_dropped_players = []
+
+        # First, separate current stage players into active and dropped
+        for current_standing in current_standings:
+            player = current_standing['stage_player'].player
+            current_stage_player_ids.add(player.id)
+
+            standing_data = {
+                'player': player,
+                'stage_player': current_standing['stage_player'],
+                'highest_stage_order': current_stage.order,
+                'is_active': player.status == Player.PlayerStatus.ACTIVE,
+                'is_dropped': player.status == Player.PlayerStatus.DROPPED,
+                'is_in_current_stage': True,
+                'rank': current_standing['rank'],
+                'wins': current_standing['wins'],
+                'losses': current_standing['losses'],
+                'ties': current_standing['ties'],
+                'points': current_standing['points'],
+                'strength_of_schedule': current_standing['strength_of_schedule'],
+                'seed': current_standing['seed'],
+            }
+
+            # Add criterion values for current stage
+            for criterion in current_stage.get_enabled_ranking_criteria_objects():
+                key = criterion.get_key()
+                standing_data[f'{key}_value'] = current_standing.get(
+                    f'{key}_value', None)
+
+            # Separate into active and dropped lists while preserving order
+            if player.status == Player.PlayerStatus.ACTIVE:
+                current_stage_active_players.append(standing_data)
+            else:
+                current_stage_dropped_players.append(standing_data)
+
+        # Add active players first, then dropped players
+        final_standings.extend(current_stage_active_players)
+        final_standings.extend(current_stage_dropped_players)
+
+        # Then add players from other stages/not in current stage
+        other_players = []
+        for player in all_players:
+            if player.id in current_stage_player_ids:
+                continue  # Already added above
+
+            # Find the highest stage this player achieved
+            player_stages = StagePlayer.objects.filter(
+                player=player,
+                stage__tournament=tournament
+            ).order_by('-stage__order')
+
+            if not player_stages:
+                continue
+
+            highest_stage_player = player_stages.first()
+            highest_stage = highest_stage_player.stage
+
+            standing_data = {
+                'player': player,
+                'stage_player': highest_stage_player,
+                'highest_stage_order': highest_stage.order,
+                'is_active': player.status == Player.PlayerStatus.ACTIVE,
+                'is_dropped': player.status == Player.PlayerStatus.DROPPED,
+                'is_in_current_stage': False,
+                'rank': highest_stage_player.rank or 999,
+                'wins': None,
+                'losses': None,
+                'ties': None,
+                'points': None,
+                'strength_of_schedule': None,
+                'seed': highest_stage_player.seed,
+            }
+
+            # Set criterion values to None (will show as dashes)
+            for criterion in current_stage.get_enabled_ranking_criteria_objects():
+                key = criterion.get_key()
+                standing_data[f'{key}_value'] = None
+
+            other_players.append(standing_data)
+
+        # Sort other players by stage order (desc), active status, then rank
+        other_players.sort(
+            key=lambda x: (-x['highest_stage_order'], 0 if x['is_active'] else 1, x['rank']))
+        final_standings.extend(other_players)
+
+        # Assign final tournament ranks
+        for i, standing in enumerate(final_standings):
+            standing['tournament_rank'] = i + 1
+
+        return final_standings
 
 
 class TournamentActionLog(models.Model):

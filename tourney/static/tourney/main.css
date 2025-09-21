@@ -356,3 +356,20 @@
   }
 }
 
+.seeding-confirmation {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.seeding-controls {
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.seeding-actions {
+    margin-top: 2rem;
+    text-align: center;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}

@@ -402,10 +402,8 @@ def tournament_detail_standings(request, tournament_id):
     standings = []
     enabled_criteria = []
     if context['current_stage']:
-        standings = StandingCalculator.get_stage_standings(
-            context['current_stage'])
-        enabled_criteria = context['current_stage'].get_enabled_ranking_criteria_objects(
-        )
+        standings = StandingCalculator.get_tournament_standings(tournament)
+        enabled_criteria = context['current_stage'].get_enabled_ranking_criteria_objects()
 
     context['standings'] = standings
     context['enabled_criteria'] = enabled_criteria
@@ -777,11 +775,20 @@ def confirm_seeding(request, tournament_id):
 
     stage_players = target_stage.stage_players.order_by('seed')
 
+    # Calculate advancement information
+    total_players = stage_players.count()
+    max_players = target_stage.max_players
+    players_advancing = min(max_players, total_players) if max_players else total_players
+    all_players_advance = not max_players or max_players >= total_players
+
     context = {
         'tournament': tournament,
         'next_stage': target_stage,  # Keep same template variable name for compatibility
         'stage_players': stage_players,
         'is_current_stage': target_stage == current_stage,
+        'total_players': total_players,
+        'players_advancing': players_advancing,
+        'all_players_advance': all_players_advance,
     }
 
     return render(request, 'tourney/confirm-seeding.html', context)
