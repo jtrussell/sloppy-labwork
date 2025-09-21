@@ -750,6 +750,7 @@ class StagePlayer(models.Model):
     stage = models.ForeignKey(
         Stage, on_delete=models.CASCADE, related_name='stage_players')
     seed = models.PositiveIntegerField()
+    rank = models.PositiveIntegerField(default=None, null=True, blank=True)
     group = models.ForeignKey(
         Group, on_delete=models.SET_NULL, related_name='players',
         default=None, null=True, blank=True)
