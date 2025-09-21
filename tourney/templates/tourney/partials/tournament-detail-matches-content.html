@@ -46,8 +46,8 @@
                 <p id="noMatchesMessage" class="text-muted">There are no matches within this round.</p>
             {% endif %}
 
-            {% comment %} Show unmatched players if any {% endcomment %}
-            {% if unmatched_players %}
+            {% comment %} Show unmatched players if any and if strategy allows {% endcomment %}
+            {% if unmatched_players and show_unmatched_players %}
                 <div class="unmatched-players-section">
                     <h3>Players Not Matched</h3>
                     <div class="unmatched-players-grid">

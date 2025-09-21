@@ -371,13 +371,20 @@ def tournament_detail_matches(request, tournament_id):
 
         unmatched_players = stage_players.exclude(id__in=matched_player_ids)
 
-    # Check if current user can add matches
+    # Check if current user can add matches and if we should show unmatched players
     can_add_match = False
+    show_unmatched_players = True
     if selected_stage:
         is_admin = tournament.is_user_admin(request.user)
-        is_self_scheduled = selected_stage.get_pairing_strategy().is_self_scheduled()
+        pairing_strategy = selected_stage.get_pairing_strategy()
+        is_self_scheduled = pairing_strategy.is_self_scheduled()
+        is_elimination_style = pairing_strategy.is_elimination_style()
         is_player = tournament.players.filter(user=request.user).exists()
+
         can_add_match = is_admin or (is_self_scheduled and is_player)
+
+        # Hide unmatched players for elimination-style or self-scheduled strategies
+        show_unmatched_players = not (is_elimination_style or is_self_scheduled)
 
     context.update({
         'selected_stage': selected_stage,
@@ -385,6 +392,7 @@ def tournament_detail_matches(request, tournament_id):
         'matches': matches,
         'unmatched_players': unmatched_players,
         'can_add_match': can_add_match,
+        'show_unmatched_players': show_unmatched_players,
     })
 
     if request.htmx:

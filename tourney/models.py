@@ -147,7 +147,8 @@ class Tournament(models.Model):
 
         # For seeding confirmation, show ALL active players initially
         # Filtering to max_players will happen when the stage actually starts
-        active_standings = [s for s in standings if s['stage_player'].player.status == Player.PlayerStatus.ACTIVE]
+        active_standings = [
+            s for s in standings if s['stage_player'].player.status == Player.PlayerStatus.ACTIVE]
 
         # Create preliminary stage players for ALL active players (for seeding confirmation)
         for i, standing in enumerate(active_standings):
@@ -875,8 +876,19 @@ class PairingStrategy:
         """
         return False
 
+    def is_elimination_style(self):
+        """ Returns True if the pairing strategy is elimination-style.
+
+        When true, we will not display non-matched players on the standings
+        page.
+        """
+        return False
+
 
 class SwissPairingStrategy(PairingStrategy):
+    def is_elimination_style(self):
+        return False
+
     def make_pairings_for_round(self, round):
         stage = round.stage
         stage_players = list(stage.stage_players.filter(
@@ -947,6 +959,9 @@ class SwissPairingStrategy(PairingStrategy):
 
 class SingleEliminationPairingStrategy(PairingStrategy):
     def is_seeding_required(self):
+        return True
+
+    def is_elimination_style(self):
         return True
 
     def make_pairings_for_round(self, round):
@@ -1020,6 +1035,9 @@ class RoundRobinSelfScheduledPairingStrategy(PairingStrategy):
 
     def is_self_scheduled(self):
         return True
+
+    def is_elimination_style(self):
+        return False
 
 
 PAIRING_STRATEGIES = {
