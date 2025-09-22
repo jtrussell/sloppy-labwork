@@ -4,9 +4,10 @@ from . import views
 urlpatterns = [
     path('', views.my_tournaments, name='tourney-my-tournaments'),
     path('create/', views.create_tournament, name='tourney-create-tournament'),
-    path('<int:tournament_id>/', views.tournament_detail_home, name='tourney-detail-home'),
+    path('<int:tournament_id>/', views.tournament_detail_matches, name='tourney-detail-home'),
     path('<int:tournament_id>/matches/', views.tournament_detail_matches, name='tourney-detail-matches'),
     path('<int:tournament_id>/standings/', views.tournament_detail_standings, name='tourney-detail-standings'),
+    path('<int:tournament_id>/admin/', views.tournament_detail_admin, name='tourney-detail-admin'),
     path('<int:tournament_id>/edit/', views.edit_tournament, name='tourney-edit-tournament'),
     path('<int:tournament_id>/copy/', views.copy_tournament, name='tourney-copy-tournament'),
     path('<int:tournament_id>/players/', views.manage_players, name='tourney-manage-players'),

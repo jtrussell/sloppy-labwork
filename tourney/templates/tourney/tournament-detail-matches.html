@@ -2,57 +2,32 @@
 
 {% block tab_content %}
 <div id="tournament-content">
-<section>
-    <!-- Stage and Round Selection -->
-    {% if stages %}
-        <section>
-            <h2>Select Stage and Round</h2>
-            <div class="stage-round-controls">
-                <div class="stage-round-item">
-                    <label for="stageSelect" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Stage:</label>
-                    <select id="stageSelect" style="width: 100%;" onchange="updateRounds()">
-                        <option value="">Choose a stage...</option>
-                        {% for stage in stages %}
-                            <option value="{{ stage.id }}" {% if stage == selected_stage %}selected{% endif %}>
-                                {{ stage.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="stage-round-item">
-                    <label for="roundSelect" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Round:</label>
-                    <select id="roundSelect" style="width: 100%;" onchange="navigateToMatch()" disabled>
-                        <option value="">Select a stage first...</option>
-                    </select>
-                </div>
-            </div>
-
-            <div id="stageMessage" style="display: none; text-align: center; color: var(--color-text-muted); margin-bottom: 1rem;">
-                <!-- Dynamic message will be inserted here -->
-            </div>
-        </section>
-    {% endif %}
-
-    <!-- Current Round Matches -->
-    {% if selected_round %}
-        <section>
-            <h2>{{ selected_stage.name }} - Round {{ selected_round.order }}</h2>
-
-            {% if matches %}
-                <div class="match-grid">
-                    {% for match in matches %}
-                        {% include 'tourney/partials/match-card.html' with match=match is_admin=is_admin show_match_number=True match_number=forloop.counter %}
+    <!-- All Tournament Matches -->
+    {% if grouped_matches %}
+        {% for stage_group in grouped_matches %}
+            <section class="stack gap-2">
+                <div>
+                    <h2>{{ stage_group.stage.name }}</h2>
+                    {% for round_group in stage_group.rounds %}
+                        <h3>Round {{ round_group.round.order }}</h3>
+                        <div class="subheading">{{ stage_group.stage.name }}</div>
+                        {% if round_group.matches %}
+                            <div class="match-grid">
+                                {% for match in round_group.matches %}
+                                    {% include 'tourney/partials/match-card.html' with match=match is_admin=is_admin show_match_number=True match_number=forloop.counter %}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     {% endfor %}
                 </div>
-            {% else %}
-                <p id="noMatchesMessage" class="text-muted">There are no matches within this round.</p>
-            {% endif %}
+            </section>
+        {% endfor %}
 
-            {% comment %} Show unmatched players if any and if strategy allows {% endcomment %}
-            {% if unmatched_players and show_unmatched_players %}
+        {% comment %} Show unmatched players for the latest round if any and if strategy allows {% endcomment %}
+        {% if unmatched_players and show_unmatched_players %}
+            <section>
                 <div class="unmatched-players-section">
-                    <h3>Players Not Matched</h3>
+                    <h3>Players Not Matched (Latest Round)</h3>
                     <div class="unmatched-players-grid">
                         {% for stage_player in unmatched_players %}
                             <div class="unmatched-player-card">
@@ -65,16 +40,14 @@
                         {% endfor %}
                     </div>
                 </div>
-            {% endif %}
-        </section>
-    {% else %}
-        {% if stages %}
-            <p id="selectMessage" class="text-muted" style="text-align: center;">Select a stage and round to view matches.</p>
-        {% else %}
-            <p class="text-muted" style="text-align: center;">No stages have been created yet.</p>
+            </section>
         {% endif %}
+    {% else %}
+        <section>
+            <p class="text-muted" style="text-align: center;">No matches have been created yet.</p>
+        </section>
     {% endif %}
-</section>
+
 
 <section>
     {% if is_admin %}
@@ -132,7 +105,7 @@
     {% endif %}
 </section>
 
-{% comment %} Add Match section for players in self-scheduled stages {% endcomment %}
+{% comment %} Add Match latestfor players in self-scheduled stages {% endcomment %}
 {% if can_add_match and selected_round and unmatched_players.count >= 2 %}
 <section>
     <h2>Quick Actions</h2>
@@ -153,96 +126,4 @@
 </section>
 {% endif %}
 </div>
-{% endblock %}
-
-{% block extra_body %}
-    {{ block.super }}
-
-    <script>
-    // Stage and Round data for cascading menus
-    const stageRoundData = {
-        {% for stage in stages %}
-            "{{ stage.id }}": {
-                name: "{{ stage.name|escapejs }}",
-                rounds: [
-                    {% for round in stage.rounds.all %}
-                        {id: {{ round.id }}, order: {{ round.order }}},
-                    {% endfor %}
-                ]
-            },
-        {% endfor %}
-    };
-
-    function updateRounds() {
-        const stageSelect = document.getElementById('stageSelect');
-        const roundSelect = document.getElementById('roundSelect');
-        const stageMessage = document.getElementById('stageMessage');
-        const selectedStageId = stageSelect.value;
-
-        // Clear round options
-        roundSelect.innerHTML = '';
-
-        if (!selectedStageId) {
-            // No stage selected
-            roundSelect.disabled = true;
-            roundSelect.innerHTML = '<option value="">Select a stage first...</option>';
-            stageMessage.style.display = 'none';
-            return;
-        }
-
-        const stageData = stageRoundData[selectedStageId];
-        roundSelect.disabled = false;
-
-        if (stageData.rounds.length === 0) {
-            // Stage has no rounds
-            roundSelect.innerHTML = '<option value="">No rounds available</option>';
-            roundSelect.disabled = true;
-            stageMessage.innerHTML = 'This stage has not begun yet.';
-            stageMessage.style.display = 'block';
-        } else {
-            // Stage has rounds
-            roundSelect.innerHTML = '<option value="">Choose a round...</option>';
-            stageData.rounds.forEach(round => {
-                const option = document.createElement('option');
-                option.value = round.id;
-                option.textContent = `Round ${round.order}`;
-                {% if selected_round %}
-                    if (round.id === {{ selected_round.id }}) {
-                        option.selected = true;
-                    }
-                {% endif %}
-                roundSelect.appendChild(option);
-            });
-            stageMessage.style.display = 'none';
-        }
-    }
-
-    function navigateToMatch() {
-        const stageSelect = document.getElementById('stageSelect');
-        const roundSelect = document.getElementById('roundSelect');
-        const selectedStageId = stageSelect.value;
-        const selectedRoundId = roundSelect.value;
-
-        if (selectedStageId && selectedRoundId) {
-            const url = `{% url 'tourney-detail-matches' tournament.id %}?stage=${selectedStageId}&round=${selectedRoundId}`;
-            window.location = url;
-
-        } else if (selectedStageId && !selectedRoundId) {
-            // Show stage selected but no round message
-            const stageData = stageRoundData[selectedStageId];
-            if (stageData.rounds.length > 0) {
-                // Stage has rounds, just need to select one
-                const stageMessage = document.getElementById('stageMessage');
-                stageMessage.innerHTML = 'Please select a round to view matches.';
-                stageMessage.style.display = 'block';
-            }
-        }
-    }
-
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        updateRounds();
-    });
-    </script>
-
 {% endblock %}

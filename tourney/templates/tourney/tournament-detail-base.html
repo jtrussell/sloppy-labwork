@@ -34,23 +34,25 @@
             style="justify-content: center;"
         >
             <li class="nav__item">
-                <a href="{% url 'tourney-detail-home' tournament.id %}" 
-                class="nav__link {% if current_tab == 'home' %}nav__link--active{% endif %}">
-                    Info
-                </a>
-            </li>
-            <li class="nav__item">
-                <a href="{% url 'tourney-detail-matches' tournament.id %}" 
+                <a href="{% url 'tourney-detail-matches' tournament.id %}"
                 class="nav__link {% if current_tab == 'matches' %}nav__link--active{% endif %}">
                     Matches
                 </a>
             </li>
             <li class="nav__item">
-                <a href="{% url 'tourney-detail-standings' tournament.id %}" 
+                <a href="{% url 'tourney-detail-standings' tournament.id %}"
                 class="nav__link {% if current_tab == 'standings' %}nav__link--active{% endif %}">
                     Standings
                 </a>
             </li>
+            {% if is_admin %}
+            <li class="nav__item">
+                <a href="{% url 'tourney-detail-admin' tournament.id %}"
+                class="nav__link {% if current_tab == 'admin' %}nav__link--active{% endif %}">
+                    Admin
+                </a>
+            </li>
+            {% endif %}
         </ul>
      </section>
 

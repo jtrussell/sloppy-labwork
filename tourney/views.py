@@ -305,91 +305,71 @@ def get_tournament_base_context(request, tournament):
 
 @login_required
 @is_tournament_admin_or_player
-def tournament_detail_home(request, tournament_id):
-    tournament = get_object_or_404(Tournament, id=tournament_id)
-    context = get_tournament_base_context(request, tournament)
-    context['current_tab'] = 'home'
-
-    # Get user's pending matches for home tab
-    user_matches = []
-    if context['is_active_player'] and context['current_round']:
-        user_stage_player = context['current_stage'].stage_players.filter(
-            player__user=request.user,
-            player__status=Player.PlayerStatus.ACTIVE).first()
-        if user_stage_player:
-            user_matches = context['current_round'].matches.filter(
-                models.Q(player_one=user_stage_player) | models.Q(
-                    player_two=user_stage_player)
-            ).filter(result__isnull=True)
-
-    context['user_matches'] = user_matches
-
-    if request.htmx:
-        return render(request, 'tourney/partials/tournament-detail-home-content.html', context)
-    return render(request, 'tourney/tournament-detail-home.html', context)
-
-
-@login_required
-@is_tournament_admin_or_player
 def tournament_detail_matches(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
     context = get_tournament_base_context(request, tournament)
     context['current_tab'] = 'matches'
 
-    selected_stage_id = request.GET.get('stage')
-    selected_round_id = request.GET.get('round')
+    # Get all stages ordered by creation (most recent first)
+    stages = tournament.stages.prefetch_related(
+        'rounds__matches__result',
+        'rounds__matches__player_one__player',
+        'rounds__matches__player_two__player'
+    ).order_by('-created_on')
 
-    if selected_stage_id:
-        selected_stage = get_object_or_404(
-            Stage, id=selected_stage_id, tournament=tournament)
-    else:
-        selected_stage = context['current_stage']
-
-    if selected_round_id and selected_stage:
-        selected_round = get_object_or_404(
-            Round, id=selected_round_id, stage=selected_stage)
-        matches = selected_round.matches.all()
-    elif selected_stage:
-        latest_round = selected_stage.rounds.order_by('-order').first()
-        selected_round = latest_round
-        matches = latest_round.matches.all() if latest_round else []
-    else:
-        selected_round = None
-        matches = []
-
+    # Build grouped matches structure
+    grouped_matches = []
+    current_stage = context['current_stage']
+    latest_round = None
     unmatched_players = []
-    if selected_round and selected_stage:
-        stage_players = selected_stage.stage_players.filter(
+
+    for stage in stages:
+        stage_rounds = []
+        for round_obj in stage.rounds.order_by('-order'):
+            if round_obj.matches.exists():
+                stage_rounds.append({
+                    'round': round_obj,
+                    'matches': round_obj.matches.all()
+                })
+                # Track the most recent round for unmatched players logic
+                if not latest_round and stage == current_stage:
+                    latest_round = round_obj
+
+        if stage_rounds:
+            grouped_matches.append({
+                'stage': stage,
+                'rounds': stage_rounds
+            })
+
+    # Calculate unmatched players for the current stage's latest round
+    if latest_round and current_stage:
+        stage_players = current_stage.stage_players.filter(
             player__status=Player.PlayerStatus.ACTIVE)
         matched_player_ids = set()
-        for match in matches:
+        for match in latest_round.matches.all():
             if match.player_one:
                 matched_player_ids.add(match.player_one.id)
             if match.player_two:
                 matched_player_ids.add(match.player_two.id)
-
         unmatched_players = stage_players.exclude(id__in=matched_player_ids)
 
-    # Check if current user can add matches and if we should show unmatched players
+    # Check if current user can add matches
     can_add_match = False
     show_unmatched_players = True
-    if selected_stage:
+    if current_stage:
         is_admin = tournament.is_user_admin(request.user)
-        pairing_strategy = selected_stage.get_pairing_strategy()
+        pairing_strategy = current_stage.get_pairing_strategy()
         is_self_scheduled = pairing_strategy.is_self_scheduled()
         is_elimination_style = pairing_strategy.is_elimination_style()
         is_player = tournament.players.filter(user=request.user).exists()
 
         can_add_match = is_admin or (is_self_scheduled and is_player)
-
-        # Hide unmatched players for elimination-style or self-scheduled strategies
         show_unmatched_players = not (
             is_elimination_style or is_self_scheduled)
 
     context.update({
-        'selected_stage': selected_stage,
-        'selected_round': selected_round,
-        'matches': matches,
+        'grouped_matches': grouped_matches,
+        'latest_round': latest_round,
         'unmatched_players': unmatched_players,
         'can_add_match': can_add_match,
         'show_unmatched_players': show_unmatched_players,
@@ -420,6 +400,23 @@ def tournament_detail_standings(request, tournament_id):
     if request.htmx:
         return render(request, 'tourney/partials/tournament-detail-standings-content.html', context)
     return render(request, 'tourney/tournament-detail-standings.html', context)
+
+
+@login_required
+@is_tournament_admin
+def tournament_detail_admin(request, tournament_id):
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+    context = get_tournament_base_context(request, tournament)
+    context['current_tab'] = 'admin'
+
+    # Get tournament action logs ordered by most recent first
+    logs = tournament.action_logs.select_related('user').order_by(
+        '-created_on')[:100]  # Limit to most recent 100
+    context['tournament_logs'] = logs
+
+    if request.htmx:
+        return render(request, 'tourney/partials/tournament-detail-admin-content.html', context)
+    return render(request, 'tourney/tournament-detail-admin.html', context)
 
 
 @login_required

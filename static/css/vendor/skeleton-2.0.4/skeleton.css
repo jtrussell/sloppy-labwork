@@ -155,7 +155,7 @@ body {
 .h1, .h2, .h3, .h4, .h5, .h6,
 h1, h2, h3, h4, h5, h6 {
   margin-top: 0;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   font-weight: 300; }
 .h1, h1 { font-size: 3.2rem; line-height: 1.2;  letter-spacing: -.1rem;}
 .h2, h2 { font-size: 2.8rem; line-height: 1.25; letter-spacing: -.1rem; }
@@ -361,12 +361,12 @@ td:last-child {
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 button,
 .button {
-  margin-bottom: 1rem; }
+  margin-bottom: 0.75rem; }
 input,
 textarea,
 select,
 fieldset {
-  margin-bottom: 1.5rem; }
+  margin-bottom: 1rem; }
 pre,
 blockquote,
 dl,
@@ -376,7 +376,7 @@ p,
 ul,
 ol,
 form {
-  margin-bottom: 2.5rem; }
+  margin-bottom: 1.5rem; }
 
 
 /* Utilities
