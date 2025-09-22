@@ -9,6 +9,8 @@ different values for the variables below.
 
 import os
 
+os.environ['SESSION_COOKIE_DOMAIN'] = ''
+
 os.environ['SECRET_KEY'] = '@$1xls%3gshxbx7a3q6#ojkvdg(8t2#m)#075^nzen=(2rtmjr'
 
 os.environ['DEBUG'] = 'True'

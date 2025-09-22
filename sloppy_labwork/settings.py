@@ -175,6 +175,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 ACCOUNT_SESSION_REMEMBER = True
 
+if os.environ.get('SESSION_COOKIE_DOMAIN'):
+    SESSION_COOKIE_DOMAIN = os.environ['SESSION_COOKIE_DOMAIN']
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
