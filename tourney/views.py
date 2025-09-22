@@ -225,14 +225,14 @@ def get_tournament_base_context(request, tournament):
     current_stage = tournament.get_current_stage()
     current_round = current_stage.get_current_round() if current_stage else None
 
-    is_admin = tournament.is_user_admin(request.user)
-
+    is_admin = False
     player = None
     is_player = False
     is_active_player = False
     is_dropped_player = False
 
     if request.user.is_authenticated:
+        is_admin = tournament.is_user_admin(request.user)
         try:
             player = tournament.players.get(user=request.user)
             is_player = True
@@ -303,8 +303,6 @@ def get_tournament_base_context(request, tournament):
     }
 
 
-@login_required
-@is_tournament_admin_or_player
 def tournament_detail_matches(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
     context = get_tournament_base_context(request, tournament)
@@ -357,13 +355,15 @@ def tournament_detail_matches(request, tournament_id):
     can_add_match = False
     show_unmatched_players = True
     if current_stage:
-        is_admin = tournament.is_user_admin(request.user)
         pairing_strategy = current_stage.get_pairing_strategy()
         is_self_scheduled = pairing_strategy.is_self_scheduled()
         is_elimination_style = pairing_strategy.is_elimination_style()
-        is_player = tournament.players.filter(user=request.user).exists()
 
-        can_add_match = is_admin or (is_self_scheduled and is_player)
+        if request.user.is_authenticated:
+            user_is_admin = tournament.is_user_admin(request.user)
+            user_is_player = tournament.players.filter(user=request.user).exists()
+            can_add_match = user_is_admin or (is_self_scheduled and user_is_player)
+
         show_unmatched_players = not (
             is_elimination_style or is_self_scheduled)
 
@@ -380,8 +380,6 @@ def tournament_detail_matches(request, tournament_id):
     return render(request, 'tourney/tournament-detail-matches.html', context)
 
 
-@login_required
-@is_tournament_admin_or_player
 def tournament_detail_standings(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
     context = get_tournament_base_context(request, tournament)

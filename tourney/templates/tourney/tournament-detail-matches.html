@@ -2,53 +2,62 @@
 
 {% block tab_content %}
 <div id="tournament-content">
-    <!-- All Tournament Matches -->
-    {% if grouped_matches %}
-        {% for stage_group in grouped_matches %}
-            <section class="stack gap-2">
-                <div>
-                    <h2>{{ stage_group.stage.name }}</h2>
-                    {% for round_group in stage_group.rounds %}
-                        <h3>Round {{ round_group.round.order }}</h3>
-                        <div class="subheading">{{ stage_group.stage.name }}</div>
-                        {% if round_group.matches %}
-                            <div class="match-grid">
-                                {% for match in round_group.matches %}
-                                    {% include 'tourney/partials/match-card.html' with match=match is_admin=is_admin show_match_number=True match_number=forloop.counter %}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-            </section>
-        {% endfor %}
-
-        {% comment %} Show unmatched players for the latest round if any and if strategy allows {% endcomment %}
-        {% if unmatched_players and show_unmatched_players %}
-            <section>
-                <div class="unmatched-players-section">
-                    <h3>Players Not Matched (Latest Round)</h3>
-                    <div class="unmatched-players-grid">
-                        {% for stage_player in unmatched_players %}
-                            <div class="unmatched-player-card">
-                                <span class="player-name">{{ stage_player.player.get_display_name }}</span>
-                                {% if stage_player.player.is_guest %}
-                                    <span class="player-guest-badge">(Guest)</span>
-                                {% endif %}
-                                <span class="player-seed">Seed {{ stage_player.seed }}</span>
-                            </div>
+    {% if not user.is_authenticated %}
+        <section>
+            <p class="text-muted" style="text-align: center; font-style: italic;">
+                Please log in to view match details and participate in this tournament.
+            </p>
+        </section>
+    {% else %}
+        <!-- All Tournament Matches -->
+        {% if grouped_matches %}
+            {% for stage_group in grouped_matches %}
+                <section class="stack gap-2">
+                    <div>
+                        <h2>{{ stage_group.stage.name }}</h2>
+                        {% for round_group in stage_group.rounds %}
+                            <h3>Round {{ round_group.round.order }}</h3>
+                            <div class="subheading">{{ stage_group.stage.name }}</div>
+                            {% if round_group.matches %}
+                                <div class="match-grid">
+                                    {% for match in round_group.matches %}
+                                        {% include 'tourney/partials/match-card.html' with match=match is_admin=is_admin show_match_number=True match_number=forloop.counter %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         {% endfor %}
                     </div>
-                </div>
+                </section>
+            {% endfor %}
+
+            {% comment %} Show unmatched players for the latest round if any and if strategy allows {% endcomment %}
+            {% if unmatched_players and show_unmatched_players %}
+                <section>
+                    <div class="unmatched-players-section">
+                        <h3>Players Not Matched (Latest Round)</h3>
+                        <div class="unmatched-players-grid">
+                            {% for stage_player in unmatched_players %}
+                                <div class="unmatched-player-card">
+                                    <span class="player-name">{{ stage_player.player.get_display_name }}</span>
+                                    {% if stage_player.player.is_guest %}
+                                        <span class="player-guest-badge">(Guest)</span>
+                                    {% endif %}
+                                    <span class="player-seed">Seed {{ stage_player.seed }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+            {% endif %}
+        {% else %}
+            <section>
+                <p class="text-muted" style="text-align: center;">No matches have been created yet.</p>
             </section>
         {% endif %}
-    {% else %}
-        <section>
-            <p class="text-muted" style="text-align: center;">No matches have been created yet.</p>
-        </section>
     {% endif %}
 
 
+{% if user.is_authenticated %}
 <section>
     {% if is_admin %}
         <h2>Tournament Control</h2>
@@ -104,9 +113,10 @@
         </div>
     {% endif %}
 </section>
+{% endif %}
 
-{% comment %} Add Match latestfor players in self-scheduled stages {% endcomment %}
-{% if can_add_match and selected_round and unmatched_players.count >= 2 %}
+{% comment %} Add Match for players in self-scheduled stages {% endcomment %}
+{% if user.is_authenticated and can_add_match and selected_round and unmatched_players.count >= 2 %}
 <section>
     <h2>Quick Actions</h2>
     <div class="hstack gap-1">

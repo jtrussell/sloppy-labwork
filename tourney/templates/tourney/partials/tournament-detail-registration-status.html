@@ -1,50 +1,62 @@
-{% if user.is_authenticated %}
 <section
   id="registrationStatus"
   hx-target="#registrationStatus"
   hx-swap="outerHTML"
 >
-  {% if tournament.is_accepting_registrations and not is_player %}
-    <h2>Join Tournament</h2>
-    <form
-        method="post"
-        class="form-wide"
-        action="{% url 'tourney-register' tournament.id %}"
-    >
-        {% csrf_token %}
-        <div class="input-with-button-group">
-        <input type="text" name="nickname" placeholder="Nickname (optional)" />
-        <button type="submit" class="button button-primary">Register</button>
-        </div>
-    </form>
-  {% elif is_active_player %}
-    <p class="text-muted">You are registered for this tournament.</p>
-    <form
-        hx-post="{% url 'tourney-drop' tournament.id %}"
-        hx-confirm="Are you sure you want to drop from this tournament?"
-    >
-        <button class="button button-danger">
-            Drop from Tournament
-        </button>
-    </form>
-  {% elif is_dropped_player %}
-    <p class="text-muted">You are dropped from this tournament.</p>
-    {% if tournament.is_accepting_registrations %}
-        <form hx-post="{% url 'tourney-undrop' tournament.id %}">
-            <button class="button button-primary">
-                Rejoin Tournament
-            </button>
-        </form>
-    {% else %}
-        <p class="text-muted" style="margin-top: 1rem">
-            Tournament is no longer accepting registrations. Contact an admin to rejoin.
-        </p>
-        {% endif %} {% elif not tournament.is_accepting_registrations %}
-        <div class="note">
-            <p class="text-muted">
-            This tournament is no longer accepting registrations.
-            </p>
-        </div>
+  {% if user.is_authenticated %}
+    {% if tournament.is_accepting_registrations and not is_player %}
+      <h2>Join Tournament</h2>
+      <form
+          method="post"
+          class="form-wide"
+          action="{% url 'tourney-register' tournament.id %}"
+      >
+          {% csrf_token %}
+          <div class="input-with-button-group">
+          <input type="text" name="nickname" placeholder="Nickname (optional)" />
+          <button type="submit" class="button button-primary">Register</button>
+          </div>
+      </form>
+    {% elif is_active_player %}
+      <p class="text-muted">You are registered for this tournament.</p>
+      <form
+          hx-post="{% url 'tourney-drop' tournament.id %}"
+          hx-confirm="Are you sure you want to drop from this tournament?"
+      >
+          <button class="button button-danger">
+              Drop from Tournament
+          </button>
+      </form>
+    {% elif is_dropped_player %}
+      <p class="text-muted">You are dropped from this tournament.</p>
+      {% if tournament.is_accepting_registrations %}
+          <form hx-post="{% url 'tourney-undrop' tournament.id %}">
+              <button class="button button-primary">
+                  Rejoin Tournament
+              </button>
+          </form>
+      {% else %}
+          <p class="text-muted" style="margin-top: 1rem">
+              Tournament is no longer accepting registrations. Contact an admin to rejoin.
+          </p>
+      {% endif %}
+    {% elif not tournament.is_accepting_registrations %}
+      <div class="note">
+          <p class="text-muted">
+          This tournament is no longer accepting registrations.
+          </p>
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="note">
+      <p class="text-muted">
+        {% if tournament.is_accepting_registrations %}
+          This tournament is currently accepting registrations.
+        {% else %}
+          This tournament is not currently accepting registrations.
+        {% endif %}
+        <a href="/login/">Log in</a> to get more details{% if tournament.is_accepting_registrations %} and register{% endif %}.
+      </p>
+    </div>
   {% endif %}
 </section>
-{% endif %}
