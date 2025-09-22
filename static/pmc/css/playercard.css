@@ -50,6 +50,9 @@ img.qrcode {
 .banner .banner-sub-text {
   font-size: 1em;
   font-style: normal;
+  text-wrap: wrap;
+  line-height: normal;
+  padding-right: 3px;
 }
 
 @container (max-width: 768px) {
