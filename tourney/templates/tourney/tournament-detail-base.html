@@ -1,8 +1,13 @@
 {% extends "tourney/_base.html" %}
 {% load partials %}
+{% load posts_extras %}
 
 {% block content %}
     <h1>{{ tournament.name }}</h1>
+
+    {% if tournament.description %}
+        <section>{{ tournament.description | markdown | safe }}</section>
+    {% endif %}
 
     {% include "tourney/partials/tournament-detail-registration-status.html" %}
 
@@ -22,34 +27,37 @@
     </section>
     {% endif %}
 
-
     <!-- Tab Navigation -->
-    <ul
-        class="nav short"
-        style="justify-content: center;"
-    >
-        <li class="nav__item">
-            <a href="{% url 'tourney-detail-home' tournament.id %}" 
-            class="nav__link {% if current_tab == 'home' %}nav__link--active{% endif %}">
-                Info
-            </a>
-        </li>
-        <li class="nav__item">
-            <a href="{% url 'tourney-detail-matches' tournament.id %}" 
-            class="nav__link {% if current_tab == 'matches' %}nav__link--active{% endif %}">
-                Matches
-            </a>
-        </li>
-        <li class="nav__item">
-            <a href="{% url 'tourney-detail-standings' tournament.id %}" 
-            class="nav__link {% if current_tab == 'standings' %}nav__link--active{% endif %}">
-                Standings
-            </a>
-        </li>
-    </ul>
+     <section>
+        <ul
+            class="nav short"
+            style="justify-content: center;"
+        >
+            <li class="nav__item">
+                <a href="{% url 'tourney-detail-home' tournament.id %}" 
+                class="nav__link {% if current_tab == 'home' %}nav__link--active{% endif %}">
+                    Info
+                </a>
+            </li>
+            <li class="nav__item">
+                <a href="{% url 'tourney-detail-matches' tournament.id %}" 
+                class="nav__link {% if current_tab == 'matches' %}nav__link--active{% endif %}">
+                    Matches
+                </a>
+            </li>
+            <li class="nav__item">
+                <a href="{% url 'tourney-detail-standings' tournament.id %}" 
+                class="nav__link {% if current_tab == 'standings' %}nav__link--active{% endif %}">
+                    Standings
+                </a>
+            </li>
+        </ul>
+     </section>
 
-    {% block tab_content %}
-    {% endblock %}
+     <section>
+        {% block tab_content %}
+        {% endblock %}
+     </section>
 
     <!-- Match Result Modal -->
     <div id="matchModal" class="modal">
