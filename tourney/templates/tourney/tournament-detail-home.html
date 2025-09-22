@@ -2,5 +2,27 @@
 {% load posts_extras %}
 
 {% block tab_content %}
-{% include "tourney/partials/tournament-detail-home-content.html" %}
+<div id="tournament-content">
+<section class="markdown">
+    <h2>Tournament Details</h2>
+    {% if tournament.description %}
+        <p>{{ tournament.description | markdown | safe }}</p>
+    {% endif %}
+
+    <small>
+        <strong>Created by:</strong> {{ tournament.owner.username }} on {{ tournament.created_on|date:"M d, Y" }}
+    </small>
+</section>
+
+{% if is_admin %}
+<section>
+    <h2>Administration</h2>
+    <div class="hstack">
+        <div class="nav__item">
+            <a href="{% url 'tourney-edit-tournament' tournament.id %}" class="button">Edit Tournament</a>
+        </div>
+    </div>
+</section>
+{% endif %}
+</div>
 {% endblock %}
