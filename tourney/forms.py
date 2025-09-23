@@ -51,9 +51,10 @@ class TournamentForm(forms.ModelForm):
 
     class Meta:
         model = Tournament
-        fields = ['name', 'description', 'is_accepting_registrations', 'is_closed']
+        fields = ['name', 'description',
+                  'is_accepting_registrations', 'is_closed']
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 4}),
+            'description': forms.Textarea(attrs={'rows': 4, 'style': 'text-wrap: auto'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -171,7 +172,8 @@ class PlayerForm(forms.ModelForm):
 
 
 class StageForm(forms.ModelForm):
-    pairing_strategy = forms.ChoiceField(choices=[])  # Will be populated in __init__
+    pairing_strategy = forms.ChoiceField(
+        choices=[])  # Will be populated in __init__
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -212,12 +214,14 @@ class MatchResultForm(forms.ModelForm):
 
         # Validate winner selection based on stage settings
         if not stage.are_ties_allowed and not winner:
-            raise forms.ValidationError("A winner must be selected - ties are not allowed in this stage.")
+            raise forms.ValidationError(
+                "A winner must be selected - ties are not allowed in this stage.")
 
         # Validate scores based on stage settings
         if stage.report_full_scores == Stage.SCORE_REPORTING_REQUIRED:
             if player_one_score is None or player_two_score is None:
-                raise forms.ValidationError("Scores are required for this stage.")
+                raise forms.ValidationError(
+                    "Scores are required for this stage.")
 
         # If scores are provided, validate they make sense with the winner
         if player_one_score is not None and player_two_score is not None:
@@ -307,7 +311,8 @@ class AddMatchForm(forms.Form):
 
         choices = [('', 'Select a player...')]
         for stage_player in available_players:
-            choices.append((stage_player.id, stage_player.player.get_display_name()))
+            choices.append(
+                (stage_player.id, stage_player.player.get_display_name()))
 
         self.fields['player_one'].choices = choices
         self.fields['player_two'].choices = choices
@@ -319,7 +324,8 @@ class AddMatchForm(forms.Form):
 
         if player_one_id and player_two_id:
             if player_one_id == player_two_id:
-                raise forms.ValidationError('Please select two different players.')
+                raise forms.ValidationError(
+                    'Please select two different players.')
 
         return cleaned_data
 
@@ -328,7 +334,9 @@ class AddMatchForm(forms.Form):
         player_one_id = self.cleaned_data.get('player_one')
         player_two_id = self.cleaned_data.get('player_two')
 
-        player_one = StagePlayer.objects.get(id=player_one_id) if player_one_id else None
-        player_two = StagePlayer.objects.get(id=player_two_id) if player_two_id else None
+        player_one = StagePlayer.objects.get(
+            id=player_one_id) if player_one_id else None
+        player_two = StagePlayer.objects.get(
+            id=player_two_id) if player_two_id else None
 
         return player_one, player_two

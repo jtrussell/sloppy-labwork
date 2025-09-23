@@ -603,10 +603,10 @@ def get_ranking_criterion_by_key(key):
 
 def get_default_main_stage_criteria():
     return [
-        {'key': 'points', 'enabled': True},
         {'key': 'wins', 'enabled': True},
         {'key': 'strength_of_schedule', 'enabled': True},
-        {'key': 'seed', 'enabled': True},
+        {'key': 'head_to_head', 'enabled': True},
+        {'key': 'random', 'enabled': True},
     ]
 
 
