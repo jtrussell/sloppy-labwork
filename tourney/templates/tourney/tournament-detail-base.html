@@ -199,8 +199,6 @@
         window.currentMatchPlayerTwo = playerTwo;
 
         form.setAttribute('hx-post', updateAction);
-        form.setAttribute('hx-target', `#match-${matchId}`);
-        form.setAttribute('hx-swap', 'outerHTML');
         htmx.process(form);
 
         // Set modal title
@@ -328,9 +326,6 @@
 
     document.addEventListener('htmx:afterRequest', function(e) {
         // Close modal on successful htmx request
-        if (e.detail.elt && e.detail.elt.id === 'matchForm' && e.detail.successful) {
-            closeMatchModal();
-        }
         if (e.detail.elt && e.detail.elt.id === 'addMatchForm' && e.detail.successful) {
             closeAddMatchModal();
         }

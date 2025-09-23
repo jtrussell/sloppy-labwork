@@ -604,21 +604,7 @@ def report_match_result(request, tournament_id, match_id):
         messages.error(
             request, 'Error reporting match result. Please check the form.')
 
-    # For htmx requests, return updated match card partial
-    if request.htmx:
-        is_admin = tournament.is_user_admin(request.user)
-        base_context = get_tournament_base_context(request, tournament)
-        print(base_context)
-        context = {
-            'match': match,
-            'tournament': tournament,
-            'is_admin': is_admin,
-            **base_context,
-
-        }
-        return render(request, 'tourney/partials/match-card-with-my-pending-matches.html', context)
-
-    return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_id': tournament.id}))
+    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
 
 
 @login_required

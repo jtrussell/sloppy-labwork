@@ -23,7 +23,7 @@ class TournamentForm(forms.ModelForm):
     )
     main_score_reporting = forms.ChoiceField(
         choices=Stage.SCORE_REPORTING_CHOICES,
-        initial=Stage.SCORE_REPORTING_DISABLED,
+        initial=Stage.SCORE_REPORTING_OPTIONAL,
         label='Score Reporting in Main Stage'
     )
 
