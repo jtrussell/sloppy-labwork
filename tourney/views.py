@@ -502,7 +502,7 @@ def manage_players(request, tournament_id):
                     'tournament': tournament,
                     'player': player,
                 }
-                return render(request, 'tourney/manage-players.html#player-card', context)
+                return render(request, 'tourney/manage-players.html#player-item', context)
 
         elif action == 'undrop_player':
             player_id = request.POST.get('player_id')
@@ -527,7 +527,7 @@ def manage_players(request, tournament_id):
                     'tournament': tournament,
                     'player': player,
                 }
-                return render(request, 'tourney/manage-players.html#player-card', context)
+                return render(request, 'tourney/manage-players.html#player-item', context)
 
         return redirect_to(request, reverse('tourney-manage-players', kwargs={'tournament_id': tournament.id}))
 
@@ -1603,7 +1603,8 @@ def delete_tournament(request, tournament_id):
     # Delete the tournament (this will cascade to related objects)
     tournament.delete()
 
-    messages.success(request, f'Tournament "{tournament_name}" has been successfully deleted.')
+    messages.success(
+        request, f'Tournament "{tournament_name}" has been successfully deleted.')
 
     # Redirect to tournaments list
     return HttpResponseRedirect(reverse('tourney-my-tournaments'))
