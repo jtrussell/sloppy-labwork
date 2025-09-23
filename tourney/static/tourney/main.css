@@ -275,12 +275,6 @@
     margin-left: 0;
   }
 
-  .player-line-2 {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
   .player-actions .button {
     font-size: 1.2rem;
     padding: 0.5rem 1rem;
