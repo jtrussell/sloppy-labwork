@@ -61,55 +61,76 @@
 <section>
     {% if is_admin %}
         <h2>Tournament Control</h2>
-        <div class="hstack gap-1">
-            {% if can_start_next_stage and next_stage %}
-            <form method="post"
-                    action="{% url 'tourney-prepare-stage-seeding' tournament.id %}"
-                    style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="button button-primary">Start {{ next_stage.name }}</button>
-            </form>
-            {% elif can_start_current_stage and current_stage %}
-            <form method="post"
-                    action="{% url 'tourney-prepare-current-stage-seeding' tournament.id %}"
-                    style="display:inline;">
-                {% csrf_token %}
-                <button type="submit" class="button button-primary">Start {{ current_stage.name }}</button>
-            </form>
-            {% else %}
-            <form method="post"
-                  action="{% url 'tourney-create-round' tournament.id %}"
-                  style="display:inline;"
-                  hx-post="{% url 'tourney-create-round' tournament.id %}"
-                  hx-target="#tournament-content"
-                  hx-swap="outerHTML">
-                {% csrf_token %}
-                <button
-                    type="submit"
-                    class="button button-primary"
-                    {% if not can_create_round %}
-                        disabled="true"
-                    {% endif %}
-                >Create New Round</button>
-            </form>
+        <div class="stack gap-2">
+            {% comment %} Start Current Stage - for tournaments that need initial seeding {% endcomment %}
+            {% if current_stage %}
+            <div>
+                <div class="text-small text-muted">Initialize {{ current_stage.name }} with player seeding if needed</div>
+                <form method="post"
+                      action="{% url 'tourney-prepare-current-stage-seeding' tournament.id %}"
+                      style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="button button-small"
+                            {% if not can_start_current_stage %}disabled{% endif %}>
+                        Start {{ current_stage.name }}
+                    </button>
+                </form>
+            </div>
             {% endif %}
 
+            {% comment %} Create New Round - continue current stage with another round {% endcomment %}
+            <div>
+                <div class="text-small text-muted">Continue current stage with another round</div>
+                <form method="post"
+                      action="{% url 'tourney-create-round' tournament.id %}"
+                      style="display:inline;"
+                      hx-post="{% url 'tourney-create-round' tournament.id %}"
+                      hx-target="#tournament-content"
+                      hx-swap="outerHTML">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="button button-small"
+                            {% if not can_create_round %}disabled{% endif %}>
+                        Create New Round
+                    </button>
+                </form>
+            </div>
 
-            <form method="post"
-                    style="display:inline;"
-                    hx-target="#tournament-content"
-                    hx-swap="outerHTML"
-                    hx-post="{% url 'tourney-delete-latest-round' tournament.id %}"
-                    hx-confirm="Are you sure you want to delete the latest round? This action cannot be undone and will remove all matches in the round.">
-                {% csrf_token %}
-                <button
-                    type="submit"
-                    class="button button-danger"
-                    {% if not can_delete_latest_round %}
-                        disabled="true"
-                    {% endif %}
-                >Delete Latest Round</button>
-            </form>
+            {% comment %} Start Next Stage - advance to playoffs or next tournament stage {% endcomment %}
+            {% if next_stage %}
+            <div>
+                <div class="text-small text-muted">Advance tournament to {{ next_stage.name }}</div>
+                <form method="post"
+                      action="{% url 'tourney-prepare-stage-seeding' tournament.id %}"
+                      style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="button button-small"
+                            {% if not can_start_next_stage %}disabled{% endif %}>
+                        Start {{ next_stage.name }}
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+            {% comment %} Delete Latest Round - remove the most recent round and its matches {% endcomment %}
+            <div>
+                <div class="text-small text-muted">Remove the most recent round and all its matches</div>
+                <form method="post"
+                      style="display:inline;"
+                      hx-target="#tournament-content"
+                      hx-swap="outerHTML"
+                      hx-post="{% url 'tourney-delete-latest-round' tournament.id %}"
+                      hx-confirm="Are you sure you want to delete the latest round? This action cannot be undone and will remove all matches in the round.">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="button button-small button-danger"
+                            {% if not can_delete_latest_round %}disabled{% endif %}>
+                        Delete Latest Round
+                    </button>
+                </form>
+            </div>
         </div>
     {% endif %}
 </section>
