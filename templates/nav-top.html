@@ -67,6 +67,14 @@
     </li>
     {% endif %}
 
+    {% if ft_use_tourneys %}
+    <li class="nav__item">
+      <a href="{% url 'tourney-my-tournaments' %}" class="nav__link">
+        Tournaments
+      </a>
+    </li>
+    {% endif %}
+
     <li class="nav__item">
       <a href="{% url 'redacted-list' %}" class="nav__link">
         Gizmos

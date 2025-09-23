@@ -1,0 +1,148 @@
+{% extends "tourney/tournament-detail-base.html" %}
+
+{% block tab_content %}
+<div id="tournament-content">
+    {% if not user.is_authenticated %}
+        <section>
+            <p class="text-muted" style="text-align: center; font-style: italic;">
+                Please log in to view match details and participate in this tournament.
+            </p>
+        </section>
+    {% else %}
+        <!-- All Tournament Matches -->
+        {% if grouped_matches %}
+            {% for stage_group in grouped_matches %}
+                <section class="stack gap-2">
+                    <div>
+                        <h2>{{ stage_group.stage.name }}</h2>
+                        {% for round_group in stage_group.rounds %}
+                            <h3>Round {{ round_group.round.order }}</h3>
+                            <div class="subheading">{{ stage_group.stage.name }}</div>
+                            {% if round_group.matches %}
+                                <div class="match-grid">
+                                    {% for match in round_group.matches %}
+                                        {% include 'tourney/partials/match-card.html' with match=match is_admin=is_admin show_match_number=True match_number=forloop.counter %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endfor %}
+
+            {% comment %} Show unmatched players for the latest round if any and if strategy allows {% endcomment %}
+            {% if unmatched_players and show_unmatched_players %}
+                <section>
+                    <div class="unmatched-players-section">
+                        <h3>Players Not Matched (Latest Round)</h3>
+                        <div class="unmatched-players-grid">
+                            {% for stage_player in unmatched_players %}
+                                <div class="unmatched-player-card">
+                                    <span class="player-name">{{ stage_player.player.get_display_name }}</span>
+                                    {% if stage_player.player.is_guest %}
+                                        <span class="player-guest-badge">(Guest)</span>
+                                    {% endif %}
+                                    <span class="player-seed">Seed {{ stage_player.seed }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+            {% endif %}
+        {% else %}
+            <section>
+                <p class="text-muted" style="text-align: center;">No matches have been created yet.</p>
+            </section>
+        {% endif %}
+    {% endif %}
+
+
+{% if user.is_authenticated %}
+<section>
+    {% if is_admin %}
+        <h2>Tournament Control</h2>
+        <div class="hstack gap-1">
+            {% if can_start_next_stage and next_stage %}
+            <form method="post"
+                    action="{% url 'tourney-prepare-stage-seeding' tournament.id %}"
+                    style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="button button-primary">Start {{ next_stage.name }}</button>
+            </form>
+            {% elif can_start_current_stage and current_stage %}
+            <form method="post"
+                    action="{% url 'tourney-prepare-current-stage-seeding' tournament.id %}"
+                    style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="button button-primary">Start {{ current_stage.name }}</button>
+            </form>
+            {% else %}
+            <form method="post"
+                  action="{% url 'tourney-create-round' tournament.id %}"
+                  style="display:inline;"
+                  hx-post="{% url 'tourney-create-round' tournament.id %}"
+                  hx-target="#tournament-content"
+                  hx-swap="outerHTML">
+                {% csrf_token %}
+                <button
+                    type="submit"
+                    class="button button-primary"
+                    {% if not can_create_round %}
+                        disabled="true"
+                    {% endif %}
+                >Create New Round</button>
+            </form>
+            {% endif %}
+
+
+            <form method="post"
+                    style="display:inline;"
+                    hx-target="#tournament-content"
+                    hx-swap="outerHTML"
+                    hx-post="{% url 'tourney-delete-latest-round' tournament.id %}"
+                    hx-confirm="Are you sure you want to delete the latest round? This action cannot be undone and will remove all matches in the round.">
+                {% csrf_token %}
+                <button
+                    type="submit"
+                    class="button button-danger"
+                    {% if not can_delete_latest_round %}
+                        disabled="true"
+                    {% endif %}
+                >Delete Latest Round</button>
+            </form>
+        </div>
+    {% endif %}
+</section>
+{% endif %}
+
+{% comment %} Add Match for players in self-scheduled stages {% endcomment %}
+{% if user.is_authenticated and can_add_match and selected_round and unmatched_players.count >= 2 %}
+<section>
+    <h2>Quick Actions</h2>
+    <div class="hstack gap-1">
+        {% if is_admin %}
+        <button
+            type="button"
+            class="button button-primary"
+            onclick="openAddMatchModal()"
+        >Add Match</button>
+        {% endif %}
+        {% if not tournament.is_closed %}
+        <button
+            type="button"
+            class="button button-primary"
+            onclick="openPlayerMatchReportModal()"
+        >Report Match Result</button>
+        {% else %}
+        <button
+            type="button"
+            class="button button-muted"
+            disabled
+            title="Tournament is closed - match reporting is disabled"
+        >Report Match Result</button>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+</div>
+{% endblock %}

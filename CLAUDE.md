@@ -12,7 +12,8 @@ This is a Python/Django project which contains code for two sites:
 
 - Always confirm changes before applying them unless explicitly asked to skip confirmation.
 - Treat `git` as read only. Never commit, push, rebase, etc. unless explicitly asked.,
-- Prefer self-documenting code over comments.
+- Prefer self-documenting code over comments. NEVER add comments to the code
+unless asked to directly.
 - Prefer using existing tools and dependencies, but do suggest when a popular
   3rd party solution exists and would offer a better solve.
 - Favor existing styles and patterns, but do suggest alternatives -
@@ -22,6 +23,7 @@ This is a Python/Django project which contains code for two sites:
 
 - Python/Django - see `./requirements.txt` and `./.python-version` for a complete list of dependencies
 - Deployment envionment: Heroku
+- htmx
 
 
 ## App Structure
@@ -51,3 +53,14 @@ All stylesheets are centralized at the root of the repo in `./static/css` with
 KeyChain related stylesheets in `./static/pmc/css` Note that we have a
 `main.css` stylesheet containing global stiles for both sites as well as page
 specific stylesheets.
+
+## Agents
+
+Please coordinate with the following agents to plan tasks:
+
+- `ui-researcher` - Coordinate with this agent to when planning a UI intensive task.
+- `django-expert` - This agent should be consulted on most tasks, any that interact with the Django framework.
+- `htmx-expert` - Consult this agent when using htmx or when asked to add SPA-like behavior to our experiences.
+
+Use the folder `.claude/.local/agent-artifacts` as a context cache and to share
+artifacts with your agents. Please create this folder if it doesn't exist.

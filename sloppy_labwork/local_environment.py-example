@@ -40,6 +40,7 @@ os.environ['FT_USE_REGISTER'] = 'True'
 os.environ['FT_USE_RATINGS'] = 'True'
 os.environ['FT_USE_POSTS'] = 'True'
 os.environ['FT_USE_EVENTS'] = 'True'
+os.environ['FT_USE_TOURNEYS'] = 'True'
 
 # PMC
 os.environ['PMC_RATINGS_API_KEY'] = 'ABCD'

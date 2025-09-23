@@ -1,0 +1,72 @@
+{% extends 'tourney/_base.html' %}
+{% load static %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'tourney/drag-drop.css' %}">
+    {{ block.super }}
+{% endblock %}
+
+{% block title %}Confirm Seeding - {{ tournament.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Confirm Seeding</h1>
+        <div class="subheading">{{ next_stage.name }}</div>
+        <p class="text-muted">
+            Drag and drop players to adjust seeding.
+        </p>
+    </div>
+
+    <div class="seeding-confirmation">
+        <div class="seeding-controls">
+            <button
+                type="button"
+                class="button button-secondary"
+                hx-post="{% url 'tourney-randomize-seeding' tournament.id %}"
+                hx-target="#seeding-list"
+                hx-swap="innerHTML">
+                Randomize Seeding
+            </button>
+        </div>
+
+        <div id="seeding-list">
+            {% include 'tourney/partials/seeding-list.html' %}
+        </div>
+
+        {% if all_players_advance %}
+            <p class="text-muted">All {{ total_players }} players will advance to {{ next_stage.name }}.</p>
+        {% else %}
+            <p class="text-muted">The top {{ players_advancing }} of {{ total_players }} players will advance to {{ next_stage.name }}.</p>
+        {% endif %}
+
+        <div class="seeding-actions">
+            <a href="{% url 'tourney-detail-matches' tournament.id %}" class="button button-secondary">Cancel</a>
+            <form method="post" action="{% url 'tourney-start-next-stage' tournament.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="button button-primary">Start {{ next_stage.name }}</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'tourney/drag-drop.js' %}"></script>
+<script>
+let seedingManager;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeSeedingDragDrop();
+});
+
+document.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.target.id === 'seeding-list') {
+        initializeSeedingDragDrop();
+    }
+});
+
+function initializeSeedingDragDrop() {
+    const updateUrl = '{% url "tourney-update-seeding-order" tournament.id %}';
+    seedingManager = new SeedingDragDropManager('#sortable-seeding', updateUrl);
+}
+</script>
+{% endblock %}

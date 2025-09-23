@@ -1,0 +1,16 @@
+{% if user.is_authenticated and is_active_player and pending_matches %}
+  <section id="my-pending-matches" hx-swap-oob="true">
+      <h2>Your Pending Matches</h2>
+      {% for match in pending_matches %}
+          <div style="margin-bottom: 1rem;">
+              {% include 'tourney/partials/match-card.html' with match=match is_admin=is_admin show_match_number=False match_id_prefix='my-' %}
+
+              <div style="text-align: center; color: var(--color-text-muted); font-size: 1.2rem; margin-top: 0.5rem;">
+                  {{ match.round.stage.name }} - Round {{ match.round.order }}
+              </div>
+          </div>
+      {% endfor %}
+  </section>
+{% else %}
+  <section id="my-pending-matches" hx-swap-oob="true" style="display: none;"></section>
+{% endif %}

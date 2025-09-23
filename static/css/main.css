@@ -24,6 +24,32 @@ hr {
   width: 100%;
 }
 
+.subheading {
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin-top: -1.2rem;
+}
+
+h1 + .subheading {
+  margin-bottom: 1.8rem;
+  font-size: 12px;
+  line-height: 12px;
+}
+
+@media (max-width: 680px) {
+  h1 + .subheading { margin-top: -.8rem }
+}
+
+h2 + .subheading,
+h3 + .subheading,
+h4 + .subheading,
+h5 + .subheading,
+h6 + .subheading {
+  font-size: 12px;
+  line-height: 12px;
+  margin-bottom: 1.4rem;
+}
+
 
 /* Misc */
 .brand {
@@ -33,7 +59,7 @@ hr {
 }
 
 section + section {
-  margin-top: 2rem;
+  margin-top: 2.5rem;
 }
 
 form.form-inline {
@@ -50,6 +76,27 @@ form.form-inline {
 .form-wide textarea {
   font-size: 1.5rem;
   height: 15rem;
+}
+
+.button:hover {
+  cursor: pointer;
+  background-color: transparent;
+}
+
+.button[disabled],
+.button:hover[disabled],
+.button:active[disabled] {
+  cursor: not-allowed;
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-muted);
+  border-color: var(--color-lines);
+}
+
+.button-small {
+  height: 24px;
+  line-height: 24px;
+  padding: 0 16px;
+  margin-bottom: 0.25rem;
 }
 
 .button-jumbo {
@@ -105,15 +152,15 @@ aside {
 
 table {
   font-size: 1.5rem;
+  width: 100%;
 }
-
 /* helptext is built in to Django forms */
 form .helptext {
   display: block;
   color: var(--color-text-muted);
   font-size: 1.2rem;
-  margin-top: -1.5rem;
-  margin-bottom: 1.5rem;
+  margin-top: -1rem;
+  margin-bottom: 1rem;
 }
 
 .verification_nonce_display {
@@ -156,6 +203,11 @@ form .helptext {
 .stack { display: flex; flex-direction: column; }
 .stack__spacer { flex-grow: 1; }
 
+.hstack { display: flex; flex-direction: row; }
+
+.gap-1 { gap: 1rem; }
+.gap-2 { gap: 2rem; }
+
 /* Navigation */
 .nav {
   list-style-type: none;
@@ -181,6 +233,80 @@ form .helptext {
   line-height: 6.5rem;
   text-transform: uppercase;
   text-decoration: none;
+}
+
+.nav.short .nav__link {
+  line-height: revert;
+}
+
+.nav__link--active {
+  color: var(--color-primary);
+  border-bottom: 1px solid var(--color-primary);
+}
+
+
+/* Match Result Modal */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+
+#modalTitle {
+  margin: 0;
+}
+
+.modal--active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-lines);
+  border-radius: 4px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-lines);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 0;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  color: var(--color-text);
+}
+
+.modal-close:before {
+  content: "×";
 }
 
 /* Footer */

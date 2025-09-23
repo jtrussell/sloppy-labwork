@@ -1,0 +1,81 @@
+{% extends "tourney/tournament-detail-base.html" %}
+
+{% block tab_content %}
+<div id="tournament-content">
+    <section>
+        <h2>Admin Actions</h2>
+        <p class="text-muted">Manage tournament settings and configuration.</p>
+
+        <a href="{% url 'tourney-edit-tournament' tournament.id %}" class="button button-primary">
+            Edit Tournament
+        </a>
+
+        <form style="display: inline-block; margin-left: 1rem;">
+            <button type="button"
+                    class="button button-danger"
+                    hx-post="{% url 'tourney-delete-tournament' tournament.id %}"
+                    hx-confirm="Are you sure you want to delete the tournament '{{ tournament.name }}'? This action cannot be undone and will permanently remove all tournament data including matches and results."
+                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+                Delete Tournament
+            </button>
+        </form>
+    </section>
+
+    <section>
+        <h2>Tournament Log</h2>
+        <p class="text-muted">Recent admin and player actions for this tournament.</p>
+        <button type="button" id="copyLogsBtn" class="button button-primary" onclick="copyLogsToClipboard()">
+            Copy Logs to Clipboard
+        </button>
+
+        {% if tournament_logs %}
+            <div class="tournament-logs" style="margin-top: 2rem; font-family: monospace; font-size: 0.9rem; line-height: 1.4;">
+                {% for log in tournament_logs %}
+                    <div class="log-entry" style="padding: 0.25rem 0;">
+                        {{ log.created_on|date:"M d, Y g:i A" }}<span style="white-space: pre;">	</span>{% if log.user %}{{ log.user.username }}{% else %}System{% endif %}<span style="white-space: pre;">	</span>{{ log.get_action_display }}{% if log.description %}: {{ log.description }}{% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="margin-top: 2rem;">
+                <p class="text-muted" style="text-align: center;">No tournament log entries found.</p>
+            </div>
+        {% endif %}
+    </section>
+</div>
+
+<script>
+function copyLogsToClipboard() {
+    const button = document.getElementById('copyLogsBtn');
+    const originalText = button.textContent;
+
+    // Build log text in compact tab-separated format
+    let logText = `Tournament Log: {{ tournament.name|escapejs }}\n`;
+    logText += `Generated: ${new Date().toLocaleString()}\n\n`;
+
+    {% for log in tournament_logs %}
+    logText += `{{ log.created_on|date:"M d, Y g:i A" }}\t{% if log.user %}{{ log.user.username|escapejs }}{% else %}System{% endif %}\t{{ log.get_action_display|escapejs }}{% if log.description %}: {{ log.description|escapejs }}{% endif %}\n`;
+    {% endfor %}
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(logText).then(function() {
+        button.textContent = 'Copied!';
+        button.classList.add('button-success');
+
+        setTimeout(function() {
+            button.textContent = originalText;
+            button.classList.remove('button-success');
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Failed to copy: ', err);
+        button.textContent = 'Copy Failed';
+        button.classList.add('button-danger');
+
+        setTimeout(function() {
+            button.textContent = originalText;
+            button.classList.remove('button-danger');
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}

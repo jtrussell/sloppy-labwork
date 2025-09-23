@@ -1,0 +1,105 @@
+{% extends "tourney/_base.html" %}
+{% load partials %}
+
+{% partialdef player-item %}
+<li class="player-item">
+    <div class="player-line-1">
+        <span class="player-name">
+            {{ player.get_display_name }}
+            <span class="player-username">{{ player.get_username_display }}</span>
+        </span>
+        <span class="player-registered">
+            Registered {{ player.created_on|date:"M d, Y" }}
+        </span>
+    </div>
+    <div class="player-line-2">
+        <span class="player-status player-status--{% if player.status == 'active' %}active{% else %}dropped{% endif %}">
+            {{ player.get_status_display }}
+        </span>
+        <div class="player-actions">
+            {% if player.status == 'active' %}
+                <form
+                    method="post"
+                    hx-confirm="Are you sure you want to drop this player?"
+                    hx-post="{% url 'tourney-manage-players' tournament.id %}"
+                    hx-target="closest .player-item"
+                    hx-swap="outerHTML"
+                >
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="drop_player">
+                    <input type="hidden" name="player_id" value="{{ player.id }}">
+                    <button type="submit" class="button button-small">Drop Player</button>
+                </form>
+            {% else %}
+                <form
+                    method="post"
+                    hx-post="{% url 'tourney-manage-players' tournament.id %}"
+                    hx-confirm="Are you sure you want to undrop this player?"
+                    hx-target="closest .player-item"
+                    hx-swap="outerHTML"
+                >
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="undrop_player">
+                    <input type="hidden" name="player_id" value="{{ player.id }}">
+                    <button type="submit" class="button button-small">Undrop Player</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</li>
+{% endpartialdef %}
+
+{% partialdef players-list %}
+<ul class="players-list">
+    {% for player in players %}
+        {% partial player-item %}
+    {% endfor %}
+</ul>
+{% endpartialdef %}
+
+{% block content %}
+<h1>{{ tournament.name }}</h1>
+<div class="subheading">
+    <a href="{% url 'tourney-detail-standings' tournament.id %}">&larr; Back</a> • Manage Players
+</div>
+
+<section>
+    <h2>Add Player</h2>
+    <form method="post" class="form-wide">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_player">
+        
+        <div class="form-group">
+            <label for="{{ form.username.id_for_label }}">Username</label>
+            {{ form.username }}
+            {% if form.username.help_text %}
+                <span class="helptext">{{ form.username.help_text }}</span>
+            {% endif %}
+            {% if form.username.errors %}
+                <div class="error">{{ form.username.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.nickname.id_for_label }}">Nickname</label>
+            {{ form.nickname }}
+            <span class="helptext">Required for guest players, optional for registered users</span>
+            {% if form.nickname.errors %}
+                <div class="error">{{ form.nickname.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <button type="submit" class="button button-primary">Add Player</button>
+        <a href="{% url 'tourney-detail-standings' tournament.id %}" class="button">Back</a>
+    </form>
+</section>
+
+<section>
+    <h2>Registered Players ({{ players | length }})</h2>
+    {% if players %}
+        {% partial players-list %}
+    {% else %}
+        <p>No players registered yet.</p>
+    {% endif %}
+</section>
+{% endblock %}
