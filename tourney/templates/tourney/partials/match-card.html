@@ -17,7 +17,7 @@
             <div class="match-player match-player--winner">
                 {{ match.player_one.player.get_display_name }}
                 {% if match.player_one.player.is_guest %}
-                    <span class="player-guest-badge">(Guest)</span>
+                    <span class="player-guest-badge"></span>
                 {% endif %}
             </div>
             <div class="match-player match-player--bye">
@@ -29,7 +29,7 @@
                     <div class="match-player match-player--winner">
                         {{ match.player_one.player.get_display_name }}
                         {% if match.player_one.player.is_guest %}
-                            <span class="player-guest-badge">(Guest)</span>
+                            <span class="player-guest-badge"></span>
                         {% endif %}
                         {% if match.round.stage.report_full_scores != 0 and match.result.player_one_score is not None and match.result.player_two_score is not None %}
                             <span class="match-score match-score--winner">{{ match.result.player_one_score }}</span>
@@ -38,7 +38,7 @@
                     <div class="match-player match-player--loser">
                         {{ match.player_two.player.get_display_name }}
                         {% if match.player_two.player.is_guest %}
-                            <span class="player-guest-badge">(Guest)</span>
+                            <span class="player-guest-badge"></span>
                         {% endif %}
                         {% if match.round.stage.report_full_scores != 0 and match.result.player_one_score is not None and match.result.player_two_score is not None %}
                             <span class="match-score match-score--loser">{{ match.result.player_two_score }}</span>
@@ -48,7 +48,7 @@
                     <div class="match-player match-player--loser">
                         {{ match.player_one.player.get_display_name }}
                         {% if match.player_one.player.is_guest %}
-                            <span class="player-guest-badge">(Guest)</span>
+                            <span class="player-guest-badge"></span>
                         {% endif %}
                         {% if match.round.stage.report_full_scores != 0 and match.result.player_one_score is not None and match.result.player_two_score is not None %}
                             <span class="match-score match-score--loser">{{ match.result.player_one_score }}</span>
@@ -57,7 +57,7 @@
                     <div class="match-player match-player--winner">
                         {{ match.player_two.player.get_display_name }}
                         {% if match.player_two.player.is_guest %}
-                            <span class="player-guest-badge">(Guest)</span>
+                            <span class="player-guest-badge"></span>
                         {% endif %}
                         {% if match.round.stage.report_full_scores != 0 and match.result.player_one_score is not None and match.result.player_two_score is not None %}
                             <span class="match-score match-score--winner">{{ match.result.player_two_score }}</span>
@@ -68,7 +68,7 @@
                     <div class="match-player">
                         {{ match.player_one.player.get_display_name }}
                         {% if match.player_one.player.is_guest %}
-                            <span class="player-guest-badge">(Guest)</span>
+                            <span class="player-guest-badge"></span>
                         {% endif %}
                         {% if match.round.stage.report_full_scores != 0 and match.result.player_one_score is not None and match.result.player_two_score is not None %}
                             <span class="match-score match-score--tie">({{ match.result.player_one_score }})</span>
@@ -77,7 +77,7 @@
                     <div class="match-player">
                         {{ match.player_two.player.get_display_name }}
                         {% if match.player_two.player.is_guest %}
-                            <span class="player-guest-badge">(Guest)</span>
+                            <span class="player-guest-badge"></span>
                         {% endif %}
                         {% if match.round.stage.report_full_scores != 0 and match.result.player_one_score is not None and match.result.player_two_score is not None %}
                             <span class="match-score match-score--tie">({{ match.result.player_two_score }})</span>
@@ -89,14 +89,14 @@
                 <div class="match-player match-player--pending">
                     {{ match.player_one.player.get_display_name }}
                     {% if match.player_one.player.is_guest %}
-                        <span class="player-guest-badge">(Guest)</span>
+                        <span class="player-guest-badge"></span>
                     {% endif %}
                 </div>
                 <div class="match-player match-player--pending">
                     {% if match.player_two %}
                         {{ match.player_two.player.get_display_name }}
                         {% if match.player_two.player.is_guest %}
-                            <span class="player-guest-badge">(Guest)</span>
+                            <span class="player-guest-badge"></span>
                         {% endif %}
                     {% else %}
                         <em>TBD</em>
