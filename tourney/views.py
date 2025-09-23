@@ -1581,3 +1581,29 @@ def copy_tournament(request, tournament_id):
     }
 
     return render(request, 'tourney/tournament-form.html', context)
+
+
+@login_required
+@require_POST
+@is_tournament_admin
+def delete_tournament(request, tournament_id):
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+
+    # Log the deletion
+    TournamentActionLog.objects.create(
+        tournament=tournament,
+        user=request.user,
+        action=TournamentActionLog.ActionType.TOURNAMENT_DELETED,
+        description=f"Tournament '{tournament.name}' deleted by admin"
+    )
+
+    # Store tournament name for success message
+    tournament_name = tournament.name
+
+    # Delete the tournament (this will cascade to related objects)
+    tournament.delete()
+
+    messages.success(request, f'Tournament "{tournament_name}" has been successfully deleted.')
+
+    # Redirect to tournaments list
+    return HttpResponseRedirect(reverse('tourney-my-tournaments'))
