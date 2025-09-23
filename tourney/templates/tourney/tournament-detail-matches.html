@@ -71,7 +71,7 @@
                       style="display:inline;">
                     {% csrf_token %}
                     <button type="submit"
-                            class="button button-small"
+                            class="button sm-w100"
                             {% if not can_start_current_stage %}disabled{% endif %}>
                         Start {{ current_stage.name }}
                     </button>
@@ -90,7 +90,7 @@
                       hx-swap="outerHTML">
                     {% csrf_token %}
                     <button type="submit"
-                            class="button button-small"
+                            class="button sm-w100"
                             {% if not can_create_round %}disabled{% endif %}>
                         Create New Round
                     </button>
@@ -106,7 +106,7 @@
                       style="display:inline;">
                     {% csrf_token %}
                     <button type="submit"
-                            class="button button-small"
+                            class="button sm-w100"
                             {% if not can_start_next_stage %}disabled{% endif %}>
                         Start {{ next_stage.name }}
                     </button>
@@ -125,7 +125,7 @@
                       hx-confirm="Are you sure you want to delete the latest round? This action cannot be undone and will remove all matches in the round.">
                     {% csrf_token %}
                     <button type="submit"
-                            class="button button-small button-danger"
+                            class="button sm-w100"
                             {% if not can_delete_latest_round %}disabled{% endif %}>
                         Delete Latest Round
                     </button>
@@ -143,20 +143,20 @@
         {% if is_admin %}
         <button
             type="button"
-            class="button button-primary"
+            class="button button-primary sm-w100"
             onclick="openAddMatchModal()"
         >Add Match</button>
         {% endif %}
         {% if not tournament.is_closed %}
         <button
             type="button"
-            class="button button-primary"
+            class="button button-primary sm-w100"
             onclick="openPlayerMatchReportModal()"
         >Report Match Result</button>
         {% else %}
         <button
             type="button"
-            class="button button-muted"
+            class="button button-muted sm-w100"
             disabled
             title="Tournament is closed - match reporting is disabled"
         >Report Match Result</button>
