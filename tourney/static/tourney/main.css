@@ -159,70 +159,83 @@
 }
 
 /* Player Management Cards */
-.players-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
+/* Players List */
+.players-list {
+  list-style: none;
   margin: 2rem 0;
-}
-
-@media (min-width: 550px) {
-  .players-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  }
-}
-
-.player-card {
+  padding: 0;
   border: 1px solid var(--color-lines);
-  border-radius: 3px;
+  border-radius: 4px;
   background-color: var(--color-bg);
-  padding: 1.2rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.player-card:hover {
-  border-color: var(--color-lines-active);
-  box-shadow: 0 2px 4px rgba(133, 92, 214, 0.1);
+.player-item {
+  margin: 0;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-lines);
+  transition: background-color 0.2s;
 }
 
-.player-card-header {
-  margin-bottom: 0.8rem;
+.player-item:last-child {
+  border-bottom: none;
+}
+
+.player-item:hover {
+  background-color: var(--color-bg-secondary);
+}
+
+/* Line 1: Name (username) <spacer> Registration Date */
+.player-line-1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
 }
 
 .player-name {
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: bold;
   color: var(--color-text-active);
-  margin: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 .player-username {
   color: var(--color-text-muted);
-  font-size: 1.3rem;
+  font-size: 1.2rem;
+  font-weight: normal;
   margin-left: 0.5rem;
 }
 
 .player-guest-badge {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: normal;
   color: var(--color-primary);
   margin-left: 0.5rem;
 }
 
-.player-info {
+.player-registered {
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  white-space: nowrap;
+  margin-left: 1rem;
+}
+
+/* Line 2: Status <spacer> Action Button */
+.player-line-2 {
   display: flex;
-  justify-content: center;
-  gap: 1rem;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .player-status {
-  font-size: 1.2rem;
-  padding: 0.2rem 0.6rem;
+  font-size: 1.1rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 3px;
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.05rem;
+  white-space: nowrap;
 }
 
 .player-status--active {
@@ -235,17 +248,8 @@
   color: var(--color-text-active);
 }
 
-.player-registered {
-  color: var(--color-text-muted);
-  font-size: 1.2rem;
-}
-
 .player-actions {
-  border-top: 1px solid var(--color-lines);
-  padding-top: 0.8rem;
-  display: flex;
-  gap: 0.8rem;
-  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .player-actions form {
@@ -253,27 +257,33 @@
 }
 
 .player-actions .button {
-  font-size: 1.2rem;
-  padding: 0.6rem 1.2rem;
+  font-size: 1.1rem;
+  padding: 0.3rem 0.8rem;
   height: auto;
   line-height: 1.2;
 }
 
 /* Mobile optimizations */
 @media (max-width: 549px) {
-  .player-info {
+  .player-line-1 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+  }
+
+  .player-registered {
+    margin-left: 0;
+  }
+
+  .player-line-2 {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
-  .player-actions {
-    flex-direction: column;
-  }
-  
+
   .player-actions .button {
-    width: 100%;
-    text-align: center;
+    font-size: 1.2rem;
+    padding: 0.5rem 1rem;
   }
 }
 

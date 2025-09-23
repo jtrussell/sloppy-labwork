@@ -1,65 +1,60 @@
 {% extends "tourney/_base.html" %}
 {% load partials %}
 
-{% partialdef player-card %}
-<div class="player-card">
-    <div class="player-card-header">
+{% partialdef player-item %}
+<li class="player-item">
+    <div class="player-line-1">
         <span class="player-name">
             {{ player.get_display_name }}
-            {% if player.is_guest %}
-                <span class="player-guest-badge">(Guest)</span>
-            {% endif %}
-        </span>
-        <span class="player-username">({{ player.get_username_display }})</span>
-    </div>
-    
-    <div class="player-info">
-        <span class="player-status player-status--{% if player.status == 'active' %}active{% else %}dropped{% endif %}">
-            {{ player.get_status_display }}
+            <span class="player-username">{{ player.get_username_display }}</span>
         </span>
         <span class="player-registered">
             Registered {{ player.created_on|date:"M d, Y" }}
         </span>
     </div>
-    
-    <div class="player-actions">
-        {% if player.status == 'active' %}
-            <form
-                method="post"
-                hx-confirm="Are you sure you want to drop this player?"
-                hx-post="{% url 'tourney-manage-players' tournament.id %}"
-                hx-target="closest .player-card"
-                hx-swap="outerHTML"
-            >
-                {% csrf_token %}
-                <input type="hidden" name="action" value="drop_player">
-                <input type="hidden" name="player_id" value="{{ player.id }}">
-                <button type="submit" class="button">Drop Player</button>
-            </form>
-        {% else %}
-            <form
-                method="post"
-                hx-post="{% url 'tourney-manage-players' tournament.id %}"
-                hx-confirm="Are you sure you want to undrop this player?"
-                hx-target="closest .player-card"
-                hx-swap="outerHTML"
-            >
-                {% csrf_token %}
-                <input type="hidden" name="action" value="undrop_player">
-                <input type="hidden" name="player_id" value="{{ player.id }}">
-                <button type="submit" class="button">Undrop Player</button>
-            </form>
-        {% endif %}
+    <div class="player-line-2">
+        <span class="player-status player-status--{% if player.status == 'active' %}active{% else %}dropped{% endif %}">
+            {{ player.get_status_display }}
+        </span>
+        <div class="player-actions">
+            {% if player.status == 'active' %}
+                <form
+                    method="post"
+                    hx-confirm="Are you sure you want to drop this player?"
+                    hx-post="{% url 'tourney-manage-players' tournament.id %}"
+                    hx-target="closest .player-item"
+                    hx-swap="outerHTML"
+                >
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="drop_player">
+                    <input type="hidden" name="player_id" value="{{ player.id }}">
+                    <button type="submit" class="button button-small">Drop Player</button>
+                </form>
+            {% else %}
+                <form
+                    method="post"
+                    hx-post="{% url 'tourney-manage-players' tournament.id %}"
+                    hx-confirm="Are you sure you want to undrop this player?"
+                    hx-target="closest .player-item"
+                    hx-swap="outerHTML"
+                >
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="undrop_player">
+                    <input type="hidden" name="player_id" value="{{ player.id }}">
+                    <button type="submit" class="button button-small">Undrop Player</button>
+                </form>
+            {% endif %}
+        </div>
     </div>
-</div>
+</li>
 {% endpartialdef %}
 
-{% partialdef players-grid %}
-<div class="players-grid">
+{% partialdef players-list %}
+<ul class="players-list">
     {% for player in players %}
-        {% partial player-card %}
+        {% partial player-item %}
     {% endfor %}
-</div>
+</ul>
 {% endpartialdef %}
 
 {% block content %}
@@ -102,7 +97,7 @@
 <section>
     <h2>Registered Players ({{ players | length }})</h2>
     {% if players %}
-        {% partial players-grid %}
+        {% partial players-list %}
     {% else %}
         <p>No players registered yet.</p>
     {% endif %}
