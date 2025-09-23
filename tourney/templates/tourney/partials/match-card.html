@@ -1,4 +1,4 @@
-<div id="match-{{ match.id }}" class="match-card {% if match.has_result %}match-card--completed{% endif %}">
+<div id="{{ match_id_prefix|default:'' }}match-{{ match.id }}" class="match-card {% if match.has_result %}match-card--completed{% endif %}">
     {% if show_match_number %}
         <div class="match-number">{{ match_number|default:forloop.counter }}</div>
     {% else %}

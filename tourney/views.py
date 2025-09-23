@@ -148,7 +148,8 @@ def edit_tournament(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
 
     if request.method == 'POST':
-        form = TournamentForm(request.POST, instance=tournament, is_edit_mode=True)
+        form = TournamentForm(
+            request.POST, instance=tournament, is_edit_mode=True)
         if form.is_valid():
             with transaction.atomic():
                 form.save()
@@ -361,8 +362,10 @@ def tournament_detail_matches(request, tournament_id):
 
         if request.user.is_authenticated:
             user_is_admin = tournament.is_user_admin(request.user)
-            user_is_player = tournament.players.filter(user=request.user).exists()
-            can_add_match = user_is_admin or (is_self_scheduled and user_is_player)
+            user_is_player = tournament.players.filter(
+                user=request.user).exists()
+            can_add_match = user_is_admin or (
+                is_self_scheduled and user_is_player)
 
         show_unmatched_players = not (
             is_elimination_style or is_self_scheduled)
@@ -558,7 +561,8 @@ def report_match_result(request, tournament_id, match_id):
 
     # Check if tournament is closed for non-admin users
     if tournament.is_closed and not is_admin:
-        messages.error(request, 'This tournament is closed. Match results can no longer be submitted by players.')
+        messages.error(
+            request, 'This tournament is closed. Match results can no longer be submitted by players.')
         return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_id': tournament.id}))
 
     if match.has_result() and not is_admin:
@@ -603,12 +607,16 @@ def report_match_result(request, tournament_id, match_id):
     # For htmx requests, return updated match card partial
     if request.htmx:
         is_admin = tournament.is_user_admin(request.user)
+        base_context = get_tournament_base_context(request, tournament)
+        print(base_context)
         context = {
             'match': match,
             'tournament': tournament,
             'is_admin': is_admin,
+            **base_context,
+
         }
-        return render(request, 'tourney/partials/match-card.html', context)
+        return render(request, 'tourney/partials/match-card-with-my-pending-matches.html', context)
 
     return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_id': tournament.id}))
 
@@ -1306,7 +1314,8 @@ def player_add_match_result(request, tournament_id):
 
     # Check if tournament is closed
     if tournament.is_closed:
-        messages.error(request, 'This tournament is closed. Match results can no longer be submitted by players.')
+        messages.error(
+            request, 'This tournament is closed. Match results can no longer be submitted by players.')
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
 
     current_stage = tournament.get_current_stage()
