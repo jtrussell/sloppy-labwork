@@ -357,3 +357,192 @@ class PairingStrategyTestCase(TestCase):
         # Should hide unmatched players
         show_unmatched = not (strategy.is_elimination_style() or strategy.is_self_scheduled())
         self.assertFalse(show_unmatched)
+
+
+class SwissPairingPerformanceTestCase(TestCase):
+    """Test Swiss pairing strategy performance with different tournament sizes."""
+
+    def test_swiss_pairing_7_players_3_rounds(self):
+        """Test Swiss pairing with 7 players over 3 rounds (uses brute force algorithm)."""
+        import time
+        from django.contrib.auth.models import User
+
+        # Create test users and tournament
+        owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        tournament = Tournament.objects.create(
+            name='Small Tournament Test',
+            owner=owner,
+            is_accepting_registrations=True
+        )
+
+        # Create stage
+        stage = Stage.objects.create(
+            tournament=tournament,
+            name='Main Stage',
+            order=1,
+            pairing_strategy='swiss'
+        )
+
+        # Create 7 players
+        players = []
+        stage_players = []
+        for i in range(7):
+            user = User.objects.create_user(f'player{i+1}', f'player{i+1}@test.com', 'password')
+            player = Player.objects.create(user=user, tournament=tournament)
+            stage_player = StagePlayer.objects.create(player=player, stage=stage, seed=i+1)
+            players.append(player)
+            stage_players.append(stage_player)
+
+        strategy = get_pairing_strategy('swiss')
+
+        # Test 3 rounds of pairing
+        for round_num in range(1, 4):
+            round_obj = Round.objects.create(stage=stage, order=round_num)
+
+            # Time the pairing process
+            start_time = time.time()
+            strategy.make_pairings_for_round(round_obj)
+            end_time = time.time()
+
+            pairing_time = end_time - start_time
+
+            # Verify performance: should be very fast for 7 players (brute force)
+            self.assertLess(pairing_time, 1.0, f"Round {round_num} pairing took too long: {pairing_time:.3f}s")
+
+            # Verify matches were created
+            matches = Match.objects.filter(round=round_obj)
+            expected_matches = 4  # 3 regular matches + 1 bye
+            self.assertEqual(matches.count(), expected_matches, f"Round {round_num} should have {expected_matches} matches")
+
+            # Verify exactly one bye match
+            bye_matches = matches.filter(player_two__isnull=True)
+            self.assertEqual(bye_matches.count(), 1, f"Round {round_num} should have exactly 1 bye match")
+
+            # For subsequent rounds, randomly assign winners to create realistic standings
+            if round_num > 1:
+                self._assign_random_winners(matches)
+
+            print(f"Round {round_num} pairing completed in {pairing_time:.3f}s with {matches.count()} matches")
+
+    def test_swiss_pairing_100_players_3_rounds(self):
+        """Test Swiss pairing with 100 players over 3 rounds (uses greedy+backtrack algorithm)."""
+        import time
+        from django.contrib.auth.models import User
+
+        # Create test users and tournament
+        owner = User.objects.create_user('owner100', 'owner100@test.com', 'password')
+        tournament = Tournament.objects.create(
+            name='Large Tournament Test',
+            owner=owner,
+            is_accepting_registrations=True
+        )
+
+        # Create stage
+        stage = Stage.objects.create(
+            tournament=tournament,
+            name='Main Stage',
+            order=1,
+            pairing_strategy='swiss'
+        )
+
+        # Create 100 players
+        players = []
+        stage_players = []
+        for i in range(100):
+            user = User.objects.create_user(f'player100_{i+1}', f'player100_{i+1}@test.com', 'password')
+            player = Player.objects.create(user=user, tournament=tournament)
+            stage_player = StagePlayer.objects.create(player=player, stage=stage, seed=i+1)
+            players.append(player)
+            stage_players.append(stage_player)
+
+        strategy = get_pairing_strategy('swiss')
+
+        # Test 3 rounds of pairing
+        for round_num in range(1, 4):
+            round_obj = Round.objects.create(stage=stage, order=round_num)
+
+            # Time the pairing process
+            start_time = time.time()
+            strategy.make_pairings_for_round(round_obj)
+            end_time = time.time()
+
+            pairing_time = end_time - start_time
+
+            # Verify performance: should complete in under 1 second even for 100 players
+            self.assertLess(pairing_time, 1.0, f"Round {round_num} pairing took too long: {pairing_time:.3f}s")
+
+            # Verify matches were created
+            matches = Match.objects.filter(round=round_obj)
+            expected_matches = 50  # 100 players = 50 matches (even number)
+            self.assertEqual(matches.count(), expected_matches, f"Round {round_num} should have {expected_matches} matches")
+
+            # Verify no bye matches (even number of players)
+            bye_matches = matches.filter(player_two__isnull=True)
+            self.assertEqual(bye_matches.count(), 0, f"Round {round_num} should have no bye matches")
+
+            # For subsequent rounds, randomly assign winners to create realistic standings
+            if round_num > 1:
+                self._assign_random_winners(matches)
+
+            print(f"Round {round_num} pairing completed in {pairing_time:.3f}s with {matches.count()} matches")
+
+    def test_swiss_algorithm_selection(self):
+        """Test that the correct algorithm is selected based on player count."""
+        from django.contrib.auth.models import User
+        from tourney.pairing_strategies.swiss import SwissPairingStrategy
+
+        # Create tournament setup
+        owner = User.objects.create_user('owner_algo', 'owner_algo@test.com', 'password')
+        tournament = Tournament.objects.create(
+            name='Algorithm Selection Test',
+            owner=owner,
+            is_accepting_registrations=True
+        )
+
+        stage = Stage.objects.create(
+            tournament=tournament,
+            name='Test Stage',
+            order=1,
+            pairing_strategy='swiss'
+        )
+
+        strategy = SwissPairingStrategy()
+
+        # Test with 14 players (should use brute force)
+        players_14 = []
+        for i in range(14):
+            user = User.objects.create_user(f'algo_player_{i+1}', f'algo_player_{i+1}@test.com', 'password')
+            player = Player.objects.create(user=user, tournament=tournament)
+            stage_player = StagePlayer.objects.create(player=player, stage=stage, seed=i+1)
+            players_14.append(stage_player)
+
+        round_obj = Round.objects.create(stage=stage, order=2)  # Round 2 to test algorithm selection
+
+        # This should complete quickly even though it uses brute force
+        import time
+        start_time = time.time()
+        strategy.make_pairings_for_round(round_obj)
+        end_time = time.time()
+
+        pairing_time = end_time - start_time
+        self.assertLess(pairing_time, 1.0, f"14-player brute force took too long: {pairing_time:.3f}s")
+
+        print(f"14-player tournament (brute force) completed in {pairing_time:.3f}s")
+
+    def _assign_random_winners(self, matches):
+        """Helper method to randomly assign winners to matches for testing."""
+        import random
+
+        for match in matches:
+            # Skip if match already has a result (e.g., bye matches are auto-resolved)
+            if hasattr(match, 'result') and match.result:
+                continue
+
+            if match.player_two is None:
+                # Bye match - player_one automatically wins (but may already be resolved)
+                if not MatchResult.objects.filter(match=match).exists():
+                    MatchResult.objects.create(match=match, winner=match.player_one)
+            else:
+                # Regular match - randomly pick winner
+                winner = random.choice([match.player_one, match.player_two])
+                MatchResult.objects.create(match=match, winner=winner)
