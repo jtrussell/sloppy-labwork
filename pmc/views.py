@@ -25,6 +25,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
+import pmc
 from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
@@ -998,7 +999,7 @@ def my_achievement_detail(request, pk):
             earned_count=Count('user_achievement_tiers', distinct=True)
         ),
         'my_stat': AwardAssignmentService.get_user_criteria_value(
-            request.user, achievement.criteria),
+            request.user, achievement),
     }
     return render(request, 'pmc/g-my-achievement-detail.html', context)
 
@@ -1034,7 +1035,12 @@ def refresh_trophies(request):
 @api_key_required
 @transaction.atomic
 def refresh_achievements(request):
-    AwardAssignmentService.refresh_user_achievements()
+    pmc_id_min = request.GET.get('pmc_id_min')
+    pmc_id_max = request.GET.get('pmc_id_max')
+    AwardAssignmentService.refresh_user_achievements(
+        pmc_id_min=pmc_id_min,
+        pmc_id_max=pmc_id_max
+    )
     return HttpResponse('Done.', content_type='text/plain')
 
 

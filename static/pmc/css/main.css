@@ -561,6 +561,10 @@ em {
   font-style: italic;
 }
 
+strong {
+  font-weight: bolder;
+}
+
 ul.inline-list {
   display: flex;
   flex-direction: row;
@@ -1027,4 +1031,15 @@ ul.footer-links a {
 
 .pmc-icon.icon-set-empty {
   background-image: var(--icon-set-empty);
+}
+
+/* ***********************************
+ * Markdown
+ * *********************************** */
+.markdown {
+  ul, ol {
+    margin: revert;
+    padding: revert;
+    list-style: revert;
+  }
 }
