@@ -7,11 +7,7 @@ import json
 class TournamentForm(forms.ModelForm):
     # Main Stage fields
     main_pairing_strategy = forms.ChoiceField(
-        choices=[
-            ('swiss', 'Swiss'),
-            ('single_elimination', 'Single Elimination'),
-            ('round_robin', 'Round Robin (Self Scheduled)'),
-        ],
+        choices=[],  # Will be populated in __init__
         initial='swiss',
         label='Main Stage Pairing Strategy'
     )
@@ -64,6 +60,10 @@ class TournamentForm(forms.ModelForm):
         instance = kwargs.get('instance')
         is_edit_mode = kwargs.pop('is_edit_mode', False)
         super().__init__(*args, **kwargs)
+
+        # Populate pairing strategy choices dynamically
+        from .pairing_strategies import get_strategy_choices
+        self.fields['main_pairing_strategy'].choices = get_strategy_choices()
 
         # Disable is_closed field for create/copy operations
         if not is_edit_mode:
@@ -171,13 +171,13 @@ class PlayerForm(forms.ModelForm):
 
 
 class StageForm(forms.ModelForm):
-    PAIRING_STRATEGY_CHOICES = [
-        ('swiss', 'Swiss'),
-        ('single_elimination', 'Single Elimination'),
-        ('round_robin', 'Round Robin (Self Scheduled)'),
-    ]
+    pairing_strategy = forms.ChoiceField(choices=[])  # Will be populated in __init__
 
-    pairing_strategy = forms.ChoiceField(choices=PAIRING_STRATEGY_CHOICES)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Populate pairing strategy choices dynamically
+        from .pairing_strategies import get_strategy_choices
+        self.fields['pairing_strategy'].choices = get_strategy_choices()
 
     class Meta:
         model = Stage
