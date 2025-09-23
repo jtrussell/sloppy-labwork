@@ -371,3 +371,19 @@
     gap: 1rem;
     justify-content: center;
 }
+
+tr.with-actions td {
+  border-bottom: none;
+}
+
+.actions-column {
+    padding: 0;
+}
+.actions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-start;
+}

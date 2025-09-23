@@ -4,7 +4,13 @@
   hx-swap="outerHTML"
 >
   {% if user.is_authenticated %}
-    {% if tournament.is_accepting_registrations and not is_player %}
+    {% if tournament.is_closed %}
+      <div class="note">
+          <p class="text-muted">
+              <strong>This tournament is closed.</strong> No further registrations or changes are allowed.
+          </p>
+      </div>
+    {% elif tournament.is_accepting_registrations and not is_player %}
       <h2>Join Tournament</h2>
       <form
           method="post"
@@ -50,12 +56,15 @@
   {% else %}
     <div class="note">
       <p class="text-muted">
-        {% if tournament.is_accepting_registrations %}
+        {% if tournament.is_closed %}
+          <strong>This tournament is closed.</strong> No further registrations or changes are allowed.
+        {% elif tournament.is_accepting_registrations %}
           This tournament is currently accepting registrations.
+          <a href="/login/">Log in</a> to get more details and register.
         {% else %}
           This tournament is not currently accepting registrations.
+          <a href="/login/">Log in</a> to get more details.
         {% endif %}
-        <a href="/login/">Log in</a> to get more details{% if tournament.is_accepting_registrations %} and register{% endif %}.
       </p>
     </div>
   {% endif %}

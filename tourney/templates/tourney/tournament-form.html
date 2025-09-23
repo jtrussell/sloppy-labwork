@@ -37,9 +37,7 @@
             <div class="twelve columns">
                 <label for="{{ form.description.id_for_label }}">Description</label>
                 {{ form.description }}
-                {% if tournament %}
-                    <span class="helptext">Markdown formatted. Start with h3's (###) for section headers.</span>
-                {% endif %}
+                <span class="helptext">Markdown formatted. Start with h3's (###) for section headers.</span>
                 {% if form.description.errors %}
                     <div class="form-error">{{ form.description.errors }}</div>
                 {% endif %}
@@ -57,6 +55,23 @@
                 {% endif %}
             </div>
         </div>
+
+        {% if tournament %}
+        <div class="row">
+            <div class="twelve columns">
+                <label>
+                    {{ form.is_closed }}
+                    Close tournament
+                </label>
+                {% if form.is_closed.help_text %}
+                    <span class="helptext">{{ form.is_closed.help_text }}</span>
+                {% endif %}
+                {% if form.is_closed.errors %}
+                    <div class="form-error">{{ form.is_closed.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </section>
 
     <section>

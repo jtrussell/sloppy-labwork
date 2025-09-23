@@ -3,7 +3,7 @@
 {% block content %}
 <h1>My Tournaments</h1>
 
-<div class="card">
+<section>
     <h2>Tournaments I Admin</h2>
     
     <div style="margin-bottom: 2rem;">
@@ -17,12 +17,11 @@
                     <th>Tournament</th>
                     <th>Created</th>
                     <th>Status</th>
-                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for tournament in admin_tournaments %}
-                <tr>
+                <tr class="with-actions">
                     <td>
                         <a href="{% url 'tourney-detail-home' tournament.id %}">
                             {{ tournament.name }}
@@ -30,16 +29,22 @@
                     </td>
                     <td>{{ tournament.created_on|date:"M d, Y" }}</td>
                     <td>
-                        {% if tournament.is_accepting_registrations %}
+                        {% if tournament.is_closed %}
+                            <span class="badge danger">Closed</span>
+                        {% elif tournament.is_accepting_registrations %}
                             <span class="badge success">Open Registration</span>
                         {% else %}
-                            <span class="badge">Closed</span>
+                            <span class="badge">In Progress</span>
                         {% endif %}
                     </td>
-                    <td>
-                        <a href="{% url 'tourney-edit-tournament' tournament.id %}">Edit</a>
-                        <a href="{% url 'tourney-copy-tournament' tournament.id %}">Copy</a>
-                        <a href="{% url 'tourney-manage-players' tournament.id %}">Manage Players</a>
+                </tr>
+                <tr>
+                    <td colspan="3" class="actions-column">
+                        <ul class="actions-list">
+                            <li><a class="button button-small" href="{% url 'tourney-edit-tournament' tournament.id %}">Edit</a></li>
+                            <li><a class="button button-small" href="{% url 'tourney-copy-tournament' tournament.id %}">Copy</a></li>
+                            <li><a class="button button-small" href="{% url 'tourney-manage-players' tournament.id %}">Manage Players</a></li>
+                        </ul>
                     </td>
                 </tr>
                 {% endfor %}
@@ -62,9 +67,9 @@
     {% else %}
         <p>You haven't created any tournaments yet.</p>
     {% endif %}
-</div>
+</section>
 
-<div class="card">
+<section>
     <h2>Tournaments I'm Playing In</h2>
     {% if player_tournaments %}
         <table>
@@ -73,7 +78,6 @@
                     <th>Tournament</th>
                     <th>Created</th>
                     <th>Status</th>
-                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -86,14 +90,13 @@
                     </td>
                     <td>{{ tournament.created_on|date:"M d, Y" }}</td>
                     <td>
-                        {% if tournament.is_accepting_registrations %}
+                        {% if tournament.is_closed %}
+                            <span class="badge danger">Closed</span>
+                        {% elif tournament.is_accepting_registrations %}
                             <span class="badge success">Open Registration</span>
                         {% else %}
                             <span class="badge">In Progress</span>
                         {% endif %}
-                    </td>
-                    <td>
-                        <a href="{% url 'tourney-detail-home' tournament.id %}">View</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -116,5 +119,5 @@
     {% else %}
         <p>You're not registered for any tournaments.</p>
     {% endif %}
-</div>
+</section>
 {% endblock %}

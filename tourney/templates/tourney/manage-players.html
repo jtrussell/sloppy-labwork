@@ -68,7 +68,7 @@
     <a href="{% url 'tourney-detail-standings' tournament.id %}">&larr; Back</a> • Manage Players
 </div>
 
-<div class="card">
+<section>
     <h2>Add Player</h2>
     <form method="post" class="form-wide">
         {% csrf_token %}
@@ -97,14 +97,14 @@
         <button type="submit" class="button button-primary">Add Player</button>
         <a href="{% url 'tourney-detail-standings' tournament.id %}" class="button">Back</a>
     </form>
-</div>
+</section>
 
-<div class="card">
+<section>
     <h2>Registered Players ({{ players | length }})</h2>
     {% if players %}
         {% partial players-grid %}
     {% else %}
         <p>No players registered yet.</p>
     {% endif %}
-</div>
+</section>
 {% endblock %}

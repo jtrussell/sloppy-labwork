@@ -55,14 +55,20 @@ class TournamentForm(forms.ModelForm):
 
     class Meta:
         model = Tournament
-        fields = ['name', 'description', 'is_accepting_registrations']
+        fields = ['name', 'description', 'is_accepting_registrations', 'is_closed']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
         }
 
     def __init__(self, *args, **kwargs):
         instance = kwargs.get('instance')
+        is_edit_mode = kwargs.pop('is_edit_mode', False)
         super().__init__(*args, **kwargs)
+
+        # Disable is_closed field for create/copy operations
+        if not is_edit_mode:
+            self.fields['is_closed'].disabled = True
+            self.fields['is_closed'].help_text = 'Tournament can only be closed after creation'
 
         # If editing existing tournament, populate stage fields
         if instance and instance.pk:

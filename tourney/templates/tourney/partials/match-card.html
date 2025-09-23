@@ -110,7 +110,8 @@
         {% if not match.is_bye %}
             {% comment %} Check if user can edit this match {% endcomment %}
             {% if is_admin or match.player_one.player.user == user or match.player_two.player.user == user %}
-                <button class="match-edit-btn"
+                {% if is_admin or not tournament.is_closed %}
+                    <button class="match-edit-btn"
                         data-match-id="{{ match.id }}"
                         data-update-action="{% url 'tourney-report-result' tournament.id match.id %}"
                         data-delete-action="{% url 'tourney-delete-match' tournament.id match.id %}"
@@ -129,7 +130,8 @@
                         data-stage-allow-ties="{{ match.round.stage.are_ties_allowed|yesno:'true,false' }}"
                         data-stage-score-reporting="{{ match.round.stage.report_full_scores }}"
                         onclick="openMatchModal(this)">
-                </button>
+                    </button>
+                {% endif %}
             {% endif %}
 
         {% endif %}

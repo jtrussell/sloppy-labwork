@@ -137,7 +137,7 @@ def create_tournament(request):
                 request, f'Tournament "{tournament.name}" created successfully!')
             return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_id': tournament.id}))
     else:
-        form = TournamentForm()
+        form = TournamentForm(is_edit_mode=False)
 
     return render(request, 'tourney/tournament-form.html', {'form': form})
 
@@ -148,7 +148,7 @@ def edit_tournament(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
 
     if request.method == 'POST':
-        form = TournamentForm(request.POST, instance=tournament)
+        form = TournamentForm(request.POST, instance=tournament, is_edit_mode=True)
         if form.is_valid():
             with transaction.atomic():
                 form.save()
@@ -201,7 +201,7 @@ def edit_tournament(request, tournament_id):
             messages.success(request, 'Tournament updated successfully!')
             return redirect_to(request, reverse('tourney-edit-tournament', kwargs={'tournament_id': tournament.id}))
     else:
-        form = TournamentForm(instance=tournament)
+        form = TournamentForm(instance=tournament, is_edit_mode=True)
 
     # Get available criteria for the template
     available_criteria = get_available_ranking_criteria()
@@ -555,6 +555,11 @@ def report_match_result(request, tournament_id, match_id):
 
     if not (is_admin or is_player_in_match):
         raise PermissionDenied
+
+    # Check if tournament is closed for non-admin users
+    if tournament.is_closed and not is_admin:
+        messages.error(request, 'This tournament is closed. Match results can no longer be submitted by players.')
+        return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_id': tournament.id}))
 
     if match.has_result() and not is_admin:
         messages.error(request, 'This match already has a result.')
@@ -955,6 +960,11 @@ def start_next_stage(request, tournament_id):
 def register_for_tournament(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
 
+    if tournament.is_closed:
+        messages.error(
+            request, 'This tournament is closed. No further registrations are allowed.')
+        return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_id': tournament.id}))
+
     if not tournament.is_accepting_registrations:
         messages.error(
             request, 'This tournament is not accepting registrations.')
@@ -1030,6 +1040,11 @@ def unregister_from_tournament(request, tournament_id):
 def drop_from_tournament(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
 
+    if tournament.is_closed:
+        messages.error(
+            request, 'This tournament is closed. Players can no longer drop or make changes.')
+        return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_id': tournament.id}))
+
     try:
         player = tournament.players.get(user=request.user)
         if player.status == Player.PlayerStatus.DROPPED:
@@ -1086,6 +1101,11 @@ def drop_from_tournament(request, tournament_id):
 @require_POST
 def undrop_from_tournament(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
+
+    if tournament.is_closed:
+        messages.error(
+            request, 'This tournament is closed. Players can no longer rejoin or make changes.')
+        return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_id': tournament.id}))
 
     if not tournament.is_accepting_registrations:
         messages.error(
@@ -1283,6 +1303,12 @@ def add_match(request, tournament_id):
 @can_add_match
 def player_add_match_result(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
+
+    # Check if tournament is closed
+    if tournament.is_closed:
+        messages.error(request, 'This tournament is closed. Match results can no longer be submitted by players.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
     current_stage = tournament.get_current_stage()
 
     if not current_stage:
@@ -1508,7 +1534,7 @@ def copy_tournament(request, tournament_id):
         else:
             initial_data['enable_playoffs'] = False
 
-        form = TournamentForm(initial=initial_data)
+        form = TournamentForm(initial=initial_data, is_edit_mode=False)
 
     # Prepare ranking criteria data for JavaScript
     ranking_criteria_data = []

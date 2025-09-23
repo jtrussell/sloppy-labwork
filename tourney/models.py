@@ -14,6 +14,7 @@ class Tournament(models.Model):
     owner = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='owned_tournaments')
     is_accepting_registrations = models.BooleanField(default=True)
+    is_closed = models.BooleanField(default=False)
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
 
