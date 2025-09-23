@@ -438,7 +438,7 @@ class HeadToHeadRankingCriterion(RankingCriterion):
         return 'head_to_head'
 
     def get_name(self):
-        return 'Head-to-Head'
+        return 'H2H'
 
     def get_description(self):
         return 'Wins against tied opponents'
