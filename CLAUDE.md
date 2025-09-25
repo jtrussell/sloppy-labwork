@@ -58,9 +58,11 @@ specific stylesheets.
 
 Please coordinate with the following agents to plan tasks:
 
-- `ui-researcher` - Coordinate with this agent to when planning a UI intensive task.
-- `django-expert` - This agent should be consulted on most tasks, any that interact with the Django framework.
-- `htmx-expert` - Consult this agent when using htmx or when asked to add SPA-like behavior to our experiences.
+- `ui-researcher` - Coordinate with this agent when planning a UI intensive task.
+- `django-expert` - This agent should be consulted on most tasks, any that
+   interact with the Django framework.
+- `htmx-expert` - Consult this agent when using htmx or when asked to add
+   SPA-like behavior to our experiences.
 
 Use the folder `.claude/.local/agent-artifacts` as a context cache and to share
 artifacts with your agents. Please create this folder if it doesn't exist.

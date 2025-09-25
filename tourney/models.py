@@ -852,7 +852,7 @@ class MatchResult(models.Model):
         return self.winner is None
 
     class Meta:
-        unique
+        ordering = ['created_on']
 
 
 # Import the new pairing strategy system

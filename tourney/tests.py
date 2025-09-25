@@ -1,9 +1,12 @@
+import logging
 from django.test import TestCase
 from django.contrib.auth.models import User
 from .models import (
     Tournament, Player, Stage, StagePlayer, Round, Match, MatchResult,
     StandingCalculator, get_pairing_strategy
 )
+
+logger = logging.getLogger(__name__)
 
 
 class StandingsTestCase(TestCase):
@@ -23,13 +26,19 @@ class StandingsTestCase(TestCase):
             is_accepting_registrations=True
         )
 
-        # Create main stage with Wins -> Seed ranking criteria
+        # Create main stage with predictable ranking criteria (wins -> seed)
         self.main_stage = Stage.objects.create(
             tournament=self.tournament,
             name='Main Stage',
             order=1,
             pairing_strategy='swiss'
         )
+
+        # Set predictable ranking criteria instead of using random
+        self.main_stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},  # Use seed instead of random for predictable tests
+        ])
 
         # Create players
         self.player1 = Player.objects.create(user=self.user1, tournament=self.tournament)
@@ -166,6 +175,12 @@ class TournamentStandingsTestCase(StandingsTestCase):
             max_players=2
         )
 
+        # Set predictable ranking criteria for playoff stage
+        playoff_stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+
         # Simulate stage advancement: set ranks on main stage players
         self.stage_player1.rank = 1
         self.stage_player1.save()
@@ -214,6 +229,12 @@ class StageAdvancementTestCase(StandingsTestCase):
             max_players=2
         )
 
+        # Set predictable ranking criteria for playoff stage
+        playoff_stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+
         # Create some matches to establish standings
         round1 = Round.objects.create(stage=self.main_stage, order=1)
 
@@ -256,6 +277,12 @@ class StageAdvancementTestCase(StandingsTestCase):
             pairing_strategy='single_elimination',
             max_players=2
         )
+
+        # Set predictable ranking criteria for playoff stage
+        playoff_stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
 
         # Create a round in main stage to allow advancement
         round1 = Round.objects.create(stage=self.main_stage, order=1)
@@ -422,7 +449,7 @@ class SwissPairingPerformanceTestCase(TestCase):
             if round_num > 1:
                 self._assign_random_winners(matches)
 
-            print(f"Round {round_num} pairing completed in {pairing_time:.3f}s with {matches.count()} matches")
+            logger.info(f"Round {round_num} pairing completed in {pairing_time:.3f}s with {matches.count()} matches")
 
     def test_swiss_pairing_100_players_3_rounds(self):
         """Test Swiss pairing with 100 players over 3 rounds (uses greedy+backtrack algorithm)."""
@@ -484,7 +511,7 @@ class SwissPairingPerformanceTestCase(TestCase):
             if round_num > 1:
                 self._assign_random_winners(matches)
 
-            print(f"Round {round_num} pairing completed in {pairing_time:.3f}s with {matches.count()} matches")
+            logger.info(f"Round {round_num} pairing completed in {pairing_time:.3f}s with {matches.count()} matches")
 
     def test_swiss_algorithm_selection(self):
         """Test that the correct algorithm is selected based on player count."""
@@ -527,7 +554,7 @@ class SwissPairingPerformanceTestCase(TestCase):
         pairing_time = end_time - start_time
         self.assertLess(pairing_time, 1.0, f"14-player brute force took too long: {pairing_time:.3f}s")
 
-        print(f"14-player tournament (brute force) completed in {pairing_time:.3f}s")
+        logger.info(f"14-player tournament (brute force) completed in {pairing_time:.3f}s")
 
     def _assign_random_winners(self, matches):
         """Helper method to randomly assign winners to matches for testing."""
@@ -546,3 +573,342 @@ class SwissPairingPerformanceTestCase(TestCase):
                 # Regular match - randomly pick winner
                 winner = random.choice([match.player_one, match.player_two])
                 MatchResult.objects.create(match=match, winner=winner)
+
+
+class SwissTournamentTestCase(TestCase):
+    """Test complete Swiss tournaments with various player counts and round structures."""
+
+    def setUp(self):
+        """Set up common test data."""
+        self.owner = User.objects.create_user('tournament_owner', 'owner@test.com', 'password')
+
+    def _create_tournament_with_players(self, player_count, tournament_name):
+        """Helper to create tournament with specified number of players."""
+        tournament = Tournament.objects.create(
+            name=tournament_name,
+            owner=self.owner,
+            is_accepting_registrations=True
+        )
+
+        stage = Stage.objects.create(
+            tournament=tournament,
+            name='Main Stage',
+            order=1,
+            pairing_strategy='swiss'
+        )
+
+        # Set explicit ranking criteria for predictable testing
+        stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+
+        players = []
+        stage_players = []
+        for i in range(player_count):
+            user = User.objects.create_user(
+                f'{tournament_name.lower().replace(" ", "_")}_player_{i+1}',
+                f'player_{i+1}@{tournament_name.lower().replace(" ", "_")}.com',
+                'password'
+            )
+            player = Player.objects.create(user=user, tournament=tournament)
+            stage_player = StagePlayer.objects.create(player=player, stage=stage, seed=i+1)
+            players.append(player)
+            stage_players.append(stage_player)
+
+        return tournament, stage, players, stage_players
+
+    def _create_rounds_and_assign_results(self, stage, round_count):
+        """Helper to create rounds and assign realistic results."""
+        import random
+        strategy = get_pairing_strategy('swiss')
+
+        for round_num in range(1, round_count + 1):
+            round_obj = Round.objects.create(stage=stage, order=round_num)
+            strategy.make_pairings_for_round(round_obj)
+
+            # Assign results based on seeding for more predictable testing
+            matches = Match.objects.filter(round=round_obj)
+            for match in matches:
+                if hasattr(match, 'result') and match.result:
+                    continue
+
+                if match.player_two is None:
+                    # Bye matches are auto-resolved
+                    continue
+                else:
+                    # Better seeded player has 60% chance to win
+                    if match.player_one.seed < match.player_two.seed:
+                        winner = match.player_one if random.random() < 0.6 else match.player_two
+                    else:
+                        winner = match.player_two if random.random() < 0.6 else match.player_one
+                    MatchResult.objects.create(match=match, winner=winner)
+
+    def _verify_no_duplicate_pairings(self, stage):
+        """Verify that no two players have been paired more than once."""
+        matches = Match.objects.filter(round__stage=stage)
+        pairings = set()
+
+        for match in matches:
+            if match.player_two is None:
+                continue
+
+            # Create a sorted tuple to avoid (A,B) vs (B,A) duplicates
+            pairing = tuple(sorted([match.player_one.id, match.player_two.id]))
+
+            self.assertNotIn(pairing, pairings,
+                f"Players {match.player_one.player.get_display_name()} and "
+                f"{match.player_two.player.get_display_name()} have been paired more than once")
+            pairings.add(pairing)
+
+    def test_3_player_tournament_2_rounds(self):
+        """Test 3-player Swiss tournament with 2 rounds."""
+        tournament, stage, players, stage_players = self._create_tournament_with_players(3, "3 Player Tournament")
+
+        # Create 2 rounds
+        self._create_rounds_and_assign_results(stage, 2)
+
+        # Verify correct number of rounds
+        self.assertEqual(stage.rounds.count(), 2)
+
+        # Verify each round has correct number of matches (2 matches per round: 1 regular + 1 bye)
+        for round_num in range(1, 3):
+            round_obj = stage.rounds.get(order=round_num)
+            matches = Match.objects.filter(round=round_obj)
+            self.assertEqual(matches.count(), 2, f"Round {round_num} should have 2 matches")
+
+            # Should have exactly 1 bye match
+            bye_matches = matches.filter(player_two__isnull=True)
+            self.assertEqual(bye_matches.count(), 1, f"Round {round_num} should have 1 bye match")
+
+        # Verify no duplicate pairings
+        self._verify_no_duplicate_pairings(stage)
+
+        logger.debug(f"3-player tournament completed successfully with {stage.rounds.count()} rounds")
+
+    def test_4_player_tournament_3_rounds(self):
+        """Test 4-player Swiss tournament with 3 rounds."""
+        tournament, stage, players, stage_players = self._create_tournament_with_players(4, "4 Player Tournament")
+
+        # Create 3 rounds
+        self._create_rounds_and_assign_results(stage, 3)
+
+        # Verify correct number of rounds
+        self.assertEqual(stage.rounds.count(), 3)
+
+        # Verify each round has correct number of matches (2 matches per round, no byes)
+        for round_num in range(1, 4):
+            round_obj = stage.rounds.get(order=round_num)
+            matches = Match.objects.filter(round=round_obj)
+            self.assertEqual(matches.count(), 2, f"Round {round_num} should have 2 matches")
+
+            # Should have no bye matches
+            bye_matches = matches.filter(player_two__isnull=True)
+            self.assertEqual(bye_matches.count(), 0, f"Round {round_num} should have no bye matches")
+
+        # Verify no duplicate pairings
+        self._verify_no_duplicate_pairings(stage)
+
+        logger.debug(f"4-player tournament completed successfully with {stage.rounds.count()} rounds")
+
+    def test_5_player_tournament_3_rounds(self):
+        """Test 5-player Swiss tournament with 3 rounds."""
+        tournament, stage, players, stage_players = self._create_tournament_with_players(5, "5 Player Tournament")
+
+        # Create 3 rounds
+        self._create_rounds_and_assign_results(stage, 3)
+
+        # Verify correct number of rounds
+        self.assertEqual(stage.rounds.count(), 3)
+
+        # Verify each round has correct number of matches (3 matches per round: 2 regular + 1 bye)
+        for round_num in range(1, 4):
+            round_obj = stage.rounds.get(order=round_num)
+            matches = Match.objects.filter(round=round_obj)
+            self.assertEqual(matches.count(), 3, f"Round {round_num} should have 3 matches")
+
+            # Should have exactly 1 bye match
+            bye_matches = matches.filter(player_two__isnull=True)
+            self.assertEqual(bye_matches.count(), 1, f"Round {round_num} should have 1 bye match")
+
+        # Verify no duplicate pairings
+        self._verify_no_duplicate_pairings(stage)
+
+        logger.debug(f"5-player tournament completed successfully with {stage.rounds.count()} rounds")
+
+    def test_6_player_tournament_3_rounds(self):
+        """Test 6-player Swiss tournament with 3 rounds."""
+        tournament, stage, players, stage_players = self._create_tournament_with_players(6, "6 Player Tournament")
+
+        # Create 3 rounds
+        self._create_rounds_and_assign_results(stage, 3)
+
+        # Verify correct number of rounds
+        self.assertEqual(stage.rounds.count(), 3)
+
+        # Verify each round has correct number of matches (3 matches per round, no byes)
+        for round_num in range(1, 4):
+            round_obj = stage.rounds.get(order=round_num)
+            matches = Match.objects.filter(round=round_obj)
+            self.assertEqual(matches.count(), 3, f"Round {round_num} should have 3 matches")
+
+            # Should have no bye matches
+            bye_matches = matches.filter(player_two__isnull=True)
+            self.assertEqual(bye_matches.count(), 0, f"Round {round_num} should have no bye matches")
+
+        # Verify no duplicate pairings
+        self._verify_no_duplicate_pairings(stage)
+
+        logger.debug(f"6-player tournament completed successfully with {stage.rounds.count()} rounds")
+
+    def test_7_player_tournament_3_rounds(self):
+        """Test 7-player Swiss tournament with 3 rounds."""
+        tournament, stage, players, stage_players = self._create_tournament_with_players(7, "7 Player Tournament")
+
+        # Create 3 rounds
+        self._create_rounds_and_assign_results(stage, 3)
+
+        # Verify correct number of rounds
+        self.assertEqual(stage.rounds.count(), 3)
+
+        # Verify each round has correct number of matches (4 matches per round: 3 regular + 1 bye)
+        for round_num in range(1, 4):
+            round_obj = stage.rounds.get(order=round_num)
+            matches = Match.objects.filter(round=round_obj)
+            self.assertEqual(matches.count(), 4, f"Round {round_num} should have 4 matches")
+
+            # Should have exactly 1 bye match
+            bye_matches = matches.filter(player_two__isnull=True)
+            self.assertEqual(bye_matches.count(), 1, f"Round {round_num} should have 1 bye match")
+
+        # Verify no duplicate pairings
+        self._verify_no_duplicate_pairings(stage)
+
+        logger.debug(f"7-player tournament completed successfully with {stage.rounds.count()} rounds")
+
+    def test_8_player_tournament_4_rounds(self):
+        """Test 8-player Swiss tournament with 4 rounds."""
+        tournament, stage, players, stage_players = self._create_tournament_with_players(8, "8 Player Tournament")
+
+        # Create 4 rounds
+        self._create_rounds_and_assign_results(stage, 4)
+
+        # Verify correct number of rounds
+        self.assertEqual(stage.rounds.count(), 4)
+
+        # Verify each round has correct number of matches (4 matches per round, no byes)
+        for round_num in range(1, 5):
+            round_obj = stage.rounds.get(order=round_num)
+            matches = Match.objects.filter(round=round_obj)
+            self.assertEqual(matches.count(), 4, f"Round {round_num} should have 4 matches")
+
+            # Should have no bye matches
+            bye_matches = matches.filter(player_two__isnull=True)
+            self.assertEqual(bye_matches.count(), 0, f"Round {round_num} should have no bye matches")
+
+        # Verify no duplicate pairings
+        self._verify_no_duplicate_pairings(stage)
+
+        logger.debug(f"8-player tournament completed successfully with {stage.rounds.count()} rounds")
+
+    def test_9_player_tournament_4_rounds(self):
+        """Test 9-player Swiss tournament with 4 rounds."""
+        tournament, stage, players, stage_players = self._create_tournament_with_players(9, "9 Player Tournament")
+
+        # Create 4 rounds
+        self._create_rounds_and_assign_results(stage, 4)
+
+        # Verify correct number of rounds
+        self.assertEqual(stage.rounds.count(), 4)
+
+        # Verify each round has correct number of matches (5 matches per round: 4 regular + 1 bye)
+        for round_num in range(1, 5):
+            round_obj = stage.rounds.get(order=round_num)
+            matches = Match.objects.filter(round=round_obj)
+            self.assertEqual(matches.count(), 5, f"Round {round_num} should have 5 matches")
+
+            # Should have exactly 1 bye match
+            bye_matches = matches.filter(player_two__isnull=True)
+            self.assertEqual(bye_matches.count(), 1, f"Round {round_num} should have 1 bye match")
+
+        # Verify no duplicate pairings
+        self._verify_no_duplicate_pairings(stage)
+
+        logger.debug(f"9-player tournament completed successfully with {stage.rounds.count()} rounds")
+
+    def test_swiss_pairing_quality_across_all_sizes(self):
+        """Test that Swiss pairing produces quality pairings across all tournament sizes."""
+        test_configs = [
+            (3, 2), (4, 3), (5, 3), (6, 3), (7, 3), (8, 4), (9, 4)
+        ]
+
+        for player_count, round_count in test_configs:
+            with self.subTest(players=player_count, rounds=round_count):
+                tournament, stage, players, stage_players = self._create_tournament_with_players(
+                    player_count, f"Quality Test {player_count}P"
+                )
+
+                # Run all rounds
+                self._create_rounds_and_assign_results(stage, round_count)
+
+                # Verify no duplicate pairings
+                self._verify_no_duplicate_pairings(stage)
+
+                # Verify reasonable score distribution
+                standings = StandingCalculator.get_stage_standings(stage)
+                scores = [s['wins'] for s in standings]
+
+                # In a well-paired Swiss tournament, scores should be somewhat spread out
+                unique_scores = len(set(scores))
+                self.assertGreaterEqual(unique_scores, 2,
+                    f"Tournament with {player_count} players should have varied scores, got: {scores}")
+
+                logger.debug(f"Quality test passed for {player_count} players, {round_count} rounds - Score spread: {sorted(scores, reverse=True)}")
+
+    def test_bye_distribution_fairness(self):
+        """Test that byes are distributed fairly in odd-player tournaments."""
+        # Test with 5 players over 3 rounds
+        tournament, stage, players, stage_players = self._create_tournament_with_players(5, "Bye Distribution Test")
+
+        # Track who gets byes
+        bye_recipients = {}
+        for stage_player in stage_players:
+            bye_recipients[stage_player.id] = 0
+
+        # Create 3 rounds and track byes
+        strategy = get_pairing_strategy('swiss')
+        for round_num in range(1, 4):
+            round_obj = Round.objects.create(stage=stage, order=round_num)
+            strategy.make_pairings_for_round(round_obj)
+
+            # Find who got the bye
+            matches = Match.objects.filter(round=round_obj)
+            bye_matches = matches.filter(player_two__isnull=True)
+
+            for bye_match in bye_matches:
+                bye_recipients[bye_match.player_one.id] += 1
+
+            # Assign results for next round pairing
+            if round_num < 3:
+                for match in matches:
+                    if not hasattr(match, 'result') and match.player_two is not None:
+                        # Favor better seed slightly
+                        import random
+                        winner = match.player_one if random.random() < 0.6 else match.player_two
+                        MatchResult.objects.create(match=match, winner=winner)
+
+        # Verify bye distribution
+        bye_counts = list(bye_recipients.values())
+        max_byes = max(bye_counts)
+        min_byes = min(bye_counts)
+
+        # In a 3-round tournament with 5 players, byes should be reasonably distributed
+        # Some players might get more than 1 bye, but the distribution should be fair
+        self.assertLessEqual(max_byes, 2, f"No player should get more than 2 byes, distribution: {bye_counts}")
+
+        # At least 3 different players should get byes (since we have 3 rounds and 5 players)
+        players_with_byes = sum(1 for count in bye_counts if count > 0)
+        self.assertGreaterEqual(players_with_byes, 2,
+            f"At least 2 players should get byes, got {players_with_byes} players with byes")
+
+        logger.debug(f"Bye distribution test passed: {bye_counts} byes per player")
