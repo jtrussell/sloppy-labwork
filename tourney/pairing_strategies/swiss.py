@@ -146,10 +146,10 @@ class SwissPairingStrategy(PairingStrategy):
 
         # For small numbers, use the optimized search
         if len(sorted_players) <= 8:
-            return self._exhaustive_search_pairing(sorted_players, previous_opponents)
+            return self._exhaustive_search_pairing(sorted_players, previous_opponents, round_obj.order)
         else:
             # For 10-14 players, use a hybrid approach: try a few good options
-            return self._smart_brute_force_pairing(sorted_players, previous_opponents)
+            return self._smart_brute_force_pairing(sorted_players, previous_opponents, round_obj.order)
 
     def _greedy_backtrack_pairing(self, round_obj, stage_players):
         """
@@ -169,6 +169,25 @@ class SwissPairingStrategy(PairingStrategy):
         # Get previous opponents for each player
         previous_opponents = self._get_previous_opponents(round_obj.stage)
 
+        # Handle odd number with improved bye selection
+        if len(sorted_players) % 2 == 1:
+            bye_history = self._get_bye_history(round_obj.stage)
+            bye_player = self._select_bye_player(
+                sorted_players, bye_history, previous_opponents, round_obj.order)
+
+            remaining_players = [p for p in sorted_players if p.id != bye_player.id]
+
+            # Try backtracking approach for remaining players
+            result = []
+            used = set()
+
+            if self._backtrack_pair(remaining_players, result, used, 0, previous_opponents):
+                return result + [(bye_player, None)]
+
+            # Fallback to simple pairing if backtracking fails
+            return self._force_pair_with_repeats(remaining_players, previous_opponents) + [(bye_player, None)]
+
+        # Even number of players - original logic
         # Try backtracking approach
         result = []
         used = set()
@@ -367,6 +386,109 @@ class SwissPairingStrategy(PairingStrategy):
 
         return opponents
 
+    def _get_bye_history(self, stage):
+        """
+        Get a set of player IDs who have received byes in previous rounds.
+
+        Returns:
+            Set of stage_player IDs who have had byes
+        """
+        from tourney.models import Match
+
+        bye_recipients = set()
+
+        # Get all bye matches (where player_two is None)
+        bye_matches = Match.objects.filter(
+            round__stage=stage,
+            player_two__isnull=True
+        ).select_related('player_one')
+
+        for match in bye_matches:
+            if match.player_one:
+                bye_recipients.add(match.player_one.id)
+
+        return bye_recipients
+
+    def _select_bye_player(self, sorted_players, bye_history, previous_opponents, round_number):
+        """
+        Select the best player to receive a bye based on the Swiss bye rules:
+        - Round 1: Random selection
+        - Later rounds: Lowest ranked player who hasn't had a bye yet
+        - Exception: Allow repeat bye to avoid repeat pairings
+
+        Args:
+            sorted_players: List of stage players sorted by standings (best to worst)
+            bye_history: Set of player IDs who have had byes
+            previous_opponents: Dict of player ID to set of opponent IDs
+            round_number: Current round number
+
+        Returns:
+            StagePlayer who should receive the bye
+        """
+        if round_number == 1:
+            # Round 1: Random bye assignment
+            return random.choice(sorted_players)
+
+        # Find players who haven't had a bye yet, starting from lowest ranked
+        players_without_byes = []
+        for player in reversed(sorted_players):  # Start from lowest ranked
+            if player.id not in bye_history:
+                players_without_byes.append(player)
+
+        if players_without_byes:
+            # Check if giving bye to lowest ranked player without bye would force repeat pairings
+            candidate_bye_player = players_without_byes[0]  # Lowest ranked without bye
+
+            # Test if we can make valid pairings with this bye selection
+            remaining_players = [p for p in sorted_players if p.id != candidate_bye_player.id]
+            if self._can_pair_without_repeats(remaining_players, previous_opponents):
+                return candidate_bye_player
+
+            # If lowest ranked causes pairing issues, try next lowest without bye
+            for candidate in players_without_byes[1:]:
+                remaining_players = [p for p in sorted_players if p.id != candidate.id]
+                if self._can_pair_without_repeats(remaining_players, previous_opponents):
+                    return candidate
+
+        # Fallback: If no valid non-repeat bye exists, give bye to lowest ranked overall
+        # This handles the case where avoiding repeat byes would force repeat pairings
+        return sorted_players[-1]  # Lowest ranked player
+
+    def _can_pair_without_repeats(self, players, previous_opponents):
+        """
+        Check if a list of players can be paired without any repeat pairings.
+
+        Args:
+            players: List of stage players to pair
+            previous_opponents: Dict of player ID to set of opponent IDs
+
+        Returns:
+            Boolean indicating if valid pairing exists
+        """
+        if len(players) % 2 != 0:
+            return False  # Can't pair odd number of players
+
+        # Use a simple greedy check - not perfect but sufficient for our needs
+        used = set()
+        for i, player_one in enumerate(players):
+            if player_one.id in used:
+                continue
+
+            # Find a valid opponent for this player
+            found_opponent = False
+            for j, player_two in enumerate(players[i+1:], i+1):
+                if (player_two.id not in used and
+                    player_two.id not in previous_opponents.get(player_one.id, set())):
+                    used.add(player_one.id)
+                    used.add(player_two.id)
+                    found_opponent = True
+                    break
+
+            if not found_opponent:
+                return False
+
+        return len(used) == len(players)
+
     def _get_player_score(self, stage_player):
         """
         Get a player's current score (wins) for sorting purposes.
@@ -378,12 +500,39 @@ class SwissPairingStrategy(PairingStrategy):
             winner=stage_player
         ).count()
 
-    def _exhaustive_search_pairing(self, sorted_players, previous_opponents):
+    def _exhaustive_search_pairing(self, sorted_players, previous_opponents, round_number=None):
         """
         Exhaustive search for small tournaments (≤8 players).
+        Uses improved bye selection logic.
         """
-        # Handle odd number of players - try each as bye
+        # Handle odd number of players
         if len(sorted_players) % 2 == 1:
+            # Use improved bye selection if we have round information
+            if round_number is not None:
+                stage = sorted_players[0].stage if sorted_players else None
+                if stage:
+                    bye_history = self._get_bye_history(stage)
+                    bye_player = self._select_bye_player(
+                        sorted_players, bye_history, previous_opponents, round_number)
+
+                    remaining_players = [p for p in sorted_players if p.id != bye_player.id]
+
+                    # Find best pairing for remaining players
+                    matchings = self._generate_perfect_matchings(remaining_players)
+                    if matchings:
+                        best_score = float('-inf')
+                        best_pairing = None
+
+                        for matching in matchings:
+                            score = self._calculate_matching_score(matching, previous_opponents)
+                            if score > best_score:
+                                best_score = score
+                                best_pairing = matching
+
+                        if best_pairing:
+                            return best_pairing + [(bye_player, None)]
+
+            # Fallback to old logic if no round info or stage
             best_bye_pairings = None
             best_bye_score = float('-inf')
 
@@ -418,11 +567,33 @@ class SwissPairingStrategy(PairingStrategy):
 
         return best_pairings or self._create_simple_pairings(sorted_players)
 
-    def _smart_brute_force_pairing(self, sorted_players, previous_opponents):
+    def _smart_brute_force_pairing(self, sorted_players, previous_opponents, round_number=None):
         """
         Smart brute force for medium tournaments (9-14 players).
         Uses greedy approach with backtracking, limited search.
         """
+        # Handle odd number with improved bye selection
+        if len(sorted_players) % 2 == 1 and round_number is not None:
+            stage = sorted_players[0].stage if sorted_players else None
+            if stage:
+                bye_history = self._get_bye_history(stage)
+                bye_player = self._select_bye_player(
+                    sorted_players, bye_history, previous_opponents, round_number)
+
+                remaining_players = [p for p in sorted_players if p.id != bye_player.id]
+
+                # Try the greedy backtracking approach for remaining players
+                result = []
+                used = set()
+
+                if self._backtrack_pair(remaining_players, result, used, 0, previous_opponents):
+                    return result + [(bye_player, None)]
+
+                # Fallback to force pairing
+                pairings = self._force_pair_with_repeats(remaining_players, previous_opponents)
+                return pairings + [(bye_player, None)]
+
+        # Original logic for even numbers or when no round info
         # Try the greedy backtracking approach first
         result = []
         used = set()

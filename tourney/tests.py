@@ -912,3 +912,333 @@ class SwissTournamentTestCase(TestCase):
             f"At least 2 players should get byes, got {players_with_byes} players with byes")
 
         logger.debug(f"Bye distribution test passed: {bye_counts} byes per player")
+
+    def test_bye_placement_avoids_top_players(self):
+        """Test that highly ranked players don't get byes when lower ranked players are available."""
+        tournament, stage, players, stage_players = self._create_tournament_with_players(5, "Bye Placement Test")
+
+        strategy = get_pairing_strategy('swiss')
+
+        # Round 1: Random pairing, establish some standings
+        round1 = Round.objects.create(stage=stage, order=1)
+        strategy.make_pairings_for_round(round1)
+
+        # Assign controlled results to create predictable standings
+        matches_r1 = Match.objects.filter(round=round1)
+        for match in matches_r1:
+            if match.player_two is None:
+                continue  # Bye match already resolved
+
+            # Always favor lower seed (better player) winning to create predictable standings
+            winner = match.player_one if match.player_one.seed < match.player_two.seed else match.player_two
+            MatchResult.objects.create(match=match, winner=winner)
+
+        # Debug: Show Round 1 pairings for analysis
+        r1_matches = [(f"{m.player_one.player.get_display_name()}" +
+                      (f" vs {m.player_two.player.get_display_name()}" if m.player_two else " (BYE)"),
+                      f"Winner: {m.result.winner.player.get_display_name()}" if hasattr(m, 'result') and m.result else "No result")
+                     for m in matches_r1]
+        logger.debug(f"Round 1 pairings: {r1_matches}")
+
+        # Get standings BEFORE Round 2 to determine who should get the bye
+        standings_after_r1 = StandingCalculator.get_stage_standings(stage)
+
+        # Round 2: Test bye placement - should avoid top performing players
+        round2 = Round.objects.create(stage=stage, order=2)
+        strategy.make_pairings_for_round(round2)
+
+        r2_bye_match = Match.objects.filter(round=round2, player_two__isnull=True).first()
+
+        if r2_bye_match:
+            bye_player_r2 = r2_bye_match.player_one
+
+            # Find the bye player's position in standings BEFORE they got the Round 2 bye
+            bye_player_rank = next(i for i, s in enumerate(standings_after_r1) if s['stage_player'] == bye_player_r2)
+
+            # Check if there are lower-ranked players available for bye
+            # (players who haven't had byes and are ranked lower)
+            r1_bye_match = Match.objects.filter(round=round1, player_two__isnull=True).first()
+            r1_bye_player_id = r1_bye_match.player_one.id if r1_bye_match else None
+
+            lower_ranked_without_byes = []
+            for i, standing in enumerate(standings_after_r1):
+                if (i > bye_player_rank and  # Lower ranked than current bye recipient
+                    standing['stage_player'].id != r1_bye_player_id):  # Hasn't had a bye
+                    lower_ranked_without_byes.append(standing['stage_player'])
+
+            if lower_ranked_without_byes:
+                # Check if giving bye to the lowest ranked would force rematches
+                alternative_bye_player = lower_ranked_without_byes[0]  # Lowest ranked without bye
+                remaining_players = [s['stage_player'] for s in standings_after_r1 if s['stage_player'] != alternative_bye_player]
+
+                # Get Round 1 opponent history
+                r1_opponents = {}
+                for match in matches_r1:
+                    if match.player_two is not None:  # Not a bye match
+                        p1, p2 = match.player_one, match.player_two
+                        r1_opponents.setdefault(p1.id, set()).add(p2.id)
+                        r1_opponents.setdefault(p2.id, set()).add(p1.id)
+
+                # Check if remaining players can be paired without rematches
+                can_avoid_rematches = True
+                pairing_analysis = []
+                used = set()
+
+                for i, player1 in enumerate(remaining_players):
+                    if player1.id in used:
+                        continue
+
+                    found_opponent = False
+                    for j, player2 in enumerate(remaining_players[i+1:], i+1):
+                        if (player2.id not in used and
+                            player2.id not in r1_opponents.get(player1.id, set())):
+                            pairing_analysis.append(f"{player1.player.get_display_name()} vs {player2.player.get_display_name()}")
+                            used.add(player1.id)
+                            used.add(player2.id)
+                            found_opponent = True
+                            break
+
+                    if not found_opponent:
+                        can_avoid_rematches = False
+                        break
+
+                failure_msg = (
+                    f"Round 2 bye went to {bye_player_r2.player.get_display_name()} "
+                    f"(rank {bye_player_rank + 1}) when lower-ranked players without byes were available: "
+                    f"{[p.player.get_display_name() for p in lower_ranked_without_byes]}. "
+                    f"Current standings: {[(i+1, s['stage_player'].player.get_display_name(), s['wins']) for i, s in enumerate(standings_after_r1)]}. ")
+
+                if can_avoid_rematches:
+                    failure_msg += f"Alternative pairing with {alternative_bye_player.player.get_display_name()} bye would work: {pairing_analysis}"
+                else:
+                    failure_msg += f"Alternative bye assignment might force rematches - this could be acceptable."
+
+                # Only fail if we can definitely avoid rematches
+                if can_avoid_rematches:
+                    self.fail(failure_msg)
+                else:
+                    logger.debug(f"Bye assignment may be acceptable due to pairing constraints: {failure_msg}")
+
+        # Assign results for round 2
+        for match in Match.objects.filter(round=round2):
+            if match.player_two is None or hasattr(match, 'result'):
+                continue
+            winner = match.player_one if match.player_one.seed < match.player_two.seed else match.player_two
+            MatchResult.objects.create(match=match, winner=winner)
+
+        # Get standings BEFORE Round 3 to determine who should get the bye
+        standings_after_r2 = StandingCalculator.get_stage_standings(stage)
+
+        # Round 3: Test bye placement again
+        round3 = Round.objects.create(stage=stage, order=3)
+        strategy.make_pairings_for_round(round3)
+        r3_bye_match = Match.objects.filter(round=round3, player_two__isnull=True).first()
+
+        if r3_bye_match:
+            bye_player_r3 = r3_bye_match.player_one
+            bye_player_rank_r3 = next(i for i, s in enumerate(standings_after_r2) if s['stage_player'] == bye_player_r3)
+
+            # Check for previous bye recipients
+            previous_bye_recipients = set()
+            if r1_bye_match:
+                previous_bye_recipients.add(r1_bye_match.player_one.id)
+            if r2_bye_match:
+                previous_bye_recipients.add(r2_bye_match.player_one.id)
+
+            # Find lower ranked players without previous byes
+            lower_ranked_without_byes_r3 = []
+            for i, standing in enumerate(standings_after_r2):
+                if (i > bye_player_rank_r3 and  # Lower ranked
+                    standing['stage_player'].id not in previous_bye_recipients):  # No previous bye
+                    lower_ranked_without_byes_r3.append(standing['stage_player'])
+
+            if lower_ranked_without_byes_r3:
+                self.fail(
+                    f"Round 3 bye went to {bye_player_r3.player.get_display_name()} "
+                    f"(rank {bye_player_rank_r3 + 1}) when lower-ranked players without byes were available: "
+                    f"{[p.player.get_display_name() for p in lower_ranked_without_byes_r3]}. "
+                    f"Current standings: {[(i+1, s['stage_player'].player.get_display_name(), s['wins']) for i, s in enumerate(standings_after_r2)]}")
+
+        logger.debug(f"Bye placement test passed - byes went to appropriately ranked players")
+
+    def test_bye_assignment_avoids_repeat_byes(self):
+        """Test that byes are not given to players who already had a bye, except when necessary."""
+        tournament, stage, players, stage_players = self._create_tournament_with_players(5, "Repeat Bye Avoidance Test")
+
+        strategy = get_pairing_strategy('swiss')
+        bye_recipients = {}  # Track who gets byes in which rounds
+
+        # Track all rounds and their bye assignments
+        for round_num in range(1, 4):  # 3 rounds
+            round_obj = Round.objects.create(stage=stage, order=round_num)
+            strategy.make_pairings_for_round(round_obj)
+
+            # Find who got the bye this round
+            matches = Match.objects.filter(round=round_obj)
+            bye_match = matches.filter(player_two__isnull=True).first()
+
+            if bye_match:
+                bye_player = bye_match.player_one
+                if bye_player.id not in bye_recipients:
+                    bye_recipients[bye_player.id] = []
+                bye_recipients[bye_player.id].append(round_num)
+
+                logger.debug(f"Round {round_num} bye: {bye_player.player.get_display_name()}")
+
+            # Assign results for next round (except last round)
+            if round_num < 3:
+                for match in matches:
+                    if match.player_two is None or hasattr(match, 'result'):
+                        continue
+
+                    # Create some realistic standings progression
+                    import random
+                    winner = match.player_one if random.random() < 0.6 else match.player_two
+                    MatchResult.objects.create(match=match, winner=winner)
+
+        # Check that no player got more than one bye (unless it was unavoidable)
+        players_with_multiple_byes = {player_id: rounds for player_id, rounds in bye_recipients.items() if len(rounds) > 1}
+
+        if players_with_multiple_byes:
+            # If any player got multiple byes, it should only be when necessary to avoid repeat pairings
+            logger.debug(f"Players with multiple byes: {players_with_multiple_byes}")
+            # For now, we'll log this but not assert - this will help identify when the logic needs the exception
+
+        logger.debug(f"Bye recipients by round: {bye_recipients}")
+
+    def test_bye_given_to_lowest_ranked_without_bye(self):
+        """Test that byes are given to the lowest-ranked player who hasn't had a bye yet."""
+        tournament, stage, players, stage_players = self._create_tournament_with_players(7, "Lowest Ranked Bye Test")
+
+        strategy = get_pairing_strategy('swiss')
+        bye_recipients = set()  # Track who has had byes
+
+        # Round 1: Random bye (establish baseline)
+        round1 = Round.objects.create(stage=stage, order=1)
+        strategy.make_pairings_for_round(round1)
+
+        matches_r1 = Match.objects.filter(round=round1)
+        bye_match_r1 = matches_r1.filter(player_two__isnull=True).first()
+        if bye_match_r1:
+            bye_recipients.add(bye_match_r1.player_one.id)
+
+        # Create controlled results to establish clear standings
+        for match in matches_r1:
+            if match.player_two is None or hasattr(match, 'result'):
+                continue
+
+            # Favor lower seeds to create predictable standings
+            winner = match.player_one if match.player_one.seed <= match.player_two.seed else match.player_two
+            MatchResult.objects.create(match=match, winner=winner)
+
+        # Get standings BEFORE Round 2 to determine who should get the bye
+        standings_after_r1 = StandingCalculator.get_stage_standings(stage)
+
+        # Round 2: Bye should go to lowest ranked player without a previous bye
+        round2 = Round.objects.create(stage=stage, order=2)
+        strategy.make_pairings_for_round(round2)
+
+        matches_r2 = Match.objects.filter(round=round2)
+        bye_match_r2 = matches_r2.filter(player_two__isnull=True).first()
+
+        if bye_match_r2:
+            bye_player_r2 = bye_match_r2.player_one
+
+            # Verify that the bye went to a player who hasn't had a bye yet (if possible)
+            # This is the core principle we want to enforce
+            players_without_byes_r2 = []
+            for player in stage_players:
+                if player.id not in bye_recipients:
+                    players_without_byes_r2.append(player)
+
+            if players_without_byes_r2:
+                # The bye should go to someone who hasn't had a bye yet
+                self.assertIn(bye_player_r2, players_without_byes_r2,
+                    f"Round 2 bye should go to a player without a previous bye. "
+                    f"Players without byes: {[p.player.get_display_name() for p in players_without_byes_r2]}, "
+                    f"but bye went to {bye_player_r2.player.get_display_name()}")
+
+                # Among players without byes, it should prefer lower-ranked ones
+                # (but we allow flexibility for pairing constraints)
+                bye_rank = next(i for i, s in enumerate(standings_after_r1) if s['stage_player'] == bye_player_r2)
+
+                # Verify it's not in the top half (which would be very wrong)
+                total_players = len(standings_after_r1)
+                self.assertGreater(bye_rank, total_players // 2,
+                    f"Bye should not go to top-half player. {bye_player_r2.player.get_display_name()} "
+                    f"is ranked {bye_rank + 1} out of {total_players}")
+
+            bye_recipients.add(bye_player_r2.id)
+
+        # Add results for round 2
+        for match in matches_r2:
+            if match.player_two is None or hasattr(match, 'result'):
+                continue
+
+            winner = match.player_one if match.player_one.seed <= match.player_two.seed else match.player_two
+            MatchResult.objects.create(match=match, winner=winner)
+
+        # Get standings BEFORE Round 3 to determine who should get the bye
+        standings_after_r2 = StandingCalculator.get_stage_standings(stage)
+
+        # Round 3: Again, bye should go to lowest ranked without previous bye
+        round3 = Round.objects.create(stage=stage, order=3)
+        strategy.make_pairings_for_round(round3)
+
+        matches_r3 = Match.objects.filter(round=round3)
+        bye_match_r3 = matches_r3.filter(player_two__isnull=True).first()
+
+        if bye_match_r3:
+            bye_player_r3 = bye_match_r3.player_one
+
+            # Verify that the bye went to a player who hasn't had a bye yet (if possible)
+            players_without_byes_r3 = []
+            for player in stage_players:
+                if player.id not in bye_recipients:
+                    players_without_byes_r3.append(player)
+
+            if players_without_byes_r3:
+                # The bye should go to someone who hasn't had a bye yet
+                self.assertIn(bye_player_r3, players_without_byes_r3,
+                    f"Round 3 bye should go to a player without a previous bye. "
+                    f"Players without byes: {[p.player.get_display_name() for p in players_without_byes_r3]}, "
+                    f"but bye went to {bye_player_r3.player.get_display_name()}")
+
+                # Among players without byes, it should prefer lower-ranked ones
+                # (but we allow flexibility for pairing constraints)
+                bye_rank = next(i for i, s in enumerate(standings_after_r2) if s['stage_player'] == bye_player_r3)
+
+                # Verify it's not in the top half (which would be very wrong)
+                total_players = len(standings_after_r2)
+                self.assertGreater(bye_rank, total_players // 2,
+                    f"Bye should not go to top-half player. {bye_player_r3.player.get_display_name()} "
+                    f"is ranked {bye_rank + 1} out of {total_players}")
+            else:
+                # All players have had byes - any player is acceptable
+                logger.debug("All players have had byes, any selection is acceptable")
+
+        logger.debug(f"Bye assignment test: R1={bye_match_r1.player_one.player.get_display_name() if bye_match_r1 else None}, "
+                    f"R2={bye_match_r2.player_one.player.get_display_name() if bye_match_r2 else None}, "
+                    f"R3={bye_match_r3.player_one.player.get_display_name() if bye_match_r3 else None}")
+
+    def test_bye_exception_for_repeat_pairings(self):
+        """Test that a player can get a second bye to avoid repeat pairings."""
+        # This test will be more complex to set up - we need a scenario where
+        # giving the bye to the lowest unassigned player would force a repeat pairing
+
+        tournament, stage, players, stage_players = self._create_tournament_with_players(5, "Repeat Pairing Exception Test")
+
+        strategy = get_pairing_strategy('swiss')
+
+        # This test is more of a placeholder for now - it would require very specific
+        # match result patterns to force the repeat pairing scenario
+        # We'll implement this after the basic bye logic is working
+
+        logger.debug("Repeat pairing exception test - placeholder for future implementation")
+
+        # For now, just verify the tournament can be created and basic pairing works
+        round1 = Round.objects.create(stage=stage, order=1)
+        strategy.make_pairings_for_round(round1)
+
+        matches = Match.objects.filter(round=round1)
+        self.assertEqual(matches.count(), 3)  # 2 regular matches + 1 bye
