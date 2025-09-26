@@ -21,20 +21,20 @@
             style="justify-content: center;"
         >
             <li class="nav__item">
-                <a href="{% url 'tourney-detail-matches' tournament.id %}"
+                <a href="{% url 'tourney-detail-matches' tournament.code %}"
                 class="nav__link {% if current_tab == 'matches' %}nav__link--active{% endif %}">
                     Matches
                 </a>
             </li>
             <li class="nav__item">
-                <a href="{% url 'tourney-detail-standings' tournament.id %}"
+                <a href="{% url 'tourney-detail-standings' tournament.code %}"
                 class="nav__link {% if current_tab == 'standings' %}nav__link--active{% endif %}">
                     Standings
                 </a>
             </li>
             {% if is_admin %}
             <li class="nav__item">
-                <a href="{% url 'tourney-detail-admin' tournament.id %}"
+                <a href="{% url 'tourney-detail-admin' tournament.code %}"
                 class="nav__link {% if current_tab == 'admin' %}nav__link--active{% endif %}">
                     Admin
                 </a>
@@ -362,7 +362,7 @@
         const playerTwoSelect = document.getElementById('addMatchPlayerTwo');
 
         // Set up form action
-        form.setAttribute('hx-post', '{% url "tourney-add-match" tournament.id %}');
+        form.setAttribute('hx-post', '{% url "tourney-add-match" tournament.code %}');
         htmx.process(form);
 
         // Clear and populate player selects with unmatched players
@@ -435,7 +435,7 @@
         const scoreInputsSection = document.getElementById('playerScoreInputs');
 
         // Set up form action
-        form.setAttribute('hx-post', '{% url "tourney-player-add-match-result" tournament.id %}');
+        form.setAttribute('hx-post', '{% url "tourney-player-add-match-result" tournament.code %}');
         htmx.process(form);
 
         // Clear opponent select

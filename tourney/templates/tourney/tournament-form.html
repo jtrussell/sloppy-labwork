@@ -11,7 +11,7 @@
 {% if tournament %}
     <h1>{{ tournament.name }}</h1>
     <div class="subheading">
-        <a href="{% url 'tourney-detail-home' tournament.id %}">&larr; Back</a> • Edit Tournament
+        <a href="{% url 'tourney-detail-home' tournament.code %}">&larr; Back</a> • Edit Tournament
     </div>
 {% else %}
     <h1>Create Tournament</h1>
@@ -184,7 +184,7 @@
     <section>
         {% if tournament %}
             <button type="submit" class="button button-primary">Update Tournament</button>
-            <a href="{% url 'tourney-detail-home' tournament.id %}" class="button">Back</a>
+            <a href="{% url 'tourney-detail-home' tournament.code %}" class="button">Back</a>
         {% else %}
             <button type="submit" class="button button-primary">Create Tournament</button>
             <a href="{% url 'tourney-my-tournaments' %}" class="button">Cancel</a>

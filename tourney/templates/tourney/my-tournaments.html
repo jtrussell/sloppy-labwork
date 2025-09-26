@@ -23,7 +23,7 @@
                 {% for tournament in admin_tournaments %}
                 <tr class="with-actions">
                     <td>
-                        <a href="{% url 'tourney-detail-home' tournament.id %}">
+                        <a href="{% url 'tourney-detail-home' tournament.code %}">
                             {{ tournament.name }}
                         </a>
                     </td>
@@ -41,9 +41,9 @@
                 <tr>
                     <td colspan="3" class="actions-column">
                         <ul class="actions-list">
-                            <li><a class="button button-small" href="{% url 'tourney-edit-tournament' tournament.id %}">Edit</a></li>
-                            <li><a class="button button-small" href="{% url 'tourney-copy-tournament' tournament.id %}">Copy</a></li>
-                            <li><a class="button button-small" href="{% url 'tourney-manage-players' tournament.id %}">Manage Players</a></li>
+                            <li><a class="button button-small" href="{% url 'tourney-edit-tournament' tournament.code %}">Edit</a></li>
+                            <li><a class="button button-small" href="{% url 'tourney-copy-tournament' tournament.code %}">Copy</a></li>
+                            <li><a class="button button-small" href="{% url 'tourney-manage-players' tournament.code %}">Manage Players</a></li>
                         </ul>
                     </td>
                 </tr>
@@ -84,7 +84,7 @@
                 {% for tournament in player_tournaments %}
                 <tr>
                     <td>
-                        <a href="{% url 'tourney-detail-home' tournament.id %}">
+                        <a href="{% url 'tourney-detail-home' tournament.code %}">
                             {{ tournament.name }}
                         </a>
                     </td>

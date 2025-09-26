@@ -67,7 +67,7 @@
             <div>
                 <div class="text-small text-muted">Initialize {{ current_stage.name }} with player seeding if needed</div>
                 <form method="post"
-                      action="{% url 'tourney-prepare-current-stage-seeding' tournament.id %}"
+                      action="{% url 'tourney-prepare-current-stage-seeding' tournament.code %}"
                       style="display:inline;">
                     {% csrf_token %}
                     <button type="submit"
@@ -83,9 +83,9 @@
             <div>
                 <div class="text-small text-muted">Continue current stage with another round</div>
                 <form method="post"
-                      action="{% url 'tourney-create-round' tournament.id %}"
+                      action="{% url 'tourney-create-round' tournament.code %}"
                       style="display:inline;"
-                      hx-post="{% url 'tourney-create-round' tournament.id %}"
+                      hx-post="{% url 'tourney-create-round' tournament.code %}"
                       hx-target="#tournament-content"
                       hx-swap="outerHTML">
                     {% csrf_token %}
@@ -102,7 +102,7 @@
             <div>
                 <div class="text-small text-muted">Advance tournament to {{ next_stage.name }}</div>
                 <form method="post"
-                      action="{% url 'tourney-prepare-stage-seeding' tournament.id %}"
+                      action="{% url 'tourney-prepare-stage-seeding' tournament.code %}"
                       style="display:inline;">
                     {% csrf_token %}
                     <button type="submit"
@@ -121,7 +121,7 @@
                       style="display:inline;"
                       hx-target="#tournament-content"
                       hx-swap="outerHTML"
-                      hx-post="{% url 'tourney-delete-latest-round' tournament.id %}"
+                      hx-post="{% url 'tourney-delete-latest-round' tournament.code %}"
                       hx-confirm="Are you sure you want to delete the latest round? This action cannot be undone and will remove all matches in the round.">
                     {% csrf_token %}
                     <button type="submit"

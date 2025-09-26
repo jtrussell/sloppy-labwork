@@ -4,14 +4,29 @@ from django.db import models
 from django.db.models import UniqueConstraint
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Q
+from django.utils.crypto import get_random_string
 import random
 from abc import ABC, abstractmethod
 from .pairing_strategies import get_pairing_strategy
 
 
+def generate_tournament_code():
+    """Generate a unique 6-character code for tournament URLs."""
+    length = 6
+    while True:
+        code = get_random_string(length, allowed_chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+        if not Tournament.objects.filter(code=code).exists():
+            return code
+
+
 class Tournament(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(default=None, null=True, blank=True)
+    code = models.CharField(
+        max_length=6,
+        unique=True,
+        help_text="Unique code used in URLs for security"
+    )
     owner = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='owned_tournaments')
     is_accepting_registrations = models.BooleanField(default=True)
@@ -24,6 +39,12 @@ class Tournament(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        # Generate code if it doesn't exist
+        if not self.code:
+            self.code = generate_tournament_code()
+        super().save(*args, **kwargs)
 
     def is_user_admin(self, user):
         if user == self.owner:

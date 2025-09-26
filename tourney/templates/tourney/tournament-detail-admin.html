@@ -7,14 +7,14 @@
         <p class="text-muted">Manage tournament settings and configuration.</p>
 
         <div class="hstack gap-1">
-            <a href="{% url 'tourney-edit-tournament' tournament.id %}" class="button button-primary">
+            <a href="{% url 'tourney-edit-tournament' tournament.code %}" class="button button-primary">
                 Edit Tournament
             </a>
 
             <form style="display: inline-block">
                 <button type="button"
                         class="button button-danger sm-w100"
-                        hx-post="{% url 'tourney-delete-tournament' tournament.id %}"
+                        hx-post="{% url 'tourney-delete-tournament' tournament.code %}"
                         hx-confirm="Are you sure you want to delete the tournament '{{ tournament.name }}'? This action cannot be undone and will permanently remove all tournament data including matches and results."
                         hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
                     Delete Tournament
