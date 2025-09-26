@@ -107,8 +107,28 @@
     </div>
 
     <div class="match-actions">
-        {% if not match.is_bye %}
-            {% comment %} Check if user can edit this match {% endcomment %}
+        {% comment %} Check if user can edit this match {% endcomment %}
+        {% if match.is_bye %}
+            {% comment %} For bye matches, only admins can delete them {% endcomment %}
+            {% if is_admin %}
+                <button class="match-edit-btn"
+                    data-match-id="{{ match.id }}"
+                    data-update-action="{% url 'tourney-report-result' tournament.id match.id %}"
+                    data-delete-action="{% url 'tourney-delete-match' tournament.id match.id %}"
+                    data-match-player-one="{{ match.player_one.player.get_display_name }}"
+                    data-match-player-one-id="{{ match.player_one.id }}"
+                    data-match-player-two=""
+                    data-match-player-two-id=""
+                    data-match-has-result="true"
+                    data-match-winner-id="{{ match.player_one.id }}"
+                    data-match-is-bye="true"
+                    data-stage-allow-ties="{{ match.round.stage.are_ties_allowed|yesno:'true,false' }}"
+                    data-stage-score-reporting="{{ match.round.stage.report_full_scores }}"
+                    onclick="openMatchModal(this)">
+                </button>
+            {% endif %}
+        {% else %}
+            {% comment %} For regular matches, check normal edit permissions {% endcomment %}
             {% if is_admin or match.player_one.player.user == user or match.player_two.player.user == user %}
                 {% if is_admin or not tournament.is_closed %}
                     <button class="match-edit-btn"
@@ -133,7 +153,6 @@
                     </button>
                 {% endif %}
             {% endif %}
-
         {% endif %}
     </div>
 </div>

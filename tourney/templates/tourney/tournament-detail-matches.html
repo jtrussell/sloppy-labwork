@@ -131,22 +131,27 @@
                     </button>
                 </form>
             </div>
+
+            {% comment %} Add Match - create a match between two players or a bye match {% endcomment %}
+            <div>
+                <div class="text-small text-muted">Create a match between unmatched players or award a bye</div>
+                <button type="button"
+                        class="button sm-w100"
+                        {% if unmatched_players.count < 1 %}disabled{% endif %}
+                        onclick="openAddMatchModal()">
+                    Add Match
+                </button>
+            </div>
         </div>
     {% endif %}
 </section>
 {% endif %}
 
-{% if user.is_authenticated and can_add_match and selected_round and unmatched_players.count >= 2 %}
+{% if user.is_authenticated and can_add_match %}
 <section>
     <h2>Quick Actions</h2>
     <div class="hstack gap-1">
-        {% if is_admin %}
-        <button
-            type="button"
-            class="button button-primary sm-w100"
-            onclick="openAddMatchModal()"
-        >Add Match</button>
-        {% endif %}
+        {% comment %} Report Match Result button - show for self-scheduled tournaments {% endcomment %}
         {% if not tournament.is_closed %}
         <button
             type="button"

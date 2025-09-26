@@ -302,7 +302,8 @@ class AddMatchForm(forms.Form):
     player_two = forms.ChoiceField(
         choices=[],
         widget=forms.Select(attrs={'class': 'form-select'}),
-        label='Player Two'
+        label='Player Two',
+        required=False
     )
 
     def __init__(self, *args, **kwargs):
@@ -315,12 +316,19 @@ class AddMatchForm(forms.Form):
                 (stage_player.id, stage_player.player.get_display_name()))
 
         self.fields['player_one'].choices = choices
-        self.fields['player_two'].choices = choices
+        player_two_choices = [('', 'Select a player or leave empty for bye...')]
+        for stage_player in available_players:
+            player_two_choices.append(
+                (stage_player.id, stage_player.player.get_display_name()))
+        self.fields['player_two'].choices = player_two_choices
 
     def clean(self):
         cleaned_data = super().clean()
         player_one_id = cleaned_data.get('player_one')
         player_two_id = cleaned_data.get('player_two')
+
+        if not player_one_id:
+            raise forms.ValidationError('Player One is required.')
 
         if player_one_id and player_two_id:
             if player_one_id == player_two_id:

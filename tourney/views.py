@@ -1181,10 +1181,6 @@ def delete_match(request, tournament_id, match_id):
     match = get_object_or_404(
         Match, id=match_id, round__stage__tournament=tournament)
 
-    if match.is_bye():
-        messages.error(request, 'Cannot delete bye matches.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
-
     player_one_name = match.player_one.player.get_display_name(
     ) if match.player_one else "Unknown"
     player_two_name = match.player_two.player.get_display_name(
@@ -1246,9 +1242,9 @@ def add_match(request, tournament_id):
                 request, 'You are not available to create a match in this round.')
             return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
 
-    if available_players.count() < 2:
+    if available_players.count() < 1:
         messages.error(
-            request, 'Not enough unmatched players to create a new match.')
+            request, 'No unmatched players available to create a match.')
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
 
     form = AddMatchForm(request.POST, available_players=available_players)
@@ -1256,12 +1252,23 @@ def add_match(request, tournament_id):
         player_one, player_two = form.get_selected_players()
 
         # For non-admin players, ensure they are one of the participants
+        # and they cannot create bye matches for themselves
         if not is_admin:
             user_stage_player = current_stage.stage_players.filter(
                 player__user=request.user).first()
-            if user_stage_player not in [player_one, player_two]:
+
+            # Check if user is one of the participants
+            participants = [p for p in [
+                player_one, player_two] if p is not None]
+            if user_stage_player not in participants:
                 messages.error(
                     request, 'You can only create matches where you are a participant.')
+                return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
+
+            # Prevent non-admin players from creating bye matches for themselves
+            if player_two is None and player_one == user_stage_player:
+                messages.error(
+                    request, 'You cannot award yourself a bye. Only admins can create bye matches.')
                 return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_id': tournament.id}))
 
         with transaction.atomic():
@@ -1271,15 +1278,35 @@ def add_match(request, tournament_id):
                 player_two=player_two
             )
 
+            # For bye matches, automatically create a match result awarding the win to player_one
+            if player_two is None:
+                MatchResult.objects.create(
+                    match=match,
+                    winner=player_one,
+                    player_one_score=None,
+                    player_two_score=None
+                )
+
+            # Create appropriate log message based on match type
+            if player_two:
+                match_description = f'Added match: {player_one.player.get_display_name()} vs {player_two.player.get_display_name()} in {current_round.stage.name} Round {current_round.order}'
+            else:
+                match_description = f'Added bye match: {player_one.player.get_display_name()} received a bye in {current_round.stage.name} Round {current_round.order}'
+
             TournamentActionLog.objects.create(
                 tournament=tournament,
                 user=request.user,
                 action_type=TournamentActionLog.ActionType.CREATE_ROUND,
-                description=f'Added match: {player_one.player.get_display_name()} vs {player_two.player.get_display_name()} in {current_round.stage.name} Round {current_round.order}'
+                description=match_description
             )
 
-        messages.success(
-            request, f'Match between {player_one.player.get_display_name()} and {player_two.player.get_display_name()} created successfully!')
+        # Create appropriate success message based on match type
+        if player_two:
+            messages.success(
+                request, f'Match between {player_one.player.get_display_name()} and {player_two.player.get_display_name()} created successfully!')
+        else:
+            messages.success(
+                request, f'Bye match for {player_one.player.get_display_name()} created successfully!')
     else:
         if form.errors:
             for field, errors in form.errors.items():

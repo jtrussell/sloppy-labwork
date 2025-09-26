@@ -114,8 +114,8 @@
 
                 <div>
                     <label for="addMatchPlayerTwo">Player Two:</label>
-                    <select id="addMatchPlayerTwo" name="player_two" required>
-                        <option value="">Select Player Two</option>
+                    <select id="addMatchPlayerTwo" name="player_two">
+                        <option value="">Select Player Two (Bye)</option>
                     </select>
                 </div>
 
@@ -192,17 +192,23 @@
         const playerTwoId = button.dataset.matchPlayerTwoId;
         const hasResult = button.dataset.matchHasResult === 'true';
         const currentWinnerId = button.dataset.matchWinnerId;
+        const isBye = button.dataset.matchIsBye === 'true';
 
         // Store match info for delete function
         window.currentDeleteAction = deleteAction;
         window.currentMatchPlayerOne = playerOne;
         window.currentMatchPlayerTwo = playerTwo;
 
-        form.setAttribute('hx-post', updateAction);
-        htmx.process(form);
-
-        // Set modal title
-        title.textContent = hasResult ? 'Update Match Result' : 'Report Match Result';
+        // For bye matches, we don't want to allow updating results, only deletion
+        if (isBye) {
+            // For bye matches, disable the form submission since results can't be changed
+            form.setAttribute('onsubmit', 'return false;');
+            title.textContent = 'Bye Match';
+        } else {
+            form.setAttribute('hx-post', updateAction);
+            htmx.process(form);
+            title.textContent = hasResult ? 'Update Match Result' : 'Report Match Result';
+        }
 
         // Show/hide delete button for admins only
         {% if is_admin %}
@@ -211,40 +217,56 @@
         }
         {% endif %}
 
-        // Clear and populate winner select
-        winnerSelect.innerHTML = '<option value="">Select Winner</option>';
+        // Hide/show form elements based on whether this is a bye match
+        const winnerDiv = winnerSelect.closest('div');
+        const scoreInputs = document.getElementById('scoreInputs');
+        const submitButton = form.querySelector('button[type="submit"]');
 
-
-        if (playerOne) {
-            const option1 = new Option(playerOne, playerOneId);
-            if (currentWinnerId === playerOneId) option1.selected = true;
-            winnerSelect.appendChild(option1);
-        }
-
-        if (playerTwo) {
-            const option2 = new Option(playerTwo, playerTwoId);
-            if (currentWinnerId === playerTwoId) option2.selected = true;
-            winnerSelect.appendChild(option2);
-        }
-
-        // Add tie option only if stage allows ties
-        const stageAllowTies = button.dataset.stageAllowTies === 'true';
-        if (stageAllowTies) {
-            const tieOption = new Option('Tie', '');
-            if (!currentWinnerId && hasResult) tieOption.selected = true;
-            winnerSelect.appendChild(tieOption);
-        }
-
-        // Handle score inputs based on stage settings
-        const stageScoreReporting = parseInt(button.dataset.stageScoreReporting);
-        const scoreInputsSection = document.getElementById('scoreInputs');
-
-        if (stageScoreReporting === 0) {
-            // Score reporting disabled - hide score section
-            if (scoreInputsSection) scoreInputsSection.style.display = 'none';
+        if (isBye) {
+            // For bye matches, hide winner selection and score inputs
+            if (winnerDiv) winnerDiv.style.display = 'none';
+            if (scoreInputs) scoreInputs.style.display = 'none';
+            if (submitButton) submitButton.style.display = 'none';
         } else {
-            // Score reporting enabled (optional or required) - show score section
-            if (scoreInputsSection) scoreInputsSection.style.display = 'block';
+            // For regular matches, show form elements and populate normally
+            if (winnerDiv) winnerDiv.style.display = 'block';
+            if (submitButton) submitButton.style.display = 'inline-block';
+
+            // Clear and populate winner select
+            winnerSelect.innerHTML = '<option value="">Select Winner</option>';
+
+            if (playerOne) {
+                const option1 = new Option(playerOne, playerOneId);
+                if (currentWinnerId === playerOneId) option1.selected = true;
+                winnerSelect.appendChild(option1);
+            }
+
+            if (playerTwo) {
+                const option2 = new Option(playerTwo, playerTwoId);
+                if (currentWinnerId === playerTwoId) option2.selected = true;
+                winnerSelect.appendChild(option2);
+            }
+
+            // Add tie option only if stage allows ties
+            const stageAllowTies = button.dataset.stageAllowTies === 'true';
+            if (stageAllowTies) {
+                const tieOption = new Option('Tie', '');
+                if (!currentWinnerId && hasResult) tieOption.selected = true;
+                winnerSelect.appendChild(tieOption);
+            }
+        }
+
+        // Handle score inputs based on stage settings (but not for bye matches)
+        if (!isBye) {
+            const stageScoreReporting = parseInt(button.dataset.stageScoreReporting);
+            const scoreInputsSection = document.getElementById('scoreInputs');
+
+            if (stageScoreReporting === 0) {
+                // Score reporting disabled - hide score section
+                if (scoreInputsSection) scoreInputsSection.style.display = 'none';
+            } else {
+                // Score reporting enabled (optional or required) - show score section
+                if (scoreInputsSection) scoreInputsSection.style.display = 'block';
 
             const playerOneScoreLabel = document.getElementById('playerOneScoreLabel');
             const playerTwoScoreLabel = document.getElementById('playerTwoScoreLabel');
@@ -272,12 +294,13 @@
                 if (playerTwoScoreInput) playerTwoScoreInput.required = false;
             }
 
-            // Populate existing scores if available
-            const playerOneScore = button.dataset.matchPlayerOneScore || '';
-            const playerTwoScore = button.dataset.matchPlayerTwoScore || '';
+                // Populate existing scores if available
+                const playerOneScore = button.dataset.matchPlayerOneScore || '';
+                const playerTwoScore = button.dataset.matchPlayerTwoScore || '';
 
-            if (playerOneScoreInput) playerOneScoreInput.value = playerOneScore;
-            if (playerTwoScoreInput) playerTwoScoreInput.value = playerTwoScore;
+                if (playerOneScoreInput) playerOneScoreInput.value = playerOneScore;
+                if (playerTwoScoreInput) playerTwoScoreInput.value = playerTwoScore;
+            }
         }
 
         // Show modal
@@ -344,7 +367,7 @@
 
         // Clear and populate player selects with unmatched players
         playerOneSelect.innerHTML = '<option value="">Select Player One</option>';
-        playerTwoSelect.innerHTML = '<option value="">Select Player Two</option>';
+        playerTwoSelect.innerHTML = '<option value="">Select Player Two (Bye)</option>';
 
         {% if unmatched_players %}
         const isAdmin = {{ is_admin|yesno:"true,false" }};
