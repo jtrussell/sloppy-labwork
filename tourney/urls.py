@@ -26,6 +26,7 @@ urlpatterns = [
     path('<str:tournament_code>/stage/advance/', views.start_next_stage, name='tourney-start-next-stage'),
     path('<str:tournament_code>/match/<int:match_id>/report/', views.report_match_result, name='tourney-report-result'),
     path('<str:tournament_code>/match/<int:match_id>/delete/', views.delete_match, name='tourney-delete-match'),
+    path('<str:tournament_code>/match/<int:match_id>/reset/', views.reset_match, name='tourney-reset-match'),
     path('<str:tournament_code>/match/add/', views.add_match, name='tourney-add-match'),
     path('<str:tournament_code>/player/match/add-result/', views.player_add_match_result, name='tourney-player-add-match-result'),
 ]

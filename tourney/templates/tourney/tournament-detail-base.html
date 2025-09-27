@@ -87,6 +87,7 @@
                 <div style="margin-top: 2rem">
                     <h4>Danger Zone</h4>
                     <div style="display: flex; gap: 1rem; justify-content: center;">
+                        <button type="button" id="resetMatchBtn" class="button button-secondary" onclick="resetMatch()" style="display: none;">Reset Match</button>
                         <button type="button" id="deleteMatchBtn" class="button button-danger" onclick="deleteMatch()" style="display: none;">Delete Match</button>
                     </div>
                 </div>
@@ -186,6 +187,7 @@
         const matchId = button.dataset.matchId;
         const updateAction = button.dataset.updateAction;
         const deleteAction = button.dataset.deleteAction;
+        const resetAction = button.dataset.resetAction;
         const playerOne = button.dataset.matchPlayerOne;
         const playerOneId = button.dataset.matchPlayerOneId;
         const playerTwo = button.dataset.matchPlayerTwo;
@@ -194,8 +196,9 @@
         const currentWinnerId = button.dataset.matchWinnerId;
         const isBye = button.dataset.matchIsBye === 'true';
 
-        // Store match info for delete function
+        // Store match info for delete and reset functions
         window.currentDeleteAction = deleteAction;
+        window.currentResetAction = resetAction;
         window.currentMatchPlayerOne = playerOne;
         window.currentMatchPlayerTwo = playerTwo;
 
@@ -210,10 +213,21 @@
             title.textContent = hasResult ? 'Update Match Result' : 'Report Match Result';
         }
 
-        // Show/hide delete button for admins only
+        // Show/hide admin buttons for admins only
         {% if is_admin %}
+        const resetBtn = document.getElementById('resetMatchBtn');
+
         if (deleteBtn) {
             deleteBtn.style.display = 'inline-block';
+        }
+
+        // Show reset button only if match has a result and it's not a bye match
+        if (resetBtn) {
+            if (hasResult && !isBye) {
+                resetBtn.style.display = 'inline-block';
+            } else {
+                resetBtn.style.display = 'none';
+            }
         }
         {% endif %}
 
@@ -314,6 +328,23 @@
     }
 
     {% if is_admin %}
+    function resetMatch() {
+        if (!window.currentResetAction) return;
+
+        const resetBtn = document.getElementById('resetMatchBtn');
+        const playerNames = window.currentMatchPlayerTwo
+            ? `${window.currentMatchPlayerOne} and ${window.currentMatchPlayerTwo}`
+            : window.currentMatchPlayerOne;
+
+        // Set up HTMX attributes on the reset button
+        resetBtn.setAttribute('hx-post', window.currentResetAction);
+        resetBtn.setAttribute('hx-confirm', `Are you sure you want to reset this match between ${playerNames}?`);
+
+        // Process the button with HTMX and trigger the click
+        htmx.process(resetBtn);
+        resetBtn.click();
+    }
+
     function deleteMatch() {
         if (!window.currentDeleteAction) return;
 

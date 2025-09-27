@@ -1205,6 +1205,40 @@ def delete_match(request, tournament_code, match_id):
 
 @login_required
 @require_POST
+@is_tournament_admin
+def reset_match(request, tournament_code, match_id):
+    tournament = get_object_or_404(Tournament, code=tournament_code)
+    match = get_object_or_404(
+        Match, id=match_id, round__stage__tournament=tournament)
+
+    if not match.has_result():
+        messages.error(request, 'This match has no result to reset.')
+        return redirect_to(request, reverse('tourney-detail-standings', kwargs={'tournament_code': tournament.code}))
+
+    player_one_name = match.player_one.player.get_display_name(
+    ) if match.player_one else "Unknown"
+    player_two_name = match.player_two.player.get_display_name(
+    ) if match.player_two else "Unknown"
+    round_info = f"Round {match.round.order} in {match.round.stage.name}"
+
+    with transaction.atomic():
+        match.result.delete()
+
+        TournamentActionLog.objects.create(
+            tournament=tournament,
+            user=request.user,
+            action_type=TournamentActionLog.ActionType.UPDATE_RESULT,
+            description=f'Reset match result: {player_one_name} vs {player_two_name} from {round_info}'
+        )
+
+    messages.success(
+        request, f'Match result between {player_one_name} and {player_two_name} has been reset successfully!')
+
+    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+
+
+@login_required
+@require_POST
 @can_add_match
 def add_match(request, tournament_code):
     tournament = get_object_or_404(Tournament, code=tournament_code)
