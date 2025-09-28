@@ -147,25 +147,20 @@
 </section>
 {% endif %}
 
-{% if user.is_authenticated and can_add_match %}
+{% if can_report_result %}
 <section>
     <h2>Quick Actions</h2>
     <div class="hstack gap-1">
-        {% comment %} Report Match Result button - show for self-scheduled tournaments {% endcomment %}
-        {% if not tournament.is_closed %}
         <button
             type="button"
             class="button button-primary sm-w100"
+        {% if not tournament.is_closed %}
             onclick="openPlayerMatchReportModal()"
-        >Report Match Result</button>
         {% else %}
-        <button
-            type="button"
-            class="button button-muted sm-w100"
             disabled
             title="Tournament is closed - match reporting is disabled"
-        >Report Match Result</button>
         {% endif %}
+        >Report Match Result</button>
     </div>
 </section>
 {% endif %}

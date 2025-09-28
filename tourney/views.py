@@ -357,13 +357,15 @@ def tournament_detail_matches(request, tournament_code):
                     matched_player_ids.add(match.player_one.id)
                 if match.player_two:
                     matched_player_ids.add(match.player_two.id)
-            unmatched_players = stage_players.exclude(id__in=matched_player_ids)
+            unmatched_players = stage_players.exclude(
+                id__in=matched_player_ids)
         else:
             # No rounds yet, all players are available
             unmatched_players = stage_players
 
     # Check if current user can add matches
     can_add_match = False
+    can_report_result = False
     show_unmatched_players = True
     if current_stage:
         pairing_strategy = current_stage.get_pairing_strategy()
@@ -374,17 +376,20 @@ def tournament_detail_matches(request, tournament_code):
             user_is_admin = tournament.is_user_admin(request.user)
             user_is_player = tournament.players.filter(
                 user=request.user).exists()
-            can_add_match = user_is_admin or (
-                is_self_scheduled and user_is_player)
+            can_report_result = is_self_scheduled and user_is_player
+            can_add_match = user_is_admin or can_report_result
 
         show_unmatched_players = not (
             is_elimination_style or is_self_scheduled)
+
+    print('can_add_match', can_add_match)
 
     context.update({
         'grouped_matches': grouped_matches,
         'latest_round': latest_round,
         'unmatched_players': unmatched_players,
         'can_add_match': can_add_match,
+        'can_report_result': can_report_result,
         'show_unmatched_players': show_unmatched_players,
     })
 
@@ -1294,7 +1299,7 @@ def add_match(request, tournament_code):
 
     if available_players.count() < 1:
         error_message = ('No active players available to create a match.' if pairing_strategy.is_self_scheduled()
-                        else 'No unmatched players available to create a match.')
+                         else 'No unmatched players available to create a match.')
         messages.error(request, error_message)
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
