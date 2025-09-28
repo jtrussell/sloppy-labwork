@@ -1,6 +1,7 @@
 import logging
 from django.test import TestCase
 from django.contrib.auth.models import User
+from django.db import models
 from .models import (
     Tournament, Player, Stage, StagePlayer, Round, Match, MatchResult,
     StandingCalculator, get_pairing_strategy
@@ -1242,3 +1243,196 @@ class SwissTournamentTestCase(TestCase):
 
         matches = Match.objects.filter(round=round1)
         self.assertEqual(matches.count(), 3)  # 2 regular matches + 1 bye
+
+
+class RoundRobinScheduledTestCase(TestCase):
+    """Test Round Robin Scheduled pairing strategy."""
+
+    def setUp(self):
+        """Set up common test data."""
+        self.owner = User.objects.create_user('tournament_owner', 'owner@test.com', 'password')
+
+    def _create_tournament_with_players(self, num_players, tournament_name="Round Robin Test"):
+        """Helper method to create a tournament with the specified number of players."""
+        tournament = Tournament.objects.create(
+            name=tournament_name,
+            owner=self.owner,
+            is_accepting_registrations=True
+        )
+
+        stage = Stage.objects.create(
+            tournament=tournament,
+            name='Main Stage',
+            order=1,
+            pairing_strategy='round_robin_scheduled'
+        )
+
+        users = []
+        players = []
+        stage_players = []
+
+        for i in range(num_players):
+            user = User.objects.create_user(f'player{i+1}', f'player{i+1}@test.com', 'password')
+            player = Player.objects.create(user=user, tournament=tournament)
+            stage_player = StagePlayer.objects.create(player=player, stage=stage, seed=i+1)
+
+            users.append(user)
+            players.append(player)
+            stage_players.append(stage_player)
+
+        return tournament, stage, players, stage_players
+
+    def test_round_robin_4_players(self):
+        """Test Round Robin Scheduled with 4 players (even number)."""
+        tournament, stage, players, stage_players = self._create_tournament_with_players(4, "4 Player Round Robin")
+
+        strategy = get_pairing_strategy('round_robin_scheduled')
+
+        # Create and start the first round - this should generate all rounds and matches
+        round1 = Round.objects.create(stage=stage, order=1)
+        strategy.make_pairings_for_round(round1)
+
+        # Verify expected number of rounds created (n-1 where n=4, so 3 rounds)
+        rounds = Round.objects.filter(stage=stage).order_by('order')
+        self.assertEqual(rounds.count(), 3, "Should create 3 rounds for 4 players")
+
+        # Verify round orders
+        for i, round_obj in enumerate(rounds, 1):
+            self.assertEqual(round_obj.order, i, f"Round {i} should have order {i}")
+
+        # Verify total number of matches (each player plays every other player once)
+        # For 4 players: C(4,2) = 6 matches total
+        total_matches = Match.objects.filter(round__stage=stage)
+        self.assertEqual(total_matches.count(), 6, "Should create 6 total matches for 4 players")
+
+        # Verify matches per round (4 players = 2 matches per round)
+        for round_obj in rounds:
+            matches_in_round = Match.objects.filter(round=round_obj)
+            self.assertEqual(matches_in_round.count(), 2, f"Round {round_obj.order} should have 2 matches")
+
+        # Verify no repeat pairings
+        pairings = set()
+        for match in total_matches:
+            if match.player_one and match.player_two:
+                pair = tuple(sorted([match.player_one.id, match.player_two.id]))
+                self.assertNotIn(pair, pairings, f"Duplicate pairing found: {pair}")
+                pairings.add(pair)
+
+        # Verify each player plays exactly n-1 matches (3 matches each)
+        for stage_player in stage_players:
+            player_matches = total_matches.filter(
+                models.Q(player_one=stage_player) | models.Q(player_two=stage_player)
+            )
+            self.assertEqual(player_matches.count(), 3,
+                f"Player {stage_player.player.get_display_name()} should play exactly 3 matches")
+
+        # Verify no bye matches (even number of players)
+        bye_matches = total_matches.filter(player_two__isnull=True)
+        self.assertEqual(bye_matches.count(), 0, "Should be no bye matches with even number of players")
+
+    def test_round_robin_7_players(self):
+        """Test Round Robin Scheduled with 7 players (odd number)."""
+        tournament, stage, players, stage_players = self._create_tournament_with_players(7, "7 Player Round Robin")
+
+        strategy = get_pairing_strategy('round_robin_scheduled')
+
+        # Create and start the first round - this should generate all rounds and matches
+        round1 = Round.objects.create(stage=stage, order=1)
+        strategy.make_pairings_for_round(round1)
+
+        # Verify expected number of rounds created (for odd n, we need n rounds due to bye rotation)
+        rounds = Round.objects.filter(stage=stage).order_by('order')
+        self.assertEqual(rounds.count(), 7, "Should create 7 rounds for 7 players")
+
+        # Verify round orders
+        for i, round_obj in enumerate(rounds, 1):
+            self.assertEqual(round_obj.order, i, f"Round {i} should have order {i}")
+
+        # Verify total number of matches
+        # For 7 players: C(7,2) = 21 regular matches + 7 bye matches = 28 total matches
+        total_matches = Match.objects.filter(round__stage=stage)
+        regular_matches = total_matches.filter(player_two__isnull=False)
+        bye_matches = total_matches.filter(player_two__isnull=True)
+
+        self.assertEqual(regular_matches.count(), 21, "Should create 21 regular matches for 7 players")
+        self.assertEqual(bye_matches.count(), 7, "Should create 7 bye matches for 7 players")
+        self.assertEqual(total_matches.count(), 28, "Should create 28 total matches for 7 players")
+
+        # Verify matches per round (7 players = 3 regular matches + 1 bye per round)
+        for round_obj in rounds:
+            matches_in_round = Match.objects.filter(round=round_obj)
+            regular_in_round = matches_in_round.filter(player_two__isnull=False)
+            bye_in_round = matches_in_round.filter(player_two__isnull=True)
+
+            self.assertEqual(matches_in_round.count(), 4, f"Round {round_obj.order} should have 4 total matches")
+            self.assertEqual(regular_in_round.count(), 3, f"Round {round_obj.order} should have 3 regular matches")
+            self.assertEqual(bye_in_round.count(), 1, f"Round {round_obj.order} should have 1 bye match")
+
+        # Verify no repeat pairings in regular matches
+        pairings = set()
+        for match in regular_matches:
+            if match.player_one and match.player_two:
+                pair = tuple(sorted([match.player_one.id, match.player_two.id]))
+                self.assertNotIn(pair, pairings, f"Duplicate pairing found: {pair}")
+                pairings.add(pair)
+
+        # Verify each player plays exactly n-1 regular matches (6 matches each)
+        for stage_player in stage_players:
+            player_regular_matches = regular_matches.filter(
+                models.Q(player_one=stage_player) | models.Q(player_two=stage_player)
+            )
+            self.assertEqual(player_regular_matches.count(), 6,
+                f"Player {stage_player.player.get_display_name()} should play exactly 6 regular matches")
+
+        # Verify each player gets exactly one bye
+        bye_distribution = {}
+        for match in bye_matches:
+            player_id = match.player_one.id
+            bye_distribution[player_id] = bye_distribution.get(player_id, 0) + 1
+
+        for stage_player in stage_players:
+            bye_count = bye_distribution.get(stage_player.id, 0)
+            self.assertEqual(bye_count, 1,
+                f"Player {stage_player.player.get_display_name()} should get exactly 1 bye, got {bye_count}")
+
+    def test_round_robin_strategy_properties(self):
+        """Test that the Round Robin Scheduled strategy has correct properties."""
+        strategy = get_pairing_strategy('round_robin_scheduled')
+
+        self.assertEqual(strategy.name, 'round_robin_scheduled')
+        self.assertEqual(strategy.display_name, 'Round Robin')
+        self.assertFalse(strategy.is_self_scheduled(), "Round Robin Scheduled should not be self-scheduled")
+        self.assertFalse(strategy.is_elimination_style(), "Round Robin Scheduled should not be elimination style")
+
+        # Test can_create_new_round returns False (all rounds created at start)
+        tournament, stage, players, stage_players = self._create_tournament_with_players(4)
+        self.assertFalse(strategy.can_create_new_round(stage),
+            "Round Robin Scheduled should not allow creating additional rounds")
+
+    def test_round_robin_no_additional_rounds_created(self):
+        """Test that calling make_pairings_for_round on non-first rounds doesn't create additional rounds."""
+        tournament, stage, players, stage_players = self._create_tournament_with_players(4)
+
+        strategy = get_pairing_strategy('round_robin_scheduled')
+
+        # Create and start the first round
+        round1 = Round.objects.create(stage=stage, order=1)
+        strategy.make_pairings_for_round(round1)
+
+        initial_rounds_count = Round.objects.filter(stage=stage).count()
+        initial_matches_count = Match.objects.filter(round__stage=stage).count()
+
+        # Try to call the strategy on an existing round (should not create more matches)
+        # Find the second round that was already created
+        round2 = Round.objects.filter(stage=stage, order=2).first()
+        if round2:
+            strategy.make_pairings_for_round(round2)
+
+        # Verify no additional rounds or matches were created
+        final_rounds_count = Round.objects.filter(stage=stage).count()
+        final_matches_count = Match.objects.filter(round__stage=stage).count()
+
+        self.assertEqual(final_rounds_count, initial_rounds_count,
+            "No additional rounds should be created on subsequent calls")
+        self.assertEqual(final_matches_count, initial_matches_count,
+            "No additional matches should be created on subsequent calls")
