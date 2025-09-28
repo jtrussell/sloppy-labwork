@@ -340,17 +340,27 @@ def tournament_detail_matches(request, tournament_code):
                 'rounds': stage_rounds
             })
 
-    # Calculate unmatched players for the current stage's latest round
-    if latest_round and current_stage:
+    # Calculate available players for the current stage
+    if current_stage:
         stage_players = current_stage.stage_players.filter(
             player__status=Player.PlayerStatus.ACTIVE)
-        matched_player_ids = set()
-        for match in latest_round.matches.all():
-            if match.player_one:
-                matched_player_ids.add(match.player_one.id)
-            if match.player_two:
-                matched_player_ids.add(match.player_two.id)
-        unmatched_players = stage_players.exclude(id__in=matched_player_ids)
+
+        # For self-scheduled stages, show all active players
+        # For other stages, only show unmatched players from the latest round
+        pairing_strategy = current_stage.get_pairing_strategy()
+        if pairing_strategy.is_self_scheduled():
+            unmatched_players = stage_players
+        elif latest_round:
+            matched_player_ids = set()
+            for match in latest_round.matches.all():
+                if match.player_one:
+                    matched_player_ids.add(match.player_one.id)
+                if match.player_two:
+                    matched_player_ids.add(match.player_two.id)
+            unmatched_players = stage_players.exclude(id__in=matched_player_ids)
+        else:
+            # No rounds yet, all players are available
+            unmatched_players = stage_players
 
     # Check if current user can add matches
     can_add_match = False
@@ -1254,17 +1264,23 @@ def add_match(request, tournament_code):
             request, 'No active round found. Please create a round first.')
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
-    # Get unmatched players for this round
+    # Get available players for this round
     stage_players = current_stage.stage_players.filter(
         player__status=Player.PlayerStatus.ACTIVE)
-    matched_player_ids = set()
-    for match in current_round.matches.all():
-        if match.player_one:
-            matched_player_ids.add(match.player_one.id)
-        if match.player_two:
-            matched_player_ids.add(match.player_two.id)
 
-    available_players = stage_players.exclude(id__in=matched_player_ids)
+    # For self-scheduled stages, show all active players
+    # For other stages, only show unmatched players
+    pairing_strategy = current_stage.get_pairing_strategy()
+    if pairing_strategy.is_self_scheduled():
+        available_players = stage_players
+    else:
+        matched_player_ids = set()
+        for match in current_round.matches.all():
+            if match.player_one:
+                matched_player_ids.add(match.player_one.id)
+            if match.player_two:
+                matched_player_ids.add(match.player_two.id)
+        available_players = stage_players.exclude(id__in=matched_player_ids)
 
     # For non-admin players, restrict to only include themselves
     is_admin = tournament.is_user_admin(request.user)
@@ -1277,8 +1293,9 @@ def add_match(request, tournament_code):
             return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     if available_players.count() < 1:
-        messages.error(
-            request, 'No unmatched players available to create a match.')
+        error_message = ('No active players available to create a match.' if pairing_strategy.is_self_scheduled()
+                        else 'No unmatched players available to create a match.')
+        messages.error(request, error_message)
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     form = AddMatchForm(request.POST, available_players=available_players)
