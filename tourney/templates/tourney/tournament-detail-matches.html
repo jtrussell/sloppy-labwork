@@ -62,7 +62,6 @@
     {% if is_admin %}
         <h2>Tournament Control</h2>
         <div class="stack gap-2">
-            {% comment %} Start Current Stage - for tournaments that need initial seeding {% endcomment %}
             {% if current_stage %}
             <div>
                 <div class="text-small text-muted">Initialize {{ current_stage.name }} with player seeding if needed</div>
@@ -79,7 +78,6 @@
             </div>
             {% endif %}
 
-            {% comment %} Create New Round - continue current stage with another round {% endcomment %}
             <div>
                 <div class="text-small text-muted">Continue current stage with another round</div>
                 <form method="post"
@@ -97,7 +95,6 @@
                 </form>
             </div>
 
-            {% comment %} Start Next Stage - advance to playoffs or next tournament stage {% endcomment %}
             {% if next_stage %}
             <div>
                 <div class="text-small text-muted">Advance tournament to {{ next_stage.name }}</div>
@@ -114,7 +111,6 @@
             </div>
             {% endif %}
 
-            {% comment %} Delete Latest Round - remove the most recent round and its matches {% endcomment %}
             <div>
                 <div class="text-small text-muted">Remove the most recent round and all its matches</div>
                 <form method="post"
@@ -132,7 +128,6 @@
                 </form>
             </div>
 
-            {% comment %} Add Match - create a match between two players or a bye match {% endcomment %}
             <div>
                 <div class="text-small text-muted">Create a match between unmatched players or award a bye</div>
                 <button type="button"
@@ -141,6 +136,11 @@
                         onclick="openAddMatchModal()">
                     Add Match
                 </button>
+            </div>
+
+            <div>
+                <div class="text-small text-muted">Add new player, drop/undrop existing ones</div>
+                <a href="{% url 'tourney-manage-players' tournament.code %}" class="button sm-w100">Manage Players</a>
             </div>
         </div>
     {% endif %}

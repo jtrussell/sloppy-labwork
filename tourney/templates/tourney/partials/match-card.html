@@ -123,6 +123,7 @@
                     data-match-has-result="true"
                     data-match-winner-id="{{ match.player_one.id }}"
                     data-match-is-bye="true"
+                    data-is-admin="{{ is_admin|yesno:'true,false' }}"
                     data-stage-allow-ties="{{ match.round.stage.are_ties_allowed|yesno:'true,false' }}"
                     data-stage-score-reporting="{{ match.round.stage.report_full_scores }}"
                     onclick="openMatchModal(this)">
@@ -149,6 +150,7 @@
                         data-match-player-one-score="{% if match.result.player_one_score is not None %}{{ match.result.player_one_score }}{% endif %}"
                         data-match-player-two-score="{% if match.result.player_two_score is not None %}{{ match.result.player_two_score }}{% endif %}"
                         {% endif %}
+                        data-is-admin="{{ is_admin|yesno:'true,false' }}"
                         data-stage-allow-ties="{{ match.round.stage.are_ties_allowed|yesno:'true,false' }}"
                         data-stage-score-reporting="{{ match.round.stage.report_full_scores }}"
                         onclick="openMatchModal(this)">

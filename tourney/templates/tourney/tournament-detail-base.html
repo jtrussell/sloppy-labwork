@@ -1,6 +1,7 @@
 {% extends "tourney/_base.html" %}
 {% load partials %}
 {% load posts_extras %}
+{% load static %}
 
 {% block content %}
     <h1>{{ tournament.name }}</h1>
@@ -16,10 +17,7 @@
 
     <!-- Tab Navigation -->
      <section>
-        <ul
-            class="nav short"
-            style="justify-content: center;"
-        >
+        <ul class="nav short">
             <li class="nav__item">
                 <a href="{% url 'tourney-detail-matches' tournament.code %}"
                 class="nav__link {% if current_tab == 'matches' %}nav__link--active{% endif %}">
@@ -64,29 +62,29 @@
                     </select>
                 </div>
 
-                <div id="scoreInputs" style="margin-top: 1rem;">
-                    <h4 style="margin-bottom: 1rem; text-align: center; color: var(--color-text-muted);">Scores (Optional)</h4>
-                    <div style="display: flex; gap: 1rem;">
-                        <div style="flex: 1;">
+                <div id="scoreInputs">
+                    <h4>Scores (Optional)</h4>
+                    <div>
+                        <div>
                             <label for="playerOneScore" id="playerOneScoreLabel">Player One Score:</label>
-                            <input type="number" id="playerOneScore" name="player_one_score" min="0" step="1" style="width: 100%;">
+                            <input type="number" id="playerOneScore" name="player_one_score" min="0" step="1">
                         </div>
-                        <div style="flex: 1;">
+                        <div>
                             <label for="playerTwoScore" id="playerTwoScoreLabel">Player Two Score:</label>
-                            <input type="number" id="playerTwoScore" name="player_two_score" min="0" step="1" style="width: 100%;">
+                            <input type="number" id="playerTwoScore" name="player_two_score" min="0" step="1">
                         </div>
                     </div>
                 </div>
 
-                <div style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: center;">
+                <div class="modal-actions">
                     <button type="submit" class="button button-primary">Submit</button>
                     <button type="button" class="button" onclick="closeMatchModal()">Cancel</button>
                 </div>
 
                 {% if is_admin %}
-                <div style="margin-top: 2rem">
+                <div class="modal-danger-zone">
                     <h4>Danger Zone</h4>
-                    <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <div class="modal-danger-actions">
                         <button type="button" id="resetMatchBtn" class="button button-secondary" onclick="resetMatch()" style="display: none;">Reset Match</button>
                         <button type="button" id="deleteMatchBtn" class="button button-danger" onclick="deleteMatch()" style="display: none;">Delete Match</button>
                     </div>
@@ -97,7 +95,11 @@
     </div>
 
     <!-- Add Match Modal -->
-    <div id="addMatchModal" class="modal">
+    <div id="addMatchModal" class="modal"
+         data-add-match-url="{% url 'tourney-add-match' tournament.code %}"
+         data-unmatched-players='{{ unmatched_players_json|default:"[]"|safe }}'
+         data-is-admin="{{ is_admin|yesno:"true,false" }}"
+         data-current-user-id="{{ user.id|default:"null" }}">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="addMatchModalTitle">Add Match</h3>
@@ -120,7 +122,7 @@
                     </select>
                 </div>
 
-                <div style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: center;">
+                <div class="modal-actions">
                     <button type="submit" class="button button-primary">Create Match</button>
                     <button type="button" class="button" onclick="closeAddMatchModal()">Cancel</button>
                 </div>
@@ -129,7 +131,12 @@
     </div>
 
     <!-- Player Match Report Modal -->
-    <div id="playerMatchReportModal" class="modal">
+    <div id="playerMatchReportModal" class="modal"
+         data-report-url="{% url 'tourney-player-add-match-result' tournament.code %}"
+         data-unmatched-players='{{ unmatched_players_json|default:"[]"|safe }}'
+         data-current-user-id="{{ user.id|default:"null" }}"
+         data-stage-allow-ties="{{ selected_stage.are_ties_allowed|yesno:"true,false"|default:"false" }}"
+         data-stage-score-reporting="{{ selected_stage.report_full_scores|default:"0" }}">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="playerMatchReportModalTitle">Report Match Result</h3>
@@ -154,21 +161,21 @@
                     </select>
                 </div>
 
-                <div id="playerScoreInputs" style="margin-top: 1rem; display: none;">
-                    <h4 style="margin-bottom: 1rem; text-align: center; color: var(--color-text-muted);">Match Scores</h4>
-                    <div style="display: flex; gap: 1rem;">
-                        <div style="flex: 1;">
+                <div id="playerScoreInputs">
+                    <h4>Match Scores</h4>
+                    <div>
+                        <div>
                             <label for="playerMyScore">My Score:</label>
-                            <input type="number" id="playerMyScore" name="my_score" min="0" step="1" style="width: 100%;">
+                            <input type="number" id="playerMyScore" name="my_score" min="0" step="1">
                         </div>
-                        <div style="flex: 1;">
+                        <div>
                             <label for="playerTheirScore">Their Score:</label>
-                            <input type="number" id="playerTheirScore" name="their_score" min="0" step="1" style="width: 100%;">
+                            <input type="number" id="playerTheirScore" name="their_score" min="0" step="1">
                         </div>
                     </div>
                 </div>
 
-                <div style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: center;">
+                <div class="modal-actions">
                     <button type="submit" class="button button-primary">Submit Result</button>
                     <button type="button" class="button" onclick="closePlayerMatchReportModal()">Cancel</button>
                 </div>
@@ -176,374 +183,5 @@
         </div>
     </div>
 
-    <script>
-    function openMatchModal(button) {
-        const modal = document.getElementById('matchModal');
-        const form = document.getElementById('matchForm');
-        const title = document.getElementById('modalTitle');
-        const winnerSelect = document.getElementById('matchWinner');
-        const deleteBtn = document.getElementById('deleteMatchBtn');
-
-        const matchId = button.dataset.matchId;
-        const updateAction = button.dataset.updateAction;
-        const deleteAction = button.dataset.deleteAction;
-        const resetAction = button.dataset.resetAction;
-        const playerOne = button.dataset.matchPlayerOne;
-        const playerOneId = button.dataset.matchPlayerOneId;
-        const playerTwo = button.dataset.matchPlayerTwo;
-        const playerTwoId = button.dataset.matchPlayerTwoId;
-        const hasResult = button.dataset.matchHasResult === 'true';
-        const currentWinnerId = button.dataset.matchWinnerId;
-        const isBye = button.dataset.matchIsBye === 'true';
-
-        // Store match info for delete and reset functions
-        window.currentDeleteAction = deleteAction;
-        window.currentResetAction = resetAction;
-        window.currentMatchPlayerOne = playerOne;
-        window.currentMatchPlayerTwo = playerTwo;
-
-        // For bye matches, we don't want to allow updating results, only deletion
-        if (isBye) {
-            // For bye matches, disable the form submission since results can't be changed
-            form.setAttribute('onsubmit', 'return false;');
-            title.textContent = 'Bye Match';
-        } else {
-            form.setAttribute('hx-post', updateAction);
-            htmx.process(form);
-            title.textContent = hasResult ? 'Update Match Result' : 'Report Match Result';
-        }
-
-        // Show/hide admin buttons for admins only
-        {% if is_admin %}
-        const resetBtn = document.getElementById('resetMatchBtn');
-
-        if (deleteBtn) {
-            deleteBtn.style.display = 'inline-block';
-        }
-
-        // Show reset button only if match has a result and it's not a bye match
-        if (resetBtn) {
-            if (hasResult && !isBye) {
-                resetBtn.style.display = 'inline-block';
-            } else {
-                resetBtn.style.display = 'none';
-            }
-        }
-        {% endif %}
-
-        // Hide/show form elements based on whether this is a bye match
-        const winnerDiv = winnerSelect.closest('div');
-        const scoreInputs = document.getElementById('scoreInputs');
-        const submitButton = form.querySelector('button[type="submit"]');
-
-        if (isBye) {
-            // For bye matches, hide winner selection and score inputs
-            if (winnerDiv) winnerDiv.style.display = 'none';
-            if (scoreInputs) scoreInputs.style.display = 'none';
-            if (submitButton) submitButton.style.display = 'none';
-        } else {
-            // For regular matches, show form elements and populate normally
-            if (winnerDiv) winnerDiv.style.display = 'block';
-            if (submitButton) submitButton.style.display = 'inline-block';
-
-            // Clear and populate winner select
-            winnerSelect.innerHTML = '<option value="">Select Winner</option>';
-
-            if (playerOne) {
-                const option1 = new Option(playerOne, playerOneId);
-                if (currentWinnerId === playerOneId) option1.selected = true;
-                winnerSelect.appendChild(option1);
-            }
-
-            if (playerTwo) {
-                const option2 = new Option(playerTwo, playerTwoId);
-                if (currentWinnerId === playerTwoId) option2.selected = true;
-                winnerSelect.appendChild(option2);
-            }
-
-            // Add tie option only if stage allows ties
-            const stageAllowTies = button.dataset.stageAllowTies === 'true';
-            if (stageAllowTies) {
-                const tieOption = new Option('Tie', '');
-                if (!currentWinnerId && hasResult) tieOption.selected = true;
-                winnerSelect.appendChild(tieOption);
-            }
-        }
-
-        // Handle score inputs based on stage settings (but not for bye matches)
-        if (!isBye) {
-            const stageScoreReporting = parseInt(button.dataset.stageScoreReporting);
-            const scoreInputsSection = document.getElementById('scoreInputs');
-
-            if (stageScoreReporting === 0) {
-                // Score reporting disabled - hide score section
-                if (scoreInputsSection) scoreInputsSection.style.display = 'none';
-            } else {
-                // Score reporting enabled (optional or required) - show score section
-                if (scoreInputsSection) scoreInputsSection.style.display = 'block';
-
-            const playerOneScoreLabel = document.getElementById('playerOneScoreLabel');
-            const playerTwoScoreLabel = document.getElementById('playerTwoScoreLabel');
-            const playerOneScoreInput = document.getElementById('playerOneScore');
-            const playerTwoScoreInput = document.getElementById('playerTwoScore');
-
-            // Update labels with player names
-            if (playerOneScoreLabel && playerOne) {
-                playerOneScoreLabel.textContent = `${playerOne}`;
-            }
-            if (playerTwoScoreLabel && playerTwo) {
-                playerTwoScoreLabel.textContent = `${playerTwo}`;
-            } else if (playerTwoScoreLabel) {
-                playerTwoScoreLabel.textContent = 'Player Two';
-            }
-
-            // Set required attribute based on stage settings
-            if (stageScoreReporting === 2) {
-                // Required
-                if (playerOneScoreInput) playerOneScoreInput.required = true;
-                if (playerTwoScoreInput) playerTwoScoreInput.required = true;
-            } else {
-                // Optional
-                if (playerOneScoreInput) playerOneScoreInput.required = false;
-                if (playerTwoScoreInput) playerTwoScoreInput.required = false;
-            }
-
-                // Populate existing scores if available
-                const playerOneScore = button.dataset.matchPlayerOneScore || '';
-                const playerTwoScore = button.dataset.matchPlayerTwoScore || '';
-
-                if (playerOneScoreInput) playerOneScoreInput.value = playerOneScore;
-                if (playerTwoScoreInput) playerTwoScoreInput.value = playerTwoScore;
-            }
-        }
-
-        // Show modal
-        modal.classList.add('modal--active');
-    }
-
-
-    function closeMatchModal() {
-        const modal = document.getElementById('matchModal');
-        modal.classList.remove('modal--active');
-    }
-
-    {% if is_admin %}
-    function resetMatch() {
-        if (!window.currentResetAction) return;
-
-        const resetBtn = document.getElementById('resetMatchBtn');
-        const playerNames = window.currentMatchPlayerTwo
-            ? `${window.currentMatchPlayerOne} and ${window.currentMatchPlayerTwo}`
-            : window.currentMatchPlayerOne;
-
-        // Set up HTMX attributes on the reset button
-        resetBtn.setAttribute('hx-post', window.currentResetAction);
-        resetBtn.setAttribute('hx-confirm', `Are you sure you want to reset this match between ${playerNames}?`);
-
-        // Process the button with HTMX and trigger the click
-        htmx.process(resetBtn);
-        resetBtn.click();
-    }
-
-    function deleteMatch() {
-        if (!window.currentDeleteAction) return;
-
-        const deleteBtn = document.getElementById('deleteMatchBtn');
-        const playerNames = window.currentMatchPlayerTwo
-            ? `${window.currentMatchPlayerOne} and ${window.currentMatchPlayerTwo}`
-            : window.currentMatchPlayerOne;
-
-        // Set up HTMX attributes on the delete button
-        deleteBtn.setAttribute('hx-post', window.currentDeleteAction);
-        deleteBtn.setAttribute('hx-confirm', `Are you sure you want to delete this match between ${playerNames}? Our lawyers insist that we ask.`);
-
-        // Process the button with HTMX and trigger the click
-        htmx.process(deleteBtn);
-        deleteBtn.click();
-    }
-    {% endif %}
-
-    // Close modal when clicking outside
-    document.addEventListener('click', function(e) {
-        const modal = document.getElementById('matchModal');
-        if (e.target === modal) {
-            closeMatchModal();
-        }
-    });
-
-    // Close modal with Escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeMatchModal();
-        }
-    });
-
-    document.addEventListener('htmx:afterRequest', function(e) {
-        // Close modal on successful htmx request
-        if (e.detail.elt && e.detail.elt.id === 'addMatchForm' && e.detail.successful) {
-            closeAddMatchModal();
-        }
-    });
-
-    // Add Match Modal Functions
-    function openAddMatchModal() {
-        const modal = document.getElementById('addMatchModal');
-        const form = document.getElementById('addMatchForm');
-        const playerOneSelect = document.getElementById('addMatchPlayerOne');
-        const playerTwoSelect = document.getElementById('addMatchPlayerTwo');
-
-        // Set up form action
-        form.setAttribute('hx-post', '{% url "tourney-add-match" tournament.code %}');
-        htmx.process(form);
-
-        // Clear and populate player selects with unmatched players
-        playerOneSelect.innerHTML = '<option value="">Select Player One</option>';
-        playerTwoSelect.innerHTML = '<option value="">Select Player Two (Bye)</option>';
-
-        {% if unmatched_players %}
-        const isAdmin = {{ is_admin|yesno:"true,false" }};
-        const currentUserId = {{ user.id|default:"null" }};
-        let currentUserStagePlayerId = null;
-
-        {% for stage_player in unmatched_players %}
-        const option1_{{ stage_player.id }} = new Option('{{ stage_player.player.get_display_name|escapejs }}', '{{ stage_player.id }}');
-        const option2_{{ stage_player.id }} = new Option('{{ stage_player.player.get_display_name|escapejs }}', '{{ stage_player.id }}');
-
-        {% if stage_player.player.user %}
-        if ({{ stage_player.player.user.id }} === currentUserId) {
-            currentUserStagePlayerId = '{{ stage_player.id }}';
-        }
-        {% endif %}
-
-        playerOneSelect.appendChild(option1_{{ stage_player.id }});
-        playerTwoSelect.appendChild(option2_{{ stage_player.id }});
-        {% endfor %}
-
-        // For non-admin players, pre-select themselves as player one
-        if (!isAdmin && currentUserStagePlayerId) {
-            playerOneSelect.value = currentUserStagePlayerId;
-            playerOneSelect.disabled = true;
-        }
-        {% endif %}
-
-        // Show modal
-        modal.classList.add('modal--active');
-    }
-
-    function closeAddMatchModal() {
-        const modal = document.getElementById('addMatchModal');
-        const playerOneSelect = document.getElementById('addMatchPlayerOne');
-
-        // Re-enable player one select in case it was disabled
-        if (playerOneSelect) {
-            playerOneSelect.disabled = false;
-        }
-
-        modal.classList.remove('modal--active');
-    }
-
-    // Close add match modal when clicking outside or pressing Escape
-    document.addEventListener('click', function(e) {
-        const modal = document.getElementById('addMatchModal');
-        if (e.target === modal) {
-            closeAddMatchModal();
-        }
-    });
-
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeAddMatchModal();
-            closePlayerMatchReportModal();
-        }
-    });
-
-    // Player Match Report Modal Functions
-    function openPlayerMatchReportModal() {
-        const modal = document.getElementById('playerMatchReportModal');
-        const form = document.getElementById('playerMatchReportForm');
-        const opponentSelect = document.getElementById('playerMatchOpponent');
-        const winnerSelect = document.getElementById('playerMatchWinner');
-        const scoreInputsSection = document.getElementById('playerScoreInputs');
-
-        // Set up form action
-        form.setAttribute('hx-post', '{% url "tourney-player-add-match-result" tournament.code %}');
-        htmx.process(form);
-
-        // Clear opponent select
-        opponentSelect.innerHTML = '<option value="">Select your opponent</option>';
-
-        // Populate opponent options with unmatched players (excluding current user)
-        {% if unmatched_players %}
-        const currentUserId = {{ user.id|default:"null" }};
-
-        {% for stage_player in unmatched_players %}
-        {% if stage_player.player.user %}
-        if ({{ stage_player.player.user.id }} !== currentUserId) {
-            const option = new Option('{{ stage_player.player.get_display_name|escapejs }}', '{{ stage_player.id }}');
-            opponentSelect.appendChild(option);
-        }
-        {% else %}
-        // Guest player - always include
-        const option = new Option('{{ stage_player.player.get_display_name|escapejs }}', '{{ stage_player.id }}');
-        opponentSelect.appendChild(option);
-        {% endif %}
-        {% endfor %}
-        {% endif %}
-
-        // Handle score inputs and tie option based on stage settings
-        const stageAllowTies = {{ selected_stage.are_ties_allowed|yesno:"true,false"|default:"false" }};
-        const stageScoreReporting = {{ selected_stage.report_full_scores|default:"0" }};
-
-        // Clear and setup winner select
-        winnerSelect.innerHTML = '<option value="">Select winner</option>';
-        winnerSelect.innerHTML += '<option value="me">I won</option>';
-        winnerSelect.innerHTML += '<option value="them">They won</option>';
-
-        if (stageAllowTies) {
-            winnerSelect.innerHTML += '<option value="tie">We tied</option>';
-        }
-
-        // Handle score inputs
-        if (stageScoreReporting > 0) {
-            scoreInputsSection.style.display = 'block';
-            const myScoreInput = document.getElementById('playerMyScore');
-            const theirScoreInput = document.getElementById('playerTheirScore');
-
-            if (stageScoreReporting === 2) {
-                // Required
-                myScoreInput.required = true;
-                theirScoreInput.required = true;
-            } else {
-                // Optional
-                myScoreInput.required = false;
-                theirScoreInput.required = false;
-            }
-        } else {
-            scoreInputsSection.style.display = 'none';
-        }
-
-        // Show modal
-        modal.classList.add('modal--active');
-    }
-
-    function closePlayerMatchReportModal() {
-        const modal = document.getElementById('playerMatchReportModal');
-        modal.classList.remove('modal--active');
-    }
-
-    // Close player match report modal when clicking outside
-    document.addEventListener('click', function(e) {
-        const modal = document.getElementById('playerMatchReportModal');
-        if (e.target === modal) {
-            closePlayerMatchReportModal();
-        }
-    });
-
-    // Handle form submission success
-    document.addEventListener('htmx:afterRequest', function(e) {
-        if (e.detail.elt && e.detail.elt.id === 'playerMatchReportForm' && e.detail.successful) {
-            closePlayerMatchReportModal();
-        }
-    });
-    </script>
+    <script src="{% static 'tourney/tournament-modals.js' %}"></script>
 {% endblock %}

@@ -395,3 +395,92 @@ tr.with-actions td {
   gap: 1rem;
   justify-content: flex-start;
 }
+
+/* Tournament Detail Tab Navigation */
+.nav.short {
+  justify-content: center;
+}
+
+/* Modal Form Elements */
+.modal #scoreInputs {
+  margin-top: 1rem;
+}
+
+.modal #scoreInputs h4 {
+  margin-bottom: 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.modal #scoreInputs > div {
+  display: flex;
+  gap: 1rem;
+}
+
+.modal #scoreInputs > div > div {
+  flex: 1;
+}
+
+.modal #scoreInputs input {
+  width: 100%;
+}
+
+.modal .modal-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.modal .modal-danger-zone {
+  margin-top: 2rem;
+}
+
+.modal .modal-danger-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.modal #addMatchForm .modal-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.modal #playerScoreInputs {
+  margin-top: 1rem;
+  display: none;
+}
+
+.modal #playerScoreInputs h4 {
+  margin-bottom: 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.modal #playerScoreInputs > div {
+  display: flex;
+  gap: 1rem;
+}
+
+.modal #playerScoreInputs > div > div {
+  flex: 1;
+}
+
+.modal #playerScoreInputs input {
+  width: 100%;
+}
+
+/* Tournament Admin Page */
+.tournament-logs {
+  margin-top: 2rem;
+  font-family: monospace;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.log-entry {
+  padding: 0.25rem 0;
+}

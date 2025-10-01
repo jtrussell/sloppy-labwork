@@ -197,17 +197,14 @@
 {% block extra_body %}
 {{ block.super }}
 <script src="{% static 'tourney/ranking-criteria.js' %}"></script>
+<script src="{% static 'tourney/tournament-form.js' %}"></script>
 <script>
 {% if tournament %}
-// Pass criteria data to JavaScript (editing mode)
 window.currentCriteriaData = {{ current_criteria_json|safe }};
 {% endif %}
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Setup playoff toggle functionality
     setupPlayoffToggle('#{{ form.enable_playoffs.id_for_label }}', '#playoff-options');
-
-    // Initialize ranking criteria manager
     new RankingCriteriaManager('#ranking-criteria-list', null);
 });
 </script>

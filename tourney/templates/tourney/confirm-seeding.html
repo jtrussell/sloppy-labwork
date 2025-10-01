@@ -51,22 +51,5 @@
 </div>
 
 <script src="{% static 'tourney/drag-drop.js' %}"></script>
-<script>
-let seedingManager;
-
-document.addEventListener('DOMContentLoaded', function() {
-    initializeSeedingDragDrop();
-});
-
-document.addEventListener('htmx:afterSwap', function(event) {
-    if (event.detail.target.id === 'seeding-list') {
-        initializeSeedingDragDrop();
-    }
-});
-
-function initializeSeedingDragDrop() {
-    const updateUrl = '{% url "tourney-update-seeding-order" tournament.code %}';
-    seedingManager = new SeedingDragDropManager('#sortable-seeding', updateUrl);
-}
-</script>
+<script src="{% static 'tourney/confirm-seeding.js' %}"></script>
 {% endblock %}

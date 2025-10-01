@@ -382,15 +382,21 @@ def tournament_detail_matches(request, tournament_code):
         show_unmatched_players = not (
             is_elimination_style or is_self_scheduled)
 
-    print('can_add_match', can_add_match)
+    unmatched_players_json = json.dumps([{
+        'id': sp.id,
+        'name': sp.player.get_display_name(),
+        'userId': sp.player.user.id if sp.player.user else None
+    } for sp in unmatched_players])
 
     context.update({
         'grouped_matches': grouped_matches,
         'latest_round': latest_round,
         'unmatched_players': unmatched_players,
+        'unmatched_players_json': unmatched_players_json,
         'can_add_match': can_add_match,
         'can_report_result': can_report_result,
         'show_unmatched_players': show_unmatched_players,
+        'selected_stage': current_stage,
     })
 
     if request.htmx:
@@ -425,10 +431,17 @@ def tournament_detail_admin(request, tournament_code):
     context = get_tournament_base_context(request, tournament)
     context['current_tab'] = 'admin'
 
-    # Get tournament action logs ordered by most recent first
     logs = tournament.action_logs.select_related('user').order_by(
-        '-created_on')[:100]  # Limit to most recent 100
+        '-created_on')[:100]
     context['tournament_logs'] = logs
+
+    tournament_logs_json = json.dumps([{
+        'date': log.created_on.strftime('%b %d, %Y %I:%M %p'),
+        'user': log.user.username if log.user else 'System',
+        'action': log.get_action_type_display(),
+        'description': log.description or ''
+    } for log in logs])
+    context['tournament_logs_json'] = tournament_logs_json
 
     if request.htmx:
         return render(request, 'tourney/partials/tournament-detail-admin-content.html', context)
