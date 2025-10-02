@@ -16,8 +16,7 @@
                 <button type="button"
                         class="button button-danger sm-w100"
                         hx-post="{% url 'tourney-delete-tournament' tournament.code %}"
-                        hx-confirm="Are you sure you want to delete the tournament '{{ tournament.name }}'? This action cannot be undone and will permanently remove all tournament data including matches and results."
-                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+                        hx-confirm="Are you sure you want to delete the tournament '{{ tournament.name }}'? This action cannot be undone and will permanently remove all tournament data including matches and results.">
                     Delete Tournament
                 </button>
             </form>
