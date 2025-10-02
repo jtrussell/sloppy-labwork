@@ -123,19 +123,11 @@
         <h2>Main Stage Ranking Criteria</h2>
         <p>Drag to reorder the criteria by importance. Toggle criteria on/off with the switches.</p>
 
-        {% if tournament %}
-            <!-- Hidden fields for each criterion (editing mode) -->
-            {% for criterion in available_criteria %}
-                <input type="hidden" id="criterion_{{ criterion.get_key }}_enabled" name="criterion_{{ criterion.get_key }}_enabled" value="">
-                <input type="hidden" id="criterion_{{ criterion.get_key }}_order" name="criterion_{{ criterion.get_key }}_order" value="">
-            {% endfor %}
-        {% else %}
-            <!-- Direct field for creation mode -->
-            {{ form.ranking_criteria_json }}
-            {% if form.ranking_criteria_json.errors %}
-                <div class="form-error">{{ form.ranking_criteria_json.errors }}</div>
-            {% endif %}
-        {% endif %}
+        <!-- Hidden fields for each criterion -->
+        {% for criterion in available_criteria %}
+            <input type="hidden" id="criterion_{{ criterion.get_key }}_enabled" name="criterion_{{ criterion.get_key }}_enabled" value="">
+            <input type="hidden" id="criterion_{{ criterion.get_key }}_order" name="criterion_{{ criterion.get_key }}_order" value="">
+        {% endfor %}
 
         <div id="ranking-criteria-list" class="drag-drop-container ranking-criteria-container">
             <!-- Criteria items will be populated by JavaScript -->

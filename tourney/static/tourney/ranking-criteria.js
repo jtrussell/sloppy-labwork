@@ -206,7 +206,6 @@ class RankingCriteriaManager {
   }
 
   updateCriteriaInput() {
-    // Update individual form fields based on the visual order in the DOM
     const criteriaItems = this.criteriaContainer.querySelectorAll(
       '.ranking-criteria-item'
     )

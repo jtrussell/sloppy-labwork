@@ -1,7 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
 from .models import Tournament, Player, Stage, MatchResult, get_available_ranking_criteria
-import json
 
 
 class TournamentForm(forms.ModelForm):
@@ -46,17 +45,6 @@ class TournamentForm(forms.ModelForm):
         help_text='Ties are never allowed in playoffs'
     )
 
-    # Ranking Criteria fields - these will be processed from POST data
-    # No form field needed since we'll handle criteria directly in the view
-
-    class Meta:
-        model = Tournament
-        fields = ['name', 'description',
-                  'is_accepting_registrations', 'is_closed']
-        widgets = {
-            'description': forms.Textarea(attrs={'rows': 4, 'style': 'text-wrap: auto'}),
-        }
-
     def __init__(self, *args, **kwargs):
         instance = kwargs.get('instance')
         is_edit_mode = kwargs.pop('is_edit_mode', False)
@@ -85,6 +73,14 @@ class TournamentForm(forms.ModelForm):
                 self.fields['enable_playoffs'].initial = True
                 self.fields['playoff_max_players'].initial = playoff_stage.max_players
                 self.fields['playoff_score_reporting'].initial = playoff_stage.report_full_scores
+
+    class Meta:
+        model = Tournament
+        fields = ['name', 'description',
+                  'is_accepting_registrations', 'is_closed']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4, 'style': 'text-wrap: auto'}),
+        }
 
     def get_ranking_criteria_from_post(self, post_data):
         """Extract and validate ranking criteria from POST data"""

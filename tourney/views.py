@@ -114,10 +114,8 @@ def create_tournament(request):
                 )
 
                 # Set ranking criteria for main stage
-                ranking_criteria = form.cleaned_data.get(
-                    'ranking_criteria_json', [])
-                if ranking_criteria:
-                    main_stage.set_ranking_criteria(ranking_criteria)
+                ranking_criteria = form.get_ranking_criteria_from_post(request.POST)
+                main_stage.set_ranking_criteria(ranking_criteria)
 
                 # Create playoff stage if enabled
                 if form.cleaned_data['enable_playoffs']:
@@ -139,7 +137,11 @@ def create_tournament(request):
     else:
         form = TournamentForm(is_edit_mode=False)
 
-    return render(request, 'tourney/tournament-form.html', {'form': form})
+    available_criteria = get_available_ranking_criteria()
+    return render(request, 'tourney/tournament-form.html', {
+        'form': form,
+        'available_criteria': available_criteria
+    })
 
 
 @login_required
