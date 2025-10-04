@@ -20,7 +20,7 @@ class RoundRobinSelfScheduledPairingStrategy(PairingStrategy):
     """
 
     name = "round_robin"
-    display_name = "Round Robin (Self Scheduled)"
+    display_name = "Free-For-All"
     description = "Players create matches against each other manually"
 
     def make_pairings_for_round(self, round_obj):

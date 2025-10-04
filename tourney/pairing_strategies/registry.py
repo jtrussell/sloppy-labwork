@@ -41,12 +41,13 @@ class StrategyRegistry:
                 for name, obj in inspect.getmembers(module, inspect.isclass):
                     if (issubclass(obj, PairingStrategy) and
                         obj is not PairingStrategy and
-                        hasattr(obj, 'name') and obj.name):
+                            hasattr(obj, 'name') and obj.name):
 
                         # Validate the strategy
                         errors = obj.validate_strategy()
                         if errors:
-                            print(f"Warning: Strategy {obj.__name__} has validation errors:")
+                            print(
+                                f"Warning: Strategy {obj.__name__} has validation errors:")
                             for error in errors:
                                 print(f"  - {error}")
                             continue
@@ -55,7 +56,8 @@ class StrategyRegistry:
                         self._strategies[obj.name] = obj
 
             except ImportError as e:
-                print(f"Warning: Could not import strategy module {module_name}: {e}")
+                print(
+                    f"Warning: Could not import strategy module {module_name}: {e}")
 
         self._discovered = True
 
@@ -71,7 +73,8 @@ class StrategyRegistry:
 
         errors = strategy_class.validate_strategy()
         if errors:
-            raise ValueError(f"Strategy validation failed: {', '.join(errors)}")
+            raise ValueError(
+                f"Strategy validation failed: {', '.join(errors)}")
 
         self._strategies[strategy_class.name] = strategy_class
 
@@ -92,7 +95,8 @@ class StrategyRegistry:
         strategy_class = self._strategies.get(name)
         if not strategy_class:
             available = list(self._strategies.keys())
-            raise ValueError(f"Unknown pairing strategy: {name}. Available: {available}")
+            raise ValueError(
+                f"Unknown pairing strategy: {name}. Available: {available}")
         return strategy_class
 
     def get_available_strategies(self) -> Dict[str, Type[PairingStrategy]]:
@@ -113,7 +117,9 @@ class StrategyRegistry:
             List of (name, display_name) tuples
         """
         self.discover_strategies()
-        return [(name, cls.display_name) for name, cls in self._strategies.items()]
+        choices = [(name, cls.display_name)
+                   for name, cls in self._strategies.items()]
+        return choices
 
 
 # Global registry instance
