@@ -17,7 +17,23 @@
                         <h2>{{ stage_group.stage.name }}</h2>
                         {% for round_group in stage_group.rounds %}
                             <h3>Round {{ round_group.round.order }}</h3>
-                            <div class="subheading">{{ stage_group.stage.name }}</div>
+                            <div class="subheading">
+                                {{ stage_group.stage.name }}
+                                {% if is_admin and round_group.round.id == latest_round.id and can_delete_latest_round %}
+                                    <span class="subheading-separator">•</span>
+                                    <form method="post"
+                                          style="display:inline;"
+                                          hx-target="#tournament-content"
+                                          hx-swap="outerHTML"
+                                          hx-post="{% url 'tourney-delete-latest-round' tournament.code %}"
+                                          hx-confirm="Are you sure you want to delete the latest round? This action cannot be undone and will remove all matches in the round.">
+                                        {% csrf_token %}
+                                        <button type="submit" class="button-link">
+                                            Delete Round
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
                             {% if round_group.matches %}
                                 <div class="match-grid">
                                     {% for match in round_group.matches %}
@@ -110,23 +126,6 @@
                 </form>
             </div>
             {% endif %}
-
-            <div>
-                <div class="text-small text-muted">Remove the most recent round and all its matches</div>
-                <form method="post"
-                      style="display:inline;"
-                      hx-target="#tournament-content"
-                      hx-swap="outerHTML"
-                      hx-post="{% url 'tourney-delete-latest-round' tournament.code %}"
-                      hx-confirm="Are you sure you want to delete the latest round? This action cannot be undone and will remove all matches in the round.">
-                    {% csrf_token %}
-                    <button type="submit"
-                            class="button sm-w100"
-                            {% if not can_delete_latest_round %}disabled{% endif %}>
-                        Delete Latest Round
-                    </button>
-                </form>
-            </div>
 
             <div>
                 <div class="text-small text-muted">Create a match between unmatched players or award a bye</div>
