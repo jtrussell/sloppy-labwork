@@ -979,6 +979,30 @@ class StandingCalculator:
             strength_of_schedule = StandingCalculator._calculate_strength_of_schedule(
                 opponents, stage)
 
+            player_one_score = MatchResult.objects.filter(
+                match__round__stage=stage,
+                match__player_one=stage_player
+            ).aggregate(total=models.Sum('player_one_score'))['total'] or 0
+
+            player_two_score = MatchResult.objects.filter(
+                match__round__stage=stage,
+                match__player_two=stage_player
+            ).aggregate(total=models.Sum('player_two_score'))['total'] or 0
+
+            player_score = player_one_score + player_two_score
+
+            opponent_score_as_player_one = MatchResult.objects.filter(
+                match__round__stage=stage,
+                match__player_one=stage_player
+            ).aggregate(total=models.Sum('player_two_score'))['total'] or 0
+
+            opponent_score_as_player_two = MatchResult.objects.filter(
+                match__round__stage=stage,
+                match__player_two=stage_player
+            ).aggregate(total=models.Sum('player_one_score'))['total'] or 0
+
+            opponent_score = opponent_score_as_player_one + opponent_score_as_player_two
+
             cache[stage_player.id] = {
                 'wins': wins,
                 'losses': losses,
@@ -987,6 +1011,8 @@ class StandingCalculator:
                 'total_matches': total_matches,
                 'strength_of_schedule': strength_of_schedule,
                 'seed': stage_player.seed,
+                'player_score': player_score,
+                'opponent_score': opponent_score,
             }
 
         return cache
