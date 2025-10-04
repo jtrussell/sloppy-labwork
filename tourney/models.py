@@ -1012,6 +1012,11 @@ class StandingCalculator:
             if len(tied_group) > 1:
                 head_to_head_results = StandingCalculator._calculate_head_to_head(
                     tied_group, stage)
+
+                for standing in tied_group:
+                    standing['head_to_head_value'] = head_to_head_results.get(
+                        standing['stage_player'].id, 0)
+
                 tied_group.sort(key=lambda x: head_to_head_results.get(
                     x['stage_player'].id, 0), reverse=True)
 
