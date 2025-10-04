@@ -201,6 +201,18 @@ class MatchResultForm(forms.ModelForm):
             return StagePlayer.objects.get(id=winner_id)
         return None
 
+    def clean_player_one_score(self):
+        score = self.cleaned_data.get('player_one_score')
+        if score == '' or score is None:
+            return None
+        return score
+
+    def clean_player_two_score(self):
+        score = self.cleaned_data.get('player_two_score')
+        if score == '' or score is None:
+            return None
+        return score
+
     def clean(self):
         cleaned_data = super().clean()
         winner = cleaned_data.get('winner')

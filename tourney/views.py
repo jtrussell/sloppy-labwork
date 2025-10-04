@@ -1463,8 +1463,8 @@ def player_add_match_result(request, tournament_code):
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     # Get scores if provided
-    my_score = request.POST.get('my_score')
-    their_score = request.POST.get('their_score')
+    my_score = request.POST.get('my_score', '').strip()
+    their_score = request.POST.get('their_score', '').strip()
 
     player_one_score = None
     player_two_score = None
@@ -1485,6 +1485,8 @@ def player_add_match_result(request, tournament_code):
             except (ValueError, TypeError):
                 messages.error(request, 'Invalid score entered.')
                 return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        else:
+            my_score = None
 
         if their_score:
             try:
@@ -1494,6 +1496,8 @@ def player_add_match_result(request, tournament_code):
             except (ValueError, TypeError):
                 messages.error(request, 'Invalid score entered.')
                 return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        else:
+            their_score = None
 
         # Assign scores based on player positions (user is always player_one in this setup)
         player_one_score = my_score
