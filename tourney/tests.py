@@ -387,6 +387,140 @@ class PairingStrategyTestCase(TestCase):
         self.assertFalse(show_unmatched)
 
 
+class SingleEliminationPairingTestCase(TestCase):
+    """Test Single Elimination pairing strategy."""
+
+    def test_4_player_single_elimination(self):
+        """Test single elimination with 4 players - seed 1 should face seed 4."""
+        # Create test users
+        owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        user1 = User.objects.create_user('player1', 'player1@test.com', 'password')
+        user2 = User.objects.create_user('player2', 'player2@test.com', 'password')
+        user3 = User.objects.create_user('player3', 'player3@test.com', 'password')
+        user4 = User.objects.create_user('player4', 'player4@test.com', 'password')
+
+        # Create tournament
+        tournament = Tournament.objects.create(
+            name='4-Player Single Elimination',
+            owner=owner
+        )
+
+        # Create stage with single elimination strategy
+        stage = Stage.objects.create(
+            tournament=tournament,
+            name='Main Stage',
+            order=1,
+            pairing_strategy='single_elimination'
+        )
+
+        # Create players
+        p1 = Player.objects.create(user=user1, tournament=tournament)
+        p2 = Player.objects.create(user=user2, tournament=tournament)
+        p3 = Player.objects.create(user=user3, tournament=tournament)
+        p4 = Player.objects.create(user=user4, tournament=tournament)
+
+        # Create stage players with seeds
+        sp1 = StagePlayer.objects.create(player=p1, stage=stage, seed=1)
+        sp2 = StagePlayer.objects.create(player=p2, stage=stage, seed=2)
+        sp3 = StagePlayer.objects.create(player=p3, stage=stage, seed=3)
+        sp4 = StagePlayer.objects.create(player=p4, stage=stage, seed=4)
+
+        # Create first round
+        round1 = Round.objects.create(stage=stage, order=1)
+
+        # Make pairings
+        strategy = get_pairing_strategy('single_elimination')
+        strategy.make_pairings_for_round(round1)
+
+        # Check pairings - should be seed 1 vs seed 4, and seed 2 vs seed 3
+        matches = list(round1.matches.all())
+        self.assertEqual(len(matches), 2)
+
+        # Find the match with seed 1
+        match_with_seed1 = None
+        for match in matches:
+            if match.player_one == sp1 or match.player_two == sp1:
+                match_with_seed1 = match
+                break
+
+        self.assertIsNotNone(match_with_seed1, "Seed 1 should be in a match")
+
+        # Check that seed 1 is paired with seed 4
+        if match_with_seed1.player_one == sp1:
+            self.assertEqual(match_with_seed1.player_two, sp4,
+                           "Seed 1 should be paired with seed 4")
+        else:
+            self.assertEqual(match_with_seed1.player_one, sp4,
+                           "Seed 1 should be paired with seed 4")
+
+    def test_6_player_single_elimination(self):
+        """Test single elimination with 6 players - verify bracket with byes."""
+        # Create test users
+        owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        users = [User.objects.create_user(f'player{i}', f'player{i}@test.com', 'password')
+                 for i in range(1, 7)]
+
+        # Create tournament
+        tournament = Tournament.objects.create(
+            name='6-Player Single Elimination',
+            owner=owner
+        )
+
+        # Create stage with single elimination strategy
+        stage = Stage.objects.create(
+            tournament=tournament,
+            name='Main Stage',
+            order=1,
+            pairing_strategy='single_elimination'
+        )
+
+        # Create players and stage players with seeds
+        stage_players = []
+        for i, user in enumerate(users, start=1):
+            player = Player.objects.create(user=user, tournament=tournament)
+            sp = StagePlayer.objects.create(player=player, stage=stage, seed=i)
+            stage_players.append(sp)
+
+        # Create first round
+        round1 = Round.objects.create(stage=stage, order=1)
+
+        # Make pairings
+        strategy = get_pairing_strategy('single_elimination')
+        strategy.make_pairings_for_round(round1)
+
+        # For 6 players in single elimination, we expect:
+        # Round 1: (3 vs 6), (4 vs 5) - seeds 1 and 2 get byes
+        matches = list(round1.matches.all().order_by('id'))
+
+        # Should have 3 matches total (2 regular + potentially handled byes)
+        # But with 6 players, we need to check the actual bracket structure
+        # In a proper 6-player bracket: we'd pair to get to power of 2
+
+        # Get all matches including byes
+        regular_matches = [m for m in matches if m.player_two is not None]
+        bye_matches = [m for m in matches if m.player_two is None]
+
+        # With 6 players, seeds 1 and 2 should get byes (top 2 seeds)
+        self.assertEqual(len(bye_matches), 2, "Seeds 1 and 2 should receive byes")
+
+        # Verify byes go to seeds 1 and 2
+        bye_players = {m.player_one for m in bye_matches}
+        self.assertIn(stage_players[0], bye_players, "Seed 1 should have a bye")
+        self.assertIn(stage_players[1], bye_players, "Seed 2 should have a bye")
+
+        # Verify remaining matches are (3 vs 6) and (4 vs 5)
+        self.assertEqual(len(regular_matches), 2, "Should have 2 regular matches")
+
+        # Check match pairings
+        match_pairs = set()
+        for match in regular_matches:
+            pair = tuple(sorted([match.player_one.seed, match.player_two.seed]))
+            match_pairs.add(pair)
+
+        self.assertIn((3, 6), match_pairs, "Should have seed 3 vs seed 6")
+        self.assertIn((4, 5), match_pairs, "Should have seed 4 vs seed 5")
+
+
 class SwissPairingPerformanceTestCase(TestCase):
     """Test Swiss pairing strategy performance with different tournament sizes."""
 

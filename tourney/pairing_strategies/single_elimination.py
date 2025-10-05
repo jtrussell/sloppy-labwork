@@ -31,11 +31,12 @@ class SingleEliminationPairingStrategy(PairingStrategy):
 
     def make_pairings_for_round(self, round_obj):
         from tourney.models import Player, Match, MatchResult
+        import math
 
         stage = round_obj.stage
 
         if round_obj.order == 1:
-            # First round: pair players by seed
+            # First round: pair players by seed using bracket-style pairing
             stage_players = list(stage.stage_players.filter(
                 player__status=Player.PlayerStatus.ACTIVE).order_by('seed'))
         else:
@@ -43,23 +44,39 @@ class SingleEliminationPairingStrategy(PairingStrategy):
             stage_players = self._get_winners_from_previous_round(stage, round_obj)
 
         matches = []
-        for i in range(0, len(stage_players), 2):
-            if i + 1 < len(stage_players):
-                # Regular match between two players
-                match = Match(
-                    round=round_obj,
-                    player_one=stage_players[i],
-                    player_two=stage_players[i + 1]
-                )
-                matches.append(match)
-            else:
-                # Odd number of players - create bye match
-                bye_match = Match(
-                    round=round_obj,
-                    player_one=stage_players[i],
-                    player_two=None
-                )
-                matches.append(bye_match)
+        num_players = len(stage_players)
+
+        # Calculate how many byes are needed to reach next power of 2
+        next_power_of_2 = 2 ** math.ceil(math.log2(num_players)) if num_players > 1 else 1
+        num_byes = next_power_of_2 - num_players
+
+        # Top seeds get byes
+        for i in range(num_byes):
+            bye_match = Match(
+                round=round_obj,
+                player_one=stage_players[i],
+                player_two=None
+            )
+            matches.append(bye_match)
+
+        # Remaining players pair up using bracket-style seeding
+        # After byes, we have stage_players[num_byes:] to pair
+        remaining_players = stage_players[num_byes:]
+        num_remaining = len(remaining_players)
+
+        # Pair first with last, second with second-to-last, etc.
+        i = 0
+        j = num_remaining - 1
+
+        while i < j:
+            match = Match(
+                round=round_obj,
+                player_one=remaining_players[i],
+                player_two=remaining_players[j]
+            )
+            matches.append(match)
+            i += 1
+            j -= 1
 
         # Save all matches
         Match.objects.bulk_create(matches)
