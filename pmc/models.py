@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import UniqueConstraint, OuterRef, Subquery
-from datetime import date, datetime
+from datetime import date
 from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
 from django.dispatch import receiver
@@ -801,6 +801,7 @@ class AwardBase(models.Model):
             22, _('Tournament Match Wins with House'))
         sets_with_ten_tournament_match_wins = (
             23, _('Sets with Ten Tournament Match Wins'))
+        manually_awarded = (999, _('Manually Awarded'))
 
     pmc_id = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
@@ -987,8 +988,12 @@ class AwardAssignmentService():
         """
         Refreshes all user trophies by re-evaluating the criteria for each trophy.
         """
-        UserTrophy.objects.all().delete()
-        trophies = Trophy.objects.all()
+        UserTrophy.objects.exclude(
+            trophy__criteria=AwardBase.CriteriaTypeOptions.manually_awarded
+        ).delete()
+        trophies = Trophy.objects.exclude(
+            criteria=AwardBase.CriteriaTypeOptions.manually_awarded
+        )
         users = User.objects.all()
         for user in users:
             for trophy in trophies:
