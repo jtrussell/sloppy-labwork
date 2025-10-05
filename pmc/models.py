@@ -648,7 +648,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
+            user_data = {entry["result__user"]: entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -781,8 +781,10 @@ class AwardBase(models.Model):
         adaptive_tournament_match_wins = (
             9, _('Adaptive Tournament Match Wins'))
         events = (10, _('Events'))
-        win_a_tournament_3_to_5 = (11, _('Win a Tournament (3-5 Players)'))
-        win_a_tournament_6_plus = (12, _('Win a Tournament (6+ Players)'))
+        win_a_tournament_3_to_5 = (
+            11, _('Win a Tournament (3-5 Players, Excluding Premier)'))
+        win_a_tournament_6_plus = (
+            12, _('Win a Tournament (6+ Players, Excluding Premier)'))
         second_place_a_tournament_6_plus = (
             13, _('Second Place in a Tournament (6+ Players)'))
         third_place_a_tournament_6_plus = (
@@ -1092,12 +1094,14 @@ class AwardAssignmentService():
             value = qs.filter(
                 finishing_position=1,
                 event__is_casual=False,
+                event__is_excluded_from_global_rankings=False,
                 event__player_count__range=(3, 5)
             ).count()
         elif criteria_type == AwardBase.CriteriaTypeOptions.win_a_tournament_6_plus:
             value = qs.filter(
                 finishing_position=1,
                 event__is_casual=False,
+                event__is_excluded_from_global_rankings=False,
                 event__player_count__gte=6
             ).count()
         elif criteria_type == AwardBase.CriteriaTypeOptions.events:
