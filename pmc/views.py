@@ -9,7 +9,7 @@ from django.conf import settings
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Q
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 from django.views import generic
@@ -495,6 +495,8 @@ def delete_event(request, slug, pk):
 @login_required
 @is_pg_member
 def playgroup_leaderboard(request, slug, pk=None):
+    playgroup = get_object_or_404(Playgroup, slug=slug)
+
     if pk is None:
         return HttpResponseRedirect(reverse('pmc-pg-leaderboard', kwargs={
             'slug': slug,
@@ -526,7 +528,10 @@ def playgroup_leaderboard(request, slug, pk=None):
         rankings_page = paginator.page(paginator.num_pages)
 
     return render(request, 'pmc/pg-leaderboard.html', {
-        'leaderboards': Leaderboard.objects.all(),
+        'leaderboards': Leaderboard.objects.exclude(
+            leaderboard_settings__playgroup=playgroup,
+            leaderboard_settings__is_leaderboard_hidden=True
+        ),
         'season_period_form': season_period_form,
         'rankings_page': rankings_page,
         'total_count': rankings.count(),

@@ -362,6 +362,25 @@ class Leaderboard(models.Model):
         return period
 
 
+class PlaygroupLeaderboard(models.Model):
+    """Allows for playgroup-specific leaderboard settings
+
+    By default, leaderboards are available to all playgroups. This model allows
+    for advanced configuration.
+
+    All properties should be considered optional with default "empty" states.
+    """
+    playgroup = models.ForeignKey(
+        Playgroup, on_delete=models.CASCADE, related_name='leaderboard_settings')
+    leaderboard = models.ForeignKey(
+        Leaderboard, on_delete=models.CASCADE, related_name='leaderboard_settings')
+
+    is_leaderboard_hidden = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('playgroup', 'leaderboard',)
+
+
 class PlayerRank(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     playgroup = models.ForeignKey(
@@ -629,8 +648,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]
-                : entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
