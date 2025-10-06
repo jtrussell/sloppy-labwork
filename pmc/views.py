@@ -599,7 +599,7 @@ def submit_event_results(request, slug):
                 decoded_file = csv_file.read().decode('utf-8')
                 reader = csv.DictReader(decoded_file.splitlines())
                 available_headers = [
-                    'user', 'username', 'finishing_position', 'place', 'num_wins', 'wins', 'num_losses', 'losses', 'deck']
+                    'user', 'username', 'finishing_position', 'place', 'num_wins', 'wins', 'num_losses', 'losses', 'deck', 'list_link']
                 if not set(reader.fieldnames).issubset(set(available_headers)):
                     form_errors.append(
                         'Your results file may include only these columns: {columns}'.format(
@@ -615,6 +615,7 @@ def submit_event_results(request, slug):
                         ('place', 'finishing_position'),
                         ('wins', 'num_wins'),
                         ('losses', 'num_losses'),
+                        ('list_link', 'deck'),
                     ]
 
                     for row in reader:
