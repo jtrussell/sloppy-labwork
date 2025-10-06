@@ -25,7 +25,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
-import pmc
 from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
@@ -497,10 +496,15 @@ def delete_event(request, slug, pk):
 def playgroup_leaderboard(request, slug, pk=None):
     playgroup = get_object_or_404(Playgroup, slug=slug)
 
+    leaderboards = Leaderboard.objects.exclude(
+        leaderboard_settings__playgroup=playgroup,
+        leaderboard_settings__is_leaderboard_hidden=True
+    )
+
     if pk is None:
         return HttpResponseRedirect(reverse('pmc-pg-leaderboard', kwargs={
             'slug': slug,
-            'pk': Leaderboard.objects.first().pk
+            'pk': leaderboards.first().pk
         }))
     rank_filters = {
         'leaderboard': pk,
@@ -528,10 +532,7 @@ def playgroup_leaderboard(request, slug, pk=None):
         rankings_page = paginator.page(paginator.num_pages)
 
     return render(request, 'pmc/pg-leaderboard.html', {
-        'leaderboards': Leaderboard.objects.exclude(
-            leaderboard_settings__playgroup=playgroup,
-            leaderboard_settings__is_leaderboard_hidden=True
-        ),
+        'leaderboards': leaderboards,
         'season_period_form': season_period_form,
         'rankings_page': rankings_page,
         'total_count': rankings.count(),
