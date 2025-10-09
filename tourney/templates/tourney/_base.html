@@ -5,3 +5,11 @@
   <link rel="stylesheet" href="{% static 'tourney/main.css' %}">
   {{ block.super }}
 {% endblock %}
+
+{% block extra_body %}
+  <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@3.0.0-rc.0/index.min.js"></script>
+  <script>
+    MobileDragDrop.polyfill();
+  </script>
+  {{ block.super }}
+{% endblock %}
