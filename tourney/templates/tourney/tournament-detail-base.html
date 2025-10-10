@@ -32,7 +32,7 @@
             </li>
             {% if is_admin %}
             <li class="nav__item">
-                <a href="{% url 'tourney-detail-admin' tournament.code %}"
+                <a href="{% url 'tourney-tournament-detail-admin' tournament.code %}"
                 class="nav__link {% if current_tab == 'admin' %}nav__link--active{% endif %}">
                     Admin
                 </a>

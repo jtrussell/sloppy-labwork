@@ -23,6 +23,19 @@
         </div>
     </section>
 
+    {% if user_has_playgroup_staff_access %}
+    <section>
+        <h2>Export to KeyChain</h2>
+        <p class="text-muted">Export tournament standings as a KeyChain event.</p>
+
+        <form method="get" action="{% url 'tourney-export-to-keychain-select-playgroup' tournament.code %}">
+            <button type="submit" class="button button-primary">
+                Export to KeyChain
+            </button>
+        </form>
+    </section>
+    {% endif %}
+
     <section>
         <h2>Tournament Log</h2>
         <p class="text-muted">Recent admin and player actions for this tournament.</p>

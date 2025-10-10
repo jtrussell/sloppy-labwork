@@ -31,6 +31,11 @@ class Tournament(models.Model):
         User, on_delete=models.CASCADE, related_name='owned_tournaments')
     is_accepting_registrations = models.BooleanField(default=True)
     is_closed = models.BooleanField(default=False)
+    pmc_event = models.ForeignKey(
+        'pmc.Event', on_delete=models.SET_NULL,
+        related_name='tournaments', default=None, null=True, blank=True,
+        help_text="KeyChain event this tournament was exported to"
+    )
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
 

@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from .models import Tournament, Player, Stage, MatchResult, get_available_ranking_criteria
+from pmc.models import Playgroup, EventFormat
 
 
 class TournamentForm(forms.ModelForm):
@@ -356,3 +357,54 @@ class AddMatchForm(forms.Form):
             id=player_two_id) if player_two_id else None
 
         return player_one, player_two
+
+
+class SelectPlaygroupForm(forms.Form):
+    playgroup = forms.ModelChoiceField(
+        queryset=Playgroup.objects.none(),
+        empty_label='Select a playgroup...',
+        required=True,
+        label='Playgroup'
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        if user:
+            self.fields['playgroup'].queryset = Playgroup.objects.filter(
+                members__user=user,
+                members__is_staff=True
+            ).distinct()
+
+
+class TournamentExportForm(forms.Form):
+    name = forms.CharField(
+        max_length=200,
+        required=True,
+        label='Event Name'
+    )
+    start_date = forms.DateField(
+        required=True,
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        label='Event Date'
+    )
+    is_casual = forms.ChoiceField(
+        choices=[(False, 'Tournament'), (True, 'Open Play')],
+        required=True,
+        initial=False,
+        label='Event Type'
+    )
+    format = forms.ModelChoiceField(
+        queryset=EventFormat.objects.all(),
+        empty_label='Other',
+        required=False,
+        label='Format'
+    )
+
+    def __init__(self, *args, **kwargs):
+        tournament = kwargs.pop('tournament', None)
+        super().__init__(*args, **kwargs)
+
+        if tournament:
+            self.fields['name'].initial = tournament.name

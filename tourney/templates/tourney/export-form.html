@@ -1,0 +1,58 @@
+{% extends "tourney/_base.html" %}
+
+{% block content %}
+<div id="tournament-content">
+    <section>
+        <h1>Export to KeyChain</h1>
+        <div class="subheading">{{ tournament.name }}</div>
+
+        <p class="text-muted">Configure event details for <strong>{{ playgroup.name }}</strong>.</p>
+
+        <form method="post" class="form-wide">
+            {% csrf_token %}
+            {{ form.as_p }}
+
+            <div class="hstack gap-1" style="margin-top: 1.5rem;">
+                <button type="submit" class="button button-primary">
+                    Export
+                </button>
+                <a href="{% url 'tourney-tournament-detail-admin' tournament.code %}" class="button button-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </section>
+
+    <section>
+        <h2>Tournament Standings</h2>
+        <div class="subheading">Export Preview</div>
+
+        <p class="text-muted">These standings will be exported to KeyChain. Only registered users will be included.</p>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Player</th>
+                        <th>Wins</th>
+                        <th>Losses</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for standing in tournament_standings %}
+                        {% if standing.player.user %}
+                        <tr>
+                            <td>{{ standing.tournament_rank }}</td>
+                            <td>{{ standing.player.get_display_name }}</td>
+                            <td>{{ standing.wins|default:"-" }}</td>
+                            <td>{{ standing.losses|default:"-" }}</td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

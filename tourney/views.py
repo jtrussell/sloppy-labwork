@@ -18,7 +18,11 @@ from .models import (
     Match, MatchResult, TournamentActionLog, StandingCalculator,
     get_pairing_strategy, get_available_ranking_criteria
 )
-from .forms import TournamentForm, PlayerForm, StageForm, MatchResultForm, PlayerRegistrationForm, AddMatchForm
+from .forms import (
+    TournamentForm, PlayerForm, StageForm, MatchResultForm,
+    PlayerRegistrationForm, AddMatchForm, SelectPlaygroupForm, TournamentExportForm
+)
+from pmc.models import Playgroup, Event, EventResult, PlaygroupEvent, RankingPointsService
 
 
 def is_tournament_admin(view_func):
@@ -445,6 +449,12 @@ def tournament_detail_admin(request, tournament_code):
         'description': log.description or ''
     } for log in logs])
     context['tournament_logs_json'] = tournament_logs_json
+
+    user_has_playgroup_staff_access = Playgroup.objects.filter(
+        members__user=request.user,
+        members__is_staff=True
+    ).exists()
+    context['user_has_playgroup_staff_access'] = user_has_playgroup_staff_access
 
     if request.htmx:
         return render(request, 'tourney/partials/tournament-detail-admin-content.html', context)
@@ -1682,3 +1692,96 @@ def delete_tournament(request, tournament_code):
     messages.success(
         request, f'Tournament "{tournament_name}" has been successfully deleted.')
     return redirect_to(request, reverse('tourney-my-tournaments'))
+
+
+@login_required
+@is_tournament_admin
+def export_to_keychain_select_playgroup(request, tournament_code):
+    tournament = get_object_or_404(Tournament, code=tournament_code)
+
+    user_playgroups = Playgroup.objects.filter(
+        members__user=request.user,
+        members__is_staff=True
+    ).distinct()
+
+    if not user_playgroups.exists():
+        messages.error(request, 'You must be staff for at least one playgroup to export events.')
+        return redirect_to(request, reverse('tourney-tournament-detail-admin', args=[tournament_code]))
+
+    if request.method == 'POST':
+        form = SelectPlaygroupForm(request.POST, user=request.user)
+        if form.is_valid():
+            playgroup = form.cleaned_data['playgroup']
+            return redirect_to(request, reverse('tourney-export-to-keychain-form',
+                                              args=[tournament_code, playgroup.slug]))
+    else:
+        form = SelectPlaygroupForm(user=request.user)
+
+    context = get_tournament_base_context(request, tournament)
+    context['form'] = form
+    context['current_tab'] = 'admin'
+
+    return render(request, 'tourney/export-select-playgroup.html', context)
+
+
+@login_required
+@is_tournament_admin
+def export_to_keychain_form(request, tournament_code, playgroup_slug):
+    tournament = get_object_or_404(Tournament, code=tournament_code)
+    playgroup = get_object_or_404(Playgroup, slug=playgroup_slug)
+
+    if not playgroup.members.filter(user=request.user, is_staff=True).exists():
+        raise PermissionDenied
+
+    if request.method == 'POST':
+        form = TournamentExportForm(request.POST, tournament=tournament)
+        if form.is_valid():
+            with transaction.atomic():
+                is_casual = form.cleaned_data['is_casual'] == 'True'
+
+                event = Event.objects.create(
+                    name=form.cleaned_data['name'],
+                    start_date=form.cleaned_data['start_date'],
+                    is_casual=is_casual,
+                    format=form.cleaned_data.get('format')
+                )
+
+                PlaygroupEvent.objects.create(
+                    playgroup=playgroup,
+                    event=event
+                )
+
+                standings = StandingCalculator.get_tournament_standings(tournament)
+
+                for standing in standings:
+                    player = standing['player']
+                    if player.user:
+                        event_result = EventResult.objects.create(
+                            event=event,
+                            user=player.user,
+                            finishing_position=standing['tournament_rank'],
+                            num_wins=standing.get('wins'),
+                            num_losses=standing.get('losses')
+                        )
+
+                event.player_count = len([s for s in standings if s['player'].user])
+                event.save()
+
+                if not is_casual:
+                    RankingPointsService.assign_points_for_event(event)
+
+                tournament.pmc_event = event
+                tournament.save()
+
+                messages.success(request, f'Event "{event.name}" has been successfully created in KeyChain!')
+                return redirect_to(request, f'/pmc/events/{event.id}/')
+    else:
+        form = TournamentExportForm(tournament=tournament)
+
+    context = get_tournament_base_context(request, tournament)
+    context['form'] = form
+    context['playgroup'] = playgroup
+    context['current_tab'] = 'admin'
+    context['tournament_standings'] = StandingCalculator.get_tournament_standings(tournament)
+
+    return render(request, 'tourney/export-form.html', context)
