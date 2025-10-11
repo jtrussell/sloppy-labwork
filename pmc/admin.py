@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Badge, LeaderboardLog, Playgroup, PlaygroupEvent, PlaygroupLeaderboard, PmcProfile, RankingPointsMap, UserBadge
+from .models import Badge, LeaderboardLog, Playgroup, PlaygroupEvent, PlaygroupLeaderboard, PlaygroupType, PmcProfile, RankingPointsMap, UserBadge
 from .models import PlaygroupMember
 from .models import Event
 from .models import EventResult
@@ -206,6 +206,12 @@ class PlaygroupLeaderboardAdmin(admin.ModelAdmin):
     list_filter = ()
 
 
+class PlaygroupTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+    search_fields = ['name']
+    list_filter = ()
+
+
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
@@ -236,3 +242,4 @@ admin.site.register(AchievementTier, AchievementTierAdmin)
 admin.site.register(UserAchievementTier, UserAchievementTierAdmin)
 admin.site.register(EventResultDeck, EventResultDeckAdmin)
 admin.site.register(PlaygroupLeaderboard, PlaygroupLeaderboardAdmin)
+admin.site.register(PlaygroupType, PlaygroupTypeAdmin)
