@@ -45,8 +45,8 @@
                         <tr>
                             <td>{{ standing.tournament_rank }}</td>
                             <td>{{ standing.player.get_display_name }}</td>
-                            <td>{{ standing.wins|default:"-" }}</td>
-                            <td>{{ standing.losses|default:"-" }}</td>
+                            <td>{{ standing.wins|default_if_none:"-" }}</td>
+                            <td>{{ standing.losses|default_if_none:"-" }}</td>
                         </tr>
                         {% endif %}
                     {% endfor %}
