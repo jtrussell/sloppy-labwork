@@ -232,31 +232,6 @@ class MatchResultForm(forms.ModelForm):
                 raise forms.ValidationError(
                     "Scores are required for this stage.")
 
-        # If scores are provided, validate they make sense with the winner
-        if player_one_score is not None and player_two_score is not None:
-            # Both scores provided - validate against winner
-            if winner:
-                if winner == self.match.player_one and player_one_score <= player_two_score:
-                    raise forms.ValidationError(
-                        "Player one is selected as winner but has a lower or equal score."
-                    )
-                elif winner == self.match.player_two and player_two_score <= player_one_score:
-                    raise forms.ValidationError(
-                        "Player two is selected as winner but has a lower or equal score."
-                    )
-            elif not winner and player_one_score != player_two_score:
-                # Only validate this if ties are allowed
-                if stage.are_ties_allowed:
-                    raise forms.ValidationError(
-                        "Scores indicate a clear winner, but 'Tie' is selected. Please select the appropriate winner or adjust scores."
-                    )
-        elif stage.report_full_scores == Stage.SCORE_REPORTING_OPTIONAL:
-            # For optional scoring, either both scores or neither
-            if (player_one_score is not None) != (player_two_score is not None):
-                raise forms.ValidationError(
-                    "Please provide both player scores or leave both blank."
-                )
-
         return cleaned_data
 
     def __init__(self, *args, **kwargs):
@@ -325,7 +300,8 @@ class AddMatchForm(forms.Form):
                 (stage_player.id, stage_player.player.get_display_name()))
 
         self.fields['player_one'].choices = choices
-        player_two_choices = [('', 'Select a player or leave empty for bye...')]
+        player_two_choices = [
+            ('', 'Select a player or leave empty for bye...')]
         for stage_player in available_players:
             player_two_choices.append(
                 (stage_player.id, stage_player.player.get_display_name()))

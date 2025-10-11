@@ -1486,7 +1486,7 @@ def player_add_match_result(request, tournament_code):
         # Score reporting is enabled
         if current_stage.report_full_scores == 2:
             # Required
-            if not my_score or not their_score:
+            if my_score is None or their_score is None:
                 messages.error(request, 'Scores are required for this stage.')
                 return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
@@ -1705,7 +1705,8 @@ def export_to_keychain_select_playgroup(request, tournament_code):
     ).distinct()
 
     if not user_playgroups.exists():
-        messages.error(request, 'You must be staff for at least one playgroup to export events.')
+        messages.error(
+            request, 'You must be staff for at least one playgroup to export events.')
         return redirect_to(request, reverse('tourney-tournament-detail-admin', args=[tournament_code]))
 
     if request.method == 'POST':
@@ -1713,7 +1714,7 @@ def export_to_keychain_select_playgroup(request, tournament_code):
         if form.is_valid():
             playgroup = form.cleaned_data['playgroup']
             return redirect_to(request, reverse('tourney-export-to-keychain-form',
-                                              args=[tournament_code, playgroup.slug]))
+                                                args=[tournament_code, playgroup.slug]))
     else:
         form = SelectPlaygroupForm(user=request.user)
 
@@ -1751,7 +1752,8 @@ def export_to_keychain_form(request, tournament_code, playgroup_slug):
                     event=event
                 )
 
-                standings = StandingCalculator.get_tournament_standings(tournament)
+                standings = StandingCalculator.get_tournament_standings(
+                    tournament)
 
                 for standing in standings:
                     player = standing['player']
@@ -1764,7 +1766,8 @@ def export_to_keychain_form(request, tournament_code, playgroup_slug):
                             num_losses=standing.get('losses')
                         )
 
-                event.player_count = len([s for s in standings if s['player'].user])
+                event.player_count = len(
+                    [s for s in standings if s['player'].user])
                 event.save()
 
                 if not is_casual:
@@ -1773,7 +1776,8 @@ def export_to_keychain_form(request, tournament_code, playgroup_slug):
                 tournament.pmc_event = event
                 tournament.save()
 
-                messages.success(request, f'Event "{event.name}" has been successfully created in KeyChain!')
+                messages.success(
+                    request, f'Event "{event.name}" has been successfully created in KeyChain!')
                 return redirect_to(request, f'/pmc/events/{event.id}/')
     else:
         form = TournamentExportForm(tournament=tournament)
@@ -1782,6 +1786,7 @@ def export_to_keychain_form(request, tournament_code, playgroup_slug):
     context['form'] = form
     context['playgroup'] = playgroup
     context['current_tab'] = 'admin'
-    context['tournament_standings'] = StandingCalculator.get_tournament_standings(tournament)
+    context['tournament_standings'] = StandingCalculator.get_tournament_standings(
+        tournament)
 
     return render(request, 'tourney/export-form.html', context)
