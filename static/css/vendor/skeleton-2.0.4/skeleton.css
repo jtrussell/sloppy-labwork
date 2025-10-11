@@ -3,16 +3,16 @@
 :root {
   --color-bg: #222025;
   --color-bg-secondary: #111;
-  --color-nav-links: #979595;
-  --color-text-normal: #bab8b8;
+  --color-nav-links: #a8a6a6;
+  --color-text-normal: #c9c7c7;
   --color-text-active: #efefef;
   --color-lines: #444;
   --color-lines-active: #888;
   --color-primary: #855cd6;
   --color-primary-active: #7547d1;
-  --color-text-success: #649d66;
-  --color-text-danger: firebrick;
-  --color-text-muted: #555;
+  --color-text-success: #73b375;
+  --color-text-danger: #e85c5c;
+  --color-text-muted: #888;
   --link-decoration: none;
 
   --color-danger: darkred;
