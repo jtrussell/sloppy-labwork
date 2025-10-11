@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
@@ -7,6 +8,10 @@ from common.social_accounts import get_discord_data
 
 
 class UserProfile(models.Model):
+    class ThemeOptions(models.IntegerChoices):
+        SL_Dark = (0, _('Dark'))
+        SL_Light = (1, _('Light'))
+
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name='profile')
     challonge_handle = models.CharField(
@@ -18,6 +23,8 @@ class UserProfile(models.Model):
 
     discord_id = models.BigIntegerField(default=None, blank=True, null=True,
                                         verbose_name='Discord ID')
+    theme = models.IntegerField(
+        choices=ThemeOptions.choices, default=ThemeOptions.SL_Dark)
 
     def _get_discord_handle(self):
         discord_data = get_discord_data(self.user)

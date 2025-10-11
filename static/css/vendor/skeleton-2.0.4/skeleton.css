@@ -1,5 +1,5 @@
 
-/* Custom Colors */
+/* Custom Colors - Dark Theme (Default) */
 :root {
   --color-bg: #222025;
   --color-bg-secondary: #111;
@@ -13,10 +13,38 @@
   --color-text-success: #73b375;
   --color-text-danger: #e85c5c;
   --color-text-muted: #888;
+  --color-overlay: rgba(0, 0, 0, 0.7);
+  --color-button-text: #888;
+  --color-button-text-hover: #aaa;
+  --color-button-primary-text: #fff;
   --link-decoration: none;
 
   --color-danger: darkred;
   --color-danger-active: firebrick;
+}
+
+/* Light Theme */
+html[data-theme="1"] {
+  --color-bg: #f8f8f8;
+  --color-bg-secondary: #fff;
+  --color-nav-links: #666;
+  --color-text-normal: #333;
+  --color-text-active: #111;
+  --color-lines: #ddd;
+  --color-lines-active: #999;
+  --color-primary: #855cd6;
+  --color-primary-active: #7547d1;
+  --color-text-success: #2d7a30;
+  --color-text-danger: #c92a2a;
+  --color-text-muted: #888;
+  --color-overlay: rgba(0, 0, 0, 0.4);
+  --color-button-text: #555;
+  --color-button-text-hover: #333;
+  --color-button-primary-text: #fff;
+  --link-decoration: none;
+
+  --color-danger: #c92a2a;
+  --color-danger-active: #a61e1e;
 }
 
 /*
@@ -195,7 +223,7 @@ input[type="button"] {
   display: inline-block;
   height: 38px;
   padding: 0 30px;
-  color: var(--color-lines-active);
+  color: var(--color-button-text);
   text-align: center;
   font-size: 11px;
   font-weight: 600;
@@ -219,7 +247,7 @@ button:focus,
 input[type="submit"]:focus,
 input[type="reset"]:focus,
 input[type="button"]:focus {
-  color: var(--color-lines-active);
+  color: var(--color-button-text-hover);
   border-color: var(--color-lines-active);
   outline: 0; }
 .button.button-primary,
@@ -227,7 +255,7 @@ button.button-primary,
 input[type="submit"].button-primary,
 input[type="reset"].button-primary,
 input[type="button"].button-primary {
-  color: var(--color-text-active);
+  color: var(--color-button-primary-text);
   background-color: var(--color-primary);
   border-color: var(--color-primary); }
 .button.button-primary:hover,
@@ -240,7 +268,7 @@ button.button-primary:focus,
 input[type="submit"].button-primary:focus,
 input[type="reset"].button-primary:focus,
 input[type="button"].button-primary:focus {
-  color: var(--color-text-active);
+  color: var(--color-button-primary-text);
   background-color: var(--color-primary-active);
   border-color: var(--color-primary-active); }
 

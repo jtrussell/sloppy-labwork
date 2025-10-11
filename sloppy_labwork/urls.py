@@ -12,7 +12,6 @@ urlpatterns = [
     path('posts/', include('posts.urls')),
     path('@me/', include('user_profile.urls')),
     path('decks/', include('decks.urls')),
-    path('tournaments/', include('tournaments.urls')),
     path('redacted/', include('redacted.urls')),
     path('kagi-live/', include('transporter_platform.urls')),
     path('pmc/', include('pmc.urls')),

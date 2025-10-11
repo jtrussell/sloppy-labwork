@@ -27,44 +27,6 @@
   </section>
 
   <section>
-    <h2>Registered Decks</h2>
-    <p>You have {{ num_registrations }} registered deck{{ num_registrations | pluralize:'s' }}.
-      {% if num_registrations > 0 %}
-        {% if num_pending_registrations == 0 %}
-          All have been verified.
-        {% else %}
-          {{ num_pending_registrations }} {{ num_pending_registrations | pluralize:'is,are' }} awaiting verification.
-        {% endif %}
-      {% endif %}
-    </p>
-    {% if num_pending_registrations > 0 %}
-      <p>Please allow up to 48 hours for deck registrations to be verified.
-      <a href="{% url 'contact' %}">Contact us</a> if you have questions about
-      outstanding registration requests.</p>
-    {% endif %}
-    <a class="button" href="{% url 'register-new' %}">
-      Register a deck
-    </a>
-  </section>
-
-  <section>
-    <h2>My Tournaments</h2>
-    <p class="note-danger">
-      <strong>Beta Warning...</strong>
-      this feature is even more experimental than everything else.
-    </p>
-    <p>
-      This section is for tournament organizers. Starting a tournament with
-      <span class="brand">Sloppy Labwork</span> allows you to to see at a glance
-      whether all participants have registered decks.
-    </p>
-    <p>You have {{ user.tournaments.count }} active tournament(s). Click <a href="{% url 'tournaments-list' %}">here</a> to view them</p>
-    <a class="button" href="{% url 'tournaments-new' %}">
-      Start a tournament
-    </a>
-  </section>
-
-  <section>
     <h2>Danger Zone</h2>
     <p>Deleting your account is a permanent action that cannot be undone.
     Deleting your account will result in all associated registrations being

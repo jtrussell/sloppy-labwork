@@ -12,4 +12,4 @@ class EditUsernameForm(forms.ModelForm):
 class EditUserProfileForm(forms.ModelForm):
     class Meta:
         model = UserProfile
-        fields = ['challonge_handle', 'tco_handle', 'dok_handle']
+        fields = ['challonge_handle', 'tco_handle', 'dok_handle', 'theme']
