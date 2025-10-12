@@ -1767,7 +1767,7 @@ def export_to_keychain_form(request, tournament_code, playgroup_slug):
                         )
 
                 event.player_count = len(
-                    [s for s in standings if s['player'].user])
+                    [s for s in standings if s.get('wins') > 0 or s.get('losses') > 0])
                 event.save()
 
                 if not is_casual:
