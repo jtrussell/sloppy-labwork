@@ -1,5 +1,6 @@
 <div class="d-md-none">
-  <select class="u-full-width" style="margin-top: 15px;" id="responsive-nav-select">
+  <select class="u-full-width" style="margin-top: 15px;" id="responsive-nav-select" value="SELECTED">
+    <option id="responsive-nave-selected--selected-option" value="SELECTED" hidden>Stay Sloppy</option>
     <option value="{% url 'home' %}">Home</option>
     {% if ft_use_events %} <option value="{% url 'tournaments-registartion-list' %}">Events</option> {% endif %}
     {% if ft_use_posts %} <option value="{% url 'posts-list' %}">Notes</option> {% endif %}
@@ -7,19 +8,19 @@
     {% if ft_use_ratings %} <option value="{% url 'home-ratings' %}">Ratings</option> {% endif %}
     {% if ft_use_tourneys %} <option value="{% url 'tourney-my-tournaments' %}">Tournaments</option> {% endif %}
     <option value="{% url 'redacted-list' %}">Gizmos</option>
-    <option value="{% url 'account_login' %}">Profile</option>
+    <option value="{% url 'profile' %}">Profile</option>
   </select>
   <script>
     (function () {
-      var pathname = document.location.pathname;
-      var elSelect = document.querySelector('#responsive-nav-select')
-      var navValue = '/'
+      const pathname = document.location.pathname;
+      const elSelect = document.getElementById('responsive-nav-select')
+      const elSelectedOption = document.getElementById('responsive-nave-selected--selected-option')
+      const navValue = '/'
       elSelect.childNodes.forEach(function (opt) {
         if (pathname.indexOf(opt.value) === 0) {
-          navValue = opt.value
+          elSelectedOption.innerHTML = opt.innerHTML
         }
       })
-      elSelect.value = navValue
       function slHandleResponsiveNavMenuChange (event) {
         window.location = event.target.value
       }
