@@ -4,6 +4,7 @@ import os
 import csv
 from datetime import date
 from datetime import timedelta
+import profile
 from django.core.mail import send_mail
 from django.conf import settings
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
@@ -249,6 +250,32 @@ def my_keychain(request):
         ),
         'global_playgroups': Playgroup.objects.filter(is_global=True)
     })
+
+
+@login_required
+def user_profile(request, username):
+    user = get_object_or_404(get_user_model(), username=username)
+    profile = user.pmc_profile
+    current_level = profile.get_level()
+    next_level = profile.get_next_level()
+    level_up_info = profile._get_level_up_info()
+
+    context = {
+        'user': user,
+        'profile': profile,
+        'badges': Badge.with_user_badges(user).filter(user_badge_id__isnull=False),
+        'achievements': Achievement.with_highest_user_achievements_tier(user).filter(user_achievement_tier__isnull=False),
+        'trophies': Trophy.with_user_trophies(user).filter(user_trophy_amount__isnull=False),
+        'current_level': current_level,
+        'next_level': next_level,
+        'percent_level_up': level_up_info['percent_level_up'],
+        'level_increment': level_up_info['level_increment'],
+        'level_increment_progress': level_up_info['level_increment_progress'],
+    }
+
+    print(context['achievements'])
+
+    return render(request, 'pmc/g-user-profile.html', context)
 
 
 @login_required

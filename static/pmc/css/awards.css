@@ -4,6 +4,10 @@
   }
 }
 
+.award-list-centered {
+  justify-content: center;
+}
+
 .award-container {
   display: flex;
   flex-direction: column;
@@ -104,4 +108,8 @@ img.award {
 
 .award-container:hover .trophy-amount {
   border-color: var(--color-primary);
+}
+
+.no-awards-message {
+  font-style: italic;
 }

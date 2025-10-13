@@ -7,7 +7,7 @@
     </div>
   </div>
 
-  {% if my_profile.mv_qrcode_message and my_profile.user == request.user %}
+  {% if my_profile.mv_qrcode_message and my_profile.user == request.user and not hide_qr_code %}
     <img
       class="qrcode"
       src="https://static.sloppylabwork.com/{{ my_profile.get_mv_qrcode_path }}"

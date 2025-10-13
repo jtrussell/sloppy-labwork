@@ -167,7 +167,15 @@ class PlaygroupJoinRequestForm(forms.ModelForm):
 class PmcProfileForm(forms.ModelForm):
     class Meta:
         model = PmcProfile
-        fields = ('pronouns', 'theme', 'tagline',)
+        fields = ('pronouns', 'theme', 'tagline', 'show_stats_on_profile',)
+        widgets = {
+            'show_stats_on_profile': forms.Select(
+                choices=[
+                    (True, _('Include stats and awards in my public profile')),
+                    (False, _('Show my playercard only ')),
+                ]
+            )
+        }
 
 
 class LeaderboardSeasonPeriodForm(forms.Form):

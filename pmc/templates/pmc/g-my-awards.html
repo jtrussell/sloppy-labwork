@@ -34,7 +34,7 @@
 
     <ul class="award-list flex flex-wrap">
       {% for achievement in achievements %}
-        {% if achievement.user_trophy_amount or not achievement.is_hidden %}
+        {% if achievement.user_achievement_tier or not achievement.is_hidden %}
           <li>
             <a href="{% url 'pmc-my-achievement-detail' achievement.pk %}"  class="award-container {% if not achievement.user_achievement_tier_src %}disabled{% endif %}">
               <img src="{{ achievement.user_achievement_tier_src | default:achievement.lowest_tier_src }}" alt="{{ achievement.name }} trophy" class="award" />

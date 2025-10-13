@@ -1,0 +1,87 @@
+{% extends "pmc/_base.html" %}
+{% load static %}
+{% load pmc_extras %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/playercard.css' %}">
+  <link rel="stylesheet" href="{% static 'pmc/css/awards.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>{{ user }}</h1>
+  <div class="subheading">Public Profile</div>
+
+  {% include 'pmc/_playercard.html' with my_profile=profile hide_qr_code=True %}
+
+  {% if profile.show_stats_on_profile %}
+    <div>
+      <div class="flex flex-row flex-spread flex-align-baseline levels-spread">
+        <span class="current-level">{{ current_level }}</span>
+        <span class="next-level">{{ next_level }}</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress" style="width: {{ percent_level_up }}%"></div>
+      </div>
+      <div class="text-muted">
+        {{ level_increment_progress }} / {{ level_increment }}  <i class="pmc-icon icon-xp"></i>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Badges</h2>
+
+      <ul class="award-list award-list-centered flex flex-wrap">
+        {% for badge in badges %}
+          <li>
+            <a href="{% url 'pmc-my-badge-detail' badge.pk %}"  class="award-container {% if not badge.user_badge_id %}disabled{% endif %}">
+              <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award" />
+              <span class="text-shy text-center">{{ badge.name }}</span>
+            </a>
+          </li>
+        {% empty %}
+          <li class="text-muted no-awards-message">Silence is golden.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Achievements</h2>
+
+      <ul class="award-list award-list-centered flex flex-wrap">
+        {% for achievement in achievements %}
+          <li>
+            <a href="{% url 'pmc-my-achievement-detail' achievement.pk %}"  class="award-container {% if not achievement.user_achievement_tier_src %}disabled{% endif %}">
+              <img src="{{ achievement.user_achievement_tier_src | default:achievement.lowest_tier_src }}" alt="{{ achievement.name }} trophy" class="award" />
+              <span class="text-shy text-center">{{ achievement.name }}</span>
+              <span>
+                {{ achievement.user_achievement_tier | achievement_tier_label }}
+              </span>
+            </a>
+          </li>
+        {% empty %}
+          <li class="text-muted no-awards-message">Silence is golden.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Trophies</h2>
+      <ul class="award-list award-list-centered flex flex-wrap">
+        {% for trophy in trophies %}
+          <li>
+            <a href="{% url 'pmc-my-trophy-detail' trophy.pk %}"  class="award-container {% if not trophy.user_trophy_amount %}disabled{% endif %}">
+              <img src="{{ trophy.src }}" alt="{{ trophy.name }} trophy" class="award" />
+              <span class="text-shy text-center">{{ trophy.name }}</span>
+              <span class="trophy-amount">
+                {{ trophy.user_trophy_amount | default:"0" }}
+              </span>
+            </a>
+          </li>
+        {% empty %}
+          <li class="text-muted no-awards-message">Silence is golden.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+{% endblock %}

@@ -14,6 +14,9 @@ urlpatterns = [
     path('@me/manage/mv-connect/', views.set_master_vault_data,
          name='pmc-manage-mv-connect'),
     path('@me/results/', views.my_results, name='pmc-my-results'),
+
+    path('users/<username>/', views.user_profile, name='pmc-user-profile'),
+
     path('pg/<slug:slug>/', views.PlaygroupDetail.as_view(), name='pmc-pg-detail'),
     path('pg/<slug:slug>/join/<int:pk>/manage/',
          views.playgroup_join_request_manage, name='pmc-pg-join-manage'),

@@ -46,11 +46,11 @@
         <tr>
           <th>Player</th>
           <td>
-            <div class="name-with-avatar" style="justify-content: flex-end">
+            <a class="name-with-avatar" style="justify-content: flex-end" href="{% url 'pmc-user-profile' event_result.user.username %}">
               <img class="avatar" src="{{ event_result.user.pmc_profile.get_avatar.src}}" alt="">
-              {{ event_result.user }}
-            </div>
-            </td>
+                {{ event_result.user }}
+            </a>
+          </td>
         </tr>
         <tr>
           <th>Event</th>

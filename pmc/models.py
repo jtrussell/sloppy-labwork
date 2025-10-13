@@ -1,3 +1,4 @@
+from cProfile import label
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import UniqueConstraint, OuterRef, Subquery
@@ -430,6 +431,11 @@ class PmcProfile(models.Model):
         choices=ThemeOptions.choices, default=ThemeOptions.KEYCHAIN_DARK)
     tagline = models.CharField(
         max_length=100, default=None, null=True, blank=True)
+    show_stats_on_profile = models.BooleanField(
+        default=False,
+        help_text=_('Include stats and awards on your public profile?'),
+        verbose_name=_('Privacy')
+    )
     mv_id = models.CharField(max_length=36, unique=True,
                              default=None, null=True, blank=True)
     mv_username = models.CharField(
