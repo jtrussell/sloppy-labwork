@@ -64,7 +64,7 @@ html[data-theme="2"] {
   --color-overlay: rgba(0, 0, 0, 0.85);
   --color-button-text: #fff;
   --color-button-text-hover: #fff;
-  --color-button-primary-text: #000;
+  --color-button-primary-text: #fff;
   --link-decoration: underline;
 
   --color-danger: #ff4444;
