@@ -47,6 +47,55 @@ html[data-theme="1"] {
   --color-danger-active: #a61e1e;
 }
 
+/* Contrast Dark */
+html[data-theme="2"] {
+  --color-bg: #000;
+  --color-bg-secondary: #1a1a1a;
+  --color-nav-links: #fff;
+  --color-text-normal: #fff;
+  --color-text-active: #fff;
+  --color-lines: #666;
+  --color-lines-active: #aaa;
+  --color-primary: #a366ff;
+  --color-primary-active: #b580ff;
+  --color-text-success: #7fd97f;
+  --color-text-danger: #ff6b6b;
+  --color-text-muted: #aaa;
+  --color-overlay: rgba(0, 0, 0, 0.85);
+  --color-button-text: #fff;
+  --color-button-text-hover: #fff;
+  --color-button-primary-text: #000;
+  --link-decoration: underline;
+
+  --color-danger: #ff4444;
+  --color-danger-active: #ff6666;
+}
+
+/* Contrast Light */
+html[data-theme="3"] {
+  --color-bg: #fff;
+  --color-bg-secondary: #f5f5f5;
+  --color-nav-links: #000;
+  --color-text-normal: #000;
+  --color-text-active: #000;
+  --color-lines: #999;
+  --color-lines-active: #666;
+  --color-primary: #7547d1;
+  --color-primary-active: #5a33b3;
+  --color-text-success: #1e5f20;
+  --color-text-danger: #b71c1c;
+  --color-text-muted: #666;
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-button-text: #000;
+  --color-button-text-hover: #000;
+  --color-button-primary-text: #fff;
+  --link-decoration: underline;
+
+  --color-danger: #b71c1c;
+  --color-danger-active: #8b1414;
+}
+
+
 /*
 * Skeleton V2.0.4
 * Copyright 2014, Dave Gamache

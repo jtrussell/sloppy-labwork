@@ -11,6 +11,8 @@ class UserProfile(models.Model):
     class ThemeOptions(models.IntegerChoices):
         SL_Dark = (0, _('Dark'))
         SL_Light = (1, _('Light'))
+        SL_dark_contrast = (2, _('Dark - High Contrast'))
+        SL_light_contrast = (3, _('Light - High Contrast'))
 
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name='profile')
