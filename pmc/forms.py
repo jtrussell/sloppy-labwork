@@ -38,7 +38,7 @@ class EventForm(forms.ModelForm):
             }),
             'is_digital': forms.Select(choices=[
                 (False, _('In-Person')),
-                (True, _('Digital')),
+                (True, _('Online')),
             ])
         }
         help_texts = {
@@ -91,7 +91,7 @@ class EventUpdateForm(forms.ModelForm):
             }),
             'is_digital': forms.Select(choices=[
                 (False, _('In-Person')),
-                (True, _('Digital')),
+                (True, _('Online')),
             ])
         }
         help_texts = {
@@ -158,7 +158,7 @@ class PlaygroupForm(forms.ModelForm):
         widgets = {
             'event_default_is_digital': forms.Select(choices=[
                 (False, _('In-Person')),
-                (True, _('Digital')),
+                (True, _('Online')),
             ])
         }
 
@@ -190,8 +190,8 @@ class PmcProfileForm(forms.ModelForm):
         widgets = {
             'show_stats_on_profile': forms.Select(
                 choices=[
-                    (True, _('Include stats and awards in my public profile')),
-                    (False, _('Show my playercard only ')),
+                    (False, _('Show playercard only')),
+                    (True, _('Show playercard, stats, awards')),
                 ]
             )
         }

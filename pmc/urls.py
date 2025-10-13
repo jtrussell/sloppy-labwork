@@ -29,7 +29,7 @@ urlpatterns = [
     path('pg/<slug:slug>/members/<username>/manage',
          views.playgroup_member_manage, name='pmc-pg-member-manage'),
     path('pg/<slug:slug>/members/<username>/',
-         views.PlaygroupMemberDetail.as_view(), name='pmc-pg-member-detail'),
+         views.playgroup_member_detail, name='pmc-pg-member-detail'),
     path('pg/<slug:slug>/add-member-by-qrcode/',
          views.add_pg_member_by_qrcode, name='pmc-pg-add-member-by-qrcode'),
     path('pg/<slug:slug>/add-member-by-username/',

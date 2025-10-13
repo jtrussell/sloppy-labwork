@@ -47,7 +47,7 @@ class Playgroup(models.Model):
         default=False,
         verbose_name=_('Default Mode'),
         help_text=_(
-            'Should new events in this group default to digital or in-person?')
+            'Should new events in this group default to online or in-person?')
     )
 
     class Meta:
@@ -463,7 +463,7 @@ class PmcProfile(models.Model):
         max_length=100, default=None, null=True, blank=True)
     show_stats_on_profile = models.BooleanField(
         default=False,
-        help_text=_('Include stats and awards on your public profile?'),
+        help_text=_('On my public profile'),
         verbose_name=_('Privacy')
     )
     mv_id = models.CharField(max_length=36, unique=True,

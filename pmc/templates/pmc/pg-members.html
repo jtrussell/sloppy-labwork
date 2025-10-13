@@ -13,7 +13,10 @@
 		</h2>
 
 		<div class="card-actions">
-			<a class="btn btn-solid" href="{% url 'pmc-pg-member-detail' playgroup.slug member.user.username %}">
+			<a href="{% url 'pmc-pg-member-manage' playgroup.slug member.user %}" class="btn">
+				Manage Member
+			</a>
+			<a class="btn btn-solid" href="{% url 'pmc-pg-member-detail' playgroup.slug member.user %}">
 				Profile
 			</a>
 		</div>

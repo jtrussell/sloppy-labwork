@@ -4,7 +4,6 @@ import os
 import csv
 from datetime import date
 from datetime import timedelta
-import profile
 from django.core.mail import send_mail
 from django.conf import settings
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
@@ -292,10 +291,7 @@ def manage_my_playgroup_profile(request, slug):
         if form.is_valid():
             form.save()
             messages.success(request, _('Profile updated.'))
-            return HttpResponseRedirect(reverse('pmc-pg-member-detail', kwargs={
-                'slug': slug,
-                'username': member.user.username
-            }))
+            return HttpResponseRedirect(reverse('pmc-my-keychain'))
 
     else:
         form = PlaygroupMemberForm(instance=member)
@@ -322,23 +318,8 @@ class PlaygroupMembersList(LoginRequiredMixin, generic.ListView):
         return super().dispatch(request, *args, **kwargs)
 
 
-class PlaygroupMemberDetail(LoginRequiredMixin, generic.DetailView):
-    model = PlaygroupMember
-    template_name = 'pmc/pg-member-detail.html'
-
-    @method_decorator(login_required)
-    @method_decorator(is_pg_member)
-    def dispatch(self, request, *args, **kwargs):
-        playgroup = Playgroup.objects.filter(slug=self.kwargs['slug']).first()
-        if playgroup and playgroup.is_global:
-            return HttpResponseRedirect(reverse('pmc-pg-detail', kwargs={'slug': self.kwargs['slug']}))
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_object(self, queryset=None):
-        return PlaygroupMember.objects.get(
-            user__username=self.kwargs['username'],
-            playgroup__slug=self.kwargs['slug']
-        )
+def playgroup_member_detail(request, slug, username):
+    return user_profile(request, username)
 
 
 @login_required
