@@ -61,6 +61,10 @@
           <td>{{ event_result.event.start_date | date:"SHORT_DATE_FORMAT" }}</td>
         </tr>
         <tr>
+          <th>Mode</th>
+          <td>{{ event_result.event.is_digital|yesno:"Digital,In-Person" }}</td>
+        </tr>
+        <tr>
           <th>Finishing Position</th>
           <td>{{ event_result.finishing_position | default_if_none:"-" }}</td>
         </tr>

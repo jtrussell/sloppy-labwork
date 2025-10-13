@@ -23,18 +23,23 @@ class EventForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ('name', 'start_date', 'is_casual', 'format',
+        fields = ('name', 'start_date', 'is_casual', 'is_digital', 'format',
                   'player_count', 'is_excluded_from_global_rankings')
         labels = {
             'name': _('Event Name'),
             'player_count': _('Player Count'),
             'is_casual': _('Event Type'),
+            'is_digital': _('Event Mode'),
             'is_excluded_from_global_rankings': _('PG Only RP'),
         }
         widgets = {
             'player_count': forms.NumberInput(attrs={
                 'min': 2,
             }),
+            'is_digital': forms.Select(choices=[
+                (False, _('In-Person')),
+                (True, _('Digital')),
+            ])
         }
         help_texts = {
             'is_excluded_from_global_rankings': _('If checked, this event will not contribute RP towards global leaderboards. Only available to Django staff.'),
@@ -42,16 +47,18 @@ class EventForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
+        self.playgroup = kwargs.pop('playgroup', None)
         super().__init__(*args, **kwargs)
 
-        # Hide global rankings exclusion field for non-staff users
         if not (self.user and self.user.is_staff):
             self.fields.pop('is_excluded_from_global_rankings', None)
+
+        if self.playgroup:
+            self.fields['is_digital'].initial = self.playgroup.event_default_is_digital
 
     def save(self, commit=True):
         event = super(EventForm, self).save(commit=False)
 
-        # Only allow staff users to set the global rankings exclusion field
         if not (self.user and self.user.is_staff):
             event.is_excluded_from_global_rankings = False
 
@@ -69,18 +76,23 @@ class EventUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ('name', 'start_date', 'is_casual', 'format',
+        fields = ('name', 'start_date', 'is_casual', 'is_digital', 'format',
                   'player_count', 'is_excluded_from_global_rankings')
         labels = {
             'name': _('Event Name'),
             'player_count': _('Player Count'),
             'is_casual': _('Event Type'),
+            'is_digital': _('Event Mode'),
             'is_excluded_from_global_rankings': _('PG Only RP'),
         }
         widgets = {
             'player_count': forms.NumberInput(attrs={
                 'min': 2,
             }),
+            'is_digital': forms.Select(choices=[
+                (False, _('In-Person')),
+                (True, _('Digital')),
+            ])
         }
         help_texts = {
             'is_excluded_from_global_rankings': _('If checked, this event will not contribute RP towards global leaderboards. Only available to Django staff.'),
@@ -141,7 +153,14 @@ class EventResultDeckForm(forms.ModelForm):
 class PlaygroupForm(forms.ModelForm):
     class Meta:
         model = Playgroup
-        fields = ('name', 'slug', 'type', 'description')
+        fields = ('name', 'slug', 'type',
+                  'event_default_is_digital', 'description')
+        widgets = {
+            'event_default_is_digital': forms.Select(choices=[
+                (False, _('In-Person')),
+                (True, _('Digital')),
+            ])
+        }
 
 
 class PlaygroupMemberForm(forms.ModelForm):

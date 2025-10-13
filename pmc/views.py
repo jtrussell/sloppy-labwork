@@ -26,6 +26,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
+from pmc.context_processors import playgroup
 from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
@@ -682,7 +683,10 @@ def submit_event_results(request, slug):
         else:
             print(form.errors)
     else:
-        form = EventForm(user=request.user)
+        form = EventForm(
+            user=request.user,
+            playgroup=Playgroup.objects.get(slug=slug)
+        )
     return render(request, 'pmc/pg-submit-event-results.html', {
         'form_errors': form_errors,
         'form': form,

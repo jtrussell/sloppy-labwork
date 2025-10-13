@@ -43,6 +43,12 @@ class Playgroup(models.Model):
     )
     description = models.TextField(default=None, null=True, blank=True)
     is_global = models.BooleanField(default=False)
+    event_default_is_digital = models.BooleanField(
+        default=False,
+        verbose_name=_('Default Mode'),
+        help_text=_(
+            'Should new events in this group default to digital or in-person?')
+    )
 
     class Meta:
         ordering = ['-name']
@@ -138,6 +144,7 @@ class Event(models.Model):
     is_excluded_from_xp = models.BooleanField(default=False)
     is_casual = models.BooleanField(default=False, choices=EVENT_TYPE_CHOICES)
     is_excluded_from_global_rankings = models.BooleanField(default=False)
+    is_digital = models.BooleanField(default=False)
 
     class Meta:
         ordering = ('-start_date',)
@@ -164,6 +171,12 @@ class EventResult(models.Model):
     xp_for_attendance = 25
     xp_for_win = 10
     xp_for_loss = 5
+
+    xp_for_digital_casual_attendance = 25
+    xp_for_digital_attendance = 12
+    xp_for_digital_win = 5
+    xp_for_digital_loss = 2
+
     max_deck_lookup_attempts = 3
 
     event = models.ForeignKey(
@@ -188,6 +201,11 @@ class EventResult(models.Model):
         return f'{self.event.name} - {self.user} - ({self.finishing_position})'
 
     def get_xp(self):
+        if self.event.is_digital:
+            return self._get_xp_digital()
+        return self._get_xp()
+
+    def _get_xp(self):
         if self.event.is_excluded_from_xp:
             return 0
         if self.event.is_casual:
@@ -197,6 +215,18 @@ class EventResult(models.Model):
             xp += self.num_wins * self.xp_for_win
         if self.num_losses:
             xp += self.num_losses * self.xp_for_loss
+        return min(xp, 100)
+
+    def _get_xp_digital(self):
+        if self.event.is_excluded_from_xp:
+            return 0
+        if self.event.is_casual:
+            return self.xp_for_digital_casual_attendance
+        xp = self.xp_for_digital_attendance
+        if self.num_wins:
+            xp += self.num_wins * self.xp_for_digital_win
+        if self.num_losses:
+            xp += self.num_losses * self.xp_for_digital_loss
         return min(xp, 100)
 
     def add_deck_by_uploaded_link(self):
@@ -654,7 +684,8 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            user_data = {entry["result__user"]
+                : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -1050,7 +1081,7 @@ class AwardAssignmentService():
     def get_user_criteria_value(user, award):
         criteria_type = award.criteria
         value = 0
-        qs = EventResult.objects.filter(user=user)
+        qs = EventResult.objects.filter(user=user, event__is_digital=False)
         if criteria_type == AwardBase.CriteriaTypeOptions.event_matches:
             value = qs.aggregate(
                 total=Coalesce(Sum('num_wins'), 0) +
@@ -1143,7 +1174,10 @@ class AwardAssignmentService():
             from django.db.models.functions import TruncMonth
             qualifying_months = (
                 EventResult.objects
-                .filter(user=user)
+                .filter(
+                    user=user,
+                    event__is_digital=False
+                )
                 .filter(event__playgroups__isnull=False)
                 .annotate(
                     month=TruncMonth('event__start_date'),
@@ -1164,6 +1198,7 @@ class AwardAssignmentService():
                 .filter(
                     user=user,
                     event__is_casual=False,
+                    event__is_digital=False,
                     event_result_decks__was_played=True
                 )
                 .filter(
@@ -1181,6 +1216,7 @@ class AwardAssignmentService():
                 .filter(
                     event_result__user=user,
                     event_result__event__is_casual=False,
+                    event_result__event__is_digital=False,
                     was_played=True,
                     deck__set__isnull=False
                 )
