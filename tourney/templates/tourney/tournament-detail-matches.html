@@ -19,14 +19,14 @@
                             <h3>Round {{ round_group.round.order }}</h3>
                             <div class="subheading">
                                 {{ stage_group.stage.name }}
-                                {% if is_admin and round_group.round.id == latest_round.id and can_delete_latest_round %}
+                                {% if is_admin %}
                                     <span class="subheading-separator">•</span>
                                     <form method="post"
                                           style="display:inline;"
                                           hx-target="#tournament-content"
                                           hx-swap="outerHTML"
-                                          hx-post="{% url 'tourney-delete-latest-round' tournament.code %}"
-                                          hx-confirm="Are you sure you want to delete the latest round? This action cannot be undone and will remove all matches in the round.">
+                                          hx-post="{% url 'tourney-delete-round' tournament.code round_group.round.id %}"
+                                          hx-confirm="Are you sure you want to delete this round? All rounds that come after will also be deleted.">
                                         {% csrf_token %}
                                         <button type="submit" class="button-link">
                                             Delete Round

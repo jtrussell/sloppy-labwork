@@ -513,3 +513,8 @@ tr.with-actions td {
 .log-entry {
   padding: 0.25rem 0;
 }
+
+/* Standings */
+.standings-table th, .standings-table td {
+  white-space: nowrap;
+}

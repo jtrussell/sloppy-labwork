@@ -13,24 +13,38 @@
             {% if standings %}
                 <h2>Tournament Standings</h2>
                 <div style="overflow-x: auto">
-                    <table>
+                    <table class="standings-table">
                         <thead>
                             <tr>
-                                <th>Rank</th>
+                                <th style="max-width: 35px; text-align: center;">#</th>
                                 <th>Player</th>
+                                <th>W-L (B)</th>
                                 {% for criterion in enabled_criteria %}
-                                    <th>{{ criterion.get_name }}</th>
+                                    <th>
+                                        <span class="text-muted">{{ forloop.counter }}.</span>
+                                        {{ criterion.get_name }}
+                                    </th>
                                 {% endfor %}
                             </tr>
                         </thead>
                         <tbody>
                             {% for standing in standings %}
                             <tr{% if standing.is_dropped %} class="text-muted"{% endif %}>
-                                <td><strong>{{ standing.tournament_rank }}</strong></td>
+                                <td style="text-align:center" class="text-muted"><strong>{{ standing.tournament_rank }}</strong></td>
                                 <td>
                                     {{ standing.player.get_display_name }}
                                     {% if standing.is_dropped %}
                                         <span class="text-muted">(Dropped)</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if standing.is_in_current_stage %}
+                                        {{ standing.wins | default:0 }} - {{ standing.losses | default:0 }}
+                                        {% if standing.byes is not None and standing.byes > 0 %}
+                                            ({{ standing.byes }})
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
                                 {% for criterion in enabled_criteria %}

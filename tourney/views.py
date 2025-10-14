@@ -251,7 +251,6 @@ def get_tournament_base_context(request, tournament):
 
     can_create_round = False
     can_start_next_stage = False
-    can_delete_latest_round = False
     can_start_current_stage = False
     next_stage = None
     if is_admin:
@@ -266,7 +265,6 @@ def get_tournament_base_context(request, tournament):
 
         if current_stage:
             latest_round = current_stage.rounds.order_by('-order').first()
-            can_delete_latest_round = latest_round is not None
 
     # Get user's pending matches across all stages/rounds (only for active players)
     pending_matches = []
@@ -301,7 +299,6 @@ def get_tournament_base_context(request, tournament):
         'player': player,
         'can_create_round': can_create_round,
         'can_start_next_stage': can_start_next_stage,
-        'can_delete_latest_round': can_delete_latest_round,
         'can_start_current_stage': can_start_current_stage,
         'next_stage': next_stage,
         'current_stage': current_stage,
@@ -1182,24 +1179,24 @@ def undrop_from_tournament(request, tournament_code):
 @login_required
 @require_POST
 @is_tournament_admin
-def delete_latest_round(request, tournament_code):
+def delete_round(request, tournament_code, round_id):
     tournament = get_object_or_404(Tournament, code=tournament_code)
+    round_to_delete = get_object_or_404(
+        Round, id=round_id, stage__tournament=tournament)
 
-    current_stage = tournament.get_current_stage()
-    if not current_stage:
-        messages.error(request, 'No active stage found.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
-
-    latest_round = current_stage.rounds.order_by('-order').first()
-    if not latest_round:
-        messages.error(request, 'No rounds found to delete.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
-
-    round_number = latest_round.order
-    stage_name = current_stage.name
+    round_number = round_to_delete.order
+    stage_name = round_to_delete.stage.name
 
     with transaction.atomic():
-        latest_round.delete()
+        Round.objects.filter(
+            stage=round_to_delete.stage,
+            order__gte=round_to_delete.order
+        ).delete()
+
+        Stage.objects.filter(
+            tournament=tournament,
+            order__gt=round_to_delete.stage.order
+        ).delete()
 
         TournamentActionLog.objects.create(
             tournament=tournament,

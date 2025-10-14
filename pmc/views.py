@@ -318,7 +318,14 @@ class PlaygroupMembersList(LoginRequiredMixin, generic.ListView):
         return super().dispatch(request, *args, **kwargs)
 
 
+@login_required
 def playgroup_member_detail(request, slug, username):
+    is_pg_member = PlaygroupMember.objects.filter(
+        playgroup__slug=slug,
+        user=request.user
+    ).count() > 0
+    if not is_pg_member:
+        return redirect_to(request, reverse('pmc-user-profile', kwargs={'username': username}))
     return user_profile(request, username)
 
 

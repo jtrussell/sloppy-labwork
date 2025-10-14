@@ -14,7 +14,8 @@ def generate_tournament_code():
     """Generate a unique 6-character code for tournament URLs."""
     length = 6
     while True:
-        code = get_random_string(length, allowed_chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+        code = get_random_string(
+            length, allowed_chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
         if not Tournament.objects.filter(code=code).exists():
             return code
 
@@ -130,6 +131,7 @@ class Tournament(models.Model):
             return False
 
         pairing_strategy = get_pairing_strategy(current_stage.pairing_strategy)
+        print(pairing_strategy)
         return pairing_strategy.can_create_new_round(current_stage)
 
     def can_start_next_stage(self):
