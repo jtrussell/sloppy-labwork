@@ -13,21 +13,24 @@ class RoundRobinScheduledPairingStrategy(PairingStrategy):
     Round robin scheduled pairing strategy implementation.
 
     In round robin scheduled:
-    - All rounds are created when the first round is created
+    - All rounds are typically created when the first round is created
     - All matches are generated to ensure each player plays every other player once
-    - No additional rounds can be created beyond the initial set
-    - Uses round-robin algorithm to distribute matches across rounds
+    - Additional rounds can be created if there are unmatched pairs remaining
+    - Uses round-robin algorithm to distribute matches optimally across rounds
     """
 
     name = "round_robin_scheduled"
     display_name = "Round Robin"
-    description = "All rounds and matches created in advance, each player plays every other player once"
+    description = "Round robin tournament where each player plays every other player once"
 
     def make_pairings_for_round(self, round_obj):
         """
-        Generate all rounds and matches for the round robin tournament.
-        This is only called for the first round - all subsequent rounds and matches
-        are created at the same time.
+        Generate matches for the round robin tournament.
+
+        For the first round, all rounds and matches are created upfront.
+        For subsequent rounds (when new rounds are added dynamically),
+        generates the minimum number of rounds needed to complete the
+        round robin with all remaining unmatched pairs.
         """
         from tourney.models import Player, Match, Round
 
@@ -38,28 +41,27 @@ class RoundRobinScheduledPairingStrategy(PairingStrategy):
         if len(stage_players) < 2:
             return
 
-        # Only generate if this is the first round
-        if round_obj.order != 1:
+        if round_obj.order == 1:
+            schedule = self._generate_round_robin_schedule(stage_players)
+        else:
+            existing_pairings = self._get_existing_pairings(stage)
+            schedule = self._generate_remaining_schedule(
+                stage_players, existing_pairings)
+
+        if not schedule:
             return
 
-        # Generate round robin schedule
-        schedule = self._generate_round_robin_schedule(stage_players)
-
-        # Create all rounds and matches
         matches_to_create = []
 
-        for round_number, round_matches in enumerate(schedule, 1):
-            if round_number == 1:
-                # Use the existing round
+        for round_number, round_matches in enumerate(schedule, round_obj.order):
+            if round_number == round_obj.order:
                 target_round = round_obj
             else:
-                # Create new rounds
                 target_round = Round.objects.create(
                     stage=stage,
                     order=round_number
                 )
 
-            # Create matches for this round
             for player_one, player_two in round_matches:
                 match = Match(
                     round=target_round,
@@ -68,7 +70,6 @@ class RoundRobinScheduledPairingStrategy(PairingStrategy):
                 )
                 matches_to_create.append(match)
 
-        # Bulk create all matches
         if matches_to_create:
             Match.objects.bulk_create(matches_to_create)
 
@@ -134,17 +135,108 @@ class RoundRobinScheduledPairingStrategy(PairingStrategy):
 
         return schedule
 
-    def can_create_new_round(self, stage):
+    def _generate_remaining_schedule(self, players, existing_pairings):
         """
-        Prevent creation of additional rounds beyond the initial set.
-        All rounds are created when the tournament starts.
+        Generate an optimal schedule for remaining unmatched player pairs.
+
+        Uses a greedy algorithm to pack as many matches as possible into each round,
+        ensuring no player plays more than once per round.
+
+        Args:
+            players: List of stage players
+            existing_pairings: Set of existing pairing tuples (player_id1, player_id2)
+
+        Returns:
+            List of rounds, where each round is a list of (player1, player2) tuples
+        """
+        remaining_pairs = []
+        for i, player1 in enumerate(players):
+            for player2 in players[i+1:]:
+                pairing_key = tuple(sorted([player1.id, player2.id]))
+                if pairing_key not in existing_pairings:
+                    remaining_pairs.append((player1, player2))
+
+        if not remaining_pairs:
+            return []
+
+        schedule = []
+        remaining_pairs = list(remaining_pairs)
+
+        while remaining_pairs:
+            round_matches = []
+            used_players = set()
+
+            for pair in remaining_pairs[:]:
+                player1, player2 = pair
+                if player1.id not in used_players and player2.id not in used_players:
+                    round_matches.append(pair)
+                    used_players.add(player1.id)
+                    used_players.add(player2.id)
+                    remaining_pairs.remove(pair)
+
+            if round_matches:
+                schedule.append(round_matches)
+
+        return schedule
+
+    def _get_existing_pairings(self, stage):
+        """
+        Get all existing pairings in the stage.
 
         Args:
             stage: The tournament stage
 
         Returns:
-            bool: False - no additional rounds can be created
+            set: Set of tuples representing existing pairings (player_id1, player_id2)
+                 where player_id1 < player_id2
         """
+        from tourney.models import Match
+
+        pairings = set()
+        matches = Match.objects.filter(round__stage=stage).select_related(
+            'player_one', 'player_two')
+
+        for match in matches:
+            if match.player_one and match.player_two:
+                pairing_key = tuple(
+                    sorted([match.player_one.id, match.player_two.id]))
+                pairings.add(pairing_key)
+
+        return pairings
+
+    def can_create_new_round(self, stage):
+        """
+        Determine if a new round can be created by checking if there are
+        unmatched player pairs remaining.
+
+        Args:
+            stage: The tournament stage
+
+        Returns:
+            bool: True if at least two players haven't been matched together
+        """
+        from tourney.models import Player
+
+        print('can create new round called')
+
+        current_round = stage.get_current_round()
+        if current_round is None:
+            return False
+
+        stage_players = list(stage.stage_players.filter(
+            player__status=Player.PlayerStatus.ACTIVE))
+
+        if len(stage_players) < 2:
+            return False
+
+        existing_pairings = self._get_existing_pairings(stage)
+
+        for i, player1 in enumerate(stage_players):
+            for player2 in stage_players[i+1:]:
+                pairing_key = tuple(sorted([player1.id, player2.id]))
+                if pairing_key not in existing_pairings:
+                    return True
+
         return False
 
     def is_self_scheduled(self):
