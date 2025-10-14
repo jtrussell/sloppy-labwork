@@ -131,7 +131,6 @@ class Tournament(models.Model):
             return False
 
         pairing_strategy = get_pairing_strategy(current_stage.pairing_strategy)
-        print(pairing_strategy)
         return pairing_strategy.can_create_new_round(current_stage)
 
     def can_start_next_stage(self):
