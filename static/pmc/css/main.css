@@ -37,6 +37,8 @@
 
   --icon-set-generic: url('https://res.cloudinary.com/dig7eguxo/image/upload/v1750447189/OTHER_wltacg.png');
   --icon-set-empty: url('https://res.cloudinary.com/dig7eguxo/image/upload/v1750446466/ADD_nex8zp.png');
+
+  --icon-discord: url('https://res.cloudinary.com/dig7eguxo/image/upload/v1743023560/Discord-Symbol-White_qnyxug.svg');
 }
 
 /* ***********************************
@@ -78,6 +80,8 @@ html.pmc-theme-1 {
 
   --icon-xp: url('https://res.cloudinary.com/dig7eguxo/image/upload/v1743645712/XP_SIMPLE_LIGHT_mtqhqe.svg');
   --icon-rp: url('https://res.cloudinary.com/dig7eguxo/image/upload/v1743645712/RP_SIMPLE_LIGHT_jologn.svg');
+
+  --icon-discord: url('https://res.cloudinary.com/dig7eguxo/image/upload/v1743023560/Discord-Symbol-Black_cril5b.svg');
 }
 
 * {
@@ -1003,8 +1007,9 @@ ul.footer-links a {
   display: inline-block;
   height: 1rem;
   width: 1rem;
-  background-size: cover;
+  background-size: contain;
   vertical-align: middle;
+  background-repeat: no-repeat;
 }
 
 .pmc-icon.pmc-icon-md {
@@ -1031,6 +1036,10 @@ ul.footer-links a {
 
 .pmc-icon.icon-set-empty {
   background-image: var(--icon-set-empty);
+}
+
+.pmc-icon.icon-discord {
+  background-image: var(--icon-discord);
 }
 
 /* ***********************************

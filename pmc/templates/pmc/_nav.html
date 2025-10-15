@@ -5,14 +5,12 @@
       <li
         class="
           {% if link.is_preview %}preview{% endif %}"
-      >
-        <a
+      ><a
           href="{{ link.url }}"
           class="
             {% if link.is_active %}active{% endif %}
           "
-        >{{ link.name }}</a>
-      </li>
+        >{{ link.name }}</a></li>
       {% endfor %}
     </ul>
 
