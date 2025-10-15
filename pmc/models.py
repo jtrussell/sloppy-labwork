@@ -172,7 +172,7 @@ class EventResult(models.Model):
     xp_for_win = 10
     xp_for_loss = 5
 
-    xp_for_digital_casual_attendance = 25
+    xp_for_digital_casual_attendance = 0
     xp_for_digital_attendance = 12
     xp_for_digital_win = 5
     xp_for_digital_loss = 2
