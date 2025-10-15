@@ -114,7 +114,7 @@
           <h3>
             <a href="{% url 'pmc-pg-detail' membership.playgroup.slug %}">{{ membership.playgroup.name }}</a>
           </h3>
-          <div class="subheading">Playgroup</div>
+          <div class="subheading">{{ membership.playgroup.type | default_if_none:'Playgroup'}}</div>
 
           <p>
             Nickname: {{ membership.nickname }}<br />
