@@ -68,13 +68,18 @@
 
 <section>
     <h2>Add Player</h2>
-    <form method="post" class="form-wide">
+    <form method="post" class="form-wide" autocomplete="off">
         {% csrf_token %}
         <input type="hidden" name="action" value="add_player">
 
         <div class="form-group">
             <label for="{{ form.username.id_for_label }}">Username</label>
-            {{ form.username }}
+            <input type="text" name="username" id="{{ form.username.id_for_label }}" list="usernames-list" class="form-control" value="{{ form.username.value|default:'' }}">
+            <datalist id="usernames-list">
+                {% for username in playgroup_usernames %}
+                    <option value="{{ username }}"></option>
+                {% endfor %}
+            </datalist>
             {% if form.username.help_text %}
                 <span class="helptext">{{ form.username.help_text }}</span>
             {% endif %}

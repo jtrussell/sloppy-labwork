@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
@@ -572,10 +573,19 @@ def manage_players(request, tournament_code):
     players = tournament.players.all().order_by('status', 'created_on')
     form = PlayerForm()
 
+    staff_playgroups = Playgroup.objects.filter(
+        members__user=request.user,
+        members__is_staff=True
+    )
+    playgroup_usernames = User.objects.filter(
+        playgroupmember__playgroup__in=staff_playgroups
+    ).distinct().order_by('username').values_list('username', flat=True)
+
     context = {
         'tournament': tournament,
         'players': players,
         'form': form,
+        'playgroup_usernames': playgroup_usernames,
     }
 
     return render(request, 'tourney/manage-players.html', context)
@@ -611,10 +621,19 @@ def edit_player(request, tournament_code, player_id):
     else:
         form = EditPlayerForm(instance=player)
 
+    staff_playgroups = Playgroup.objects.filter(
+        members__user=request.user,
+        members__is_staff=True
+    )
+    playgroup_usernames = User.objects.filter(
+        playgroupmember__playgroup__in=staff_playgroups
+    ).distinct().order_by('username').values_list('username', flat=True)
+
     context = {
         'tournament': tournament,
         'player': player,
         'form': form,
+        'playgroup_usernames': playgroup_usernames,
     }
     return render(request, 'tourney/edit-player.html', context)
 

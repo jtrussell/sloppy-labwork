@@ -7,12 +7,41 @@
 </div>
 
 <section>
-    <h2>Edit Player</h2>
-    <div class="subheading">{{ player.get_display_name }}</div>
+    <h2>Edit Player: {{ player.get_display_name }}</h2>
 
-    <form method="post" class="form-wide">
+    <form method="post" class="form-wide" autocomplete="off">
         {% csrf_token %}
-        {{ form.as_p }}
+
+        {% if form.non_field_errors %}
+            <div class="error">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="form-group">
+            <label for="{{ form.username.id_for_label }}">Username</label>
+            <input type="text" name="username" id="{{ form.username.id_for_label }}" list="usernames-list" class="form-control" value="{{ form.username.value|default:'' }}">
+            <datalist id="usernames-list">
+                {% for username in playgroup_usernames %}
+                    <option value="{{ username }}"></option>
+                {% endfor %}
+            </datalist>
+            {% if form.username.help_text %}
+                <span class="helptext">{{ form.username.help_text }}</span>
+            {% endif %}
+            {% if form.username.errors %}
+                <div class="error">{{ form.username.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.nickname.id_for_label }}">Nickname</label>
+            {{ form.nickname }}
+            <span class="helptext">Required if no username is provided</span>
+            {% if form.nickname.errors %}
+                <div class="error">{{ form.nickname.errors }}</div>
+            {% endif %}
+        </div>
 
         <button type="submit" class="button button-primary">Save Changes</button>
         <a href="{% url 'tourney-manage-players' tournament.code %}" class="button">Cancel</a>
