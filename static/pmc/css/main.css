@@ -381,8 +381,11 @@ form button,
 }
 
 
-.btn:hover {
+.btn:hover,
+.btn:focus,
+.btn:active {
   box-shadow: 0 0 5px var(--color-primary);
+  transform: translate(0, -1px);
 }
 
 
@@ -440,6 +443,7 @@ form button,
   padding: 20px 20px;
   margin: 20px 0;
   overflow-x: auto;
+  border-left: 8px solid var(--color-lines);
 }
 
 .card.card-closable {
