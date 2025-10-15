@@ -24,6 +24,8 @@ urlpatterns = [
          views.export_to_keychain_form, name='tourney-export-to-keychain-form'),
     path('<str:tournament_code>/players/',
          views.manage_players, name='tourney-manage-players'),
+    path('<str:tournament_code>/players/<int:player_id>/edit/',
+         views.edit_player, name='tourney-edit-player'),
     path('<str:tournament_code>/register/',
          views.register_for_tournament, name='tourney-register'),
     path('<str:tournament_code>/unregister/',

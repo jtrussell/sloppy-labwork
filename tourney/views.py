@@ -19,7 +19,7 @@ from .models import (
     get_pairing_strategy, get_available_ranking_criteria
 )
 from .forms import (
-    TournamentForm, PlayerForm, StageForm, MatchResultForm,
+    TournamentForm, PlayerForm, EditPlayerForm, StageForm, MatchResultForm,
     PlayerRegistrationForm, AddMatchForm, SelectPlaygroupForm, TournamentExportForm
 )
 from pmc.models import Playgroup, Event, EventResult, PlaygroupEvent, RankingPointsService
@@ -579,6 +579,44 @@ def manage_players(request, tournament_code):
     }
 
     return render(request, 'tourney/manage-players.html', context)
+
+
+@login_required
+@is_tournament_admin
+def edit_player(request, tournament_code, player_id):
+    tournament = get_object_or_404(Tournament, code=tournament_code)
+    player = get_object_or_404(Player, id=player_id, tournament=tournament)
+
+    if request.method == 'POST':
+        form = EditPlayerForm(request.POST, instance=player)
+        if form.is_valid():
+            try:
+                old_display_name = player.get_display_name()
+                player = form.save()
+                new_display_name = player.get_display_name()
+
+                TournamentActionLog.objects.create(
+                    tournament=tournament,
+                    user=request.user,
+                    action_type=TournamentActionLog.ActionType.ADD_PLAYER,
+                    description=f'Edited player: {old_display_name} -> {new_display_name}'
+                )
+
+                messages.success(
+                    request, f'Player {new_display_name} updated successfully!')
+                return redirect_to(request, reverse('tourney-manage-players', kwargs={'tournament_code': tournament.code}))
+            except IntegrityError:
+                messages.error(
+                    request, 'A player with this username or nickname already exists in this tournament.')
+    else:
+        form = EditPlayerForm(instance=player)
+
+    context = {
+        'tournament': tournament,
+        'player': player,
+        'form': form,
+    }
+    return render(request, 'tourney/edit-player.html', context)
 
 
 @login_required

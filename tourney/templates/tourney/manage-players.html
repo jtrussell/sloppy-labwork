@@ -2,7 +2,7 @@
 {% load partials %}
 
 {% partialdef player-item %}
-<li class="player-item">
+<li class="player-item" id="player-{{ player.id }}">
     <div class="player-line-1">
         <span class="player-name">
             {{ player.get_display_name }}
@@ -17,6 +17,7 @@
             {{ player.get_status_display }}
         </span>
         <div class="player-actions">
+            <a href="{% url 'tourney-edit-player' tournament.code player.id %}" class="button button-small">Edit</a>
             {% if player.status == 'active' %}
                 <form
                     method="post"
@@ -24,6 +25,7 @@
                     hx-post="{% url 'tourney-manage-players' tournament.code %}"
                     hx-target="closest .player-item"
                     hx-swap="outerHTML"
+                    style="display: inline-block;"
                 >
                     {% csrf_token %}
                     <input type="hidden" name="action" value="drop_player">
@@ -37,6 +39,7 @@
                     hx-confirm="Are you sure you want to undrop this player?"
                     hx-target="closest .player-item"
                     hx-swap="outerHTML"
+                    style="display: inline-block;"
                 >
                     {% csrf_token %}
                     <input type="hidden" name="action" value="undrop_player">
@@ -68,7 +71,7 @@
     <form method="post" class="form-wide">
         {% csrf_token %}
         <input type="hidden" name="action" value="add_player">
-        
+
         <div class="form-group">
             <label for="{{ form.username.id_for_label }}">Username</label>
             {{ form.username }}
@@ -79,7 +82,7 @@
                 <div class="error">{{ form.username.errors }}</div>
             {% endif %}
         </div>
-        
+
         <div class="form-group">
             <label for="{{ form.nickname.id_for_label }}">Nickname</label>
             {{ form.nickname }}
@@ -88,7 +91,7 @@
                 <div class="error">{{ form.nickname.errors }}</div>
             {% endif %}
         </div>
-        
+
         <button type="submit" class="button button-primary">Add Player</button>
         <a href="{% url 'tourney-detail-matches' tournament.code %}" class="button">Back</a>
     </form>

@@ -168,6 +168,63 @@ class PlayerForm(forms.ModelForm):
         return instance
 
 
+class EditPlayerForm(forms.ModelForm):
+    username = forms.CharField(
+        max_length=150,
+        required=False,
+        help_text="Leave empty to remove user association"
+    )
+
+    class Meta:
+        model = Player
+        fields = ['nickname']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.user:
+            self.fields['username'].initial = self.instance.user.username
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username', '')
+        if username:
+            return username.strip()
+        return ''
+
+    def clean_nickname(self):
+        nickname = self.cleaned_data.get('nickname', '')
+        if nickname:
+            return nickname.strip()
+        return ''
+
+    def clean(self):
+        cleaned_data = super().clean()
+        username = cleaned_data.get('username', '')
+        nickname = cleaned_data.get('nickname', '')
+
+        if username:
+            try:
+                user = User.objects.get(username=username)
+                cleaned_data['user_obj'] = user
+            except User.DoesNotExist:
+                raise forms.ValidationError(
+                    f'No user found with username: {username}')
+        else:
+            cleaned_data['user_obj'] = None
+
+        if not username and not nickname:
+            raise forms.ValidationError(
+                'Player must have either a username or a nickname')
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.user = self.cleaned_data.get('user_obj')
+        if commit:
+            instance.save()
+        return instance
+
+
 class StageForm(forms.ModelForm):
     pairing_strategy = forms.ChoiceField(
         choices=[])  # Will be populated in __init__
