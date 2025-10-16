@@ -886,6 +886,7 @@ class MatchResult(models.Model):
 
 
 class StandingCalculator:
+
     @staticmethod
     def get_stage_standings(stage):
         from django.db.models import Count, Q
@@ -903,6 +904,7 @@ class StandingCalculator:
                 'stage_player': stage_player,
                 'wins': standings_cache[stage_player.id]['wins'],
                 'losses': standings_cache[stage_player.id]['losses'],
+                'byes': standings_cache[stage_player.id]['byes'],
                 'ties': standings_cache[stage_player.id]['ties'],
                 'points': standings_cache[stage_player.id]['points'],
                 'total_matches': standings_cache[stage_player.id]['total_matches'],
@@ -961,6 +963,12 @@ class StandingCalculator:
                 winner=stage_player
             ).count()
 
+            byes = MatchResult.objects.filter(
+                match__round__stage=stage,
+                winner=stage_player,
+                match__player_two__isnull=True
+            ).count()
+
             total_matches = Match.objects.filter(
                 Q(player_one=stage_player) | Q(player_two=stage_player),
                 round__stage=stage
@@ -1013,6 +1021,7 @@ class StandingCalculator:
                 'wins': wins,
                 'losses': losses,
                 'ties': ties,
+                'byes': byes,
                 'points': points,
                 'total_matches': total_matches,
                 'strength_of_schedule': strength_of_schedule,
@@ -1184,6 +1193,7 @@ class StandingCalculator:
                 'rank': current_standing['rank'],
                 'wins': current_standing['wins'],
                 'losses': current_standing['losses'],
+                'byes': current_standing['byes'],
                 'ties': current_standing['ties'],
                 'points': current_standing['points'],
                 'strength_of_schedule': current_standing['strength_of_schedule'],
@@ -1235,6 +1245,7 @@ class StandingCalculator:
                 'wins': None,
                 'losses': None,
                 'ties': None,
+                'byes': None,
                 'points': None,
                 'strength_of_schedule': None,
                 'seed': highest_stage_player.seed,
