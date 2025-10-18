@@ -56,6 +56,9 @@ class Playgroup(models.Model):
     def __str__(self):
         return self.name
 
+    def get_logo_src(self):
+        return self.logo_src or 'https://res.cloudinary.com/dig7eguxo/image/upload/v1743023566/Playgroup_yis2hs.svg'
+
     def get_pending_join_requests(self):
         return self.join_requests.filter(
             status=PlaygroupJoinRequest.RequestStatuses.SUBMITTED).order_by('-created_on')

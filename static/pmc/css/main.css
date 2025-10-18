@@ -524,6 +524,12 @@ form button,
   background-size: cover;
 }
 
+.playgroup-logo-sm {
+  max-height: 60px;
+  max-width: 60px;
+  background-size: cover;
+}
+
 .masthead {
   padding: 10px 0;
   border-bottom: 3px solid var(--color-accent);
@@ -1052,6 +1058,10 @@ ul.footer-links a {
 
 .pmc-icon.icon-discord {
   background-image: var(--icon-discord);
+}
+
+.profile-playgroups .playgroups-list {
+  margin-top: 2rem;
 }
 
 /* ***********************************

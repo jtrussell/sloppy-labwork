@@ -84,19 +84,21 @@
     {% endif %}
   {% endif %}
 
-  <!--
   {% if profile.show_playgroups_on_profile and playgroup_memberships %}
-    <div class="card">
+    <div class="card profile-playgroups">
       <h2>Playgroups</h2>
-      <ul>
+      <ul class="flex flex-col flex-gap-2 playgroups-list">
         {% for membership in playgroup_memberships %}
-          <li>
-            <a href="{% url 'pmc-pg-detail' membership.playgroup.slug %}">{{ membership.playgroup.name }}</a>
+          <li class="flex flex-row flex-gap-1 flex-col-sm">
+            <img src="{{ membership.playgroup.get_logo_src }}" alt="{{ membership.playgroup.name }} logo" class="playgroup-logo-sm">
+            <div class="flex flex-col">
+              <a href="{% url 'pmc-pg-detail' membership.playgroup.slug %}">{{ membership.playgroup.name }}</a>
+              <div>{{ membership.playgroup.members.count }} Players</div>
+            </div>
           </li>
         {% endfor %}
       </ul>
     </div>
   {% endif %}
-  -->
 
 {% endblock %}
