@@ -26,7 +26,7 @@ from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.context_processors import playgroup
-from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm
+from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm, PmcProfilePrivacyForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
 from .models import AchievementTier, Badge, EventResult, EventResultDeck, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserAchievementTier, UserBadge, Trophy, UserTrophy, Achievement
@@ -259,6 +259,7 @@ def user_profile(request, username):
     current_level = profile.get_level()
     next_level = profile.get_next_level()
     level_up_info = profile._get_level_up_info()
+    playgroup_memberships = PlaygroupMember.objects.filter(user=user)
 
     context = {
         'user': user,
@@ -271,6 +272,7 @@ def user_profile(request, username):
         'percent_level_up': level_up_info['percent_level_up'],
         'level_increment': level_up_info['level_increment'],
         'level_increment_progress': level_up_info['level_increment_progress'],
+        'playgroup_memberships': playgroup_memberships
     }
 
     print(context['achievements'])
@@ -865,9 +867,12 @@ def manage_my_pmc_profile(request):
         form = PmcProfileForm(request.POST, instance=profile)
         username_form = EditUsernameForm(
             request.POST, instance=request.user)
-        if form.is_valid() and username_form.is_valid():
+        privacy_form = PmcProfilePrivacyForm(
+            request.POST, instance=profile)
+        if form.is_valid() and username_form.is_valid() and privacy_form.is_valid():
             form.save()
             username_form.save()
+            privacy_form.save()
             messages.success(request, _('Profile updated.'))
             return HttpResponseRedirect(reverse('pmc-my-keychain-manage'))
         else:
@@ -878,10 +883,13 @@ def manage_my_pmc_profile(request):
         form = PmcProfileForm(instance=profile)
         username_form = EditUsernameForm(
             instance=request.user)
+        privacy_form = PmcProfilePrivacyForm(
+            instance=profile)
 
     return render(request, 'pmc/g-me-manage.html', {
         'form': form,
         'username_form': username_form,
+        'privacy_form': privacy_form,
     })
 
 

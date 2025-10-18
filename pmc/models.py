@@ -461,17 +461,25 @@ class PmcProfile(models.Model):
         choices=ThemeOptions.choices, default=ThemeOptions.KEYCHAIN_DARK)
     tagline = models.CharField(
         max_length=100, default=None, null=True, blank=True)
-    show_stats_on_profile = models.BooleanField(
-        default=False,
-        help_text=_('On my public profile'),
-        verbose_name=_('Privacy')
-    )
     mv_id = models.CharField(max_length=36, unique=True,
                              default=None, null=True, blank=True)
     mv_username = models.CharField(
         max_length=100, default=None, null=True, blank=True)
     mv_qrcode_message = models.CharField(
         max_length=200, default=None, null=True, blank=True)
+    show_stats_on_profile = models.BooleanField(
+        default=False,
+        help_text=_('Including your level'),
+        verbose_name=_('Stats')
+    )
+    show_awards_on_profile = models.BooleanField(
+        default=False,
+        verbose_name=_('Awards')
+    )
+    show_playgroups_on_profile = models.BooleanField(
+        default=False,
+        verbose_name=_('Playgroups')
+    )
 
     def get_avatar(self):
         try:

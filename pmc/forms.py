@@ -186,14 +186,33 @@ class PlaygroupJoinRequestForm(forms.ModelForm):
 class PmcProfileForm(forms.ModelForm):
     class Meta:
         model = PmcProfile
-        fields = ('pronouns', 'theme', 'tagline', 'show_stats_on_profile',)
+        fields = ('pronouns', 'theme', 'tagline',)
+
+
+class PmcProfilePrivacyForm(forms.ModelForm):
+    class Meta:
+        model = PmcProfile
+        fields = ('show_stats_on_profile', 'show_awards_on_profile',
+                  'show_playgroups_on_profile',)
         widgets = {
             'show_stats_on_profile': forms.Select(
                 choices=[
-                    (False, _('Show playercard only')),
-                    (True, _('Show playercard, stats, awards')),
+                    (False, _('No')),
+                    (True, _('Yes')),
                 ]
-            )
+            ),
+            'show_awards_on_profile': forms.Select(
+                choices=[
+                    (False, _('No')),
+                    (True, _('Yes')),
+                ]
+            ),
+            'show_playgroups_on_profile': forms.Select(
+                choices=[
+                    (False, _('No')),
+                    (True, _('Yes')),
+                ]
+            ),
         }
 
 

@@ -253,6 +253,7 @@ select {
   border-color: var(--staff-color-lines);
 }
 
+.form > p,
 form > p {
   display: flex;
   flex-wrap: wrap;
@@ -261,10 +262,12 @@ form > p {
   margin-bottom: 10px;
 }
 
+.form > p > label,
 form > p > label {
   flex-basis: 120px;
 }
 
+.form > p > .helptext,
 form > p > .helptext {
   width: 100%;
   text-align: right;
@@ -274,6 +277,7 @@ form > p > .helptext {
 }
 
 @media (max-width: 680px) {
+  .form > p,
   form > p {
     flex-direction: column;
     align-items: stretch;
@@ -281,11 +285,15 @@ form > p > .helptext {
     margin-bottom: 20px;
   }
 
+  .form > p > label,
   form > p > label {
     flex-basis: auto;
   }
 }
 
+.form > p > input:not([type="checkbox"]),
+.form > p > textarea,
+.form > p > select,
 form > p > input:not([type="checkbox"]),
 form > p > textarea,
 form > p > select {
