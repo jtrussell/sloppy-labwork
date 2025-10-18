@@ -197,20 +197,20 @@ class PmcProfilePrivacyForm(forms.ModelForm):
         widgets = {
             'show_stats_on_profile': forms.Select(
                 choices=[
-                    (False, _('No')),
-                    (True, _('Yes')),
+                    (False, _('Private, do not show')),
+                    (True, _('Public, show to everyone')),
                 ]
             ),
             'show_awards_on_profile': forms.Select(
                 choices=[
-                    (False, _('No')),
-                    (True, _('Yes')),
+                    (False, _('Private, do not show')),
+                    (True, _('Public, show to everyone')),
                 ]
             ),
             'show_playgroups_on_profile': forms.Select(
                 choices=[
-                    (False, _('No')),
-                    (True, _('Yes')),
+                    (False, _('Private, do not show')),
+                    (True, _('Public, show to everyone')),
                 ]
             ),
         }
