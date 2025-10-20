@@ -137,6 +137,9 @@ class PlayerForm(forms.ModelForm):
     class Meta:
         model = Player
         fields = ['nickname']
+        widgets = {
+            'nickname': forms.TextInput(attrs={'autocomplete': 'off'}),
+        }
 
     def clean(self):
         cleaned_data = super().clean()
