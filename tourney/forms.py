@@ -181,6 +181,9 @@ class EditPlayerForm(forms.ModelForm):
     class Meta:
         model = Player
         fields = ['nickname']
+        widgets = {
+            'nickname': forms.TextInput(attrs={'autocomplete': 'off'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
