@@ -1,0 +1,70 @@
+{% if is_admin %}
+<section>
+    <h2>Tournament Control</h2>
+    <div class="stack gap-2">
+        {% if current_stage %}
+        <div>
+            <div class="text-small text-muted">Initialize {{ current_stage.name }} with player seeding if needed</div>
+            <form method="post"
+                    action="{% url 'tourney-prepare-current-stage-seeding' tournament.code %}"
+                    style="display:inline;">
+                {% csrf_token %}
+                <button type="submit"
+                        class="button sm-w100"
+                        {% if not can_start_current_stage %}disabled{% endif %}>
+                    Start {{ current_stage.name }}
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div>
+            <div class="text-small text-muted">Continue current stage with another round</div>
+            <form method="post"
+                    action="{% url 'tourney-create-round' tournament.code %}"
+                    style="display:inline;"
+                    hx-post="{% url 'tourney-create-round' tournament.code %}"
+                    hx-target="#tournament-content"
+                    hx-swap="outerHTML">
+                {% csrf_token %}
+                <button type="submit"
+                        class="button sm-w100"
+                        {% if not can_create_round %}disabled{% endif %}>
+                    Create New Round
+                </button>
+            </form>
+        </div>
+
+        {% if next_stage %}
+        <div>
+            <div class="text-small text-muted">Advance tournament to {{ next_stage.name }}</div>
+            <form method="post"
+                    action="{% url 'tourney-prepare-stage-seeding' tournament.code %}"
+                    style="display:inline;">
+                {% csrf_token %}
+                <button type="submit"
+                        class="button sm-w100"
+                        {% if not can_start_next_stage %}disabled{% endif %}>
+                    Start {{ next_stage.name }}
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div>
+            <div class="text-small text-muted">Create a match or award a bye in the current round.</div>
+            <button type="button"
+                    class="button sm-w100"
+                    {% if not current_round %}disabled{% endif %}
+                    onclick="openAddMatchModal()">
+                Add Match
+            </button>
+        </div>
+
+        <div>
+            <div class="text-small text-muted">Add new player, drop/undrop existing ones</div>
+            <a href="{% url 'tourney-manage-players' tournament.code %}" class="button sm-w100">Manage Players</a>
+        </div>
+    </div>
+</section>
+{% endif %}

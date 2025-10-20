@@ -106,6 +106,8 @@
                 <button class="modal-close" onclick="closeAddMatchModal()"></button>
             </div>
 
+            <p class="text-muted">You may only create matches for players not currently matched in the current round.</p>
+
             <form id="addMatchForm" class="form-wide">
                 {% csrf_token %}
                 <div>

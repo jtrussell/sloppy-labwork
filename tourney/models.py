@@ -248,6 +248,7 @@ class Player(models.Model):
     nickname = models.CharField(
         max_length=100, default=None, null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
+    # has_seen_completion_message = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
