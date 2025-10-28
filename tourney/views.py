@@ -1789,7 +1789,8 @@ def export_to_keychain_form(request, tournament_code, playgroup_slug):
         raise PermissionDenied
 
     if request.method == 'POST':
-        form = TournamentExportForm(request.POST, tournament=tournament)
+        form = TournamentExportForm(
+            request.POST, tournament=tournament, playgroup=playgroup)
         if form.is_valid():
             with transaction.atomic():
                 is_casual = form.cleaned_data['is_casual'] == 'True'
@@ -1835,7 +1836,7 @@ def export_to_keychain_form(request, tournament_code, playgroup_slug):
                     request, f'Event "{event.name}" has been successfully created in KeyChain!')
                 return redirect_to(request, f'/pmc/events/{event.id}/')
     else:
-        form = TournamentExportForm(tournament=tournament)
+        form = TournamentExportForm(tournament=tournament, playgroup=playgroup)
 
     context = get_tournament_base_context(request, tournament)
     context['form'] = form

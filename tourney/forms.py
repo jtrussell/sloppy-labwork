@@ -430,7 +430,11 @@ class TournamentExportForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         tournament = kwargs.pop('tournament', None)
+        playgroup = kwargs.pop('playgroup', None)
         super().__init__(*args, **kwargs)
 
         if tournament:
             self.fields['name'].initial = tournament.name
+
+        if playgroup:
+            self.fields['is_digital'].initial = playgroup.event_default_is_digital
