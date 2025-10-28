@@ -6,32 +6,23 @@
     <thead>
       <th class="col-sm">#</th>
       <th class="text-left">Player</th>
-      <th class="col-md lg-only">Points</th>
-      <th class="col-md lg-only">Events</th>
+      <th class="col-md">Points</th>
+      <th class="col-md">Events</th>
     </thead>
     <tbody>
       {% for item in rankings_page %}
       <tr>
         <td class="col-sm">{{ item.rank }}</td>
         <td class="text-left">
-          <div class="name-with-avatar text-larger">
+          <div class="name-with-avatar">
             <img class="avatar" src="{{ item.user.pmc_profile.get_avatar.src}}" alt="">
-            <div>
-              <a href="{% url 'pmc-user-profile' item.user.username %}">
-                <span class="text-larger">{{ item.user }}</span>
-              </a>
-              <ul class="inline-list text-smaller sm-only">
-                <li><span class="text-muted">Points:</span> {{ item.total_points | floatformat:0 }}</li>
-                <li><span class="text-muted">Events:</span> {{ item.num_results }}</li>
-              </ul>
-              </div>
-            </div>
+            {{ item.user }}
           </div>
         </td>
-        <td class="col-md lg-only">
+        <td class="col-md">
           {{ item.total_points | floatformat:0 }}
         </td>
-        <td class="col-md lg-only">
+        <td class="col-md">
           {{ item.num_results }}
         </td>
       </tr>
