@@ -440,6 +440,12 @@ class TournamentExportForm(forms.Form):
         required=False,
         label='Format'
     )
+    is_digital = forms.ChoiceField(
+        choices=[(False, 'In-Person'), (True, 'Online')],
+        required=True,
+        initial=False,
+        label='Event Mode'
+    )
 
     def __init__(self, *args, **kwargs):
         tournament = kwargs.pop('tournament', None)

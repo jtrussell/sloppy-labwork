@@ -1798,6 +1798,7 @@ def export_to_keychain_form(request, tournament_code, playgroup_slug):
                     name=form.cleaned_data['name'],
                     start_date=form.cleaned_data['start_date'],
                     is_casual=is_casual,
+                    is_digital=form.cleaned_data['is_digital'],
                     format=form.cleaned_data.get('format')
                 )
 
