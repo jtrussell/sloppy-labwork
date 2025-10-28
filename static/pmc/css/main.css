@@ -677,7 +677,7 @@ tr:last-child > td {
 table .name-with-avatar {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 0.5rem;
 }
 
 table .avatar {
@@ -905,13 +905,13 @@ ul.messages {
 
 @media (min-width: 681px) {
   .sm-only {
-    display: none;
+    display: none !important;
   }
 }
 
 @media (max-width: 680px) {
   .lg-only {
-    display: none;
+    display: none !important;
   }
 }
 
