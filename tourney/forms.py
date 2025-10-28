@@ -5,9 +5,8 @@ from pmc.models import Playgroup, EventFormat
 
 
 class TournamentForm(forms.ModelForm):
-    # Main Stage fields
     main_pairing_strategy = forms.ChoiceField(
-        choices=[],  # Will be populated in __init__
+        choices=[],
         initial='swiss',
         label='Main Stage Pairing Strategy'
     )
@@ -27,7 +26,6 @@ class TournamentForm(forms.ModelForm):
         label='Score Reporting in Main Stage'
     )
 
-    # Playoff Stage fields
     enable_playoffs = forms.BooleanField(
         required=False,
         initial=False,
@@ -51,16 +49,13 @@ class TournamentForm(forms.ModelForm):
         is_edit_mode = kwargs.pop('is_edit_mode', False)
         super().__init__(*args, **kwargs)
 
-        # Populate pairing strategy choices dynamically
         from .pairing_strategies import get_strategy_choices
         self.fields['main_pairing_strategy'].choices = get_strategy_choices()
 
-        # Disable is_closed field for create/copy operations
         if not is_edit_mode:
             self.fields['is_closed'].disabled = True
             self.fields['is_closed'].help_text = 'Tournament can only be closed after creation'
 
-        # If editing existing tournament, populate stage fields
         if instance and instance.pk:
             main_stage = instance.stages.filter(order=1).first()
             if main_stage:
@@ -89,7 +84,6 @@ class TournamentForm(forms.ModelForm):
         available_keys = [c.get_key()
                           for c in get_available_ranking_criteria()]
 
-        # Extract criteria data from POST
         for key in available_keys:
             enabled = post_data.get(f'criterion_{key}_enabled') == 'on'
             order = post_data.get(f'criterion_{key}_order', '')
@@ -109,16 +103,13 @@ class TournamentForm(forms.ModelForm):
                 criteria.append({
                     'key': key,
                     'enabled': False,
-                    'order': 999  # High number for disabled criteria
+                    'order': 999
                 })
 
-        # Sort enabled criteria by order and reassign sequential order numbers
         enabled_criteria = [c for c in criteria if c['enabled']]
         enabled_criteria.sort(key=lambda x: x['order'])
 
-        # Reassign sequential order numbers to enabled criteria
         for i, criterion in enumerate(enabled_criteria):
-            # Find this criterion in the original list and update its order
             for orig_criterion in criteria:
                 if orig_criterion['key'] == criterion['key'] and orig_criterion['enabled']:
                     orig_criterion['order'] = i + 1
@@ -146,7 +137,6 @@ class PlayerForm(forms.ModelForm):
         username = (cleaned_data.get('username', '') or '').strip()
         nickname = (cleaned_data.get('nickname', '') or '').strip()
 
-        # If username is provided, validate it exists
         if username:
             try:
                 user = User.objects.get(username=username)
@@ -155,7 +145,6 @@ class PlayerForm(forms.ModelForm):
                 raise forms.ValidationError(
                     f'No user found with username: {username}')
         else:
-            # For guest players, nickname is required
             if not nickname:
                 raise forms.ValidationError(
                     'Nickname is required for guest players')
@@ -233,11 +222,10 @@ class EditPlayerForm(forms.ModelForm):
 
 class StageForm(forms.ModelForm):
     pairing_strategy = forms.ChoiceField(
-        choices=[])  # Will be populated in __init__
+        choices=[])
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Populate pairing strategy choices dynamically
         from .pairing_strategies import get_strategy_choices
         self.fields['pairing_strategy'].choices = get_strategy_choices()
 
@@ -284,12 +272,10 @@ class MatchResultForm(forms.ModelForm):
 
         stage = self.match.round.stage
 
-        # Validate winner selection based on stage settings
         if not stage.are_ties_allowed and not winner:
             raise forms.ValidationError(
                 "A winner must be selected - ties are not allowed in this stage.")
 
-        # Validate scores based on stage settings
         if stage.report_full_scores == Stage.SCORE_REPORTING_REQUIRED:
             if player_one_score is None or player_two_score is None:
                 raise forms.ValidationError(
@@ -301,13 +287,11 @@ class MatchResultForm(forms.ModelForm):
         match = kwargs.pop('match', None)
         super().__init__(*args, **kwargs)
 
-        # Store match for validation
         self.match = match
 
         if match:
             stage = match.round.stage
 
-            # Build winner choices based on stage settings
             choices = []
             if stage.are_ties_allowed:
                 choices.append(('', 'Tie'))
@@ -325,13 +309,10 @@ class MatchResultForm(forms.ModelForm):
                 widget=forms.Select(attrs={'class': 'form-select'})
             )
 
-            # Configure score fields based on stage settings
             if stage.report_full_scores == Stage.SCORE_REPORTING_DISABLED:
-                # Remove score fields entirely
                 del self.fields['player_one_score']
                 del self.fields['player_two_score']
             elif stage.report_full_scores == Stage.SCORE_REPORTING_REQUIRED:
-                # Make score fields required
                 self.fields['player_one_score'].required = True
                 self.fields['player_two_score'].required = True
 

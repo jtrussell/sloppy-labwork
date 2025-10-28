@@ -102,16 +102,13 @@ class EventUpdateForm(forms.ModelForm):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
-        # Hide global rankings exclusion field for non-staff users
         if not (self.user and self.user.is_staff):
             self.fields.pop('is_excluded_from_global_rankings', None)
 
     def save(self, commit=True):
         event = super().save(commit=False)
 
-        # Only allow staff users to modify the global rankings exclusion field
         if not (self.user and self.user.is_staff):
-            # Preserve the existing value if user is not staff
             if self.instance.pk:
                 original_event = Event.objects.get(pk=self.instance.pk)
                 event.is_excluded_from_global_rankings = original_event.is_excluded_from_global_rankings
