@@ -5,12 +5,14 @@
     {
       "src": "https://res.cloudinary.com/dig7eguxo/image/upload/v1750266102/KC_SQUARE_DARK_192px_jndnrl.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "maskable"
     },
     {
       "src": "https://res.cloudinary.com/dig7eguxo/image/upload/v1750266102/KC_SQUARE_DARK_512px_gxfgyp.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
   "id": "https://keychain.sloppylabwork.com",
