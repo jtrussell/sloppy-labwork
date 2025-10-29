@@ -50,11 +50,9 @@ def can_add_match(view_func):
         tournament = get_object_or_404(Tournament, code=tournament_code)
         current_stage = tournament.get_current_stage()
 
-        # Allow admins always
         if tournament.is_user_admin(request.user):
             return view_func(request, tournament_code, *args, **kwargs)
 
-        # Allow players only in self-scheduled stages
         if (current_stage and
             current_stage.get_pairing_strategy().is_self_scheduled() and
                 tournament.players.filter(user=request.user).exists()):
@@ -110,7 +108,6 @@ def create_tournament(request):
                 tournament.owner = request.user
                 tournament.save()
 
-                # Create main stage
                 main_stage = tournament.create_initial_stage(
                     main_pairing_strategy=form.cleaned_data['main_pairing_strategy'],
                     main_max_players=form.cleaned_data['main_max_players'],
@@ -118,12 +115,10 @@ def create_tournament(request):
                     main_score_reporting=form.cleaned_data['main_score_reporting']
                 )
 
-                # Set ranking criteria for main stage
                 ranking_criteria = form.get_ranking_criteria_from_post(
                     request.POST)
                 main_stage.set_ranking_criteria(ranking_criteria)
 
-                # Create playoff stage if enabled
                 if form.cleaned_data['enable_playoffs']:
                     tournament.create_playoff_stage(
                         max_players=form.cleaned_data['playoff_max_players'],
@@ -162,7 +157,6 @@ def edit_tournament(request, tournament_code):
             with transaction.atomic():
                 form.save()
 
-                # Update main stage
                 main_stage = tournament.stages.filter(order=1).first()
                 if main_stage:
                     main_stage.pairing_strategy = form.cleaned_data['main_pairing_strategy']
@@ -170,14 +164,12 @@ def edit_tournament(request, tournament_code):
                     main_stage.are_ties_allowed = form.cleaned_data['main_allow_ties']
                     main_stage.report_full_scores = form.cleaned_data['main_score_reporting']
 
-                    # Update ranking criteria for main stage
                     ranking_criteria = form.get_ranking_criteria_from_post(
                         request.POST)
                     main_stage.set_ranking_criteria(ranking_criteria)
 
                     main_stage.save()
                 else:
-                    # Create main stage if it doesn't exist
                     main_stage = tournament.create_initial_stage(
                         main_pairing_strategy=form.cleaned_data['main_pairing_strategy'],
                         main_max_players=form.cleaned_data['main_max_players'],
@@ -185,13 +177,11 @@ def edit_tournament(request, tournament_code):
                         main_score_reporting=form.cleaned_data['main_score_reporting']
                     )
 
-                    # Set ranking criteria for new main stage
                     ranking_criteria = form.get_ranking_criteria_from_post(
                         request.POST)
 
                     main_stage.set_ranking_criteria(ranking_criteria)
 
-                # Handle playoff stage
                 playoff_stage = tournament.stages.filter(order=2).first()
                 if form.cleaned_data['enable_playoffs']:
                     if playoff_stage:
@@ -204,7 +194,6 @@ def edit_tournament(request, tournament_code):
                             playoff_score_reporting=form.cleaned_data['playoff_score_reporting']
                         )
                 elif playoff_stage:
-                    # Remove playoff stage if it exists but is disabled
                     playoff_stage.delete()
 
             messages.success(request, 'Tournament updated successfully!')
@@ -212,10 +201,8 @@ def edit_tournament(request, tournament_code):
     else:
         form = TournamentForm(instance=tournament, is_edit_mode=True)
 
-    # Get available criteria for the template
     available_criteria = get_available_ranking_criteria()
 
-    # Get current main stage criteria for JavaScript initialization
     main_stage = tournament.stages.filter(order=1).first()
     current_criteria = []
     if main_stage:
@@ -259,18 +246,15 @@ def get_tournament_base_context(request, tournament):
         can_start_next_stage = tournament.can_start_next_stage()
         next_stage = tournament.get_next_stage()
 
-        # Check if current stage needs seeding confirmation (no rounds yet)
         if current_stage and not current_stage.rounds.exists():
             can_start_current_stage = True
-            can_create_round = False  # Override - we want seeding confirmation instead
+            can_create_round = False
 
         if current_stage:
             latest_round = current_stage.rounds.order_by('-order').first()
 
-    # Get user's pending matches across all stages/rounds (only for active players)
     pending_matches = []
     if request.user.is_authenticated and is_active_player:
-        # Find all stage players for this user in this tournament
         user_stage_players = StagePlayer.objects.filter(
             player__tournament=tournament,
             player__user=request.user,
@@ -278,12 +262,11 @@ def get_tournament_base_context(request, tournament):
         )
 
         if user_stage_players.exists():
-            # Find all pending matches for this user
             pending_matches = Match.objects.filter(
                 models.Q(player_one__in=user_stage_players) |
                 models.Q(player_two__in=user_stage_players),
-                result__isnull=True,  # No result yet = pending
-                player_two__isnull=False  # Exclude byes
+                result__isnull=True,
+                player_two__isnull=False
             ).select_related(
                 'round__stage',
                 'player_one__player',
@@ -314,14 +297,12 @@ def tournament_detail_matches(request, tournament_code):
     context = get_tournament_base_context(request, tournament)
     context['current_tab'] = 'matches'
 
-    # Get all stages ordered by creation (most recent first)
     stages = tournament.stages.prefetch_related(
         'rounds__matches__result',
         'rounds__matches__player_one__player',
         'rounds__matches__player_two__player'
     ).order_by('-created_on')
 
-    # Build grouped matches structure
     grouped_matches = []
     current_stage = context['current_stage']
     latest_round = None
@@ -335,7 +316,6 @@ def tournament_detail_matches(request, tournament_code):
                     'round': round_obj,
                     'matches': round_obj.matches.all()
                 })
-                # Track the most recent round for unmatched players logic
                 if not latest_round and stage == current_stage:
                     latest_round = round_obj
 
@@ -345,13 +325,10 @@ def tournament_detail_matches(request, tournament_code):
                 'rounds': stage_rounds
             })
 
-    # Calculate available players for the current stage
     if current_stage:
         stage_players = current_stage.stage_players.filter(
             player__status=Player.PlayerStatus.ACTIVE)
 
-        # For self-scheduled stages, show all active players
-        # For other stages, only show unmatched players from the latest round
         pairing_strategy = current_stage.get_pairing_strategy()
         if pairing_strategy.is_self_scheduled():
             unmatched_players = stage_players
@@ -365,10 +342,8 @@ def tournament_detail_matches(request, tournament_code):
             unmatched_players = stage_players.exclude(
                 id__in=matched_player_ids)
         else:
-            # No rounds yet, all players are available
             unmatched_players = stage_players
 
-    # Check if current user can add matches
     can_add_match = False
     can_report_result = False
     show_unmatched_players = True
@@ -535,7 +510,6 @@ def manage_players(request, tournament_code):
             messages.success(
                 request, f'Player {player.get_display_name()} dropped from tournament.')
 
-            # Return partial for htmx request
             if request.htmx:
                 context = {
                     'tournament': tournament,
@@ -560,7 +534,6 @@ def manage_players(request, tournament_code):
             messages.success(
                 request, f'Player {player.get_display_name()} re-added to tournament.')
 
-            # Return partial for htmx request
             if request.htmx:
                 context = {
                     'tournament': tournament,
@@ -654,7 +627,6 @@ def report_match_result(request, tournament_code, match_id):
     if not (is_admin or is_player_in_match):
         raise PermissionDenied
 
-    # Check if tournament is closed for non-admin users
     if tournament.is_closed and not is_admin:
         messages.error(
             request, 'This tournament is closed. Match results can no longer be submitted by players.')
@@ -666,10 +638,8 @@ def report_match_result(request, tournament_code, match_id):
 
     form = MatchResultForm(request.POST, match=match)
     if form.is_valid():
-        # Check if result already exists (for admin updates)
         existing_result = getattr(match, 'result', None)
         if existing_result:
-            # Update existing result
             result = form.save(commit=False)
             existing_result.winner = result.winner
             existing_result.player_one_score = result.player_one_score
@@ -677,7 +647,6 @@ def report_match_result(request, tournament_code, match_id):
             existing_result.save()
             result = existing_result
         else:
-            # Create new result
             result = form.save(commit=False)
             result.match = match
             result.save()
@@ -748,9 +717,7 @@ def prepare_stage_seeding(request, tournament_code):
     next_stage = tournament.get_next_stage()
     pairing_strategy = get_pairing_strategy(next_stage.pairing_strategy)
 
-    # Check if seeding is required for this pairing strategy
     if not pairing_strategy.is_seeding_required():
-        # Skip seeding confirmation and start the stage directly
         try:
             with transaction.atomic():
                 tournament.advance_to_next_stage()
@@ -769,7 +736,6 @@ def prepare_stage_seeding(request, tournament_code):
             messages.error(request, str(e))
             return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
-    # Seeding is required, proceed with confirmation workflow
     try:
         with transaction.atomic():
             next_stage = tournament.prepare_next_stage_seeding()
@@ -804,9 +770,7 @@ def prepare_current_stage_seeding(request, tournament_code):
 
     pairing_strategy = get_pairing_strategy(current_stage.pairing_strategy)
 
-    # Ensure StagePlayer records exist
     if not current_stage.stage_players.exists():
-        # Create stage players if they don't exist
         for i, player in enumerate(tournament.get_active_players()):
             StagePlayer.objects.create(
                 player=player,
@@ -814,12 +778,9 @@ def prepare_current_stage_seeding(request, tournament_code):
                 seed=i + 1
             )
 
-    # Check if seeding is required for this pairing strategy
     if not pairing_strategy.is_seeding_required():
-        # Skip seeding confirmation and start the stage directly
         try:
             with transaction.atomic():
-                # Create first round in current stage
                 new_round = Round.objects.create(stage=current_stage, order=1)
                 pairing_strategy.make_pairings_for_round(new_round)
 
@@ -837,7 +798,6 @@ def prepare_current_stage_seeding(request, tournament_code):
             messages.error(request, str(e))
             return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
-    # Seeding is required, proceed with confirmation workflow
     try:
         with transaction.atomic():
             TournamentActionLog.objects.create(
@@ -860,13 +820,10 @@ def confirm_seeding(request, tournament_code):
     current_stage = tournament.get_current_stage()
     next_stage = tournament.get_next_stage()
 
-    # Determine which stage we're confirming seeding for
     if current_stage and not current_stage.rounds.exists():
-        # We're confirming seeding for the current stage (first time starting it)
         target_stage = current_stage
         stage_name = current_stage.name
     elif next_stage and tournament.can_modify_next_stage_seeding():
-        # We're confirming seeding for the next stage
         target_stage = next_stage
         stage_name = next_stage.name
     else:
@@ -875,7 +832,6 @@ def confirm_seeding(request, tournament_code):
 
     stage_players = target_stage.stage_players.order_by('seed')
 
-    # Calculate advancement information
     total_players = stage_players.count()
     max_players = target_stage.max_players
     players_advancing = min(
@@ -884,7 +840,7 @@ def confirm_seeding(request, tournament_code):
 
     context = {
         'tournament': tournament,
-        'next_stage': target_stage,  # Keep same template variable name for compatibility
+        'next_stage': target_stage,
         'stage_players': stage_players,
         'is_current_stage': target_stage == current_stage,
         'total_players': total_players,
@@ -903,7 +859,6 @@ def update_seeding_order(request, tournament_code):
     current_stage = tournament.get_current_stage()
     next_stage = tournament.get_next_stage()
 
-    # Determine which stage we're updating seeding for
     if current_stage and not current_stage.rounds.exists():
         target_stage = current_stage
     elif next_stage and tournament.can_modify_next_stage_seeding():
@@ -916,15 +871,12 @@ def update_seeding_order(request, tournament_code):
         player_ids = [int(pid) for pid in player_ids if pid.strip()]
 
         with transaction.atomic():
-            # Calculate safe increment to avoid constraint conflicts
             max_seed = target_stage.stage_players.aggregate(models.Max('seed'))[
                 'seed__max'] or 0
             safe_increment = max(100, max_seed + 100)
 
-            # First, increment all seeds by safe amount to avoid conflicts
             target_stage.stage_players.update(seed=F('seed') + safe_increment)
 
-            # Then update to final values in the correct order
             for i, player_id in enumerate(player_ids):
                 StagePlayer.objects.filter(
                     id=player_id,
@@ -934,7 +886,7 @@ def update_seeding_order(request, tournament_code):
         stage_players = target_stage.stage_players.order_by('seed')
         context = {
             'tournament': tournament,
-            'next_stage': target_stage,  # Keep same template variable name for compatibility
+            'next_stage': target_stage,
             'stage_players': stage_players,
         }
 
@@ -951,7 +903,6 @@ def randomize_seeding(request, tournament_code):
     current_stage = tournament.get_current_stage()
     next_stage = tournament.get_next_stage()
 
-    # Determine which stage we're randomizing seeding for
     if current_stage and not current_stage.rounds.exists():
         target_stage = current_stage
     elif next_stage and tournament.can_modify_next_stage_seeding():
@@ -965,15 +916,12 @@ def randomize_seeding(request, tournament_code):
         stage_players = list(target_stage.stage_players.all())
         random.shuffle(stage_players)
 
-        # Calculate safe increment to avoid constraint conflicts
         max_seed = target_stage.stage_players.aggregate(models.Max('seed'))[
             'seed__max'] or 0
         safe_increment = max(100, max_seed + 100)
 
-        # First, increment all seeds by safe amount to avoid conflicts
         target_stage.stage_players.update(seed=F('seed') + safe_increment)
 
-        # Then set to final randomized values
         for i, stage_player in enumerate(stage_players):
             stage_player.seed = i + 1
             stage_player.save()
@@ -981,7 +929,7 @@ def randomize_seeding(request, tournament_code):
     stage_players = target_stage.stage_players.order_by('seed')
     context = {
         'tournament': tournament,
-        'next_stage': target_stage,  # Keep same template variable name for compatibility
+        'next_stage': target_stage,
         'stage_players': stage_players,
     }
 
@@ -996,15 +944,12 @@ def start_next_stage(request, tournament_code):
     current_stage = tournament.get_current_stage()
     next_stage = tournament.get_next_stage()
 
-    # Determine which stage we're starting
     if current_stage and not current_stage.rounds.exists():
-        # Starting the current stage for the first time
         target_stage = current_stage
         stage_name = current_stage.name
 
         try:
             with transaction.atomic():
-                # Create first round in current stage using existing StagePlayer records
                 pairing_strategy = get_pairing_strategy(
                     current_stage.pairing_strategy)
                 new_round = Round.objects.create(stage=current_stage, order=1)
@@ -1022,7 +967,6 @@ def start_next_stage(request, tournament_code):
             messages.error(request, str(e))
 
     elif next_stage and tournament.can_modify_next_stage_seeding():
-        # Starting the next stage (existing logic)
         try:
             with transaction.atomic():
                 tournament.advance_to_next_stage()
@@ -1349,12 +1293,9 @@ def add_match(request, tournament_code):
             request, 'No active round found. Please create a round first.')
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
-    # Get available players for this round
     stage_players = current_stage.stage_players.filter(
         player__status=Player.PlayerStatus.ACTIVE)
 
-    # For self-scheduled stages, show all active players
-    # For other stages, only show unmatched players
     pairing_strategy = current_stage.get_pairing_strategy()
     if pairing_strategy.is_self_scheduled():
         available_players = stage_players
@@ -1367,7 +1308,6 @@ def add_match(request, tournament_code):
                 matched_player_ids.add(match.player_two.id)
         available_players = stage_players.exclude(id__in=matched_player_ids)
 
-    # For non-admin players, restrict to only include themselves
     is_admin = tournament.is_user_admin(request.user)
     if not is_admin:
         user_stage_player = available_players.filter(
@@ -1387,13 +1327,10 @@ def add_match(request, tournament_code):
     if form.is_valid():
         player_one, player_two = form.get_selected_players()
 
-        # For non-admin players, ensure they are one of the participants
-        # and they cannot create bye matches for themselves
         if not is_admin:
             user_stage_player = current_stage.stage_players.filter(
                 player__user=request.user).first()
 
-            # Check if user is one of the participants
             participants = [p for p in [
                 player_one, player_two] if p is not None]
             if user_stage_player not in participants:
@@ -1401,7 +1338,6 @@ def add_match(request, tournament_code):
                     request, 'You can only create matches where you are a participant.')
                 return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
-            # Prevent non-admin players from creating bye matches for themselves
             if player_two is None and player_one == user_stage_player:
                 messages.error(
                     request, 'You cannot award yourself a bye. Only admins can create bye matches.')
@@ -1414,7 +1350,6 @@ def add_match(request, tournament_code):
                 player_two=player_two
             )
 
-            # For bye matches, automatically create a match result awarding the win to player_one
             if player_two is None:
                 MatchResult.objects.create(
                     match=match,
@@ -1423,7 +1358,6 @@ def add_match(request, tournament_code):
                     player_two_score=None
                 )
 
-            # Create appropriate log message based on match type
             if player_two:
                 match_description = f'Added match: {player_one.player.get_display_name()} vs {player_two.player.get_display_name()} in {current_round.stage.name} Round {current_round.order}'
             else:
@@ -1436,7 +1370,6 @@ def add_match(request, tournament_code):
                 description=match_description
             )
 
-        # Create appropriate success message based on match type
         if player_two:
             messages.success(
                 request, f'Match between {player_one.player.get_display_name()} and {player_two.player.get_display_name()} created successfully!')
@@ -1461,7 +1394,6 @@ def add_match(request, tournament_code):
 def player_add_match_result(request, tournament_code):
     tournament = get_object_or_404(Tournament, code=tournament_code)
 
-    # Check if tournament is closed
     if tournament.is_closed:
         messages.error(
             request, 'This tournament is closed. Match results can no longer be submitted by players.')
@@ -1479,14 +1411,12 @@ def player_add_match_result(request, tournament_code):
             request, 'No active round found. Please create a round first.')
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
-    # Get current user's stage player
     user_stage_player = current_stage.stage_players.filter(
         player__user=request.user).first()
     if not user_stage_player:
         messages.error(request, 'You are not a participant in this stage.')
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
-    # Get opponent stage player
     opponent_id = request.POST.get('opponent')
     if not opponent_id:
         messages.error(request, 'Please select an opponent.')
@@ -1498,7 +1428,6 @@ def player_add_match_result(request, tournament_code):
         messages.error(request, 'Invalid opponent selected.')
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
-    # Check if these players already have a match in this round
     existing_match = current_round.matches.filter(
         Q(player_one=user_stage_player, player_two=opponent_stage_player) |
         Q(player_one=opponent_stage_player, player_two=user_stage_player)
@@ -1509,13 +1438,11 @@ def player_add_match_result(request, tournament_code):
             request, 'You already have a match against this opponent in this round.')
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
-    # Get winner information
     winner_choice = request.POST.get('winner')
     if not winner_choice:
         messages.error(request, 'Please select a winner.')
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
-    # Determine winner based on choice
     if winner_choice == 'me':
         winner = user_stage_player
     elif winner_choice == 'them':
@@ -1529,7 +1456,6 @@ def player_add_match_result(request, tournament_code):
         messages.error(request, 'Invalid winner selection.')
         return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
-    # Get scores if provided
     my_score = request.POST.get('my_score', '').strip()
     their_score = request.POST.get('their_score', '').strip()
 
@@ -1537,9 +1463,7 @@ def player_add_match_result(request, tournament_code):
     player_two_score = None
 
     if current_stage.report_full_scores > 0:
-        # Score reporting is enabled
         if current_stage.report_full_scores == 2:
-            # Required
             if my_score is None or their_score is None:
                 messages.error(request, 'Scores are required for this stage.')
                 return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
@@ -1566,19 +1490,16 @@ def player_add_match_result(request, tournament_code):
         else:
             their_score = None
 
-        # Assign scores based on player positions (user is always player_one in this setup)
         player_one_score = my_score
         player_two_score = their_score
 
     with transaction.atomic():
-        # Create the match
         match = Match.objects.create(
             round=current_round,
             player_one=user_stage_player,
             player_two=opponent_stage_player
         )
 
-        # Create the match result
         MatchResult.objects.create(
             match=match,
             winner=winner,
@@ -1586,7 +1507,6 @@ def player_add_match_result(request, tournament_code):
             player_two_score=player_two_score
         )
 
-        # Log the action
         TournamentActionLog.objects.create(
             tournament=tournament,
             user=request.user,
@@ -1608,7 +1528,6 @@ def copy_tournament(request, tournament_code):
     source_tournament = get_object_or_404(Tournament, code=tournament_code)
 
     if request.method == 'POST':
-        # Handle the form submission for creating the new tournament
         form = TournamentForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
@@ -1616,7 +1535,6 @@ def copy_tournament(request, tournament_code):
                 tournament.owner = request.user
                 tournament.save()
 
-                # Create main stage
                 main_stage = tournament.create_initial_stage(
                     main_pairing_strategy=form.cleaned_data['main_pairing_strategy'],
                     main_max_players=form.cleaned_data['main_max_players'],
@@ -1624,11 +1542,9 @@ def copy_tournament(request, tournament_code):
                     main_score_reporting=form.cleaned_data['main_score_reporting']
                 )
 
-                # Set ranking criteria for main stage from source tournament
                 source_main_stage = source_tournament.stages.filter(
                     order=1).first()
                 if source_main_stage:
-                    # Get ranking criteria with order information
                     criteria_qs = source_main_stage.stage_ranking_criteria.all().order_by('order')
                     source_criteria = [
                         {'key': c.criterion_key, 'enabled': True, 'order': c.order}
@@ -1636,18 +1552,15 @@ def copy_tournament(request, tournament_code):
                     ]
                     main_stage.set_ranking_criteria(source_criteria)
 
-                # Create playoff stage if enabled
                 if form.cleaned_data['enable_playoffs']:
                     playoff_stage = tournament.create_playoff_stage(
                         max_players=form.cleaned_data['playoff_max_players'],
                         playoff_score_reporting=form.cleaned_data['playoff_score_reporting']
                     )
 
-                    # Set ranking criteria for playoff stage from source tournament
                     source_playoff_stage = source_tournament.stages.filter(
                         order=2).first()
                     if source_playoff_stage:
-                        # Get ranking criteria with order information
                         criteria_qs = source_playoff_stage.stage_ranking_criteria.all().order_by('order')
                         source_playoff_criteria = [
                             {'key': c.criterion_key,
@@ -1668,14 +1581,12 @@ def copy_tournament(request, tournament_code):
                 request, f'Tournament "{tournament.name}" created successfully from copy!')
             return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
     else:
-        # Pre-populate form with source tournament data
         initial_data = {
             'name': f'Copy of {source_tournament.name}',
             'description': source_tournament.description,
             'is_accepting_registrations': source_tournament.is_accepting_registrations,
         }
 
-        # Get main stage data
         source_main_stage = source_tournament.stages.filter(order=1).first()
         if source_main_stage:
             initial_data.update({
@@ -1685,7 +1596,6 @@ def copy_tournament(request, tournament_code):
                 'main_score_reporting': source_main_stage.report_full_scores,
             })
 
-        # Get playoff stage data
         source_playoff_stage = source_tournament.stages.filter(order=2).first()
         if source_playoff_stage:
             initial_data.update({
@@ -1698,16 +1608,13 @@ def copy_tournament(request, tournament_code):
 
         form = TournamentForm(initial=initial_data, is_edit_mode=False)
 
-    # Prepare ranking criteria data for JavaScript
     ranking_criteria_data = []
     source_main_stage = source_tournament.stages.filter(order=1).first()
     if source_main_stage:
-        # Get ranking criteria with order information
         criteria_qs = source_main_stage.stage_ranking_criteria.all().order_by('order')
         available_keys = [c.get_key()
                           for c in get_available_ranking_criteria()]
 
-        # Add enabled criteria with their actual order
         for criterion in criteria_qs:
             ranking_criteria_data.append({
                 'key': criterion.criterion_key,
@@ -1715,20 +1622,19 @@ def copy_tournament(request, tournament_code):
                 'order': criterion.order
             })
 
-        # Add disabled criteria
         enabled_keys = [c.criterion_key for c in criteria_qs]
         for key in available_keys:
             if key not in enabled_keys:
                 ranking_criteria_data.append({
                     'key': key,
                     'enabled': False,
-                    'order': 999  # High number for disabled criteria
+                    'order': 999
                 })
 
     context = {
         'form': form,
         'source_tournament': source_tournament,
-        'tournament': source_tournament,  # For JavaScript compatibility
+        'tournament': source_tournament,
         'current_criteria_json': json.dumps(ranking_criteria_data),
         'available_criteria': get_available_ranking_criteria(),
     }
