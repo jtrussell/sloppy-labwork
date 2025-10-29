@@ -905,13 +905,13 @@ ul.messages {
 
 @media (min-width: 681px) {
   .sm-only {
-    display: none !important;
+    display: none;
   }
 }
 
 @media (max-width: 680px) {
   .lg-only {
-    display: none !important;
+    display: none;
   }
 }
 
