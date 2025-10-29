@@ -35,18 +35,20 @@
 {% partialdef result-row-sm %}
   <tr>
     <td class="col-sm text-larger">{{ result.finishing_position|default_if_none:"-" }}</td>
-    <td style="width: 100%;">
-      <a href="{% url 'pmc-result-detail' playgroup.slug result.pk %}">
+    <td style="width: 100%;" class="text-left">
         <div class="name-with-avatar text-larger">
           <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
-          {{ result.user }}
+          <div>
+            <a href="{% url 'pmc-result-detail' playgroup.slug result.pk %}">
+              <span class="text-larger">{{ result.user }}</span>
+            </a>
+            <ul class="inline-list text-smaller sm-only">
+              <li><span class="text-muted">W:</span> {{ result.num_wins|default_if_none:"-" }}</li>
+              <li><span class="text-muted">L:</span> {{ result.num_losses|default_if_none:"-" }}</li>
+              <li><span class="text-muted">RP:</span> {{ result.ranking_points.first|default_if_none:"-" }}</li>
+            </ul>
+          </div>
         </div>
-      </a>
-      <div class="flex flex-row flex-gap-1 text-muted text-smaller">
-        <span>Wins: {{ result.num_wins|default_if_none:"-" }}</span>
-        <span>Losses: {{ result.num_losses|default_if_none:"-" }}</span>
-        <span>RP: {{ result.ranking_points.first|default_if_none:"-" }}</span>
-      </div>
     </td>
   </tr>
 {% endpartialdef %}
