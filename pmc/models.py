@@ -1,4 +1,5 @@
 from cProfile import label
+from sre_constants import ANY
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import UniqueConstraint, OuterRef, Subquery
@@ -695,8 +696,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]
-                : entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -815,6 +815,11 @@ class AwardBase(models.Model):
         SKILL = (1, _('Skill'))
         TASK = (2, _('Task'))
 
+    class ModeOptions(models.IntegerChoices):
+        IN_PERSON = (0, _('In-Person'))
+        ONLINE = (1, _('Online'))
+        ANY = (2, _('Any'))
+
     class CriteriaTypeOptions(models.IntegerChoices):
         event_matches = (0, _('Event Matches'))
         sealed_event_matches = (1, _('Sealed Event Matches'))
@@ -862,6 +867,8 @@ class AwardBase(models.Model):
     sort_order = models.PositiveSmallIntegerField(default=1)
     house = models.ForeignKey(
         'decks.House', on_delete=models.SET_NULL, default=None, null=True, blank=True)
+    mode = models.IntegerField(
+        choices=ModeOptions.choices, default=ModeOptions.IN_PERSON)
 
     class Meta:
         abstract = True
@@ -1092,7 +1099,13 @@ class AwardAssignmentService():
     def get_user_criteria_value(user, award):
         criteria_type = award.criteria
         value = 0
-        qs = EventResult.objects.filter(user=user, event__is_digital=False)
+        qs = EventResult.objects.filter(user=user)
+
+        if award.mode == AwardBase.ModeOptions.IN_PERSON:
+            qs = qs.filter(event__is_digital=False)
+        elif award.mode == AwardBase.ModeOptions.ONLINE:
+            qs = qs.filter(event__is_digital=True)
+
         if criteria_type == AwardBase.CriteriaTypeOptions.event_matches:
             value = qs.aggregate(
                 total=Coalesce(Sum('num_wins'), 0) +
