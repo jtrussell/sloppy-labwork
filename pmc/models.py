@@ -696,8 +696,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]
-                : entry for entry in all_user_points}
+            user_data = {entry["result__user"]: entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -1095,6 +1094,20 @@ class AwardAssignmentService():
                             user=user,
                             achievement_tier=tier
                         )
+
+    @staticmethod
+    def refresh_user_badges():
+        badge = Badge.objects.filter(pmc_id='071').first()
+        if badge:
+            UserBadge.objects.filter(
+                badge=badge,
+                user__pmc_profile__mv_username__isnull=True
+            ).delete()
+            users_with_mv_username = User.objects.filter(
+                pmc_profile__mv_username__isnull=False
+            )
+            for user in users_with_mv_username:
+                UserBadge.objects.update_or_create(user=user, badge=badge)
 
     @staticmethod
     def get_user_criteria_value(user, award):

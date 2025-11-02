@@ -1082,6 +1082,15 @@ def refresh_achievements(request):
 @require_POST
 @api_key_required
 @transaction.atomic
+def refresh_badges(request):
+    AwardAssignmentService.refresh_user_badges()
+    return HttpResponse('Done.', content_type='text/plain')
+
+
+@csrf_exempt
+@require_POST
+@api_key_required
+@transaction.atomic
 def hydrate_result_decks(request):
     results = EventResult.objects.filter(
         uploaded_deck_link__isnull=False,
