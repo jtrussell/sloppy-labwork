@@ -696,7 +696,8 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
+            user_data = {entry["result__user"]
+                : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -1099,12 +1100,20 @@ class AwardAssignmentService():
     def get_user_criteria_value(user, award):
         criteria_type = award.criteria
         value = 0
-        qs = EventResult.objects.filter(user=user)
 
+        event_result_mode_filter = models.Q()
+        event_result_event_mode_filter = models.Q()
         if award.mode == AwardBase.ModeOptions.IN_PERSON:
-            qs = qs.filter(event__is_digital=False)
+            event_result_mode_filter = models.Q(event__is_digital=False)
+            event_result_event_mode_filter = models.Q(
+                event_result__event__is_digital=False)
         elif award.mode == AwardBase.ModeOptions.ONLINE:
-            qs = qs.filter(event__is_digital=True)
+            event_result_mode_filter = models.Q(event__is_digital=True)
+            event_result_event_mode_filter = models.Q(
+                event_result__event__is_digital=True)
+
+        qs = EventResult.objects.filter(
+            user=user).filter(event_result_mode_filter)
 
         if criteria_type == AwardBase.CriteriaTypeOptions.event_matches:
             value = qs.aggregate(
@@ -1198,10 +1207,8 @@ class AwardAssignmentService():
             from django.db.models.functions import TruncMonth
             qualifying_months = (
                 EventResult.objects
-                .filter(
-                    user=user,
-                    event__is_digital=False
-                )
+                .filter(user=user)
+                .filter(event_result_mode_filter)
                 .filter(event__playgroups__isnull=False)
                 .annotate(
                     month=TruncMonth('event__start_date'),
@@ -1222,9 +1229,9 @@ class AwardAssignmentService():
                 .filter(
                     user=user,
                     event__is_casual=False,
-                    event__is_digital=False,
                     event_result_decks__was_played=True
                 )
+                .filter(event_result_mode_filter)
                 .filter(
                     models.Q(event_result_decks__deck__house_1=house) |
                     models.Q(event_result_decks__deck__house_2=house) |
@@ -1240,10 +1247,10 @@ class AwardAssignmentService():
                 .filter(
                     event_result__user=user,
                     event_result__event__is_casual=False,
-                    event_result__event__is_digital=False,
                     was_played=True,
                     deck__set__isnull=False
                 )
+                .filter(event_result_event_mode_filter)
                 .values('deck__set')
                 .annotate(total_wins=Sum('event_result__num_wins'))
                 .filter(total_wins__gte=10)
