@@ -345,6 +345,13 @@ def playgroup_member_manage(request, slug, username):
         if action == 'assign_badge':
             pk = request.POST.get('badge_id')
             badge = get_object_or_404(Badge, pk=pk)
+            if not badge.is_eo_assignable:
+                messages.error(request, _(
+                    'This badge only  be assigned by KeyChain staff.'))
+                return redirect_to(request, reverse('pmc-pg-member-manage', kwargs={
+                    'slug': slug,
+                    'username': username
+                }))
             UserBadge.objects.get_or_create(
                 user=member.user,
                 badge=badge

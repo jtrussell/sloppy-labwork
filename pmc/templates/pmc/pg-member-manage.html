@@ -13,6 +13,7 @@
     <h2>Assign Badges</h2>
     <ul class="flex flex-row flex-gap-1 flex-wrap">
       {% for badge in badges %}
+        {% if badge.is_eo_assignable %}
         {% if badge.user_badge_id or not badge.is_hidden %}
           <li>
             <form
@@ -27,6 +28,7 @@
               <span class="text-shy text-center">{{ badge.name }}</span>
             </form>
           </li>
+        {% endif %}
         {% endif %}
       {% endfor %}
     </ul>
