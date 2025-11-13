@@ -1,0 +1,32 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+  <div class="card">
+    <h1>Request to Join</h1>
+    {% if existing_request %}
+      <p>You submitted a request to join this group on {{ existing_request.created_on | date:'SHORT_DATE_FORMAT' }}. We'll let you know once your request has
+      been approved.</p>
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="cancel" />
+        <div class="card-actions" type="submit">
+          <button class="btn">Cancel request</button>
+        </div>
+      </form>
+    {% else %}
+      <p>Fill out the form below and we'll let the playgroup EOs know you'd like to
+      join this group.</p>
+      <p>They'll see your username, feel free to leave an additional note for
+      them too.</p>
+
+      <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <div class="card-actions">
+          <button class="btn btn-solid" type="submit">Submit</button>
+        </div>
+      </form>
+    {% endif %}
+  </div>
+{% endblock %}

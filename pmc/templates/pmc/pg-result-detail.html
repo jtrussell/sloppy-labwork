@@ -1,0 +1,125 @@
+{% extends "pmc/_base.html" %}
+{% load partials %}
+
+{% partialdef deck-list-item %}
+<div class="flex card card-closable"  hx-target="this">
+  <div
+    class="pmc-icon icon-lg icon-set"
+    style="background-image: url('{{ deck.set.src }}');"
+  ></div>
+  <div class="flex flex-col flex-1 flex-gap-0">
+    <span class="text-larger">{{ deck }}</span>
+      <ul class="inline-list flex">
+        <li><a href="{{ deck.get_mv_url }}">MV</a></li>
+        <li><a href="{{ deck.get_dok_url }}">DoK</a></li>
+      </ul>
+    <ul class="flex flex-gap-0">
+      <li><img class="pmc-icon pmc-icon-md" src="{{ deck.house_1.src }}" alt="house 1"></li>
+      <li><img class="pmc-icon pmc-icon-md" src="{{ deck.house_2.src }}" alt="house 2"></li>
+      <li><img class="pmc-icon pmc-icon-md" src="{{ deck.house_3.src }}" alt="house 3"></li>
+    </ul>
+  </div>
+  {% if is_allowed_to_edit %}
+    <form hx-post hx-swap="delete" class="close-button">
+      <input type="hidden" name="action" value="remove">
+      <input type="hidden" name="deck_id" value="{{ deck.id }}">
+      <div class="flex flex-col flex-align-center">
+        <button class="btn btn-x">&times;</button>
+      </div>
+    </form>
+  {% endif %}
+</div>
+{% endpartialdef %}
+
+{% block content %}
+  <h1>Result Detail</h1>
+  <div class="subheading">
+    <ul class="inline-list">
+      <li><a href="{% url 'pmc-pg-event-detail' playgroup.slug event_result.event.pk %}">{{ event_result.event }}</a></li>
+      <li>{{ event_result.event.start_date | date:"SHORT_DATE_FORMAT" }}</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <table>
+      <tbody>
+        <tr>
+          <th>Player</th>
+          <td>
+            <div class="name-with-avatar" style="justify-content: flex-end">
+              <img class="avatar" src="{{ event_result.user.pmc_profile.get_avatar.src}}" alt="">
+              {{ event_result.user }}
+            </div>
+            </td>
+        </tr>
+        <tr>
+          <th>Event</th>
+          <td>{{ event_result.event }}</td>
+        </tr>
+        <tr>
+          <th>Date</th>
+          <td>{{ event_result.event.start_date | date:"SHORT_DATE_FORMAT" }}</td>
+        </tr>
+        <tr>
+          <th>Finishing Position</th>
+          <td>{{ event_result.finishing_position | default_if_none:"-" }}</td>
+        </tr>
+        <tr>
+          <th>Wins</th>
+          <td>{{ event_result.num_wins | default_if_none:"-" }}</td>
+        </tr>
+        <tr>
+          <th>Losses</th>
+          <td>{{ event_result.num_losses | default_if_none:"-" }}</td>
+        </tr>
+        <tr>
+          <th>Ranking Points</th>
+          <td>{{ event_result.ranking_points.first.points | default_if_none:"-" }}</td>
+        </tr>
+        <tr>
+          <th>Experience</th>
+          <td>{{ event_result.get_xp | default_if_none:"-" }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Decks</h2>
+    <div class="subheading text-staff-only">
+      Editing as an event organizer
+    </div>
+
+    <div class="flex flex-col flex-gap-1" id="decks-list"  hx-confirm="Are you sure you want to remove this deck?">
+      {% for result_deck in event_result.event_result_decks.all %}
+        {% with deck=result_deck.deck %}
+          {% partial deck-list-item %}
+        {% endwith %}
+      {% empty %}
+        <p class="text-muted" id="no-decks-message">No decks submitted.</p>
+      {% endfor %}
+    </div>
+
+    {% if is_allowed_to_edit %}
+      <form
+        hx-on::after-request="if(event.detail.successful) this.reset(); document.getElementById('no-decks-message').remove();"
+        class="card-form"
+      >
+        <input type="hidden" name="action" value="add">
+        {{ form.as_p }}
+        <div class="card-actions">
+          <button
+            class="btn btn-solid"
+            type="submit"
+            hx-post
+            hx-target="#decks-list"
+            hx-swap="beforeend"
+          >
+            Add Deck
+          </button>
+        </div>
+      </form>
+    {% endif %}
+  </div>
+
+{% endblock %}

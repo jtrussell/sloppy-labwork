@@ -1,0 +1,82 @@
+{% extends "pmc/_base.html" %}
+{% load partials %}
+
+{% partialdef rankings-card %}
+  <table>
+    <thead>
+      <th class="col-sm">#</th>
+      <th class="text-left">Player</th>
+      <th class="col-md">Points</th>
+      <th class="col-md">Events</th>
+    </thead>
+    <tbody>
+      {% for item in rankings_page %}
+      <tr>
+        <td class="col-sm">{{ item.rank }}</td>
+        <td class="text-left">
+          <div class="name-with-avatar">
+            <img class="avatar" src="{{ item.user.pmc_profile.get_avatar.src}}" alt="">
+            {{ item.user }}
+          </div>
+        </td>
+        <td class="col-md">
+          {{ item.total_points | floatformat:0 }}
+        </td>
+        <td class="col-md">
+          {{ item.num_results }}
+        </td>
+      </tr>
+      {% empty %}
+        <td colspan="4" class="text-muted">Nothing to see here.</td>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if rankings_page.paginator.num_pages > 1 %}
+  <div class="btn-group btn-group-center" role="group" aria-label="Item pagination">
+    {% if rankings_page.has_previous %}
+        <button type="submit" name="page" value="{{ rankings_page.previous_page_number }}" class="btn">&laquo;</a>
+    {% else %}
+        <button type="button" class="btn">&laquo;</span>
+    {% endif %}
+
+    {% for page_number in rankings_page.paginator.page_range %}
+        {% if rankings_page.number == page_number %}
+            <button type="button" class="btn btn-solid">
+                {{ page_number }}
+            </button>
+        {% else %}
+            <button type="submit" name="page" value="{{ page_number }}" class="btn">
+                {{ page_number }}
+            </a>
+        {% endif %}
+    {% endfor %}
+
+    {% if rankings_page.has_next %}
+        <button type="submit" name="page" value="{{ rankings_page.next_page_number }}" class="btn">&raquo;</a>
+    {% else %}
+        <span type="button" class="btn">&raquo;</span>
+    {% endif %}
+  </div>
+  {% endif %}
+{% endpartialdef %}
+
+
+{% block content %}
+<h1>Leaderboards</h1>
+
+<div class="btn-group btn-group-center" hx-boost="true">
+  {% for lb in leaderboards %}
+  <a href="{% url 'pmc-leaderboard' lb.pk %}" class="btn{% if lb.pk == pk %} btn-solid{% endif %}">
+    {{ lb }}
+  </a>
+  {% endfor %}
+</div>
+
+<form method="GET" hx-boost="true">
+  {{ season_period_form.as_p }}
+  <div class="card">
+    {% partial rankings-card %}
+  </div>
+</form>
+{% endblock %}

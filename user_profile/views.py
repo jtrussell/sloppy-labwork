@@ -1,10 +1,8 @@
 from django.db.models import Q
 from django.shortcuts import render
 from allauth.account.decorators import login_required
-from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 from register.models import DeckRegistration
-from .models import UserProfile
 from .forms import EditUsernameForm, EditUserProfileForm
 
 

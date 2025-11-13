@@ -1,0 +1,16 @@
+{% load common_extras %}
+
+<!DOCTYPE html>
+<html>
+  <head></head>
+  <body>
+    <p>Greetings {{ join_request.user }},</p>
+    <p>Your request  to join {{ join_request.playgroup }}
+    on KeyChain has been approved 🥳! Click <a href="{% abs_url 'pmc-pg-detail' join_request.playgroup.slug %}">here</a>
+    to access your shiny new playgroup.</p>
+    <p>
+      Happy Forging,<br />
+      The KeyChain Team
+    </p>
+  </body>
+</html>

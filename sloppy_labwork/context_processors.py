@@ -1,9 +1,7 @@
 """
 Project-wide context processors
 """
-
 from django.conf import settings
-
 from common.auth import is_teammate
 
 
@@ -25,4 +23,15 @@ def teammate_authorized(request):
     """
     return {
         'teammate_authorized': is_teammate(request.user)
+    }
+
+
+def base_template(request):
+    if request.host.name == 'keychain':
+        base_template = 'pmc/_base.html'
+    else:
+        base_template = 'page.html'
+
+    return {
+        'base_template': base_template
     }

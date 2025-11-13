@@ -1,0 +1,68 @@
+{% extends "pmc/_base.html" %}
+{% load static %}
+{% load pmc_extras %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/awards.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>{{ achievement }}</h1>
+  <div class="subheading">Achievement Detail</div>
+
+
+  <div class="card">
+    <div>
+      <div class="
+        award-container
+        large
+        no-hover
+        {% if not achievement.user_achievement_tier_src %}disabled{% endif %}
+      ">
+          <img src="{{ achievement.user_achievement_tier_src | default:achievement.lowest_tier_src }}" alt="{{ achievement.name }} achievement" class="award" />
+          <ul class="inline-list">
+            <li>{{ achievement.name }}</li>
+            <li class="text-bold">{{ achievement.user_achievement_tier | achievement_tier_label }}</li>
+          </ul>
+      </div> 
+    </div>
+
+    <p class="text-center text-larger">{{ achievement.description }}</p>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Tier</th>
+          <th>Requirement</th>
+          <th>Players Earned</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% with next_tier=achievement.user_achievement_tier|add:1|default:0 %}
+        {% for tier in tiers %}
+          <tr>
+            <td
+              class="text-bold {% if tier.tier == achievement.user_achievement_tier %}text-primary{% endif %}"$^
+            >{{ tier.tier | achievement_tier_label }}</td>
+            <td>
+              {% if tier.tier == next_tier %}<span class="text-muted">{{ my_stat }} /</span>{% endif %}
+              {% if tier.tier > next_tier %}
+                &#128274;
+              {% else %}
+                {{ tier.criteria_value }}
+              {% endif %}
+              {% if my_stat >= tier.criteria_value %}<span class="text-primary">&#10004;</span>{% endif %}
+            </td>
+            <td>
+              {{ tier.earned_count | default_if_none:"0" }}
+            </td>
+          </tr>
+        {% endfor %}
+        {% endwith %}
+      </tbody>
+    </table>
+  </div>
+
+{% endblock %}

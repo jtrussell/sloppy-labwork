@@ -125,3 +125,11 @@ class MatchingService():
     @staticmethod
     def get_footer_text():
         return random.choice(FOOTER_MESSAGES)
+
+    @staticmethod
+    def record_match_by_handles(handleA, handleB):
+        playerA = PodPlayer.objects.get(user_handle=handleA)
+        playerB = PodPlayer.objects.get(user_handle=handleB)
+        if playerA and playerB:
+            PastMatch.objects.create(player=playerA, opponent=playerB)
+            PastMatch.objects.create(player=playerB, opponent=playerA)

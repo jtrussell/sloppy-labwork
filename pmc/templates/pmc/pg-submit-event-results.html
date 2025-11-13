@@ -1,0 +1,65 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+<div class="staff-only">
+  <h1>New Event</h1>
+
+  <p>
+    Please refer to our <a href="https://docs.google.com/document/d/1NETJods7KAyI_HgoC_fEiH0bRIgbRP5jyNALbXNmtck">KeyChain Reporting Standards</a> for guidance on eligible play.
+  </p>
+
+  {% if form_errors %}
+  <div class="card card-danger">
+    <h2>Ooops...</h2>
+    That didn't quite work. Check the issues below and try again.
+    <ul class="bulleted-list">
+      {% for msg in form_errors %}
+      <li>{{ msg }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-solid">
+      Submit
+    </button>
+  </form>
+
+  <div class="card">
+    <h2>Results File Format</h2>
+    <p>
+      You may optionally include a <code>CSV</code> file detailing event
+      results. When provided, uour results file should be in <code>CSV</code>
+      format. I.e. it should be a file with a <code>.csv</code> extension.
+    </p>
+
+    <p>
+      The file should contain only the fields listed below, take
+      care to match both spelling and capitalization. The <code>user</code>
+      field is required, all others are optional.
+    </p>
+
+    <ul class="bulleted-list">
+      <li><code>user</code> <em>or</em> <code>username</code> - The username (not nickname) of the player. </li>
+      <li><code>finishing_position</code> <em>or</em> <code>place</code> - The player's numeric finishing position in the event.</li>
+      <li><code>num_wins</code> <em>or</em> <code>wins</code> - The number of wins attributed to the player in the event.</li>
+      <li><code>num_losses</code> <em>or</em> <code>losses</code> - The number of losses attributed to the player.</li>
+      <li><code>deck</code> - The MV or DoK link for a deck used by the player. Note these will not populate immediately.</li>
+    </ul>
+
+    <p>
+      Your <code>CSV</code> file must include a header row with each of the above
+      names. However you may report an empty value for any of these fields other
+      than <code>user</code>.
+    </p>
+
+    <p>
+      Click <a href="{% url 'pmc-pg-events-csv-template' playgroup.slug %}">here</a>
+      to download a CSV template.
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "pmc/_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'pmc/css/about.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1>About</h1>
+
+<h2>Mission</h2>
+<p><em>Unlock your KeyForge organized play with KeyChain</em></p>
+<p>KeyChain is an unofficial, community-made platform built to supplement and
+enhance KeyForge organized play through digital rewards, record keeping, local
+and global leaderboards, personalization, and a progression system designed to
+encourage players to come back for more. </p>
+
+<h2>Progression & Ranking Systems</h2>
+
+<div id="legend">
+    <div class="legend-item">
+        <img class="legend-icon" src="https://static.sloppylabwork.com/pmc/global.svg" alt="Global Icon">
+        <div class="legend-title">Global:</div>
+        <div class="legend-decription">Elements that are account-wide, across all playgroups.</div>
+    </div>
+    
+    <div class="legend-item">
+        <img class="legend-icon" src="https://static.sloppylabwork.com/pmc/playgroup.svg" alt="Playgroup Icon">
+        <div class="legend-title">Playgroup:</div>
+        <div class="legend-decription">Elements that are within the context of an individual playgroup.</div>
+    </div>
+</div>
+
+<div class="about-item">
+    <div class="about-item-header">
+        <img class="about-item-icon" src="https://res.cloudinary.com/dig7eguxo/image/upload/v1743023566/Lv_DETAIL_V2_dyw2jc.png" alt="Level Detail">
+        <h2>Level (Lv)</h2>
+        <img class="legend-icon" src="https://static.sloppylabwork.com/pmc/global.svg" alt="Global Icon">
+    </div>
+    <div class="about-item-description">
+        Your Level (Lv) is an at-a-glance view of your overall progression and participation in KeyForge 
+        organized play through KeyChain, earned over time by accruing Experience Points (XP). Your level 
+        appears on your player profile, and additional personalization items can be unlocked through leveling 
+        up. Higher levels generally require more XP to level up.
+    </div>
+</div>
+
+<div class="about-item">
+    <div class="about-item-header">
+        <img class="about-item-icon" src="https://static.sloppylabwork.com/pmc/xp-detail.png" alt="Experience Detail">
+        <h2>Experience Points (XP)</h2>
+        <img class="legend-icon" src="https://static.sloppylabwork.com/pmc/global.svg" alt="Global Icon">
+    </div>
+    <div class="about-item-description">
+        <p>
+            Experience Points (XP) are earned for general participation in KeyForge organized play across all 
+            playgroups, and serve as the foundation for your overall KeyChain account progression. Earning XP 
+            is how you level up. XP is awarded as such:
+        </p>
+        <h2>Tournaments</h2>
+        <ul class="bulleted-list">
+            <li><strong class="tab">Attendance:</strong>25 XP</li>
+            <li><strong class="tab">Match Win:</strong>10 XP</li>
+            <li><strong class="tab">Match Loss:</strong>5 XP</li>
+        </ul>
+
+        <h3>Open Play</h3>
+        <ul class="bulleted-list">
+            <li><strong class="tab">Attendance:</strong>50 XP</li>
+        </ul>
+    </div>
+</div>
+
+<div class="about-item">
+    <div class="about-item-header">
+        <img class="about-item-icon" src="https://static.sloppylabwork.com/pmc/rp-detail.png" alt="Rank Point Detail">
+        <h2>Ranking Points (RP)</h2>
+        <img class="legend-icon" src="https://static.sloppylabwork.com/pmc/global.svg" alt="Global Icon">
+        <img class="legend-icon" src="https://static.sloppylabwork.com/pmc/playgroup.svg" alt="Playgroup Icon">
+    </div>
+    <div class="about-item-description">
+        <span>
+            Ranking Points (RP) are a leaderboard ranking metric used for
+            determining player placements and standings across events. There are
+            global leaderboards, as well as leaderboards within individual
+            playgroups.
+        </span>
+        <p>
+            Each leaderboard has associated periods, or timeframes, over which
+            players will collect RP and hope to be crowned champion. Currently,
+            there are three different period lengths supported in KeyChain:
+        </p>
+        <ul class="bulleted-list">
+            <li>
+                <strong>Monthly </strong>leaderboards collect RP earned between the first and last day of a given month.
+            </li>
+            <li>
+                <strong>Season </strong>leaderboard periods span an entire year, from December 1st through November 30th of the following year. These are timed to coincide with Ghost Galaxy’s organized play schedule, ending just after KeyForge Celebration.
+            </li>
+            <li>
+                <strong>All Time</strong> leaderboards have a single period with no end date.
+            </li>
+        </ul>
+        <p>
+            In order for RP to be considered for a given leaderboard, it must be
+            earned and recorded between the start and end (plus one week) of the
+            relevant period.
+        </p>
+        <p>
+            For more on RP and a breakdown of how points are assigned, check out <a href="{% url 'pmc-about-ranking-points' %}">this page</a>.
+        </p>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,107 @@
+.award-list {
+  @media (max-width: 680px) {
+    justify-content: space-around;
+  }
+}
+
+.award-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+  text-decoration: none;
+  cursor: pointer;
+
+  a {
+    text-decoration: none;
+    cursor: pointer;
+  }
+}
+
+.award-container:not(.large) {
+  width: 9.5rem;
+  max-width: 9.5rem;
+}
+
+@media (max-width: 680px) {
+  .award-container:not(.large) {
+    width: 8rem;
+    max-width: 8rem;
+  }
+}
+
+.award-container.disabled img.award {
+  filter: brightness(40%) grayscale(1);
+  -webkit-filter: brightness(40%) grayscale(1);
+}
+
+.award-container:not(.no-hover):hover img.award,
+.award-container.disabled:not(.no-hover):hover img.award {
+  filter: brightness(1) grayscale(0) drop-shadow(0 0 0.5rem var(--color-primary));
+  -webkit-filter: brightness(1) grayscale(0) drop-shadow(0 0 0.5rem var(--color-primary));
+}
+
+img.award {
+  width: 9rem;
+  height: auto;
+  max-width: 9rem;
+}
+
+.award-container.large {
+  img.award {
+    width: 20rem;
+    max-width: 20rem;
+  }
+
+  img.award.tier-0 { width: 12rem; max-width: 12rem; }
+  img.award.tier-1 { width: 14rem; max-width: 14rem; }
+  img.award.tier-2 { width: 16rem; max-width: 16rem; }
+  img.award.tier-3 { width: 18rem; max-width: 18rem; }
+}
+
+@media (max-width: 680px) {
+  img.award {
+    width: 7rem;
+    max-width: 7rem;
+  }
+
+  .award-container.large {
+    img.award {
+      width: 12rem;
+      max-width: 12rem;
+    }
+
+    img.award.tier-0 { width: 8rem; max-width: 8rem; }
+    img.award.tier-1 { width: 10rem; max-width: 10rem; }
+    img.award.tier-2 { width: 12rem; max-width: 12rem; }
+    img.award.tier-3 { width: 14rem; max-width: 14rem; }
+  }
+}
+
+.trophy-amount {
+  text-decoration: none;
+  background-color: transparent;
+  color: var(--color-primary);
+  height: 3rem;;
+  width: 3rem;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 0.3rem solid var(--color-lines);
+  box-shadow: 0 0 5px var(--color-primary);
+}
+
+.tier-label {
+  font-size: 1rem;
+  margin-top: -0.5rem;
+}
+  
+:not(.disabled) .tier-label {
+  color: var(--color-primary);
+}
+
+.award-container:hover .trophy-amount {
+  border-color: var(--color-primary);
+}

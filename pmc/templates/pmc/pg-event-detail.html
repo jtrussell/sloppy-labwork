@@ -1,0 +1,121 @@
+{% extends "pmc/_base.html" %}
+{% load partials %}
+
+{% partialdef result-row-lg %}
+  <tr>
+    <td class="col-sm">{{ result.finishing_position|default_if_none:"-" }}</td>
+    <td>
+      <a href="{% url 'pmc-result-detail' playgroup.slug result.pk %}">
+        <div class="name-with-avatar">
+          <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
+          {{ result.user }}
+        </div>
+      </a>
+    </td>
+    <td>
+      <a href="{% url 'pmc-result-detail' playgroup.slug result.pk %}">
+        {% if result.event_result_decks.first %}
+          <i
+            class="pmc-icon pmc-icon-md icon-set"
+            style="background-image: url('{{ result.event_result_decks.first.deck.set.src }}');"
+          ></i>
+        {% else %}
+          {% if result.user == user or playgroup_member.is_staff %}
+            <i class="pmc-icon pmc-icon-md icon-set-empty"></i>
+          {% endif %}
+        {% endif %}
+      </a>
+    </td>
+    <td class="stat">{{ result.num_wins|default_if_none:"-" }}</td>
+    <td class="stat">{{ result.num_losses|default_if_none:"-" }}</td>
+    <td class="stat">{{ result.ranking_points.first|default_if_none:"-" }}</td>
+  </tr>
+{% endpartialdef %}
+
+{% partialdef result-row-sm %}
+  <tr>
+    <td class="col-sm text-larger">{{ result.finishing_position|default_if_none:"-" }}</td>
+    <td style="width: 100%;">
+      <a href="{% url 'pmc-result-detail' playgroup.slug result.pk %}">
+        <div class="name-with-avatar text-larger">
+          <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
+          {{ result.user }}
+        </div>
+      </a>
+      <div class="flex flex-row flex-gap-1 text-muted text-smaller">
+        <span>Wins: {{ result.num_wins|default_if_none:"-" }}</span>
+        <span>Losses: {{ result.num_losses|default_if_none:"-" }}</span>
+        <span>RP: {{ result.ranking_points.first|default_if_none:"-" }}</span>
+      </div>
+    </td>
+  </tr>
+{% endpartialdef %}
+
+{% partialdef results-table-lg %}
+    <table class="lg-only">
+      <thead>
+        <tr>
+          <th title="Finishing Position">#</th>
+          <th class="text-left">Player</th>
+          <th>&nbsp;</th>
+          <th title="Wins">W</th>
+          <th title="Losses">L</th>
+          <th title="Ranking Points">RP</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for result in object.results.all %}
+          {% partial result-row-lg %}
+        {% endfor %}
+      </tbody>
+    </table>
+{% endpartialdef %}
+
+{% partialdef results-table-sm %}
+    <table class="sm-only">
+      <thead>
+        <tr>
+          <th title="Finishing Position">#</th>
+          <th class="text-left">Player</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for result in object.results.all %}
+          {% partial result-row-sm %}
+        {% endfor %}
+      </tbody>
+    </table>
+{% endpartialdef %}
+
+
+{% block content %}
+  <h1>{{ object }}</h1>
+  <div class="subheading">
+    <ul class="inline-list">
+      <li>{{ object.start_date }}</li>
+      <li>{{ object.get_player_count }} Players</li>
+      {% if object.format is not None %}
+      <li>{{ object.format }}</li>
+      {% endif %}
+    </ul>
+  </div>
+  
+	<div class="card staff-only">
+		<h2>Staff Area</h2>
+    <div class="card-actions">
+      <a href="{% url 'pmc-pg-event-manage' playgroup.slug object.pk %}" class="btn btn-solid">
+        Manage Event
+      </a>
+    </div>
+		</a>
+	</div>
+
+  <div class="card">
+    <h2>Results</h2>
+    {% partial results-table-lg %}
+
+    {% partial results-table-sm %}
+  </div>
+{% endblock %}

@@ -79,9 +79,6 @@ docs/_build/
 # PyBuilder
 target/
 
-# pyenv
-.python-version
-
 # pipenv
 #   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
 #   However, in case of collaboration, if having platform-specific dependencies or dependencies
@@ -126,3 +123,8 @@ local_environment.py
 !/staticfiles/.gitkeep
 
 venv
+
+# Claude
+.claude
+CLAUDE.local.md
+TASKS.md

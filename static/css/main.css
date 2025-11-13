@@ -19,6 +19,12 @@ body { background-color: var(--color-bg); }
   }
 }
 
+hr {
+  display: block;
+  width: 100%;
+}
+
+
 /* Misc */
 .brand {
   font-size: 1.5rem;
@@ -34,7 +40,7 @@ form.form-inline {
   margin-bottom: 0;
 }
 
-.form-wide input,
+.form-wide input:not([type="checkbox"]),
 .form-wide textarea,
 .form-wide select {
   width: 100%;

@@ -6,20 +6,41 @@
 {% block head_title %}{% trans "Sign In" %}{% endblock %}
 
 {% block content %}
-
-<h1>{% trans "Sign In" %}</h1>
-
 {% get_providers as socialaccount_providers %}
 
-<p>{% blocktrans with site.name as site_name %}Authenticate with Discord to
-see the fancy side of <span class="brand">{{site_name}}</span>. Use the link
-below to complete your sign in.{% endblocktrans %}</p>
+<h1>{% trans "Log In" %}</h1>
+
+<p>{% trans "Log in to get to the good stuff 😎." %}</p>
+
+<div class="card">
+<form method="post" action="{% url 'account_login' %}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="hidden" name="next" value="{{ request.GET.next }}"/>
+    <button type="submit" class="button button-primary btn btn-solid">{% trans "Log in" %}</button>
+    <a href="{% url 'account_signup' %}" class="button btn">Create an account</a>
+  </form>
+</div>
+
+{% if LOGIN_BY_CODE_ENABLED %}
+<div class="card">
+  <p>
+    {% trans "Don't want to futz with passwords? We'll send you a magic code, be sure to check your spam folder if you don't see it." %}</a>
+  </p>
+  <p>
+    <a href="{{ request_login_code_url }}" class="button btn">Send the magic ✨</a>
+  </p>
+</div>
+{% endif %}
 
 {% if socialaccount_providers %}
-<div class="socialaccount_ballot">
-  <ul class="socialaccount_providers">
-    {% include "socialaccount/snippets/provider_list.html" with process="login" %}
-  </ul>
+<div class="card">
+  <p>... Or, use one of our social integrations to log in.</p>
+  <div class="socialaccount_ballot">
+    <ul class="socialaccount_providers">
+      {% include "socialaccount/snippets/provider_list.html" with process="login" %}
+    </ul>
+  </div>
 </div>
 {% endif %}
 

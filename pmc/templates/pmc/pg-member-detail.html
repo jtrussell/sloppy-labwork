@@ -1,0 +1,83 @@
+{% extends "pmc/_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/playercard.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>Members - {{ object }}</h1>
+
+  <div class="card staff-only">
+    <h2>Staff Area</h2>
+    <a href="{% url 'pmc-pg-member-manage' playgroup.slug object.user.username %}" class="btn btn-block btn-solid">
+      Manage Member
+    </a>
+  </div>
+
+  <div class="card flex flex-col flex-gap-2">
+    <div class="flex flex-row flex-col-sm flex-gap-2">
+      <div class="flex-1">
+        <h2>Playercard</h2>
+        {% include 'pmc/_playercard.html' with my_profile=object.user.pmc_profile %}
+      </div>
+
+      <div>
+        <h2>Playgroup Stats</h2>
+        <table>
+          <tbody>
+            <tr>
+              <th>Member Since</th>
+              <td>{{ object.joined_on | date:"SHORT_DATE_FORMAT" }}</td>
+            </tr>
+            <tr>
+              <th>Events Attended</th>
+              <td>{{ object.get_events.count }}</td>
+            </tr>
+            <tr>
+              <th>Events Won</th>
+              <td>{{ object.get_events_won.count }}</td>
+            </tr>
+            <tr>
+              <th>Match Wins</th>
+              <td>{{ object.get_num_match_wins }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>Global Stats</h2>
+        <table>
+          <tbody>
+            <tr>
+              <th>Events Attended</th>
+              <td>{{ object.user.pmc_profile.get_events.count }}</td>
+            </tr>
+            <tr>
+              <th>Events Won</th>
+              <td>{{ object.user.pmc_profile.get_events_won.count }}</td>
+            </tr>
+            <tr>
+              <th>Match Wins</th>
+              <td>{{ object.user.pmc_profile.get_num_match_wins }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+      <div>
+        <div class="flex flex-row flex-spread flex-align-baseline levels-spread">
+          <span class="current-level">{{ object.user.pmc_profile.get_level }}</span>
+          <span class="next-level">{{ object.user.pmc_profile.get_next_level }}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress" style="width: {{ object.user.pmc_profile.get_percent_level_up }}%"></div>
+        </div>
+        <div class="text-muted">
+          {{ object.user.pmc_profile.get_level_increment_progress }} / {{ object.user.pmc_profile.get_level_increment }} <i class="pmc-icon icon-xp"></i>
+        </div>
+      </div>
+  </div>
+
+
+{% endblock %}

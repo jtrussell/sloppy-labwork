@@ -1,0 +1,53 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+  <h1>{{ playgroup }}</h1>
+  <div class="subheading">Manage</div>
+
+  <div class="staff-only card">
+    <h2>Playgroup Details</h2>
+    <form method="POST">
+      {% csrf_token %}
+      {{ form.as_p }}
+    
+      <p class="text-right">
+        <a href="https://daringfireball.net/projects/markdown/syntax" target="_blank">Help with formatting.</a>
+      </p>
+    
+      <div class="card-actions">
+        <button class="btn btn-solid" type="submit">Submit</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card staff-only">
+    <h2>Pending Join Requests</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Requesting User</th>
+          <th>Requested On</th>
+          <th>&nbsp;</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in join_requests %}
+          <tr>
+            <td>{{ req.user.username }}</td>
+            <td>{{ req.created_on|date:"SHORT_DATE_FORMAT" }}</td>
+            <td>
+              <a href="{% url 'pmc-pg-join-manage' playgroup.slug req.pk %}">View</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="3" class="text-muted">Nothing to see here.</td>
+          <tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+{% endblock %}
+

@@ -1,0 +1,64 @@
+#legend {
+    display: flex;
+    align-items: start; /* Aligns items at the top */
+    flex-direction: column;
+    gap: 12px;
+}
+
+.legend-item {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+}
+
+.legend-icon {
+    width: 24px; /* Adjust size as needed */
+    height: 24px;
+}
+
+.legend-title {
+    font-weight: bold;
+    font-size: 16px;
+    color: var(--color-primary);
+}
+
+.legend-description {
+    font-size: 14px;
+}
+
+.about-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding-top: 2rem;
+}
+
+.about-item-icon {
+    height: 125px;
+}
+.about-item-header {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    align-items: baseline;
+}
+
+.about-item-description :first-child {
+    margin-top: 0;
+}
+
+ol {
+    list-style: decimal;
+    margin-left: 25px;
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
+
+strong {
+    font-weight: bold;
+}
+
+.tab {
+    width: 150px;
+    display:inline-block;
+}

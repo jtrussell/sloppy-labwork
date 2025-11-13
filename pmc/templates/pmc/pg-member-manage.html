@@ -1,0 +1,52 @@
+{% extends "pmc/_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/awards.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>{{ member }}</h1>
+  <div class="subheading">Manage Member</div>
+
+  <div class="card staff-only">
+    <h2>Assign Badges</h2>
+    <ul class="flex flex-row flex-gap-1 flex-wrap">
+      {% for badge in badges %}
+        {% if badge.user_badge_id or not badge.is_hidden %}
+          <li>
+            <form
+              class="award-container pointer {% if not badge.user_badge_id %}disabled{% endif %}"
+              hx-post
+              hx-confirm="<span class='text-bold text-em'>{{ badge.description }}</span><br><br>Are you sure you would like to assign {{ badge.name }} to {{ member }}? This action cannot be undone."
+              hx-trigger="click"
+            >
+              <input type="hidden" name="action" value="assign_badge" />
+              <input type="hidden" name="badge_id" value="{{ badge.pk }}" />
+              <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award" />
+              <span class="text-shy text-center">{{ badge.name }}</span>
+            </form>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="card staff-only">
+    <h2>Danger Zone</h2>
+    <p>
+      Remove this member from the playgroup.
+    </p>
+    <div class="card-actions">
+      <button
+        class="btn"
+        hx-delete
+        hx-confirm="Are you sure you would like to remove {{ member }} from this playgroup?"
+        type="submit"
+      >
+        Remove Member
+      </button>
+    </div>
+  </div>
+
+{% endblock %}

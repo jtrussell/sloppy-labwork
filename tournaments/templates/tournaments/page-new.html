@@ -8,8 +8,7 @@
   can find a sign-up link to send to your participants.
 </p>
 <form method="POST" class="form-wide">
-  {{ csrf_tokken }}
-    {% csrf_token %}
+  {% csrf_token %}
   {{ form }}
   <button class="button-primary" type="submit">
     Submit

@@ -1,0 +1,58 @@
+{% extends "pmc/_base.html" %}
+{% load posts_extras %}
+
+{% block content %}
+  <div class="flex flex-row flex-col-sm flex-gap-1 flex-align-center {% if object.logo_src %}h1{% endif %}">
+    {% if object.logo_src %}
+      <img src="{{ object.logo_src }}" alt="{{ object.name }} logo" class="playgroup-logo">
+    {% endif %}
+    <div class="flex-1">
+      <h1>{{ object.name }}</h1>
+      <div class="subheading">
+        <ul class="inline-list">
+          {% if object.is_global %}
+            <li><strong>Global Playgroup</strong></li>
+          {% elif object.type %}
+            <li>{{ object.type }}</li>
+          {% endif %}
+          {% if not object.is_global %}
+            <li>
+              <a href="{% url 'pmc-pg-members' object.slug %}">{{ object.members.count }} Members</a>
+            </li>
+          {% endif %}
+          <li>
+            <a href="{% url 'pmc-pg-events' object.slug %}">{{ object.events.count }} Events</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card staff-only">
+    <h2>Staff Area</h2>
+    <a href="{% url 'pmc-pg-manage' object.slug %}" class="btn btn-solid btn-block">Manage Playgroup</a>
+  </div>
+
+  {% if not playgroup_member and not object.is_global %}
+    <div class="card">
+      <h2>Hi There 👋!</h2>
+      <p>It looks like you haven't joined this group yet on KeyChain.</p>
+      <div class="card-actions">
+        <a href="{% url 'pmc-pg-join' object.slug %}" class="btn">Request to join</a>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if object.is_global %}
+    <div class="card">
+      <h2>Welcome 👋!</h2>
+      <p>This is a global playgroup, available to all KeyChain users.</p>
+    </div>
+  {% endif %}
+
+  {% if object.description %}
+    <div class="card no-top-margin markdown">
+      {{ object.description | markdown | safe }}
+    </div>
+  {% endif %}
+{% endblock %}

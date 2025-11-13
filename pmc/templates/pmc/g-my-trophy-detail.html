@@ -1,0 +1,64 @@
+{% extends "pmc/_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/awards.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>{{ trophy }}</h1>
+  <div class="subheading">Trophy Detail</div>
+
+  <div class="card">
+    <div>
+      <div class="
+        award-container
+        large
+        no-hover
+        {% if not my_trophy %}disabled{% endif %}
+      ">
+        <img src="{{ trophy.src }}" alt="{{ trophy }} trophy" class="award lg" />
+        <span class="text-shy text-center">{{ trophy }}</span>
+      </div> 
+    </div>
+
+    <p class="text-center text-larger">{{ trophy.description }}</p>
+    
+  <p class="text-center">You've earned this trophy a total of
+    <span class="text-primary text-bold text-larger">{{ my_trophy.amount | default:0 }}</span> times.</p>
+  </div>
+
+
+  <div class="card">
+    <h2>Top 5</h2>
+    <div class="subheading">All Time</div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th class="text-left">Player</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ut in top_user_trophies %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+            <td style="width: 100%;">
+              <div class="name-with-avatar text-larger">
+                <img class="avatar" src="{{ ut.user.pmc_profile.get_avatar.src}}" alt="">
+                {{ ut.user }}
+              </div>
+            </td>
+            <td>{{ ut.amount }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="3">No players have earned this trophy yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+{% endblock %}

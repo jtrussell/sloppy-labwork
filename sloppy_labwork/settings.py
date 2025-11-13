@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+from django.utils.translation import gettext_lazy as _
 
 # Prime our environment if we've got a file to do so.
 try:
@@ -39,6 +40,8 @@ SITE_ID = int(os.environ['SITE_ID'])
 MAX_UPLOADS_PER_DAY = int(os.environ['MAX_UPLOADS_PER_DAY'])
 
 AWS_S3_BUCKET_VERIFICATION_PHOTOS_BUCKET = os.environ['AWS_S3_BUCKET_VERIFICATION_PHOTOS_BUCKET']
+AWS_S3_BUCKET_MV_QRCODE = os.environ['AWS_S3_BUCKET_MV_QRCODE']
+
 
 GA_TRACKING_ID = os.environ['GA_TRACKING_ID']
 
@@ -54,6 +57,7 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.discord',
     'register',
     'ratings',
@@ -63,10 +67,16 @@ INSTALLED_APPS = [
     'tournaments',
     'redacted',
     'transporter_platform',
+    'pmc',
+    'common',
+    'django_hosts',
+    'django_htmx',
+    'template_partials',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django_hosts.middleware.HostsRequestMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -74,15 +84,20 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'django_htmx.middleware.HtmxMiddleware',
+    'common.middleware.HtmxMessageMiddleware',
+    'django_hosts.middleware.HostsResponseMiddleware',
 ]
 
 ROOT_URLCONF = 'sloppy_labwork.urls'
+ROOT_HOSTCONF = 'sloppy_labwork.hosts'
+DEFAULT_HOST = 'default'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            'templates',
+            os.path.join(BASE_DIR, 'templates')
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -91,9 +106,14 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'django.template.context_processors.request',
-                'sloppy_labwork.context_processors.feature_flags',
+                'django.template.context_processors.static',
                 'sloppy_labwork.context_processors.teammate_authorized',
+                'sloppy_labwork.context_processors.base_template',
+                'sloppy_labwork.context_processors.feature_flags',
+                'pmc.context_processors.nav_links',
+                'pmc.context_processors.playgroup',
+                'pmc.context_processors.playgroup_member',
+                'pmc.context_processors.pmc_profile',
             ],
         },
     },
@@ -106,13 +126,22 @@ AUTHENTICATION_BACKENDS = (
 
 SOCIALACCOUNT_AUTO_SIGNUP = False
 
-LOGIN_REDIRECT_URL = '/profile/'
+LOGIN_REDIRECT_URL = '/@me/'
+
+ACCOUNT_LOGIN_BY_CODE_ENABLED = True
+ACCOUNT_PRESERVE_USERNAME_CASING = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_EMAIL_REQUIRED = True
 
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = os.environ['ACCOUNT_DEFAULT_HTTP_PROTOCOL']
 
+APPEND_SLASH = True
+
 WSGI_APPLICATION = 'sloppy_labwork.wsgi.application'
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'no-reply@sloppylabwork.com'
+EMAIL_BACKEND = 'django_ses.SESBackend'
 
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
@@ -144,9 +173,21 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+ACCOUNT_SESSION_REMEMBER = True
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
+
+LANGUAGES = [
+    ('en', _('English')),
+    ('it', _('Italian')),
+    ('po', _('Polish')),
+]
 
 LANGUAGE_CODE = 'en-us'
 
@@ -161,14 +202,22 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
-
-STATIC_URL = '/static/'
+STATIC_URL = 'static/'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage',
+    },
+}
 
 # Feature Flags
 FT_USE_REGISTER = os.environ['FT_USE_REGISTER'] == 'True'
@@ -177,11 +226,8 @@ FT_USE_POSTS = os.environ['FT_USE_POSTS'] == 'True'
 FT_USE_EVENTS = os.environ['FT_USE_EVENTS'] == 'True'
 
 # Bootstrap Heroku settings
-# Note that this env variable should NOT be present in your local environment
-# config.
-if 'IS_HEROKU' in os.environ:
-    import django_heroku
+MAX_CONN_AGE = 600
+if "DATABASE_URL" in os.environ:
     import dj_database_url
-    django_heroku.settings(locals())
-    DATABASES['default'] = dj_database_url.config(
-        conn_max_age=600, ssl_require=True)
+    DATABASES["default"] = dj_database_url.config(
+        conn_max_age=MAX_CONN_AGE, ssl_require=True)
