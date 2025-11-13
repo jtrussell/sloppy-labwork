@@ -1,0 +1,388 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-04-23 12:29-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: .\pmc\context_processors.py:22
+msgid "My KeyChain"
+msgstr "我的钥匙链"
+
+#: .\pmc\context_processors.py:29
+msgid "Home"
+msgstr "家"
+
+#: .\pmc\context_processors.py:35
+msgid "Events"
+msgstr "活动"
+
+#: .\pmc\context_processors.py:41
+msgid "Members"
+msgstr "成员"
+
+#: .\pmc\context_processors.py:47 .\pmc\context_processors.py:54
+msgid "Leaderboards"
+msgstr "排行榜"
+
+#: .\pmc\context_processors.py:60
+msgid "Results"
+msgstr "结果"
+
+#: .\pmc\forms.py:10
+msgid "This file is optional. See below for details."
+msgstr "此文件为可选文件。详情请见下文。"
+
+#: .\pmc\forms.py:13
+msgid "Other"
+msgstr "其他"
+
+#: .\pmc\forms.py:21 .\pmc\forms.py:43
+msgid "Event Name"
+msgstr "事件名称"
+
+#: .\pmc\forms.py:22 .\pmc\forms.py:44
+msgid "Event Date"
+msgstr "活动日期"
+
+#: .\pmc\forms.py:23 .\pmc\forms.py:45
+msgid "Player Count"
+msgstr "玩家人数"
+
+#: .\pmc\forms.py:24 .\pmc\forms.py:46
+msgid "Event Type"
+msgstr "事件类型"
+
+#: .\pmc\forms.py:76
+msgid "An optional note to the playgroup EOs."
+msgstr "给游戏小组执行官的可选说明。"
+
+#: .\pmc\models.py:93
+msgid "Submitted"
+msgstr "已提交"
+
+#: .\pmc\models.py:94
+msgid "Accepted"
+msgstr "公认"
+
+#: .\pmc\models.py:95
+msgid "Declined"
+msgstr "拒绝"
+
+#: .\pmc\models.py:96
+msgid "Cancelled"
+msgstr "取消"
+
+#: .\pmc\models.py:126
+msgid "Tournament"
+msgstr "比赛"
+
+#: .\pmc\models.py:127
+msgid "Open Play"
+msgstr "开放式游戏"
+
+#: .\pmc\models.py:228
+msgid "Ranking points"
+msgstr "排名积分"
+
+#: .\pmc\models.py:247
+msgid "Month"
+msgstr "月"
+
+#: .\pmc\models.py:248
+msgid "Season"
+msgstr "季节"
+
+#: .\pmc\models.py:249
+msgid "All Time"
+msgstr "所有时间"
+
+#: .\pmc\models.py:355
+msgid "KeyChain Dark"
+msgstr "深色钥匙链"
+
+#: .\pmc\models.py:356
+msgid "KeyChain Light"
+msgstr "钥匙链灯"
+
+#: .\pmc\models.py:509
+msgid "Update Rankings"
+msgstr "更新排名"
+
+#: .\pmc\views.py:91
+msgid "You are already a member of this playgroup."
+msgstr "您已经是这个游戏小组的成员了。"
+
+#: .\pmc\views.py:106
+msgid "Join request cancelled."
+msgstr "加入请求已取消。"
+
+#: .\pmc\views.py:117
+msgid "New join request for {}"
+msgstr "新的加入请求 {}"
+
+#: .\pmc\views.py:128
+msgid "Join request submitted."
+msgstr "加入申请已提交。"
+
+#: .\pmc\views.py:142
+msgid "This join request has already been handled."
+msgstr "此加入请求已处理完毕。"
+
+#: .\pmc\views.py:156
+msgid "Join request accepted."
+msgstr "加入申请已接受。"
+
+#: .\pmc\views.py:159
+msgid "Join request accepted for {}"
+msgstr "加入请求已接受 {}"
+
+#: .\pmc\views.py:175
+msgid "Join request declined."
+msgstr "加入请求被拒绝。"
+
+#: .\pmc\views.py:249 .\pmc\views.py:688
+msgid "Profile updated."
+msgstr "个人资料已更新。"
+
+#: .\pmc\views.py:298
+msgid "Member removed."
+msgstr "成员已移除。"
+
+#: .\pmc\views.py:350
+msgid "Event updated."
+msgstr "活动已更新。"
+
+#: .\pmc\views.py:357
+msgid "Oops! That's not quite right. Check the form and try again."
+msgstr "糟糕！好像不太对。请检查表格并重试。"
+
+#: .\pmc\views.py:371
+msgid "Event deleted."
+msgstr "事件已删除。"
+
+#: .\pmc\views.py:488
+msgid "Event created."
+msgstr "事件已创建。"
+
+#: .\pmc\views.py:570
+msgid "Ranking points updated."
+msgstr "排名积分已更新。"
+
+#: .\pmc\views.py:582
+msgid "Result removed."
+msgstr "结果已删除。"
+
+#: .\pmc\views.py:613
+msgid "Result added."
+msgstr "结果已添加。"
+
+#: .\pmc\views.py:616
+msgid "Oops! We could not find a user named {}. Usernames are case sensitive."
+msgstr "糟糕！我们找不到名为 {} 的用户。用户名区分大小写。"
+
+#: .\pmc\views.py:620
+msgid ""
+"Oops! We could not save that result, you may have one for that user already."
+msgstr "糟糕！我们无法保存该结果，您可能已经拥有该用户的结果了。"
+
+#: .\pmc\views.py:623 .\pmc\views.py:723 .\pmc\views.py:752 .\pmc\views.py:790
+msgid "Oops! Something went wrong."
+msgstr "糟糕！出问题了。"
+
+#: .\pmc\views.py:709
+msgid "Master Vault account disconnected."
+msgstr "主金库账户已断开连接。"
+
+#: .\pmc\views.py:720
+msgid "Master Vault account connected."
+msgstr "主金库账户已连接。"
+
+#: .\pmc\views.py:745 .\pmc\views.py:774
+msgid "{} added. View <a href=\"{}\">their profile</a>."
+msgstr "{} 已添加。查看<a href=\"{}\">他们的个人资料</a>。"
+
+#: .\pmc\views.py:783
+msgid "{} is already a member. View <a href=\"{}\">their profile</a>."
+msgstr "{} 已经是会员。查看<a href=\"{}\">他们的个人资料</a>。"
+
+#: .\pmc\views.py:787
+msgid ""
+"Oops! We could not find a user with that username. Usernames are case "
+"sensitive."
+msgstr "糟糕！我们找不到具有该用户名的用户。用户名区分大小写。"
+
+#: .\redacted\forms.py:5 .\redacted\forms.py:30 .\redacted\forms.py:37
+msgid "Any"
+msgstr "任何"
+
+#: .\redacted\forms.py:6
+msgid "Call of the Archons"
+msgstr "执政官的召唤"
+
+#: .\redacted\forms.py:7
+msgid "Age of Ascension"
+msgstr "飞升时代"
+
+#: .\redacted\forms.py:8
+msgid "Worlds Collide"
+msgstr "世界碰撞"
+
+#: .\redacted\forms.py:9
+msgid "Mass Mutation"
+msgstr "大规模突变"
+
+#: .\redacted\forms.py:10
+msgid "Dark Tidings"
+msgstr "黑暗预兆"
+
+#: .\redacted\forms.py:11
+msgid "Winds of Exchange"
+msgstr "交换之风"
+
+#: .\redacted\forms.py:12
+msgid "Unchained 2022"
+msgstr "Unchained 2022"
+
+#: .\redacted\forms.py:13
+msgid "Vault Masters 2023"
+msgstr "Vault Masters 2023"
+
+#: .\redacted\forms.py:14
+msgid "Grim Reminders"
+msgstr "残酷的提醒"
+
+#: .\redacted\forms.py:15
+msgid "Menagerie"
+msgstr "动物园"
+
+#: .\redacted\forms.py:16
+msgid "Vault Masters 2024"
+msgstr "Vault Masters 2024"
+
+#: .\redacted\forms.py:17
+msgid "Æmber Skies"
+msgstr "琥珀天空"
+
+#: .\redacted\forms.py:18
+msgid "Tokens of Change"
+msgstr "变革的象征"
+
+#: .\redacted\forms.py:19
+msgid "More Mutation"
+msgstr "更多变异"
+
+#: .\redacted\forms.py:24
+msgid "DoK username"
+msgstr "DoK用户名"
+
+#: .\redacted\forms.py:27
+msgid "Min SAS"
+msgstr "最小SAS"
+
+#: .\redacted\forms.py:34
+msgid "Max SAS"
+msgstr "最大 SAS"
+
+#: .\register\forms.py:15
+msgid "Master vault link is invalid"
+msgstr "主保险库链接无效"
+
+#: .\register\models.py:13
+msgid "Pending"
+msgstr "待办的"
+
+#: .\register\models.py:14
+msgid "Verified"
+msgstr "已验证"
+
+#: .\register\models.py:16
+msgid "Rejected"
+msgstr "已拒绝"
+
+#: .\sloppy_labwork\settings.py:181
+msgid "English"
+msgstr "英语"
+
+#: .\sloppy_labwork\settings.py:182
+msgid "Italian"
+msgstr "意大利语"
+
+#: .\sloppy_labwork\settings.py:183
+msgid "Polish"
+msgstr "抛光"
+
+#: .\templates\account\login.html:6 .\templates\socialaccount\login.html:6
+msgid "Sign In"
+msgstr "登入"
+
+#: .\templates\account\login.html:11
+msgid "Log In"
+msgstr "登录"
+
+#: .\templates\account\login.html:13
+msgid "Log in to get to the good stuff 😎."
+msgstr "登录即可查看精彩内容😎。"
+
+#: .\templates\account\login.html:20
+msgid "Log in"
+msgstr "登录"
+
+#: .\templates\account\login.html:28
+msgid ""
+"Don't want to futz with passwords? We'll send you a magic code, be sure to "
+"check your spam folder if you don't see it."
+msgstr "不想费劲输入密码？我们会给你发送一个神奇的验证码，如果没看到，请务必检查你的垃圾邮件文件夹。"
+
+#: .\templates\account\messages\logged_in.txt:4
+#, python-format
+msgid "Welcome, %(name)s."
+msgstr "欢迎， %(name)s。"
+
+#: .\templates\socialaccount\login.html:14
+#, python-format
+msgid "Connect %(provider)s"
+msgstr "连接 %(provider)s"
+
+#: .\templates\socialaccount\login.html:17
+#, python-format
+msgid "You are about to connect a new third-party account from %(provider)s."
+msgstr "您即将连接一个新的第三方帐户 %(provider)s。"
+
+#: .\templates\socialaccount\login.html:21
+#, python-format
+msgid "Sign In Via %(provider)s"
+msgstr "通过以下方式登录 %(provider)s"
+
+#: .\templates\socialaccount\login.html:24
+#, python-format
+msgid "You are about to sign in using a third-party account from %(provider)s."
+msgstr "您即将使用第三方帐户登录 %(provider)s。"
+
+#: .\templates\socialaccount\login.html:30
+msgid "Continue"
+msgstr "继续"
+
+#: .\transporter_platform\models.py:23
+msgid "Dis"
+msgstr "迪斯"
+
+#: .\transporter_platform\models.py:24
+msgid "Logos"
+msgstr "标志"
+
+#: .\transporter_platform\models.py:25
+msgid "Shadows"
+msgstr "阴影"
