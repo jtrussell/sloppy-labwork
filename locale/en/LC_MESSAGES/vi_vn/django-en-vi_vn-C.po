@@ -1,0 +1,388 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-04-23 12:29-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: .\pmc\context_processors.py:22
+msgid "My KeyChain"
+msgstr "My KeyChain"
+
+#: .\pmc\context_processors.py:29
+msgid "Home"
+msgstr "Trang chủ"
+
+#: .\pmc\context_processors.py:35
+msgid "Events"
+msgstr "Sự kiện"
+
+#: .\pmc\context_processors.py:41
+msgid "Members"
+msgstr "Thành viên"
+
+#: .\pmc\context_processors.py:47 .\pmc\context_processors.py:54
+msgid "Leaderboards"
+msgstr "Bảng xếp hạng"
+
+#: .\pmc\context_processors.py:60
+msgid "Results"
+msgstr "Kết quả"
+
+#: .\pmc\forms.py:10
+msgid "This file is optional. See below for details."
+msgstr "Tệp này là tùy chọn. Xem chi tiết bên dưới."
+
+#: .\pmc\forms.py:13
+msgid "Other"
+msgstr "Khác"
+
+#: .\pmc\forms.py:21 .\pmc\forms.py:43
+msgid "Event Name"
+msgstr "Tên sự kiện"
+
+#: .\pmc\forms.py:22 .\pmc\forms.py:44
+msgid "Event Date"
+msgstr "Ngày sự kiện"
+
+#: .\pmc\forms.py:23 .\pmc\forms.py:45
+msgid "Player Count"
+msgstr "Số lượng người chơi"
+
+#: .\pmc\forms.py:24 .\pmc\forms.py:46
+msgid "Event Type"
+msgstr "Loại sự kiện"
+
+#: .\pmc\forms.py:76
+msgid "An optional note to the playgroup EOs."
+msgstr "Một lưu ý tùy chọn cho các EO của nhóm chơi."
+
+#: .\pmc\models.py:93
+msgid "Submitted"
+msgstr "Đã nộp"
+
+#: .\pmc\models.py:94
+msgid "Accepted"
+msgstr "Đã chấp nhận"
+
+#: .\pmc\models.py:95
+msgid "Declined"
+msgstr "Từ chối"
+
+#: .\pmc\models.py:96
+msgid "Cancelled"
+msgstr "Đã hủy"
+
+#: .\pmc\models.py:126
+msgid "Tournament"
+msgstr "Giải đấu"
+
+#: .\pmc\models.py:127
+msgid "Open Play"
+msgstr "Mở chơi"
+
+#: .\pmc\models.py:228
+msgid "Ranking points"
+msgstr "Điểm xếp hạng"
+
+#: .\pmc\models.py:247
+msgid "Month"
+msgstr "Tháng"
+
+#: .\pmc\models.py:248
+msgid "Season"
+msgstr "Mùa"
+
+#: .\pmc\models.py:249
+msgid "All Time"
+msgstr "Mọi thời đại"
+
+#: .\pmc\models.py:355
+msgid "KeyChain Dark"
+msgstr "Móc khóa tối"
+
+#: .\pmc\models.py:356
+msgid "KeyChain Light"
+msgstr "KeyChain Light"
+
+#: .\pmc\models.py:509
+msgid "Update Rankings"
+msgstr "Cập nhật bảng xếp hạng"
+
+#: .\pmc\views.py:91
+msgid "You are already a member of this playgroup."
+msgstr "Bạn đã là thành viên của nhóm chơi này."
+
+#: .\pmc\views.py:106
+msgid "Join request cancelled."
+msgstr "Yêu cầu tham gia đã bị hủy."
+
+#: .\pmc\views.py:117
+msgid "New join request for {}"
+msgstr "Yêu cầu tham gia mới cho {}"
+
+#: .\pmc\views.py:128
+msgid "Join request submitted."
+msgstr "Đã gửi yêu cầu tham gia."
+
+#: .\pmc\views.py:142
+msgid "This join request has already been handled."
+msgstr "Yêu cầu tham gia này đã được xử lý."
+
+#: .\pmc\views.py:156
+msgid "Join request accepted."
+msgstr "Đã chấp nhận yêu cầu tham gia."
+
+#: .\pmc\views.py:159
+msgid "Join request accepted for {}"
+msgstr "Đã chấp nhận yêu cầu tham gia cho {}"
+
+#: .\pmc\views.py:175
+msgid "Join request declined."
+msgstr "Yêu cầu tham gia đã bị từ chối."
+
+#: .\pmc\views.py:249 .\pmc\views.py:688
+msgid "Profile updated."
+msgstr "Hồ sơ đã được cập nhật."
+
+#: .\pmc\views.py:298
+msgid "Member removed."
+msgstr "Thành viên đã bị xóa."
+
+#: .\pmc\views.py:350
+msgid "Event updated."
+msgstr "Sự kiện đã được cập nhật."
+
+#: .\pmc\views.py:357
+msgid "Oops! That's not quite right. Check the form and try again."
+msgstr "Ồ! Không đúng lắm. Hãy kiểm tra biểu mẫu và thử lại."
+
+#: .\pmc\views.py:371
+msgid "Event deleted."
+msgstr "Sự kiện đã bị xóa."
+
+#: .\pmc\views.py:488
+msgid "Event created."
+msgstr "Sự kiện đã được tạo."
+
+#: .\pmc\views.py:570
+msgid "Ranking points updated."
+msgstr "Điểm xếp hạng đã được cập nhật."
+
+#: .\pmc\views.py:582
+msgid "Result removed."
+msgstr "Kết quả đã bị xóa."
+
+#: .\pmc\views.py:613
+msgid "Result added."
+msgstr "Đã thêm kết quả."
+
+#: .\pmc\views.py:616
+msgid "Oops! We could not find a user named {}. Usernames are case sensitive."
+msgstr "Rất tiếc! Chúng tôi không tìm thấy người dùng có tên {}. Tên người dùng phân biệt chữ hoa và chữ thường."
+
+#: .\pmc\views.py:620
+msgid ""
+"Oops! We could not save that result, you may have one for that user already."
+msgstr "Rất tiếc! Chúng tôi không thể lưu kết quả đó, có thể bạn đã có kết quả cho người dùng đó rồi."
+
+#: .\pmc\views.py:623 .\pmc\views.py:723 .\pmc\views.py:752 .\pmc\views.py:790
+msgid "Oops! Something went wrong."
+msgstr "Ồ! Có lỗi xảy ra rồi."
+
+#: .\pmc\views.py:709
+msgid "Master Vault account disconnected."
+msgstr "Tài khoản Master Vault đã bị ngắt kết nối."
+
+#: .\pmc\views.py:720
+msgid "Master Vault account connected."
+msgstr "Đã kết nối tài khoản Master Vault."
+
+#: .\pmc\views.py:745 .\pmc\views.py:774
+msgid "{} added. View <a href=\"{}\">their profile</a>."
+msgstr "{} đã được thêm. Xem <a href=\"{}\">hồ sơ của họ</a>."
+
+#: .\pmc\views.py:783
+msgid "{} is already a member. View <a href=\"{}\">their profile</a>."
+msgstr "{} đã là thành viên. Xem <a href=\"{}\">hồ sơ của họ</a>."
+
+#: .\pmc\views.py:787
+msgid ""
+"Oops! We could not find a user with that username. Usernames are case "
+"sensitive."
+msgstr "Rất tiếc! Chúng tôi không tìm thấy người dùng nào có tên người dùng đó. Tên người dùng phân biệt chữ hoa và chữ thường."
+
+#: .\redacted\forms.py:5 .\redacted\forms.py:30 .\redacted\forms.py:37
+msgid "Any"
+msgstr "Bất kì"
+
+#: .\redacted\forms.py:6
+msgid "Call of the Archons"
+msgstr "Lời kêu gọi của các Archons"
+
+#: .\redacted\forms.py:7
+msgid "Age of Ascension"
+msgstr "Thời đại thăng thiên"
+
+#: .\redacted\forms.py:8
+msgid "Worlds Collide"
+msgstr "Thế giới va chạm"
+
+#: .\redacted\forms.py:9
+msgid "Mass Mutation"
+msgstr "Đột biến hàng loạt"
+
+#: .\redacted\forms.py:10
+msgid "Dark Tidings"
+msgstr "Tin tức đen tối"
+
+#: .\redacted\forms.py:11
+msgid "Winds of Exchange"
+msgstr "Gió đổi thay"
+
+#: .\redacted\forms.py:12
+msgid "Unchained 2022"
+msgstr "Giải phóng 2022"
+
+#: .\redacted\forms.py:13
+msgid "Vault Masters 2023"
+msgstr "Bậc thầy Vault 2023"
+
+#: .\redacted\forms.py:14
+msgid "Grim Reminders"
+msgstr "Những lời nhắc nhở nghiệt ngã"
+
+#: .\redacted\forms.py:15
+msgid "Menagerie"
+msgstr "Menagerie"
+
+#: .\redacted\forms.py:16
+msgid "Vault Masters 2024"
+msgstr "Bậc thầy Vault 2024"
+
+#: .\redacted\forms.py:17
+msgid "Æmber Skies"
+msgstr "Bầu trời Æmber"
+
+#: .\redacted\forms.py:18
+msgid "Tokens of Change"
+msgstr "Biểu tượng của sự thay đổi"
+
+#: .\redacted\forms.py:19
+msgid "More Mutation"
+msgstr "Đột biến nhiều hơn"
+
+#: .\redacted\forms.py:24
+msgid "DoK username"
+msgstr "Tên người dùng DoK"
+
+#: .\redacted\forms.py:27
+msgid "Min SAS"
+msgstr "Min SAS"
+
+#: .\redacted\forms.py:34
+msgid "Max SAS"
+msgstr "Max SAS"
+
+#: .\register\forms.py:15
+msgid "Master vault link is invalid"
+msgstr "Liên kết kho lưu trữ chính không hợp lệ"
+
+#: .\register\models.py:13
+msgid "Pending"
+msgstr "Chưa giải quyết"
+
+#: .\register\models.py:14
+msgid "Verified"
+msgstr "Đã xác minh"
+
+#: .\register\models.py:16
+msgid "Rejected"
+msgstr "Vật bị loại bỏ"
+
+#: .\sloppy_labwork\settings.py:181
+msgid "English"
+msgstr "Tiếng Anh"
+
+#: .\sloppy_labwork\settings.py:182
+msgid "Italian"
+msgstr "tiếng Ý"
+
+#: .\sloppy_labwork\settings.py:183
+msgid "Polish"
+msgstr "Đánh bóng"
+
+#: .\templates\account\login.html:6 .\templates\socialaccount\login.html:6
+msgid "Sign In"
+msgstr "Đăng nhập"
+
+#: .\templates\account\login.html:11
+msgid "Log In"
+msgstr "Đăng nhập"
+
+#: .\templates\account\login.html:13
+msgid "Log in to get to the good stuff 😎."
+msgstr "Đăng nhập để xem những nội dung thú vị 😎."
+
+#: .\templates\account\login.html:20
+msgid "Log in"
+msgstr "Đăng nhập"
+
+#: .\templates\account\login.html:28
+msgid ""
+"Don't want to futz with passwords? We'll send you a magic code, be sure to "
+"check your spam folder if you don't see it."
+msgstr "Bạn không muốn mất công tìm mật khẩu? Chúng tôi sẽ gửi cho bạn một mã bí mật, hãy kiểm tra thư mục thư rác nếu bạn không thấy."
+
+#: .\templates\account\messages\logged_in.txt:4
+#, python-format
+msgid "Welcome, %(name)s."
+msgstr "Chào mừng, %(name)s."
+
+#: .\templates\socialaccount\login.html:14
+#, python-format
+msgid "Connect %(provider)s"
+msgstr "Kết nối %(provider)s"
+
+#: .\templates\socialaccount\login.html:17
+#, python-format
+msgid "You are about to connect a new third-party account from %(provider)s."
+msgstr "Bạn sắp kết nối một tài khoản bên thứ ba mới từ %(provider)s."
+
+#: .\templates\socialaccount\login.html:21
+#, python-format
+msgid "Sign In Via %(provider)s"
+msgstr "Đăng nhập qua %(provider)s"
+
+#: .\templates\socialaccount\login.html:24
+#, python-format
+msgid "You are about to sign in using a third-party account from %(provider)s."
+msgstr "Bạn sắp đăng nhập bằng tài khoản của bên thứ ba từ %(provider)s."
+
+#: .\templates\socialaccount\login.html:30
+msgid "Continue"
+msgstr "Tiếp tục"
+
+#: .\transporter_platform\models.py:23
+msgid "Dis"
+msgstr "Dis"
+
+#: .\transporter_platform\models.py:24
+msgid "Logos"
+msgstr "Logo"
+
+#: .\transporter_platform\models.py:25
+msgid "Shadows"
+msgstr "Bóng tối"

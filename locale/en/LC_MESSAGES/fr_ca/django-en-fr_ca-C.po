@@ -1,0 +1,388 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-04-23 12:29-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: .\pmc\context_processors.py:22
+msgid "My KeyChain"
+msgstr "Mon porte-clés"
+
+#: .\pmc\context_processors.py:29
+msgid "Home"
+msgstr "Maison"
+
+#: .\pmc\context_processors.py:35
+msgid "Events"
+msgstr "Événements"
+
+#: .\pmc\context_processors.py:41
+msgid "Members"
+msgstr "Membres"
+
+#: .\pmc\context_processors.py:47 .\pmc\context_processors.py:54
+msgid "Leaderboards"
+msgstr "Classements"
+
+#: .\pmc\context_processors.py:60
+msgid "Results"
+msgstr "Résultats"
+
+#: .\pmc\forms.py:10
+msgid "This file is optional. See below for details."
+msgstr "Ce fichier est facultatif. Voir ci-dessous pour plus de détails."
+
+#: .\pmc\forms.py:13
+msgid "Other"
+msgstr "Autre"
+
+#: .\pmc\forms.py:21 .\pmc\forms.py:43
+msgid "Event Name"
+msgstr "Nom de l'événement"
+
+#: .\pmc\forms.py:22 .\pmc\forms.py:44
+msgid "Event Date"
+msgstr "Date de l'événement"
+
+#: .\pmc\forms.py:23 .\pmc\forms.py:45
+msgid "Player Count"
+msgstr "Nombre de joueurs"
+
+#: .\pmc\forms.py:24 .\pmc\forms.py:46
+msgid "Event Type"
+msgstr "Type d'événement"
+
+#: .\pmc\forms.py:76
+msgid "An optional note to the playgroup EOs."
+msgstr "Note facultative à l'attention des responsables des groupes de jeu."
+
+#: .\pmc\models.py:93
+msgid "Submitted"
+msgstr "Soumis"
+
+#: .\pmc\models.py:94
+msgid "Accepted"
+msgstr "Accepté"
+
+#: .\pmc\models.py:95
+msgid "Declined"
+msgstr "Refusé"
+
+#: .\pmc\models.py:96
+msgid "Cancelled"
+msgstr "Annulé"
+
+#: .\pmc\models.py:126
+msgid "Tournament"
+msgstr "Tournoi"
+
+#: .\pmc\models.py:127
+msgid "Open Play"
+msgstr "Jeu ouvert"
+
+#: .\pmc\models.py:228
+msgid "Ranking points"
+msgstr "Points de classement"
+
+#: .\pmc\models.py:247
+msgid "Month"
+msgstr "Mois"
+
+#: .\pmc\models.py:248
+msgid "Season"
+msgstr "Saison"
+
+#: .\pmc\models.py:249
+msgid "All Time"
+msgstr "Tout le temps"
+
+#: .\pmc\models.py:355
+msgid "KeyChain Dark"
+msgstr "Porte-clés sombre"
+
+#: .\pmc\models.py:356
+msgid "KeyChain Light"
+msgstr "Porte-clés lumineux"
+
+#: .\pmc\models.py:509
+msgid "Update Rankings"
+msgstr "Mise à jour des classements"
+
+#: .\pmc\views.py:91
+msgid "You are already a member of this playgroup."
+msgstr "Vous êtes déjà membre de ce groupe de jeu."
+
+#: .\pmc\views.py:106
+msgid "Join request cancelled."
+msgstr "Demande d'adhésion annulée."
+
+#: .\pmc\views.py:117
+msgid "New join request for {}"
+msgstr "Nouvelle demande d'adhésion pour {}"
+
+#: .\pmc\views.py:128
+msgid "Join request submitted."
+msgstr "Demande d'adhésion soumise."
+
+#: .\pmc\views.py:142
+msgid "This join request has already been handled."
+msgstr "Cette demande d'adhésion a déjà été traitée."
+
+#: .\pmc\views.py:156
+msgid "Join request accepted."
+msgstr "Demande d'adhésion acceptée."
+
+#: .\pmc\views.py:159
+msgid "Join request accepted for {}"
+msgstr "Demande d'adhésion acceptée pour {}"
+
+#: .\pmc\views.py:175
+msgid "Join request declined."
+msgstr "Demande d'adhésion refusée."
+
+#: .\pmc\views.py:249 .\pmc\views.py:688
+msgid "Profile updated."
+msgstr "Profil mis à jour."
+
+#: .\pmc\views.py:298
+msgid "Member removed."
+msgstr "Membre supprimé."
+
+#: .\pmc\views.py:350
+msgid "Event updated."
+msgstr "Événement mis à jour."
+
+#: .\pmc\views.py:357
+msgid "Oops! That's not quite right. Check the form and try again."
+msgstr "Oups ! Ce n'est pas tout à fait correct. Veuillez vérifier le formulaire et réessayer."
+
+#: .\pmc\views.py:371
+msgid "Event deleted."
+msgstr "Événement supprimé."
+
+#: .\pmc\views.py:488
+msgid "Event created."
+msgstr "Événement créé."
+
+#: .\pmc\views.py:570
+msgid "Ranking points updated."
+msgstr "Points de classement mis à jour."
+
+#: .\pmc\views.py:582
+msgid "Result removed."
+msgstr "Résultat supprimé."
+
+#: .\pmc\views.py:613
+msgid "Result added."
+msgstr "Résultat ajouté."
+
+#: .\pmc\views.py:616
+msgid "Oops! We could not find a user named {}. Usernames are case sensitive."
+msgstr "Oups ! Nous n'avons trouvé aucun utilisateur nommé {}. Les noms d'utilisateur sont sensibles à la casse."
+
+#: .\pmc\views.py:620
+msgid ""
+"Oops! We could not save that result, you may have one for that user already."
+msgstr "Oups ! Nous n'avons pas pu enregistrer ce résultat ; il se peut que vous en ayez déjà un pour cet utilisateur."
+
+#: .\pmc\views.py:623 .\pmc\views.py:723 .\pmc\views.py:752 .\pmc\views.py:790
+msgid "Oops! Something went wrong."
+msgstr "Oups ! Une erreur s'est produite."
+
+#: .\pmc\views.py:709
+msgid "Master Vault account disconnected."
+msgstr "Compte Master Vault déconnecté."
+
+#: .\pmc\views.py:720
+msgid "Master Vault account connected."
+msgstr "Compte Master Vault connecté."
+
+#: .\pmc\views.py:745 .\pmc\views.py:774
+msgid "{} added. View <a href=\"{}\">their profile</a>."
+msgstr "{} ajouté. Voir <a href=\"{}\">leur profil</a>."
+
+#: .\pmc\views.py:783
+msgid "{} is already a member. View <a href=\"{}\">their profile</a>."
+msgstr "{} est déjà membre. Consultez <a href=\"{}\">son profil</a>."
+
+#: .\pmc\views.py:787
+msgid ""
+"Oops! We could not find a user with that username. Usernames are case "
+"sensitive."
+msgstr "Oups ! Nous n'avons trouvé aucun utilisateur portant ce nom d'utilisateur. Les noms d'utilisateur sont sensibles à la casse."
+
+#: .\redacted\forms.py:5 .\redacted\forms.py:30 .\redacted\forms.py:37
+msgid "Any"
+msgstr "N'importe lequel"
+
+#: .\redacted\forms.py:6
+msgid "Call of the Archons"
+msgstr "L'appel des archontes"
+
+#: .\redacted\forms.py:7
+msgid "Age of Ascension"
+msgstr "L'âge de l'ascension"
+
+#: .\redacted\forms.py:8
+msgid "Worlds Collide"
+msgstr "Des mondes se rencontrent"
+
+#: .\redacted\forms.py:9
+msgid "Mass Mutation"
+msgstr "Mutation massive"
+
+#: .\redacted\forms.py:10
+msgid "Dark Tidings"
+msgstr "Sombres Nouvelles"
+
+#: .\redacted\forms.py:11
+msgid "Winds of Exchange"
+msgstr "Vents d'échange"
+
+#: .\redacted\forms.py:12
+msgid "Unchained 2022"
+msgstr "Déchaîné 2022"
+
+#: .\redacted\forms.py:13
+msgid "Vault Masters 2023"
+msgstr "Maîtres des coffres-forts 2023"
+
+#: .\redacted\forms.py:14
+msgid "Grim Reminders"
+msgstr "Sombres rappels"
+
+#: .\redacted\forms.py:15
+msgid "Menagerie"
+msgstr "Menagerie"
+
+#: .\redacted\forms.py:16
+msgid "Vault Masters 2024"
+msgstr "Maîtres des coffres-forts 2024"
+
+#: .\redacted\forms.py:17
+msgid "Æmber Skies"
+msgstr "Ciel d'ambre"
+
+#: .\redacted\forms.py:18
+msgid "Tokens of Change"
+msgstr "Jetons de change"
+
+#: .\redacted\forms.py:19
+msgid "More Mutation"
+msgstr "Plus de mutations"
+
+#: .\redacted\forms.py:24
+msgid "DoK username"
+msgstr "Nom d'utilisateur DoK"
+
+#: .\redacted\forms.py:27
+msgid "Min SAS"
+msgstr "Min SAS"
+
+#: .\redacted\forms.py:34
+msgid "Max SAS"
+msgstr "Max SAS"
+
+#: .\register\forms.py:15
+msgid "Master vault link is invalid"
+msgstr "Le lien vers le coffre-fort principal est invalide."
+
+#: .\register\models.py:13
+msgid "Pending"
+msgstr "En attente"
+
+#: .\register\models.py:14
+msgid "Verified"
+msgstr "Vérifié"
+
+#: .\register\models.py:16
+msgid "Rejected"
+msgstr "Rejeté"
+
+#: .\sloppy_labwork\settings.py:181
+msgid "English"
+msgstr "Anglais"
+
+#: .\sloppy_labwork\settings.py:182
+msgid "Italian"
+msgstr "italien"
+
+#: .\sloppy_labwork\settings.py:183
+msgid "Polish"
+msgstr "polonais"
+
+#: .\templates\account\login.html:6 .\templates\socialaccount\login.html:6
+msgid "Sign In"
+msgstr "Se connecter"
+
+#: .\templates\account\login.html:11
+msgid "Log In"
+msgstr "Se connecter"
+
+#: .\templates\account\login.html:13
+msgid "Log in to get to the good stuff 😎."
+msgstr "Connectez-vous pour accéder aux meilleurs contenus 😎."
+
+#: .\templates\account\login.html:20
+msgid "Log in"
+msgstr "Se connecter"
+
+#: .\templates\account\login.html:28
+msgid ""
+"Don't want to futz with passwords? We'll send you a magic code, be sure to "
+"check your spam folder if you don't see it."
+msgstr "Vous n'avez pas envie de vous embêter avec des mots de passe ? Nous vous enverrons un code magique ; pensez à vérifier votre dossier de courriers indésirables si vous ne le voyez pas."
+
+#: .\templates\account\messages\logged_in.txt:4
+#, python-format
+msgid "Welcome, %(name)s."
+msgstr "Accueillir, %(name)s."
+
+#: .\templates\socialaccount\login.html:14
+#, python-format
+msgid "Connect %(provider)s"
+msgstr "Connecter %(provider)s"
+
+#: .\templates\socialaccount\login.html:17
+#, python-format
+msgid "You are about to connect a new third-party account from %(provider)s."
+msgstr "Vous êtes sur le point de connecter un nouveau compte tiers depuis %(provider)s."
+
+#: .\templates\socialaccount\login.html:21
+#, python-format
+msgid "Sign In Via %(provider)s"
+msgstr "Se connecter via %(provider)s"
+
+#: .\templates\socialaccount\login.html:24
+#, python-format
+msgid "You are about to sign in using a third-party account from %(provider)s."
+msgstr "Vous êtes sur le point de vous connecter à l'aide d'un compte tiers provenant de %(provider)s."
+
+#: .\templates\socialaccount\login.html:30
+msgid "Continue"
+msgstr "Continuer"
+
+#: .\transporter_platform\models.py:23
+msgid "Dis"
+msgstr "Dis"
+
+#: .\transporter_platform\models.py:24
+msgid "Logos"
+msgstr "Logos"
+
+#: .\transporter_platform\models.py:25
+msgid "Shadows"
+msgstr "Ombres"
