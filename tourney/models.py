@@ -668,6 +668,8 @@ class Stage(models.Model):
     report_full_scores = models.PositiveSmallIntegerField(
         choices=SCORE_REPORTING_CHOICES, default=SCORE_REPORTING_DISABLED)
     created_on = models.DateTimeField(auto_now_add=True)
+    round_length_in_minutes = models.PositiveIntegerField(
+        default=None, null=True, blank=True)
 
     class Meta:
         constraints = [
@@ -816,6 +818,8 @@ class Round(models.Model):
     stage = models.ForeignKey(
         Stage, on_delete=models.CASCADE, related_name='rounds')
     created_on = models.DateTimeField(auto_now_add=True)
+    round_length_in_minutes = models.PositiveIntegerField(
+        default=None, null=True, blank=True)
 
     class Meta:
         constraints = [
@@ -829,6 +833,13 @@ class Round(models.Model):
 
     def is_complete(self):
         return all(match.has_result() for match in self.matches.all())
+
+    def get_end_timestamp(self):
+        from datetime import timedelta
+        if self.round_length_in_minutes:
+            end_time = self.created_on + timedelta(minutes=self.round_length_in_minutes)
+            return int(end_time.timestamp() * 1000)
+        return None
 
 
 class Match(models.Model):

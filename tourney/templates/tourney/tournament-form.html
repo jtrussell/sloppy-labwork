@@ -88,6 +88,22 @@
         </div>
         <div class="row">
             <div class="six columns">
+                <label for="{{ form.main_score_reporting.id_for_label }}">{{ form.main_score_reporting.label }}</label>
+                {{ form.main_score_reporting }}
+                {% if form.main_score_reporting.errors %}
+                    <div class="form-error">{{ form.main_score_reporting.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="six columns">
+                <label for="{{ form.main_allow_ties.id_for_label }}">{{ form.main_allow_ties.label }}</label>
+                {{ form.main_allow_ties }}
+                {% if form.main_allow_ties.errors %}
+                    <div class="form-error">{{ form.main_allow_ties.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="row">
+            <div class="six columns">
                 <label for="{{ form.main_max_players.id_for_label }}">{{ form.main_max_players.label }}</label>
                 {{ form.main_max_players }}
                 {% if form.main_max_players.help_text %}
@@ -98,22 +114,13 @@
                 {% endif %}
             </div>
             <div class="six columns">
-                <label for="{{ form.main_score_reporting.id_for_label }}">{{ form.main_score_reporting.label }}</label>
-                {{ form.main_score_reporting }}
-                {% if form.main_score_reporting.errors %}
-                    <div class="form-error">{{ form.main_score_reporting.errors }}</div>
+                <label for="{{ form.main_round_length.id_for_label }}">{{ form.main_round_length.label }}</label>
+                {{ form.main_round_length }}
+                {% if form.main_round_length.help_text %}
+                    <span class="helptext">{{ form.main_round_length.help_text }}</span>
                 {% endif %}
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="twelve columns">
-                <label>
-                    {{ form.main_allow_ties }}
-                    {{ form.main_allow_ties.label }}
-                </label>
-                {% if form.main_allow_ties.errors %}
-                    <div class="form-error">{{ form.main_allow_ties.errors }}</div>
+                {% if form.main_round_length.errors %}
+                    <div class="form-error">{{ form.main_round_length.errors }}</div>
                 {% endif %}
             </div>
         </div>
@@ -149,26 +156,40 @@
             </div>
         </div>
 
-        <div class="row" id="playoff-options"{% if not tournament %} style="display: none;"{% endif %}>
-            <div class="six columns">
-                <label for="{{ form.playoff_max_players.id_for_label }}">{{ form.playoff_max_players.label }}</label>
-                {{ form.playoff_max_players }}
-                {% if form.playoff_max_players.help_text %}
-                    <span class="helptext">{{ form.playoff_max_players.help_text }}</span>
-                {% endif %}
-                {% if form.playoff_max_players.errors %}
-                    <div class="form-error">{{ form.playoff_max_players.errors }}</div>
-                {% endif %}
+        <div id="playoff-options"{% if not tournament %} style="display: none;"{% endif %}>
+            <div class="row">
+                <div class="six columns">
+                    <label for="{{ form.playoff_score_reporting.id_for_label }}">{{ form.playoff_score_reporting.label }}</label>
+                    {{ form.playoff_score_reporting }}
+                    {% if form.playoff_score_reporting.help_text %}
+                        <span class="helptext">{{ form.playoff_score_reporting.help_text }}</span>
+                    {% endif %}
+                    {% if form.playoff_score_reporting.errors %}
+                        <div class="form-error">{{ form.playoff_score_reporting.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="six columns">
+                    <label for="{{ form.playoff_max_players.id_for_label }}">{{ form.playoff_max_players.label }}</label>
+                    {{ form.playoff_max_players }}
+                    {% if form.playoff_max_players.help_text %}
+                        <span class="helptext">{{ form.playoff_max_players.help_text }}</span>
+                    {% endif %}
+                    {% if form.playoff_max_players.errors %}
+                        <div class="form-error">{{ form.playoff_max_players.errors }}</div>
+                    {% endif %}
+                </div>
             </div>
-            <div class="six columns">
-                <label for="{{ form.playoff_score_reporting.id_for_label }}">{{ form.playoff_score_reporting.label }}</label>
-                {{ form.playoff_score_reporting }}
-                {% if form.playoff_score_reporting.help_text %}
-                    <span class="helptext">{{ form.playoff_score_reporting.help_text }}</span>
-                {% endif %}
-                {% if form.playoff_score_reporting.errors %}
-                    <div class="form-error">{{ form.playoff_score_reporting.errors }}</div>
-                {% endif %}
+            <div class="row">
+                <div class="six columns">
+                    <label for="{{ form.playoff_round_length.id_for_label }}">{{ form.playoff_round_length.label }}</label>
+                    {{ form.playoff_round_length }}
+                    {% if form.playoff_round_length.help_text %}
+                        <span class="helptext">{{ form.playoff_round_length.help_text }}</span>
+                    {% endif %}
+                    {% if form.playoff_round_length.errors %}
+                        <div class="form-error">{{ form.playoff_round_length.errors }}</div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </section>

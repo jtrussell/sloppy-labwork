@@ -112,7 +112,8 @@ def create_tournament(request):
                     main_pairing_strategy=form.cleaned_data['main_pairing_strategy'],
                     main_max_players=form.cleaned_data['main_max_players'],
                     main_allow_ties=form.cleaned_data['main_allow_ties'],
-                    main_score_reporting=form.cleaned_data['main_score_reporting']
+                    main_score_reporting=form.cleaned_data['main_score_reporting'],
+                    main_round_length=form.cleaned_data['main_round_length']
                 )
 
                 ranking_criteria = form.get_ranking_criteria_from_post(
@@ -122,7 +123,8 @@ def create_tournament(request):
                 if form.cleaned_data['enable_playoffs']:
                     tournament.create_playoff_stage(
                         max_players=form.cleaned_data['playoff_max_players'],
-                        playoff_score_reporting=form.cleaned_data['playoff_score_reporting']
+                        playoff_score_reporting=form.cleaned_data['playoff_score_reporting'],
+                        playoff_round_length=form.cleaned_data['playoff_round_length']
                     )
 
                 TournamentActionLog.objects.create(
@@ -163,6 +165,7 @@ def edit_tournament(request, tournament_code):
                     main_stage.max_players = form.cleaned_data['main_max_players']
                     main_stage.are_ties_allowed = form.cleaned_data['main_allow_ties']
                     main_stage.report_full_scores = form.cleaned_data['main_score_reporting']
+                    main_stage.round_length_in_minutes = form.cleaned_data['main_round_length']
 
                     ranking_criteria = form.get_ranking_criteria_from_post(
                         request.POST)
@@ -187,6 +190,8 @@ def edit_tournament(request, tournament_code):
                     if playoff_stage:
                         playoff_stage.max_players = form.cleaned_data['playoff_max_players']
                         playoff_stage.report_full_scores = form.cleaned_data['playoff_score_reporting']
+                        playoff_stage.round_length_in_minutes = form.cleaned_data[
+                            'playoff_round_length']
                         playoff_stage.save()
                     else:
                         tournament.create_playoff_stage(
@@ -687,7 +692,11 @@ def create_round(request, tournament_code):
     with transaction.atomic():
         next_order = (current_stage.rounds.aggregate(
             models.Max('order'))['order__max'] or 0) + 1
-        new_round = Round.objects.create(stage=current_stage, order=next_order)
+        new_round = Round.objects.create(
+            stage=current_stage,
+            order=next_order,
+            round_length_in_minutes=current_stage.round_length_in_minutes
+        )
 
         pairing_strategy.make_pairings_for_round(new_round)
 
@@ -781,7 +790,11 @@ def prepare_current_stage_seeding(request, tournament_code):
     if not pairing_strategy.is_seeding_required():
         try:
             with transaction.atomic():
-                new_round = Round.objects.create(stage=current_stage, order=1)
+                new_round = Round.objects.create(
+                    stage=current_stage,
+                    order=1,
+                    round_length_in_minutes=current_stage.round_length_in_minutes
+                )
                 pairing_strategy.make_pairings_for_round(new_round)
 
                 TournamentActionLog.objects.create(
@@ -952,7 +965,11 @@ def start_next_stage(request, tournament_code):
             with transaction.atomic():
                 pairing_strategy = get_pairing_strategy(
                     current_stage.pairing_strategy)
-                new_round = Round.objects.create(stage=current_stage, order=1)
+                new_round = Round.objects.create(
+                    stage=current_stage,
+                    order=1,
+                    round_length_in_minutes=current_stage.round_length_in_minutes
+                )
                 pairing_strategy.make_pairings_for_round(new_round)
 
                 TournamentActionLog.objects.create(
@@ -1539,7 +1556,8 @@ def copy_tournament(request, tournament_code):
                     main_pairing_strategy=form.cleaned_data['main_pairing_strategy'],
                     main_max_players=form.cleaned_data['main_max_players'],
                     main_allow_ties=form.cleaned_data['main_allow_ties'],
-                    main_score_reporting=form.cleaned_data['main_score_reporting']
+                    main_score_reporting=form.cleaned_data['main_score_reporting'],
+                    main_round_length=form.cleaned_data['main_round_length']
                 )
 
                 source_main_stage = source_tournament.stages.filter(

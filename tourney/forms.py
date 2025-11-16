@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.models import User
 from .models import Tournament, Player, Stage, MatchResult, get_available_ranking_criteria
 from pmc.models import Playgroup, EventFormat
+from django.utils.translation import gettext_lazy as _
 
 
 class TournamentForm(forms.ModelForm):
@@ -18,12 +19,18 @@ class TournamentForm(forms.ModelForm):
     main_allow_ties = forms.BooleanField(
         required=False,
         initial=False,
-        label='Allow Ties in Main Stage'
+        label='Allow Ties in Main Stage',
+        widget=forms.Select(choices=[(True, _('Yes')), (False, _('No'))])
     )
     main_score_reporting = forms.ChoiceField(
         choices=Stage.SCORE_REPORTING_CHOICES,
         initial=Stage.SCORE_REPORTING_OPTIONAL,
         label='Score Reporting in Main Stage'
+    )
+    main_round_length = forms.IntegerField(
+        required=False,
+        label='Round Length (minutes)',
+        help_text='Default length for rounds in minutes (leave empty for no time limit)'
     )
 
     enable_playoffs = forms.BooleanField(
@@ -42,6 +49,11 @@ class TournamentForm(forms.ModelForm):
         initial=Stage.SCORE_REPORTING_DISABLED,
         label='Score Reporting in Playoffs',
         help_text='Ties are never allowed in playoffs'
+    )
+    playoff_round_length = forms.IntegerField(
+        required=False,
+        label='Playoff Round Length (minutes)',
+        help_text='Default length for playoff rounds in minutes (leave empty for no time limit)'
     )
 
     def __init__(self, *args, **kwargs):
@@ -63,19 +75,21 @@ class TournamentForm(forms.ModelForm):
                 self.fields['main_max_players'].initial = main_stage.max_players
                 self.fields['main_allow_ties'].initial = main_stage.are_ties_allowed
                 self.fields['main_score_reporting'].initial = main_stage.report_full_scores
+                self.fields['main_round_length'].initial = main_stage.round_length_in_minutes
 
             playoff_stage = instance.stages.filter(order=2).first()
             if playoff_stage:
                 self.fields['enable_playoffs'].initial = True
                 self.fields['playoff_max_players'].initial = playoff_stage.max_players
                 self.fields['playoff_score_reporting'].initial = playoff_stage.report_full_scores
+                self.fields['playoff_round_length'].initial = playoff_stage.round_length_in_minutes
 
     class Meta:
         model = Tournament
         fields = ['name', 'description',
                   'is_accepting_registrations', 'is_closed']
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 4, 'style': 'text-wrap: auto'}),
+            'description': forms.Textarea(attrs={'rows': 4, 'style': 'text-wrap: auto'})
         }
 
     def get_ranking_criteria_from_post(self, post_data):

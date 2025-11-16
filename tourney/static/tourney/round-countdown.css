@@ -1,0 +1,31 @@
+.round-countdown-container {
+  text-align: center;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background-color: var(--color-bg-secondary, #f5f5f5);
+  border-radius: 0.5rem;
+}
+
+.round-countdown-label {
+  font-size: 0.9rem;
+  color: var(--color-text-muted, #666);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.round-countdown {
+  display: inline-block;
+}
+
+.countdown-display {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--color-primary, #2563eb);
+  letter-spacing: 0.1em;
+}
+
+.countdown-display.countdown-expired {
+  color: var(--color-danger, #dc2626);
+}

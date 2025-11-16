@@ -275,8 +275,6 @@ def user_profile(request, username):
         'playgroup_memberships': playgroup_memberships
     }
 
-    print(context['achievements'])
-
     return render(request, 'pmc/g-user-profile.html', context)
 
 

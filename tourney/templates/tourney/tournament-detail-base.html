@@ -4,6 +4,7 @@
 {% load static %}
 
 {% block content %}
+    <link rel="stylesheet" href="{% static 'tourney/round-countdown.css' %}">
     <h1>{{ tournament.name }}</h1>
 
     {% if tournament.description %}
@@ -11,6 +12,15 @@
     {% endif %}
 
     {% include "tourney/partials/tournament-detail-registration-status.html" %}
+
+    {% if current_round.get_end_timestamp %}
+    <div class="round-countdown-container">
+        <div class="round-countdown-label">Round Time Remaining:</div>
+        <div class="round-countdown" data-end-timestamp="{{ current_round.get_end_timestamp }}">
+            <span class="countdown-display">--:--</span>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Pending Matches for Current User -->
     {% include "tourney/partials/my-pending-matches.html" %}
@@ -186,4 +196,5 @@
     </div>
 
     <script src="{% static 'tourney/tournament-modals.js' %}"></script>
+    <script src="{% static 'tourney/round-countdown.js' %}"></script>
 {% endblock %}

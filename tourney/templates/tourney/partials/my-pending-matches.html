@@ -1,6 +1,7 @@
 {% if user.is_authenticated and is_active_player and pending_matches %}
   <section id="my-pending-matches" hx-swap-oob="true">
       <h2>Your Pending Matches</h2>
+
       {% for match in pending_matches %}
           <div style="margin-bottom: 1rem;">
               {% include 'tourney/partials/match-card.html' with match=match is_admin=is_admin show_match_number=False match_id_prefix='my-' %}
