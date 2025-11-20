@@ -46,6 +46,19 @@
                     <input type="hidden" name="player_id" value="{{ player.id }}">
                     <button type="submit" class="button button-small">Undrop Player</button>
                 </form>
+                <form
+                    method="post"
+                    hx-post="{% url 'tourney-manage-players' tournament.code %}"
+                    hx-confirm="Are you sure you want to remove this player? This action cannot be undone."
+                    hx-target="closest .player-item"
+                    hx-swap="outerHTML"
+                    style="display: inline-block;"
+                >
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove_player">
+                    <input type="hidden" name="player_id" value="{{ player.id }}">
+                    <button type="submit" class="button button-small">Remove</button>
+                </form>
             {% endif %}
         </div>
     </div>

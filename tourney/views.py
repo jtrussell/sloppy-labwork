@@ -546,6 +546,45 @@ def manage_players(request, tournament_code):
                 }
                 return render(request, 'tourney/manage-players.html#player-item', context)
 
+        elif action == 'remove_player':
+            player_id = request.POST.get('player_id')
+            player = get_object_or_404(
+                Player, id=player_id, tournament=tournament)
+
+            stage_players = StagePlayer.objects.filter(player=player)
+            has_match_results = Match.objects.filter(
+                models.Q(player_one__in=stage_players) |
+                models.Q(player_two__in=stage_players),
+                result__isnull=False
+            ).exists()
+
+            if has_match_results:
+                messages.error(
+                    request, f'Cannot remove {player.get_display_name()} - player has recorded match results.')
+
+                if request.htmx:
+                    context = {
+                        'tournament': tournament,
+                        'player': player,
+                    }
+                    return render(request, 'tourney/manage-players.html#player-item', context)
+            else:
+                player_name = player.get_display_name()
+                player.delete()
+
+                TournamentActionLog.objects.create(
+                    tournament=tournament,
+                    user=request.user,
+                    action_type=TournamentActionLog.ActionType.ADD_PLAYER,
+                    description=f'Removed player {player_name}'
+                )
+
+                messages.success(
+                    request, f'Player {player_name} removed from tournament.')
+
+                if request.htmx:
+                    return HttpResponse('')
+
         return redirect_to(request, reverse('tourney-manage-players', kwargs={'tournament_code': tournament.code}))
 
     players = tournament.players.all().order_by('status', 'created_on')
