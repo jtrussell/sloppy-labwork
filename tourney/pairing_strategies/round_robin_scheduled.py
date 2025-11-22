@@ -217,8 +217,6 @@ class RoundRobinScheduledPairingStrategy(PairingStrategy):
         """
         from tourney.models import Player
 
-        print('can create new round called')
-
         current_round = stage.get_current_round()
         if current_round is None:
             return False
