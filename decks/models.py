@@ -30,7 +30,7 @@ class House(models.Model):
 
 class Deck(models.Model):
     id = models.UUIDField(primary_key=True)
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, null=True, blank=True)
     added_on = models.DateTimeField(auto_now_add=True)
 
     set = models.ForeignKey(
@@ -94,4 +94,4 @@ class Deck(models.Model):
                 f'Failed to fetch deck data: {r.status_code} {r.reason}')
 
     def __str__(self):
-        return self.name
+        return self.name if self.name else str(self.id)

@@ -1,14 +1,14 @@
 from cProfile import label
 from sre_constants import ANY
 from django.contrib.auth.models import User
-from django.db import models
+from django.db import models, transaction
 from django.db.models import UniqueConstraint, OuterRef, Subquery
 from datetime import date
 from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
 from django.dispatch import receiver
 from django.db.models.signals import post_save
-from django.db.models import Sum, Value, F, Count, Window
+from django.db.models import Sum, F, Count, Window
 from django.db.models.functions import Coalesce, Rank
 from django.conf import settings
 from io import BytesIO
@@ -239,16 +239,18 @@ class EventResult(models.Model):
                 _('Deck link is required and lookup attempts exceeded.'))
 
         try:
-            mv_id = Deck.get_id_from_master_vault_url(self.uploaded_deck_link)
-            deck, _created = Deck.objects.get_or_create(id=mv_id)
-            deck.hydrate_from_master_vault(save=False)
-            EventResultDeck.objects.create(
-                event_result=self,
-                deck=deck
-            )
-            self.uploaded_deck_link = None
-            self.uploaded_deck_lookup_attempts = 0
-            self.save()
+            with transaction.atomic():
+                mv_id = Deck.get_id_from_master_vault_url(
+                    self.uploaded_deck_link)
+                deck, _created = Deck.objects.get_or_create(id=mv_id)
+                deck.hydrate_from_master_vault(save=True)
+                EventResultDeck.objects.create(
+                    event_result=self,
+                    deck=deck
+                )
+                self.uploaded_deck_link = None
+                self.uploaded_deck_lookup_attempts = 0
+                self.save()
         except Exception as e:
             self.uploaded_deck_lookup_attempts += 1
             self.save()
@@ -696,7 +698,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
+            user_data = {entry["result__user"]: entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
