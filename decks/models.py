@@ -90,6 +90,7 @@ class Deck(models.Model):
             if save:
                 self.save()
         else:
+            print(r.status_code, r.reason)
             raise ValueError(
                 f'Failed to fetch deck data: {r.status_code} {r.reason}')
 
