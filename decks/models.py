@@ -30,7 +30,7 @@ class House(models.Model):
 
 class Deck(models.Model):
     id = models.UUIDField(primary_key=True)
-    name = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200)
     added_on = models.DateTimeField(auto_now_add=True)
 
     set = models.ForeignKey(
@@ -90,7 +90,6 @@ class Deck(models.Model):
             if save:
                 self.save()
         else:
-            print(r.status_code, r.reason)
             raise ValueError(
                 f'Failed to fetch deck data: {r.status_code} {r.reason}')
 

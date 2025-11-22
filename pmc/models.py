@@ -241,7 +241,7 @@ class EventResult(models.Model):
         try:
             mv_id = Deck.get_id_from_master_vault_url(self.uploaded_deck_link)
             deck, _created = Deck.objects.get_or_create(id=mv_id)
-            deck.hydrate_from_master_vault(save=True)
+            deck.hydrate_from_master_vault(save=False)
             EventResultDeck.objects.create(
                 event_result=self,
                 deck=deck
@@ -250,7 +250,6 @@ class EventResult(models.Model):
             self.uploaded_deck_lookup_attempts = 0
             self.save()
         except Exception as e:
-            print(f'Error looking up deck from MV: {e}')
             self.uploaded_deck_lookup_attempts += 1
             self.save()
             raise e
@@ -697,7 +696,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            user_data = {entry["result__user"]                         : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
