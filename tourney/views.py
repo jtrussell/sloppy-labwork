@@ -1651,6 +1651,7 @@ def copy_tournament(request, tournament_code):
                 'main_max_players': source_main_stage.max_players,
                 'main_allow_ties': source_main_stage.are_ties_allowed,
                 'main_score_reporting': source_main_stage.report_full_scores,
+                'main_round_length': source_main_stage.round_length_in_minutes,
             })
 
         source_playoff_stage = source_tournament.stages.filter(order=2).first()
@@ -1659,6 +1660,7 @@ def copy_tournament(request, tournament_code):
                 'enable_playoffs': True,
                 'playoff_max_players': source_playoff_stage.max_players,
                 'playoff_score_reporting': source_playoff_stage.report_full_scores,
+                'playoff_round_length': source_playoff_stage.round_length_in_minutes,
             })
         else:
             initial_data['enable_playoffs'] = False

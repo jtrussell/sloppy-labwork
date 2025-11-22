@@ -195,7 +195,11 @@
     </section>
 
     <section>
-        {% if tournament %}
+        
+        {% if source_tournament %}
+            <button type="submit" class="button button-primary">Clone Tournament</button>
+            <a href="{% url 'tourney-my-tournaments' %}" class="button">Cancel</a>
+        {% elif tournament %}
             <button type="submit" class="button button-primary">Update Tournament</button>
             <a href="{% url 'tourney-detail-home' tournament.code %}" class="button">Back</a>
         {% else %}

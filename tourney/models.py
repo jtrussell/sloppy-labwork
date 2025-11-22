@@ -72,7 +72,7 @@ class Tournament(models.Model):
         return self.players.filter(status=Player.PlayerStatus.ACTIVE)
 
     def create_initial_stage(self, main_pairing_strategy='swiss', main_max_players=None,
-                             main_allow_ties=False, main_score_reporting=0):
+                             main_allow_ties=False, main_score_reporting=0, main_round_length=None):
         if not self.stages.exists():
             stage = Stage.objects.create(
                 tournament=self,
@@ -81,7 +81,8 @@ class Tournament(models.Model):
                 pairing_strategy=main_pairing_strategy,
                 max_players=main_max_players,
                 are_ties_allowed=main_allow_ties,
-                report_full_scores=main_score_reporting
+                report_full_scores=main_score_reporting,
+                round_length_in_minutes=main_round_length
             )
 
             stage.set_ranking_criteria(get_default_main_stage_criteria())
@@ -96,7 +97,7 @@ class Tournament(models.Model):
             return stage
         return self.get_current_stage()
 
-    def create_playoff_stage(self, max_players=8, playoff_score_reporting=0):
+    def create_playoff_stage(self, max_players=8, playoff_score_reporting=0, playoff_round_length=None):
         if self.stages.filter(order=2).exists():
             return self.stages.get(order=2)
 
@@ -107,7 +108,8 @@ class Tournament(models.Model):
             pairing_strategy='single_elimination',
             max_players=max_players,
             are_ties_allowed=False,  # Playoffs never allow ties
-            report_full_scores=playoff_score_reporting
+            report_full_scores=playoff_score_reporting,
+            round_length_in_minutes=playoff_round_length
         )
 
         stage.set_ranking_criteria(get_default_playoff_stage_criteria())
@@ -837,7 +839,8 @@ class Round(models.Model):
     def get_end_timestamp(self):
         from datetime import timedelta
         if self.round_length_in_minutes:
-            end_time = self.created_on + timedelta(minutes=self.round_length_in_minutes)
+            end_time = self.created_on + \
+                timedelta(minutes=self.round_length_in_minutes)
             return int(end_time.timestamp() * 1000)
         return None
 
