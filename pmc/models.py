@@ -250,6 +250,7 @@ class EventResult(models.Model):
             self.uploaded_deck_lookup_attempts = 0
             self.save()
         except Exception as e:
+            print(f'Error looking up deck from MV: {e}')
             self.uploaded_deck_lookup_attempts += 1
             self.save()
             raise e
