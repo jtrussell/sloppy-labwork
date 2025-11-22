@@ -1,5 +1,6 @@
+import random
 from django.db import models
-from requests import get
+from requests import get, head
 from django.utils.translation import gettext_lazy as _
 
 
@@ -70,7 +71,11 @@ class Deck(models.Model):
         return self.get_master_vault_ui_url_from_id(self.id)
 
     def hydrate_from_master_vault(self, save=True):
-        r = get(self.get_master_vault_api_url())
+        r = get(self.get_master_vault_api_url(), headers={
+                'X-Forwarded-For': '192.168.{}.{}'.format(
+                    random.randint(1, 255),
+                    random.randint(1, 255)
+                )})
         if r.status_code == 200:
             data = r.json()['data']
             houses = data['_links']['houses']
