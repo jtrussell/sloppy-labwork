@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Badge, LeaderboardLog, Playgroup, PlaygroupEvent, PlaygroupLeaderboard, PlaygroupType, PmcProfile, RankingPointsMap, UserBadge
+from .models import Badge, LeaderboardLog, Playgroup, PlaygroupEvent, PlaygroupLeaderboard, PlaygroupType, PmcProfile, RankingPointsMap, RankingPointsMapVersion, UserBadge
 from .models import PlaygroupMember
 from .models import Event
 from .models import EventResult
@@ -44,10 +44,16 @@ class EventResultAdmin(admin.ModelAdmin):
     list_filter = ('event',)
 
 
+class RankingPointsMapVersionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'effective_on')
+    search_fields = ['name']
+    list_filter = ()
+
+
 class RankingPointsMapAdmin(admin.ModelAdmin):
-    list_display = ('max_players', 'finishing_position', 'points')
+    list_display = ('version', 'max_players', 'finishing_position', 'points')
     search_fields = ['max_players']
-    list_filter = ('max_players',)
+    list_filter = ('max_players', 'version')
 
 
 class RankingPointsAdmin(admin.ModelAdmin):
@@ -216,6 +222,7 @@ admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(Event, EventAdmin)
 admin.site.register(EventResult, EventResultAdmin)
+admin.site.register(RankingPointsMapVersion, RankingPointsMapVersionAdmin)
 admin.site.register(RankingPointsMap, RankingPointsMapAdmin)
 admin.site.register(RankingPoints, RankingPointsAdmin)
 admin.site.register(EventFormat, EventFormatAdmin)

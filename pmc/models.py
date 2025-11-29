@@ -273,10 +273,20 @@ class EventResultDeck(models.Model):
         return f'{self.event_result.event.name} - {self.deck}'
 
 
+class RankingPointsMapVersion(models.Model):
+    name = models.CharField(max_length=100)
+    effective_on = models.DateField(unique=True)
+
+    def __str__(self):
+        return self.name
+
+
 class RankingPointsMap(models.Model):
     max_players = models.PositiveSmallIntegerField()
     finishing_position = models.PositiveSmallIntegerField()
     points = models.PositiveIntegerField()
+    version = models.ForeignKey(
+        RankingPointsMapVersion, on_delete=models.CASCADE, related_name='points_map_entries', default=None, null=True, blank=True)
 
     @staticmethod
     def list_points_for_fp_ranges(event_size):
@@ -614,14 +624,24 @@ class LeaderboardLog(models.Model):
 class RankingPointsService():
     @staticmethod
     def assign_points_for_results(event_results, player_count):
+        if not event_results:
+            return
+
         if event_results and event_results[0].event.is_casual:
             RankingPoints.objects.filter(
                 result__event=event_results[0].event).delete()
             return
 
+        rp_map_version = RankingPointsMapVersion.objects.filter(
+            effective_on__lte=event_results[0].event.start_date
+        ).order_by('-effective_on').first()
+
         rp_map_entries = RankingPointsMap.objects.filter(
             max_players=RankingPointsMap.objects
-            .filter(max_players__gte=player_count)
+            .filter(
+                max_players__gte=player_count,
+                version=rp_map_version
+            )
             .aggregate(models.Min('max_players'))['max_players__min']
         ).order_by('finishing_position')
 
@@ -698,7 +718,8 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            user_data = {entry["result__user"]
+                : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
