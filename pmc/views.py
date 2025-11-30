@@ -26,7 +26,7 @@ from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.context_processors import playgroup
-from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm, PmcProfilePrivacyForm
+from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm, PmcProfilePrivacyForm, RankingPointsMapVersionForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
 from .models import AchievementTier, Badge, EventResult, EventResultDeck, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserAchievementTier, UserBadge, Trophy, UserTrophy, Achievement
@@ -41,7 +41,7 @@ from .models import Avatar
 from .models import AvatarCategory
 from .models import Background
 from .models import BackgroundCategory
-from .models import RankingPointsMap
+from .models import RankingPointsMap, RankingPointsMapVersion
 from .models import AwardAssignmentService
 
 
@@ -697,14 +697,28 @@ def about(request):
 
 
 def about_ranking_points(request):
+    current_version = RankingPointsMapVersion.objects.filter(
+        effective_on__lte=date.today()
+    ).order_by('-effective_on').first()
+
+    form = RankingPointsMapVersionForm(request.GET or None)
+    selected_version = current_version
+
+    if form.is_valid():
+        selected_version = form.cleaned_data['version']
+    else:
+        form = RankingPointsMapVersionForm(initial={'version': current_version})
+
     return render(request, 'pmc/g-about-ranking-points.html', {
+        'form': form,
+        'selected_version': selected_version,
         'ranges_by_size': [
-            ('3 Players', RankingPointsMap.list_points_for_fp_ranges(3)),
-            ('4 Players', RankingPointsMap.list_points_for_fp_ranges(4)),
-            ('5 to 8 Players', RankingPointsMap.list_points_for_fp_ranges(8)),
-            ('9 to 16 Players', RankingPointsMap.list_points_for_fp_ranges(16)),
-            ('17 to 32 Players', RankingPointsMap.list_points_for_fp_ranges(32)),
-            ('32 to 64 Players', RankingPointsMap.list_points_for_fp_ranges(64)),
+            ('3 Players', RankingPointsMap.list_points_for_fp_ranges(3, selected_version)),
+            ('4 Players', RankingPointsMap.list_points_for_fp_ranges(4, selected_version)),
+            ('5 to 8 Players', RankingPointsMap.list_points_for_fp_ranges(8, selected_version)),
+            ('9 to 16 Players', RankingPointsMap.list_points_for_fp_ranges(16, selected_version)),
+            ('17 to 32 Players', RankingPointsMap.list_points_for_fp_ranges(32, selected_version)),
+            ('32 to 64 Players', RankingPointsMap.list_points_for_fp_ranges(64, selected_version)),
         ]
     })
 

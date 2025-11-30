@@ -1,7 +1,7 @@
 from django import forms
 
 from decks.models import Deck
-from .models import Event, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PlaygroupJoinRequest, PmcProfile
+from .models import Event, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PlaygroupJoinRequest, PmcProfile, RankingPointsMapVersion
 from .models import PlaygroupMember
 from .models import EventFormat
 from django.utils.translation import gettext_lazy as _
@@ -256,3 +256,12 @@ class LeaderboardSeasonPeriodForm(forms.Form):
             self.fields.pop('period')
         elif leaderboard.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.SEASON:
             self.fields.pop('period')
+
+
+class RankingPointsMapVersionForm(forms.Form):
+    version = forms.ModelChoiceField(
+        queryset=RankingPointsMapVersion.objects.all().order_by('-effective_on'),
+        required=True,
+        label=_('Version'),
+        widget=forms.Select(attrs={'onchange': 'this.closest("form").submit()'})
+    )

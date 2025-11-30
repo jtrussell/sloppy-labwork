@@ -289,8 +289,12 @@ class RankingPointsMap(models.Model):
         RankingPointsMapVersion, on_delete=models.CASCADE, related_name='points_map_entries', default=None, null=True, blank=True)
 
     @staticmethod
-    def list_points_for_fp_ranges(event_size):
-        ranking_data = RankingPointsMap.objects.filter(max_players=event_size).order_by(
+    def list_points_for_fp_ranges(event_size, version=None):
+        filters = {'max_players': event_size}
+        if version:
+            filters['version'] = version
+
+        ranking_data = RankingPointsMap.objects.filter(**filters).order_by(
             "finishing_position").values("finishing_position", "points")
         result = []
         for index, entry in enumerate(ranking_data):
@@ -636,11 +640,14 @@ class RankingPointsService():
             effective_on__lte=event_results[0].event.start_date
         ).order_by('-effective_on').first()
 
+        print('foobar', rp_map_version, event_results[0].event.start_date)
+
         rp_map_entries = RankingPointsMap.objects.filter(
+            version=rp_map_version,
             max_players=RankingPointsMap.objects
             .filter(
                 max_players__gte=player_count,
-                version=rp_map_version
+                version=rp_map_version,
             )
             .aggregate(models.Min('max_players'))['max_players__min']
         ).order_by('finishing_position')
