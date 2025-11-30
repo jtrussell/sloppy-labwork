@@ -882,13 +882,10 @@ def refresh_leaderboard(request, pk):
     leaderboard = Leaderboard.objects.get(pk=pk)
     period = leaderboard.get_period_for_date(date.today())
     if leaderboard.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.MONTH:
-        top_n = 4
         order_by = 'total_points'
     elif leaderboard.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.SEASON:
-        top_n = 10
         order_by = 'total_points'
     elif leaderboard.period_frequency == LeaderboardSeasonPeriod.FrequencyOptions.ALL_TIME:
-        top_n = 100
         order_by = 'total_points'
     else:
         raise ValueError('Invalid leaderboard period frequency')
@@ -896,8 +893,7 @@ def refresh_leaderboard(request, pk):
     RankingPointsService.assign_points_for_leaderboard(
         leaderboard,
         period,
-        order_by=order_by,
-        top_n=top_n
+        order_by=order_by
     )
 
     last_week_period = leaderboard.get_period_for_date(
@@ -906,8 +902,7 @@ def refresh_leaderboard(request, pk):
         RankingPointsService.assign_points_for_leaderboard(
             leaderboard,
             last_week_period,
-            order_by=order_by,
-            top_n=top_n
+            order_by=order_by
         )
 
     LeaderboardLog.objects.create(

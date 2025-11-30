@@ -673,7 +673,7 @@ class RankingPointsService():
         )
 
     @staticmethod
-    def assign_points_for_leaderboard(leaderboard, ranking_period, order_by='total_points', top_n=4):
+    def assign_points_for_leaderboard(leaderboard, ranking_period, order_by='total_points', top_n_per_month=5):
         """
         Updates PlayerRank records based on the top N highest-scoring RankingPoints
         within a given ranking period. Computes both global and playgroup rankings.
@@ -681,9 +681,9 @@ class RankingPointsService():
         Args:
             leaderboard (Leaderboard): The leaderboard for which ranks are being calculated.
             ranking_period (LeaderboardSeasonPeriod): The period defining the date range.
-            top_n (int): The number of highest-scoring results to consider for calculating average points.
+            order_by (str): Field to sort rankings by (default: 'total_points').
+            top_n_per_month (int): The number of highest-scoring results per calendar month to consider.
         """
-
         start_date = ranking_period.start_date
         next_period = LeaderboardSeasonPeriod.objects.filter(
             frequency=ranking_period.frequency,
@@ -697,13 +697,16 @@ class RankingPointsService():
             result__event__start_date__lt=end_date
         )
 
+        from django.db.models.functions import TruncMonth, RowNumber
+
         ranked_points = ranking_points_qs.annotate(
+            month=TruncMonth('result__event__start_date'),
             point_rank=Window(
-                expression=Rank(),
-                partition_by=[F("result__user")],
-                order_by=F("points").desc()
+                expression=RowNumber(),
+                partition_by=[F("result__user"), F("month")],
+                order_by=["-points"]
             )
-        ).filter(point_rank__lte=top_n)
+        ).filter(point_rank__lte=top_n_per_month)
 
         def compute_rankings(playgroup=None):
             """ Helper function to compute rankings for a given playgroup or globally. """
@@ -714,21 +717,34 @@ class RankingPointsService():
                 # For global rankings, exclude events marked as excluded from global rankings
                 filters["result__event__is_excluded_from_global_rankings"] = False
 
-            all_user_points = ranking_points_qs.filter(**filters).values("result__user").annotate(
-                total_points=Sum("points"),
-                num_results=Count("id")
+            raw_results = ranked_points.filter(**filters).values_list(
+                "result__user", "points"
             )
 
-            top_n_user_points = ranked_points.filter(**filters).values("result__user").annotate(
-                avg_points=Sum("points") / top_n
-            )
+            monthly_data = {}
+            for user_id, points in raw_results:
+                if user_id not in monthly_data:
+                    monthly_data[user_id] = {
+                        "total_points": 0, "num_results": 0}
+                monthly_data[user_id]["total_points"] += points
+                monthly_data[user_id]["num_results"] += 1
 
-            user_data = {entry["result__user"]
-                : entry for entry in all_user_points}
-            for entry in top_n_user_points:
-                if entry["result__user"] in user_data:
-                    user_data[entry["result__user"]
-                              ]["avg_points"] = entry["avg_points"]
+            top_n_user_points = [
+                {
+                    "result__user": user_id,
+                    "total_points": data["total_points"],
+                    "num_results": data["num_results"]
+                }
+                for user_id, data in monthly_data.items()
+            ]
+
+            user_data = {entry["result__user"]: {
+                "total_points": entry["total_points"],
+                "num_results": entry["num_results"],
+                "avg_points": entry["total_points"] / entry["num_results"] if entry["num_results"] > 0 else 0
+            }
+                for entry in top_n_user_points
+            }
 
             player_ranks = [
                 PlayerRank(
