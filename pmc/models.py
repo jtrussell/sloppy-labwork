@@ -278,7 +278,7 @@ class RankingPointsMapVersion(models.Model):
     effective_on = models.DateField(unique=True)
 
     def __str__(self):
-        return '{} - {}'.format(self.name, self.effective_on)
+        return self.name
 
 
 class RankingPointsMap(models.Model):
