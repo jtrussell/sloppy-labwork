@@ -11,12 +11,15 @@
  will most likely outrank a player who attends only one event in that
  month, even if the latter player wins their one event.</p>
 
+  <p>Ranking point payouts may be adjusted over time, use the form below to
+  determine which points can be expected based on the date of an event.</p> 
+
   <form method="get">
     {{ form.as_p }}
   </form>
 
   {% if selected_version %}
-    <p><strong>Showing:</strong> {{ selected_version.name }} (effective {{ selected_version.effective_on }})</p>
+    <p><strong>Showing:</strong> {{ selected_version.name }}, effective starting {{ selected_version.effective_on }}.</p>
   {% endif %}
 
   {% for label, ranges in ranges_by_size %}
