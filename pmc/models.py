@@ -1,4 +1,3 @@
-from cProfile import label
 from sre_constants import ANY
 from django.contrib.auth.models import User
 from django.db import models, transaction
@@ -15,7 +14,6 @@ from io import BytesIO
 import qrcode
 import boto3
 import hashlib
-
 from decks.models import Deck
 
 
@@ -725,8 +723,7 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]
-                : entry for entry in all_user_points}
+            user_data = {entry["result__user"]: entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -886,6 +883,32 @@ class AwardBase(models.Model):
             22, _('Tournament Match Wins with House'))
         sets_with_ten_tournament_match_wins = (
             23, _('Sets with Ten Tournament Match Wins'))
+        playgroup_leaderboard_season_first_place = (
+            24, _('Playgroup Leaderboard Season - First Place'))
+        playgroup_leaderboard_season_second_place = (
+            25, _('Playgroup Leaderboard Season - Second Place'))
+        playgroup_leaderboard_season_third_place = (
+            26, _('Playgroup Leaderboard Season - Third Place'))
+        playgroup_leaderboard_season_top_five = (
+            27, _('Playgroup Leaderboard Season - Top Five'))
+        playgroup_leaderboard_season_top_ten = (
+            28, _('Playgroup Leaderboard Season - Top Ten'))
+        global_leaderboard_season_first_place = (
+            29, _('Global Leaderboard Season - First Place'))
+        global_leaderboard_season_top_ten = (
+            30, _('Global Leaderboard Season - Top Ten'))
+        global_leaderboard_season_top_fifty = (
+            31, _('Global Leaderboard Season - Top Fifty'))
+        global_leaderboard_season_top_one_hundred = (
+            32, _('Global Leaderboard Season - Top One Hundred'))
+        global_leaderboard_monthly_first_place = (
+            33, _('Global Leaderboard Monthly - First Place'))
+        global_leaderboard_monthly_top_ten = (
+            34, _('Global Leaderboard Monthly - Top Ten'))
+        global_leaderboard_monthly_top_twenty_five = (
+            35, _('Global Leaderboard Monthly - Top Twenty Five'))
+        global_leaderboard_monthly_top_fifty = (
+            36, _('Global Leaderboard Monthly - Top Fifty'))
         manually_awarded = (999, _('Manually Awarded'))
 
     pmc_id = models.CharField(max_length=10, unique=True)
@@ -1300,6 +1323,69 @@ class AwardAssignmentService():
                 .count()
             )
             value = sets_with_10_wins
+        elif criteria_type in [
+            AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_first_place,
+            AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_second_place,
+            AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_third_place,
+            AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_top_five,
+            AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_top_ten
+        ]:
+            rank_min_max = (1, 1)
+            if criteria_type == AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_second_place:
+                rank_min_max = (2, 2)
+            elif criteria_type == AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_third_place:
+                rank_min_max = (3, 3)
+            elif criteria_type == AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_top_five:
+                rank_min_max = (4, 5)
+            elif criteria_type == AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_top_ten:
+                rank_min_max = (6, 10)
+            value = PlayerRank.objects.filter(
+                user=user,
+                rank__gte=rank_min_max[0],
+                rank__lte=rank_min_max[1],
+                playgroup__isnull=False,
+                leaderboard__name='Season'
+            ).count()
+        elif criteria_type in [
+            AwardBase.CriteriaTypeOptions.global_leaderboard_monthly_first_place,
+            AwardBase.CriteriaTypeOptions.global_leaderboard_monthly_top_ten,
+            AwardBase.CriteriaTypeOptions.global_leaderboard_monthly_top_twenty_five,
+            AwardBase.CriteriaTypeOptions.global_leaderboard_monthly_top_fifty
+        ]:
+            rank_min_max = (1, 1)
+            if criteria_type == AwardBase.CriteriaTypeOptions.global_leaderboard_monthly_top_ten:
+                rank_min_max = (2, 10)
+            elif criteria_type == AwardBase.CriteriaTypeOptions.global_leaderboard_monthly_top_twenty_five:
+                rank_min_max = (11, 25)
+            elif criteria_type == AwardBase.CriteriaTypeOptions.global_leaderboard_monthly_top_fifty:
+                rank_min_max = (26, 50)
+            value = PlayerRank.objects.filter(
+                user=user,
+                rank__gte=rank_min_max[0],
+                rank__lte=rank_min_max[1],
+                playgroup__isnull=True,
+                leaderboard__name='Month'
+            ).count()
+        elif criteria_type in [
+            AwardBase.CriteriaTypeOptions.global_leaderboard_season_first_place,
+            AwardBase.CriteriaTypeOptions.global_leaderboard_season_top_ten,
+            AwardBase.CriteriaTypeOptions.global_leaderboard_season_top_fifty,
+            AwardBase.CriteriaTypeOptions.global_leaderboard_season_top_one_hundred
+        ]:
+            rank_min_max = (1, 1)
+            if criteria_type == AwardBase.CriteriaTypeOptions.global_leaderboard_season_top_ten:
+                rank_min_max = (2, 10)
+            elif criteria_type == AwardBase.CriteriaTypeOptions.global_leaderboard_season_top_fifty:
+                rank_min_max = (11, 50)
+            elif criteria_type == AwardBase.CriteriaTypeOptions.global_leaderboard_season_top_one_hundred:
+                rank_min_max = (51, 100)
+            value = PlayerRank.objects.filter(
+                user=user,
+                rank__gte=rank_min_max[0],
+                rank__lte=rank_min_max[1],
+                playgroup__isnull=True,
+                leaderboard__name='Season'
+            ).count()
 
         value += AwardCredit.objects.filter(
             user=user,
