@@ -222,7 +222,6 @@ class LeaderboardSeasonPeriodForm(forms.Form):
     period = forms.ModelChoiceField(
         queryset=LeaderboardSeasonPeriod.objects.none(),
         initial=LeaderboardSeasonPeriod.objects.first(),
-        required=True,
         widget=forms.Select(attrs={'onchange': 'this.closest("form").submit()'}))
 
     def __init__(self, leaderboard, *args, **kwargs):
@@ -238,7 +237,14 @@ class LeaderboardSeasonPeriodForm(forms.Form):
                 period_qs = LeaderboardSeasonPeriod.objects.filter(
                     season_id=season_id, frequency=leaderboard.period_frequency)
                 self.fields['period'].queryset = period_qs
-                if 'period' not in self.data:
+                if 'period' in self.data:
+                    period_id = int(self.data.get('period'))
+                    try:
+                        self.fields['period'].initial = period_qs.get(
+                            id=period_id)
+                    except LeaderboardSeasonPeriod.DoesNotExist:
+                        self.fields['period'].initial = period_qs.first()
+                else:
                     self.fields['period'].initial = period_qs.first()
             except (ValueError, TypeError):
                 pass
@@ -263,5 +269,6 @@ class RankingPointsMapVersionForm(forms.Form):
         queryset=RankingPointsMapVersion.objects.all().order_by('-effective_on'),
         required=True,
         label=_('Version'),
-        widget=forms.Select(attrs={'onchange': 'this.closest("form").submit()'})
+        widget=forms.Select(
+            attrs={'onchange': 'this.closest("form").submit()'})
     )
