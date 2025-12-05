@@ -83,7 +83,12 @@
 </div>
 
 <form method="GET">
-  {{ season_period_form.as_p }}
+  {% for field in season_period_form %}
+    <p>
+      {{ field.label_tag }}
+      {{ field }}
+    </p>
+  {% endfor %}
   <div class="card" hx-target="false">
     {% partial rankings-card %}
   </div>

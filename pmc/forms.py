@@ -222,6 +222,7 @@ class LeaderboardSeasonPeriodForm(forms.Form):
     period = forms.ModelChoiceField(
         queryset=LeaderboardSeasonPeriod.objects.none(),
         initial=LeaderboardSeasonPeriod.objects.first(),
+        required=True,
         widget=forms.Select(attrs={'onchange': 'this.closest("form").submit()'}))
 
     def __init__(self, leaderboard, *args, **kwargs):

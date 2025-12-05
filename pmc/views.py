@@ -529,14 +529,30 @@ def playgroup_leaderboard(request, slug, pk=None):
             'slug': slug,
             'pk': leaderboards.first().pk
         }))
+
+    leaderboard = get_object_or_404(Leaderboard, pk=pk)
+
+    if 'season' in request.GET and 'period' in request.GET:
+        try:
+            season_id = int(request.GET.get('season'))
+            period_id = int(request.GET.get('period'))
+            period = LeaderboardSeasonPeriod.objects.filter(id=period_id).first()
+            if period and period.season_id != season_id:
+                params = request.GET.copy()
+                params.pop('period')
+                return HttpResponseRedirect(f"{request.path}?{params.urlencode()}")
+        except (ValueError, TypeError):
+            pass
+
     rank_filters = {
         'leaderboard': pk,
         'playgroup__slug': slug
     }
-    season_period_form = LeaderboardSeasonPeriodForm(
-        Leaderboard.objects.get(pk=pk), request.GET or None)
+
+    form_data = request.GET if request.GET else None
+    season_period_form = LeaderboardSeasonPeriodForm(leaderboard, form_data)
+
     try:
-        # TODO - determine season/period and send that into the form instead
         rank_filters['period__season'] = season_period_form.data.get(
             'season') or season_period_form.fields['season'].initial
         rank_filters['period'] = season_period_form.data.get(
@@ -570,12 +586,26 @@ def global_leaderboard(request, pk=None):
             'pk': Leaderboard.objects.first().pk
         }))
 
+    leaderboard = get_object_or_404(Leaderboard, pk=pk)
+
+    if 'season' in request.GET and 'period' in request.GET:
+        try:
+            season_id = int(request.GET.get('season'))
+            period_id = int(request.GET.get('period'))
+            period = LeaderboardSeasonPeriod.objects.filter(id=period_id).first()
+            if period and period.season_id != season_id:
+                params = request.GET.copy()
+                params.pop('period')
+                return HttpResponseRedirect(f"{request.path}?{params.urlencode()}")
+        except (ValueError, TypeError):
+            pass
+
     rank_filters = {
         'leaderboard': pk,
         'playgroup': None
     }
     season_period_form = LeaderboardSeasonPeriodForm(
-        Leaderboard.objects.get(pk=pk), request.GET or None)
+        leaderboard, request.GET or None)
     try:
         rank_filters['period__season'] = season_period_form.data.get(
             'season') or season_period_form.fields['season'].initial
@@ -707,18 +737,25 @@ def about_ranking_points(request):
     if form.is_valid():
         selected_version = form.cleaned_data['version']
     else:
-        form = RankingPointsMapVersionForm(initial={'version': current_version})
+        form = RankingPointsMapVersionForm(
+            initial={'version': current_version})
 
     return render(request, 'pmc/g-about-ranking-points.html', {
         'form': form,
         'selected_version': selected_version,
         'ranges_by_size': [
-            ('3 Players', RankingPointsMap.list_points_for_fp_ranges(3, selected_version)),
-            ('4 Players', RankingPointsMap.list_points_for_fp_ranges(4, selected_version)),
-            ('5 to 8 Players', RankingPointsMap.list_points_for_fp_ranges(8, selected_version)),
-            ('9 to 16 Players', RankingPointsMap.list_points_for_fp_ranges(16, selected_version)),
-            ('17 to 32 Players', RankingPointsMap.list_points_for_fp_ranges(32, selected_version)),
-            ('32 to 64 Players', RankingPointsMap.list_points_for_fp_ranges(64, selected_version)),
+            ('3 Players', RankingPointsMap.list_points_for_fp_ranges(
+                3, selected_version)),
+            ('4 Players', RankingPointsMap.list_points_for_fp_ranges(
+                4, selected_version)),
+            ('5 to 8 Players', RankingPointsMap.list_points_for_fp_ranges(
+                8, selected_version)),
+            ('9 to 16 Players', RankingPointsMap.list_points_for_fp_ranges(
+                16, selected_version)),
+            ('17 to 32 Players', RankingPointsMap.list_points_for_fp_ranges(
+                32, selected_version)),
+            ('32 to 64 Players', RankingPointsMap.list_points_for_fp_ranges(
+                64, selected_version)),
         ]
     })
 
