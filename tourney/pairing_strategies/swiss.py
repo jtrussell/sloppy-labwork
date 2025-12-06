@@ -468,26 +468,53 @@ class SwissPairingStrategy(PairingStrategy):
         if len(players) % 2 != 0:
             return False  # Can't pair odd number of players
 
-        # Use a simple greedy check - not perfect but sufficient for our needs
-        used = set()
-        for i, player_one in enumerate(players):
-            if player_one.id in used:
-                continue
+        # Use backtracking to properly check if valid pairing exists
+        return self._backtrack_check_pairing(players, set(), previous_opponents)
 
-            # Find a valid opponent for this player
-            found_opponent = False
-            for j, player_two in enumerate(players[i+1:], i+1):
-                if (player_two.id not in used and
-                    player_two.id not in previous_opponents.get(player_one.id, set())):
-                    used.add(player_one.id)
-                    used.add(player_two.id)
-                    found_opponent = True
-                    break
+    def _backtrack_check_pairing(self, players, used, previous_opponents):
+        """
+        Recursively check if players can be paired without repeats using backtracking.
 
-            if not found_opponent:
-                return False
+        Args:
+            players: List of all players to pair
+            used: Set of player IDs already paired
+            previous_opponents: Dict of player ID to set of opponent IDs
 
-        return len(used) == len(players)
+        Returns:
+            Boolean indicating if valid pairing exists
+        """
+        # Base case: all players are paired
+        if len(used) == len(players):
+            return True
+
+        # Find first unpaired player
+        player_one = None
+        for player in players:
+            if player.id not in used:
+                player_one = player
+                break
+
+        if player_one is None:
+            return True
+
+        # Try pairing with each other unpaired player
+        for player_two in players:
+            if (player_two.id not in used and
+                player_two.id != player_one.id and
+                player_two.id not in previous_opponents.get(player_one.id, set())):
+
+                # Try this pairing
+                used.add(player_one.id)
+                used.add(player_two.id)
+
+                if self._backtrack_check_pairing(players, used, previous_opponents):
+                    return True
+
+                # Backtrack
+                used.remove(player_one.id)
+                used.remove(player_two.id)
+
+        return False
 
     def _get_player_score(self, stage_player):
         """
