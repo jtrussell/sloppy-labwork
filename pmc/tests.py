@@ -944,7 +944,8 @@ class LeaderboardCriteriaTests(AwardCriteriaTestBase):
             name='2024-2025',
             start_date=date(2024, 12, 1),
             season=self.season,
-            frequency=LeaderboardSeasonPeriod.FrequencyOptions.SEASON
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.SEASON,
+            is_locked=True
         )
 
     def test_playgroup_season_first_place(self):
@@ -1031,7 +1032,8 @@ class LeaderboardCriteriaTests(AwardCriteriaTestBase):
             name='January 2025',
             start_date=date(2025, 1, 1),
             season=self.season,
-            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH,
+            is_locked=True
         )
 
         PlayerRank.objects.create(
@@ -1100,3 +1102,210 @@ class AwardCreditTests(AwardCriteriaTestBase):
 
         value = self.get_criteria_value(AwardBase.CriteriaTypeOptions.events)
         self.assertEqual(value, 8)
+
+
+class LeaderboardPeriodLockingTest(TestCase):
+
+    def setUp(self):
+        self.season = LeaderboardSeason.objects.create(name='Test Season')
+
+    def test_should_be_locked_returns_true_for_old_periods(self):
+        old_period = LeaderboardSeasonPeriod.objects.create(
+            name='January 2025',
+            start_date=date.today() - timedelta(days=40),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH
+        )
+
+        next_period = LeaderboardSeasonPeriod.objects.create(
+            name='February 2025',
+            start_date=date.today() - timedelta(days=10),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH
+        )
+
+        self.assertTrue(old_period.should_be_locked())
+
+    def test_should_be_locked_returns_false_for_recent_periods(self):
+        recent_period = LeaderboardSeasonPeriod.objects.create(
+            name='Recent Period',
+            start_date=date.today() - timedelta(days=5),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH
+        )
+
+        self.assertFalse(recent_period.should_be_locked())
+
+    def test_should_be_locked_returns_false_for_current_periods(self):
+        current_period = LeaderboardSeasonPeriod.objects.create(
+            name='Current Period',
+            start_date=date.today(),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH
+        )
+
+        self.assertFalse(current_period.should_be_locked())
+
+    def test_should_be_locked_returns_false_for_all_time_periods(self):
+        all_time_period = LeaderboardSeasonPeriod.objects.create(
+            name='All Time',
+            start_date=date.today() - timedelta(days=365),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.ALL_TIME
+        )
+
+        self.assertFalse(all_time_period.should_be_locked())
+
+    def test_update_lock_status_locks_old_period(self):
+        old_period = LeaderboardSeasonPeriod.objects.create(
+            name='January 2025',
+            start_date=date.today() - timedelta(days=40),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH,
+            is_locked=False
+        )
+
+        next_period = LeaderboardSeasonPeriod.objects.create(
+            name='February 2025',
+            start_date=date.today() - timedelta(days=10),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH
+        )
+
+        result = old_period.update_lock_status()
+
+        self.assertTrue(result)
+        old_period.refresh_from_db()
+        self.assertTrue(old_period.is_locked)
+
+    def test_update_lock_status_is_idempotent(self):
+        old_period = LeaderboardSeasonPeriod.objects.create(
+            name='January 2025',
+            start_date=date.today() - timedelta(days=40),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH,
+            is_locked=False
+        )
+
+        next_period = LeaderboardSeasonPeriod.objects.create(
+            name='February 2025',
+            start_date=date.today() - timedelta(days=10),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH
+        )
+
+        result1 = old_period.update_lock_status()
+        self.assertTrue(result1)
+
+        result2 = old_period.update_lock_status()
+        self.assertFalse(result2)
+
+        old_period.refresh_from_db()
+        self.assertTrue(old_period.is_locked)
+
+    def test_update_lock_status_does_not_lock_recent_period(self):
+        recent_period = LeaderboardSeasonPeriod.objects.create(
+            name='Recent Period',
+            start_date=date.today() - timedelta(days=5),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH,
+            is_locked=False
+        )
+
+        result = recent_period.update_lock_status()
+
+        self.assertFalse(result)
+        recent_period.refresh_from_db()
+        self.assertFalse(recent_period.is_locked)
+
+    def test_manager_update_all_lock_statuses(self):
+        old_period1 = LeaderboardSeasonPeriod.objects.create(
+            name='Old Period 1',
+            start_date=date.today() - timedelta(days=60),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH,
+            is_locked=False
+        )
+
+        old_period2 = LeaderboardSeasonPeriod.objects.create(
+            name='Old Period 2',
+            start_date=date.today() - timedelta(days=40),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH,
+            is_locked=False
+        )
+
+        recent_period = LeaderboardSeasonPeriod.objects.create(
+            name='Recent Period',
+            start_date=date.today() - timedelta(days=10),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH,
+            is_locked=False
+        )
+
+        current_period = LeaderboardSeasonPeriod.objects.create(
+            name='Current Period',
+            start_date=date.today(),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH,
+            is_locked=False
+        )
+
+        count = LeaderboardSeasonPeriod.objects.update_all_lock_statuses()
+
+        self.assertEqual(count, 2)
+
+        old_period1.refresh_from_db()
+        old_period2.refresh_from_db()
+        recent_period.refresh_from_db()
+        current_period.refresh_from_db()
+
+        self.assertTrue(old_period1.is_locked)
+        self.assertTrue(old_period2.is_locked)
+        self.assertFalse(recent_period.is_locked)
+        self.assertFalse(current_period.is_locked)
+
+    def test_manager_excludes_all_time_periods_from_locking(self):
+        all_time_period = LeaderboardSeasonPeriod.objects.create(
+            name='All Time',
+            start_date=date.today() - timedelta(days=365),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.ALL_TIME,
+            is_locked=False
+        )
+
+        count = LeaderboardSeasonPeriod.objects.update_all_lock_statuses()
+
+        self.assertEqual(count, 0)
+
+        all_time_period.refresh_from_db()
+        self.assertFalse(all_time_period.is_locked)
+
+    def test_get_end_date_returns_next_period_start_date(self):
+        period1 = LeaderboardSeasonPeriod.objects.create(
+            name='Period 1',
+            start_date=date(2025, 1, 1),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH
+        )
+
+        period2 = LeaderboardSeasonPeriod.objects.create(
+            name='Period 2',
+            start_date=date(2025, 2, 1),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH
+        )
+
+        end_date = period1.get_end_date()
+        self.assertEqual(end_date, date(2025, 2, 1))
+
+    def test_get_end_date_returns_tomorrow_for_latest_period(self):
+        period = LeaderboardSeasonPeriod.objects.create(
+            name='Latest Period',
+            start_date=date.today(),
+            season=self.season,
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.MONTH
+        )
+
+        end_date = period.get_end_date()
+        self.assertEqual(end_date, date.today() + timedelta(days=1))

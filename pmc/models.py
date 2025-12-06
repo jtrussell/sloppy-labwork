@@ -335,6 +335,18 @@ class LeaderboardSeason(models.Model):
         return self.name
 
 
+class LeaderboardSeasonPeriodManager(models.Manager):
+    def update_all_lock_statuses(self):
+        unlocked = self.filter(is_locked=False).exclude(
+            frequency=LeaderboardSeasonPeriod.FrequencyOptions.ALL_TIME
+        )
+        locked_count = 0
+        for period in unlocked:
+            if period.update_lock_status():
+                locked_count += 1
+        return locked_count
+
+
 class LeaderboardSeasonPeriod(models.Model):
     class FrequencyOptions(models.IntegerChoices):
         MONTH = (1, _('Month'))
@@ -346,6 +358,9 @@ class LeaderboardSeasonPeriod(models.Model):
     season = models.ForeignKey(
         LeaderboardSeason, on_delete=models.CASCADE, related_name='periods')
     frequency = models.IntegerField(choices=FrequencyOptions.choices)
+    is_locked = models.BooleanField(default=False)
+
+    objects = LeaderboardSeasonPeriodManager()
 
     class Meta:
         ordering = ('-start_date',)
@@ -354,6 +369,28 @@ class LeaderboardSeasonPeriod(models.Model):
 
     def __str__(self):
         return f'{self.name}'
+
+    def get_end_date(self):
+        next_period = LeaderboardSeasonPeriod.objects.filter(
+            frequency=self.frequency,
+            start_date__gt=self.start_date
+        ).order_by("start_date").first()
+        return next_period.start_date if next_period else date.today() + timedelta(days=1)
+
+    def should_be_locked(self) -> bool:
+        if self.frequency == self.FrequencyOptions.ALL_TIME:
+            return False
+
+        end_date = self.get_end_date()
+        return date.today() >= end_date + timedelta(days=7)
+
+    def update_lock_status(self):
+        should_lock = self.should_be_locked()
+        if should_lock and not self.is_locked:
+            self.is_locked = True
+            self.save(update_fields=['is_locked'])
+            return True
+        return False
 
 
 class Leaderboard(models.Model):
@@ -1369,6 +1406,7 @@ class AwardAssignmentService():
                 cnt=Count('id')
             ).values('cnt')
             value = PlayerRank.objects.filter(
+                period__is_locked=True,
                 user=user,
                 rank__gte=rank_min_max[0],
                 rank__lte=rank_min_max[1],
@@ -1395,6 +1433,7 @@ class AwardAssignmentService():
             elif criteria_type == AwardBase.CriteriaTypeOptions.global_leaderboard_monthly_top_fifty:
                 rank_min_max = (26, 50)
             value = PlayerRank.objects.filter(
+                period__is_locked=True,
                 user=user,
                 rank__gte=rank_min_max[0],
                 rank__lte=rank_min_max[1],
@@ -1415,6 +1454,7 @@ class AwardAssignmentService():
             elif criteria_type == AwardBase.CriteriaTypeOptions.global_leaderboard_season_top_one_hundred:
                 rank_min_max = (51, 100)
             value = PlayerRank.objects.filter(
+                period__is_locked=True,
                 user=user,
                 rank__gte=rank_min_max[0],
                 rank__lte=rank_min_max[1],

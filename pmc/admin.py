@@ -74,9 +74,10 @@ class LeaderboardSeasonAdmin(admin.ModelAdmin):
 
 
 class LeaderboardSeasonPeriodAdmin(admin.ModelAdmin):
-    list_display = ('name', 'season', 'start_date')
+    list_display = ('name', 'season', 'start_date', 'is_locked')
     search_fields = ['season']
-    list_filter = ('season',)
+    list_filter = ('season', 'is_locked')
+    readonly_fields = ('is_locked',)
 
 
 class LeaderboardAdmin(admin.ModelAdmin):

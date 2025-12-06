@@ -536,7 +536,8 @@ def playgroup_leaderboard(request, slug, pk=None):
         try:
             season_id = int(request.GET.get('season'))
             period_id = int(request.GET.get('period'))
-            period = LeaderboardSeasonPeriod.objects.filter(id=period_id).first()
+            period = LeaderboardSeasonPeriod.objects.filter(
+                id=period_id).first()
             if period and period.season_id != season_id:
                 params = request.GET.copy()
                 params.pop('period')
@@ -592,7 +593,8 @@ def global_leaderboard(request, pk=None):
         try:
             season_id = int(request.GET.get('season'))
             period_id = int(request.GET.get('period'))
-            period = LeaderboardSeasonPeriod.objects.filter(id=period_id).first()
+            period = LeaderboardSeasonPeriod.objects.filter(
+                id=period_id).first()
             if period and period.season_id != season_id:
                 params = request.GET.copy()
                 params.pop('period')
@@ -890,20 +892,23 @@ def refresh_leaderboard(request, pk):
     else:
         raise ValueError('Invalid leaderboard period frequency')
 
-    RankingPointsService.assign_points_for_leaderboard(
-        leaderboard,
-        period,
-        order_by=order_by
-    )
+    if not period.is_locked:
+        RankingPointsService.assign_points_for_leaderboard(
+            leaderboard,
+            period,
+            order_by=order_by
+        )
 
     last_week_period = leaderboard.get_period_for_date(
         date.today() - timedelta(days=7))
-    if last_week_period.pk != period.pk:
+    if last_week_period.pk != period.pk and not last_week_period.is_locked:
         RankingPointsService.assign_points_for_leaderboard(
             leaderboard,
             last_week_period,
             order_by=order_by
         )
+
+    LeaderboardSeasonPeriod.objects.update_all_lock_statuses()
 
     LeaderboardLog.objects.create(
         leaderboard=leaderboard
