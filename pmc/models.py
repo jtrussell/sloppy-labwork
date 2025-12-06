@@ -723,7 +723,8 @@ class RankingPointsService():
                 avg_points=Sum("points") / top_n
             )
 
-            user_data = {entry["result__user"]: entry for entry in all_user_points}
+            user_data = {entry["result__user"]
+                : entry for entry in all_user_points}
             for entry in top_n_user_points:
                 if entry["result__user"] in user_data:
                     user_data[entry["result__user"]
@@ -909,6 +910,8 @@ class AwardBase(models.Model):
             35, _('Global Leaderboard Monthly - Top Twenty Five'))
         global_leaderboard_monthly_top_fifty = (
             36, _('Global Leaderboard Monthly - Top Fifty'))
+        participate_in_premier_tournament = (
+            37, _('Participate in Premier Tournament'))
         manually_awarded = (999, _('Manually Awarded'))
 
     pmc_id = models.CharField(max_length=10, unique=True)
@@ -1331,20 +1334,36 @@ class AwardAssignmentService():
             AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_top_ten
         ]:
             rank_min_max = (1, 1)
+            min_players = 1
             if criteria_type == AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_second_place:
                 rank_min_max = (2, 2)
             elif criteria_type == AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_third_place:
                 rank_min_max = (3, 3)
             elif criteria_type == AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_top_five:
                 rank_min_max = (4, 5)
+                min_players = 10
             elif criteria_type == AwardBase.CriteriaTypeOptions.playgroup_leaderboard_season_top_ten:
                 rank_min_max = (6, 10)
+                min_players = 20
+            player_count_subquery = PlayerRank.objects.filter(
+                playgroup=OuterRef('playgroup'),
+                leaderboard=OuterRef('leaderboard'),
+                period=OuterRef('period'),
+            ).values('playgroup', 'leaderboard', 'period').annotate(
+                cnt=Count('id')
+            ).values('cnt')
             value = PlayerRank.objects.filter(
                 user=user,
                 rank__gte=rank_min_max[0],
                 rank__lte=rank_min_max[1],
                 playgroup__isnull=False,
                 leaderboard__name='Season'
+            ).exclude(
+                playgroup__name='Premier Tournaments'
+            ).annotate(
+                players_in_period=Subquery(player_count_subquery)
+            ).filter(
+                players_in_period__gte=min_players
             ).count()
         elif criteria_type in [
             AwardBase.CriteriaTypeOptions.global_leaderboard_monthly_first_place,
@@ -1385,6 +1404,11 @@ class AwardAssignmentService():
                 rank__lte=rank_min_max[1],
                 playgroup__isnull=True,
                 leaderboard__name='Season'
+            ).count()
+        elif criteria_type == AwardBase.CriteriaTypeOptions.participate_in_premier_tournament:
+            value = qs.filter(
+                event__is_casual=False,
+                event__playgroup_events__playgroup__name='Premier Tournaments',
             ).count()
 
         value += AwardCredit.objects.filter(
