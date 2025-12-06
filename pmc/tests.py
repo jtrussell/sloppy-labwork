@@ -262,3 +262,44 @@ class TopNPerMonthRankingTest(TestCase):
         # User A should rank higher
         self.assertEqual(user_a_rank.rank, 1)
         self.assertEqual(user_b_rank.rank, 2)
+
+    def test_top_n_per_month_only_applies_to_global_rankings(self):
+        """
+        Test that top_n_per_month only limits global rankings, not playgroup rankings.
+
+        Scenario:
+        - User A has 4 results in January (100, 100, 80, 80 points)
+        - With top_n_per_month=2:
+          * Global: 100 + 100 = 200 points (limited to top 2)
+          * Playgroup: 100 + 100 + 80 + 80 = 360 points (all results)
+        """
+        self.create_event_and_result(self.user_a, 1, date(2025, 1, 5), 100)
+        self.create_event_and_result(self.user_a, 1, date(2025, 1, 12), 100)
+        self.create_event_and_result(self.user_a, 2, date(2025, 1, 19), 80)
+        self.create_event_and_result(self.user_a, 2, date(2025, 1, 26), 80)
+
+        period = self.leaderboard.get_period_for_date(date(2025, 1, 15))
+
+        RankingPointsService.assign_points_for_leaderboard(
+            self.leaderboard,
+            period,
+            top_n_per_month=2
+        )
+
+        global_rank = PlayerRank.objects.get(
+            user=self.user_a,
+            leaderboard=self.leaderboard,
+            period=period,
+            playgroup=None
+        )
+        self.assertEqual(global_rank.total_points, 200)
+        self.assertEqual(global_rank.num_results, 2)
+
+        playgroup_rank = PlayerRank.objects.get(
+            user=self.user_a,
+            leaderboard=self.leaderboard,
+            period=period,
+            playgroup=self.playgroup
+        )
+        self.assertEqual(playgroup_rank.total_points, 360)
+        self.assertEqual(playgroup_rank.num_results, 4)

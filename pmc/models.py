@@ -709,15 +709,15 @@ class RankingPointsService():
         ).filter(point_rank__lte=top_n_per_month)
 
         def compute_rankings(playgroup=None):
-            """ Helper function to compute rankings for a given playgroup or globally. """
             filters = {}
             if playgroup:
                 filters["result__event__playgroups"] = playgroup
+                base_qs = ranking_points_qs
             else:
-                # For global rankings, exclude events marked as excluded from global rankings
                 filters["result__event__is_excluded_from_global_rankings"] = False
+                base_qs = ranked_points
 
-            raw_results = ranked_points.filter(**filters).values_list(
+            raw_results = base_qs.filter(**filters).values_list(
                 "result__user", "points"
             )
 
