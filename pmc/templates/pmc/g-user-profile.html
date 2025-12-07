@@ -32,7 +32,7 @@
     {% if badges %}
       <div class="card">
         <h2>Badges</h2>
-        <ul class="award-list award-list-centered flex flex-wrap">
+        <ul class="award-list award-list-centered flex flex-wrap flex-gap-2">
           {% for badge in badges %}
             <li>
               <a href="{% url 'pmc-my-badge-detail' badge.pk %}"  class="award-container {% if not badge.user_badge_id %}disabled{% endif %}">
@@ -48,7 +48,7 @@
     {% if achievements %}
       <div class="card">
         <h2>Achievements</h2>
-        <ul class="award-list award-list-centered flex flex-wrap">
+        <ul class="award-list award-list-centered flex flex-wrap flex-gap-2">
           {% for achievement in achievements %}
             <li>
               <a href="{% url 'pmc-my-achievement-detail' achievement.pk %}"  class="award-container {% if not achievement.user_achievement_tier_src %}disabled{% endif %}">
@@ -67,7 +67,7 @@
     {% if trophies %}
       <div class="card">
         <h2>Trophies</h2>
-        <ul class="award-list award-list-centered flex flex-wrap">
+        <ul class="award-list award-list-centered flex flex-wrap flex-gap-2">
           {% for trophy in trophies %}
             <li>
               <a href="{% url 'pmc-my-trophy-detail' trophy.pk %}"  class="award-container {% if not trophy.user_trophy_amount %}disabled{% endif %}">

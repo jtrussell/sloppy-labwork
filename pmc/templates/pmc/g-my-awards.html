@@ -14,7 +14,7 @@
     <h2>Badges</h2>
     <p>Can be earned one-time, typically granted by an EO.</p>
 
-    <ul class="award-list flex flex-wrap">
+    <ul class="award-list flex flex-wrap flex-gap-2">
       {% for badge in badges %}
         {% if badge.user_badge_id or not badge.is_hidden %}
           <li>
@@ -32,7 +32,7 @@
     <h2>Achievements</h2>
     <p>Can be earned and subsequently leveled up to higher tiers.</p>
 
-    <ul class="award-list flex flex-wrap">
+    <ul class="award-list flex flex-wrap flex-gap-2">
       {% for achievement in achievements %}
         {% if achievement.user_achievement_tier or not achievement.is_hidden %}
           <li>
@@ -53,7 +53,7 @@
     <h2>Trophies</h2>
     <p>Can be earned multiple times.</p>
 
-    <ul class="award-list flex flex-wrap">
+    <ul class="award-list flex flex-wrap flex-gap-2">
       {% for trophy in trophies %}
         {% if trophy.user_trophy_amount or not trophy.is_hidden %}
           <li>
