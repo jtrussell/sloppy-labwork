@@ -3,26 +3,6 @@
 from django.db import migrations, models
 
 
-def backfill_locked_periods(apps, schema_editor):
-    LeaderboardSeasonPeriod = apps.get_model('pmc', 'LeaderboardSeasonPeriod')
-    from datetime import date, timedelta
-
-    for period in LeaderboardSeasonPeriod.objects.all():
-        if period.frequency == 3:
-            continue
-
-        next_period = LeaderboardSeasonPeriod.objects.filter(
-            frequency=period.frequency,
-            start_date__gt=period.start_date
-        ).order_by("start_date").first()
-
-        end_date = next_period.start_date if next_period else date.today() + timedelta(days=1)
-
-        if date.today() >= end_date + timedelta(days=7):
-            period.is_locked = True
-            period.save(update_fields=['is_locked'])
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -35,5 +15,4 @@ class Migration(migrations.Migration):
             name='is_locked',
             field=models.BooleanField(db_index=True, default=False),
         ),
-        migrations.RunPython(backfill_locked_periods, reverse_code=migrations.RunPython.noop),
     ]
