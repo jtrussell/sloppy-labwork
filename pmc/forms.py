@@ -216,13 +216,13 @@ class PmcProfilePrivacyForm(forms.ModelForm):
 class LeaderboardSeasonPeriodForm(forms.Form):
     season = forms.ModelChoiceField(
         queryset=LeaderboardSeason.objects.none(),
-        initial=LeaderboardSeason.objects.first(),
         required=True,
+        empty_label=None,
         widget=forms.Select(attrs={'onchange': 'this.closest("form").submit()'}))
     period = forms.ModelChoiceField(
         queryset=LeaderboardSeasonPeriod.objects.none(),
-        initial=LeaderboardSeasonPeriod.objects.first(),
         required=True,
+        empty_label=None,
         widget=forms.Select(attrs={'onchange': 'this.closest("form").submit()'}))
 
     def __init__(self, leaderboard, *args, **kwargs):
