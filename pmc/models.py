@@ -1150,6 +1150,46 @@ class AwardAssignmentService():
     """
 
     @staticmethod
+    def refresh_trophy(pmc_id):
+        trophy = Trophy.objects.filter(pmc_id=pmc_id).first()
+        if not trophy:
+            return
+        if trophy.criteria == AwardBase.CriteriaTypeOptions.manually_awarded:
+            return
+
+        UserTrophy.objects.filter(trophy=trophy).delete()
+        users = User.objects.all()
+        for user in users:
+            value = AwardAssignmentService.get_user_criteria_value(user, trophy)
+            amount = value // trophy.criteria_value if trophy.criteria_value else 0
+            if amount > 0:
+                UserTrophy.objects.update_or_create(
+                    user=user,
+                    trophy=trophy,
+                    defaults={'amount': amount}
+                )
+
+    @staticmethod
+    def refresh_achievement(pmc_id):
+        achievement = Achievement.objects.filter(pmc_id=pmc_id).first()
+        if not achievement:
+            return
+
+        UserAchievementTier.objects.filter(
+            achievement_tier__achievement=achievement
+        ).delete()
+        tiers = achievement.tiers.all()
+        users = User.objects.all()
+        for user in users:
+            user_value = AwardAssignmentService.get_user_criteria_value(user, achievement)
+            for tier in tiers:
+                if user_value >= tier.criteria_value:
+                    UserAchievementTier.objects.update_or_create(
+                        user=user,
+                        achievement_tier=tier
+                    )
+
+    @staticmethod
     def refresh_all_user_trophies():
         """
         Refreshes all user trophies by re-evaluating the criteria for each trophy.

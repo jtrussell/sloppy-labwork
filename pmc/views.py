@@ -10,7 +10,7 @@ from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Sum, Count, Q
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.views import generic
 from django.template import loader
@@ -29,7 +29,7 @@ from pmc.context_processors import playgroup
 from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm, PmcProfilePrivacyForm, RankingPointsMapVersionForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
-from .models import AchievementTier, Badge, EventResult, EventResultDeck, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserAchievementTier, UserBadge, Trophy, UserTrophy, Achievement
+from .models import AchievementTier, AwardBase, Badge, EventResult, EventResultDeck, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserAchievementTier, UserBadge, Trophy, UserTrophy, Achievement
 from .models import PlayerRank
 from .models import Leaderboard
 from .models import Playgroup
@@ -1109,6 +1109,38 @@ def my_trophy_detail(request, pk):
         'top_user_trophies': top_user_trophies
     }
     return render(request, 'pmc/g-my-trophy-detail.html', context)
+
+
+@api_key_required
+def list_refreshable_trophies(request):
+    pmc_ids = list(Trophy.objects.exclude(
+        criteria=AwardBase.CriteriaTypeOptions.manually_awarded
+    ).values_list('pmc_id', flat=True))
+    return JsonResponse({'pmc_ids': pmc_ids})
+
+
+@api_key_required
+def list_refreshable_achievements(request):
+    pmc_ids = list(Achievement.objects.values_list('pmc_id', flat=True))
+    return JsonResponse({'pmc_ids': pmc_ids})
+
+
+@csrf_exempt
+@require_POST
+@api_key_required
+@transaction.atomic
+def refresh_trophy(request, pmc_id):
+    AwardAssignmentService.refresh_trophy(pmc_id)
+    return HttpResponse('Done.', content_type='text/plain')
+
+
+@csrf_exempt
+@require_POST
+@api_key_required
+@transaction.atomic
+def refresh_achievement(request, pmc_id):
+    AwardAssignmentService.refresh_achievement(pmc_id)
+    return HttpResponse('Done.', content_type='text/plain')
 
 
 @csrf_exempt
