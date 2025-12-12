@@ -1115,13 +1115,14 @@ def my_trophy_detail(request, pk):
 def list_refreshable_trophies(request):
     pmc_ids = list(Trophy.objects.exclude(
         criteria=AwardBase.CriteriaTypeOptions.manually_awarded
-    ).values_list('pmc_id', flat=True))
+    ).values_list('pmc_id', flat=True).order_by('pmc_id'))
     return JsonResponse({'pmc_ids': pmc_ids})
 
 
 @api_key_required
 def list_refreshable_achievements(request):
-    pmc_ids = list(Achievement.objects.values_list('pmc_id', flat=True))
+    pmc_ids = list(Achievement.objects.values_list(
+        'pmc_id', flat=True).order_by('pmc_id'))
     return JsonResponse({'pmc_ids': pmc_ids})
 
 
