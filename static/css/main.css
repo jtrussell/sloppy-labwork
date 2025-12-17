@@ -385,7 +385,7 @@ footer {
 /* Fancy Transition Junk */
 /* * { transition: background-color 0.3s linear, color 0.3s linear, border-color: 0.3s linear; } */
 * { transition: all 0.3s linear;}
-.preload * { transition: all none !important;}
+body.preload * { transition: all none !important;}
 
 /* Skeleton Overrides */
 .container { max-width: 600px; }
