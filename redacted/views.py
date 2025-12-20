@@ -7,6 +7,7 @@ from nacl.signing import VerifyKey
 from nacl.exceptions import BadSignatureError
 from .forms import RandomDecksFromDokForm
 from allauth.socialaccount.models import SocialAccount
+from decks.models import Set
 import json
 import os
 
@@ -99,7 +100,8 @@ def discord_webhook_ingress(request):
                     sa_id = int(body_json['member']['user']['id'])
                     sa = SocialAccount.objects.get(uid=sa_id)
                     owner = sa.user.profile.dok_handle
-                filters = get_filters(owner, min_sas, max_sas, expansion)
+                expansions = [expansion] if expansion else []
+                filters = get_filters(owner, min_sas, max_sas, expansions)
                 deck_info = get_random_deck_from_dok(filters)
                 content = deck_info['url']
                 # TODO = put filters in content
@@ -126,8 +128,8 @@ def from_options(opt_name, options=[]):
     return None
 
 
-def get_filters(owner, min_sas=None, max_sas=None, expansion=None):
-    expansions = []
+def get_filters(owner, min_sas=None, max_sas=None, expansions=None):
+    expansion_ids = expansions if expansions else []
     constraints = []
     if min_sas:
         constraints.append({
@@ -141,14 +143,24 @@ def get_filters(owner, min_sas=None, max_sas=None, expansion=None):
             'cap': 'MAX',
             'value': max_sas,
         })
-    if expansion:
-        expansions.append(expansion)
     filters = {
         'owner': owner,
         'constraints': constraints,
-        'expansions': expansions,
+        'expansions': expansion_ids,
     }
     return filters
+
+
+def get_expansions_from_form(expansion_value):
+    if not expansion_value:
+        return []
+    if expansion_value == 'legacy':
+        return [*Set.objects.filter(is_legacy=True).values_list('id', flat=True)]
+    if expansion_value == 'modern':
+        return [*Set.objects.filter(is_legacy=False).values_list('id', flat=True)]
+    if expansion_value == 'tournament':
+        return [*Set.objects.filter(is_tournament_legal=True).values_list('id', flat=True)]
+    return [int(expansion_value)]
 
 
 def random_access_archives(request):
@@ -160,13 +172,13 @@ def random_access_archives(request):
             dok_username = form.cleaned_data['dok_username']
             min_sas = form.cleaned_data['min_sas']
             max_sas = form.cleaned_data['max_sas']
-            set = form.cleaned_data['expansion']
-            expansion = set.id if set else None
+            expansion_value = form.cleaned_data['expansion']
+            expansions = get_expansions_from_form(expansion_value)
             filters = get_filters(
                 owner=dok_username,
                 min_sas=min_sas,
                 max_sas=max_sas,
-                expansion=expansion,
+                expansions=expansions,
             )
             try:
                 deck_info = get_random_deck_from_dok(filters=filters)

@@ -1,7 +1,13 @@
-from re import search
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from decks.models import Set
+
+SET_GROUP_CHOICES = [
+    ('', _('Any')),
+    ('legacy', _('Legacy')),
+    ('modern', _('Modern')),
+    ('tournament', _('Tournament')),
+]
 
 
 class RandomDecksFromDokForm(forms.Form):
@@ -20,9 +26,12 @@ class RandomDecksFromDokForm(forms.Form):
             attrs={
                 'placeholder': _('Any')}
         ))
-    expansion = forms.ModelChoiceField(
-        queryset=Set.objects.all(),
+    expansion = forms.ChoiceField(
         required=False,
         label=_('Set'),
-        empty_label=_('Any'),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        set_choices = [(str(s.id), s.name) for s in Set.objects.all()]
+        self.fields['expansion'].choices = SET_GROUP_CHOICES + set_choices
