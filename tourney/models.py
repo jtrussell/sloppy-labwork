@@ -609,6 +609,29 @@ class ScoreDifferentialRankingCriterion(RankingCriterion):
         return True
 
 
+class GamesPlayedRankingCriterion(RankingCriterion):
+    def get_key(self):
+        return 'games_played'
+
+    def get_name(self):
+        return 'Games Played'
+
+    def get_description(self):
+        return 'Total number of games played (higher is better)'
+
+    def calculate_value(self, stage_player, stage, standings_cache=None):
+        if standings_cache and stage_player.id in standings_cache:
+            return standings_cache[stage_player.id].get('games_played', 0)
+
+        return Match.objects.filter(
+            Q(player_one=stage_player) | Q(player_two=stage_player),
+            round__stage=stage
+        ).count()
+
+    def is_descending(self):
+        return True
+
+
 def get_available_ranking_criteria():
     return [
         WinsRankingCriterion(),
@@ -621,6 +644,7 @@ def get_available_ranking_criteria():
         PlayerScoreRankingCriterion(),
         OpponentScoreRankingCriterion(),
         ScoreDifferentialRankingCriterion(),
+        GamesPlayedRankingCriterion(),
     ]
 
 
@@ -1039,6 +1063,7 @@ class StandingCalculator:
                 'byes': byes,
                 'points': points,
                 'total_matches': total_matches,
+                'games_played': total_matches,
                 'strength_of_schedule': strength_of_schedule,
                 'seed': stage_player.seed,
                 'player_score': player_score,

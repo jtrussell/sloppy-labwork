@@ -72,6 +72,8 @@
                                                 {% if standing.opponent_score_value is not None %}{{ standing.opponent_score_value }}{% else %}<span class="text-muted">-</span>{% endif %}
                                             {% elif key == 'score_differential' %}
                                                 {% if standing.score_differential_value is not None %}{{ standing.score_differential_value }}{% else %}<span class="text-muted">-</span>{% endif %}
+                                            {% elif key == 'games_played' %}
+                                                {% if standing.games_played_value is not None %}{{ standing.games_played_value }}{% else %}<span class="text-muted">-</span>{% endif %}
                                             {% else %}
                                                 <span class="text-muted">-</span>
                                             {% endif %}

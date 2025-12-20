@@ -44,6 +44,11 @@ class RankingCriteriaManager {
         name: 'Score Differential',
         description: 'Player score minus opponent score',
       },
+      {
+        key: 'games_played',
+        name: 'Games Played',
+        description: 'Total number of games played (higher is better)',
+      },
     ]
 
     this.criteriaContainer = document.querySelector(containerSelector)

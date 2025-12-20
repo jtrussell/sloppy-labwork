@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from .models import (
     Tournament, Player, Stage, StagePlayer, Round, Match, MatchResult,
-    StandingCalculator, get_pairing_strategy
+    StandingCalculator, get_pairing_strategy, GamesPlayedRankingCriterion
 )
 
 logger = logging.getLogger(__name__)
@@ -1570,3 +1570,177 @@ class RoundRobinScheduledTestCase(TestCase):
             "No additional rounds should be created on subsequent calls")
         self.assertEqual(final_matches_count, initial_matches_count,
             "No additional matches should be created on subsequent calls")
+
+
+class GamesPlayedRankingCriterionTestCase(TestCase):
+    """Test the Games Played ranking criterion."""
+
+    def setUp(self):
+        """Set up test data."""
+        self.owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        self.user1 = User.objects.create_user('user1', 'user1@test.com', 'password')
+        self.user2 = User.objects.create_user('user2', 'user2@test.com', 'password')
+        self.user3 = User.objects.create_user('user3', 'user3@test.com', 'password')
+
+        self.tournament = Tournament.objects.create(
+            name='Games Played Test Tournament',
+            owner=self.owner,
+            is_accepting_registrations=True
+        )
+
+        self.stage = Stage.objects.create(
+            tournament=self.tournament,
+            name='Main Stage',
+            order=1,
+            pairing_strategy='swiss'
+        )
+
+        self.player1 = Player.objects.create(user=self.user1, tournament=self.tournament)
+        self.player2 = Player.objects.create(user=self.user2, tournament=self.tournament)
+        self.player3 = Player.objects.create(user=self.user3, tournament=self.tournament)
+
+        self.stage_player1 = StagePlayer.objects.create(player=self.player1, stage=self.stage, seed=1)
+        self.stage_player2 = StagePlayer.objects.create(player=self.player2, stage=self.stage, seed=2)
+        self.stage_player3 = StagePlayer.objects.create(player=self.player3, stage=self.stage, seed=3)
+
+    def test_games_played_criterion_properties(self):
+        """Test that the criterion has correct properties."""
+        criterion = GamesPlayedRankingCriterion()
+
+        self.assertEqual(criterion.get_key(), 'games_played')
+        self.assertEqual(criterion.get_name(), 'Games Played')
+        self.assertIn('games played', criterion.get_description().lower())
+        self.assertTrue(criterion.is_descending())
+
+    def test_games_played_with_no_matches(self):
+        """Test games played count when no matches have been played."""
+        criterion = GamesPlayedRankingCriterion()
+
+        games_played = criterion.calculate_value(self.stage_player1, self.stage)
+        self.assertEqual(games_played, 0)
+
+    def test_games_played_counts_correctly(self):
+        """Test that games played counts all matches for a player."""
+        round1 = Round.objects.create(stage=self.stage, order=1)
+
+        match1 = Match.objects.create(
+            round=round1,
+            player_one=self.stage_player1,
+            player_two=self.stage_player2
+        )
+        MatchResult.objects.create(match=match1, winner=self.stage_player1)
+
+        match2 = Match.objects.create(
+            round=round1,
+            player_one=self.stage_player3,
+            player_two=None
+        )
+        MatchResult.objects.create(match=match2, winner=self.stage_player3)
+
+        criterion = GamesPlayedRankingCriterion()
+
+        player1_games = criterion.calculate_value(self.stage_player1, self.stage)
+        player2_games = criterion.calculate_value(self.stage_player2, self.stage)
+        player3_games = criterion.calculate_value(self.stage_player3, self.stage)
+
+        self.assertEqual(player1_games, 1)
+        self.assertEqual(player2_games, 1)
+        self.assertEqual(player3_games, 1)
+
+    def test_games_played_across_multiple_rounds(self):
+        """Test games played accumulates across multiple rounds."""
+        round1 = Round.objects.create(stage=self.stage, order=1)
+        match1 = Match.objects.create(
+            round=round1,
+            player_one=self.stage_player1,
+            player_two=self.stage_player2
+        )
+        MatchResult.objects.create(match=match1, winner=self.stage_player1)
+
+        match2 = Match.objects.create(
+            round=round1,
+            player_one=self.stage_player3,
+            player_two=None
+        )
+        MatchResult.objects.create(match=match2, winner=self.stage_player3)
+
+        round2 = Round.objects.create(stage=self.stage, order=2)
+        match3 = Match.objects.create(
+            round=round2,
+            player_one=self.stage_player1,
+            player_two=self.stage_player3
+        )
+        MatchResult.objects.create(match=match3, winner=self.stage_player1)
+
+        match4 = Match.objects.create(
+            round=round2,
+            player_one=self.stage_player2,
+            player_two=None
+        )
+        MatchResult.objects.create(match=match4, winner=self.stage_player2)
+
+        criterion = GamesPlayedRankingCriterion()
+
+        player1_games = criterion.calculate_value(self.stage_player1, self.stage)
+        player2_games = criterion.calculate_value(self.stage_player2, self.stage)
+        player3_games = criterion.calculate_value(self.stage_player3, self.stage)
+
+        self.assertEqual(player1_games, 2)
+        self.assertEqual(player2_games, 2)
+        self.assertEqual(player3_games, 2)
+
+    def test_games_played_in_standings(self):
+        """Test that games played is included in standings calculation."""
+        self.stage.set_ranking_criteria([
+            {'key': 'games_played', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+
+        round1 = Round.objects.create(stage=self.stage, order=1)
+
+        match1 = Match.objects.create(
+            round=round1,
+            player_one=self.stage_player1,
+            player_two=self.stage_player2
+        )
+        MatchResult.objects.create(match=match1, winner=self.stage_player1)
+
+        match2 = Match.objects.create(
+            round=round1,
+            player_one=self.stage_player3,
+            player_two=None
+        )
+        MatchResult.objects.create(match=match2, winner=self.stage_player3)
+
+        standings = StandingCalculator.get_stage_standings(self.stage)
+
+        for standing in standings:
+            self.assertIn('games_played_value', standing)
+
+        self.assertEqual(standings[0]['games_played_value'], 1)
+        self.assertEqual(standings[1]['games_played_value'], 1)
+        self.assertEqual(standings[2]['games_played_value'], 1)
+
+    def test_games_played_uses_cache(self):
+        """Test that games played uses the standings cache when available."""
+        criterion = GamesPlayedRankingCriterion()
+
+        cache = {
+            self.stage_player1.id: {'games_played': 5}
+        }
+
+        games_played = criterion.calculate_value(self.stage_player1, self.stage, cache)
+        self.assertEqual(games_played, 5)
+
+    def test_games_played_disabled_by_default(self):
+        """Test that games played is not in default ranking criteria."""
+        from .models import get_default_main_stage_criteria, get_default_playoff_stage_criteria
+
+        main_criteria = get_default_main_stage_criteria()
+        playoff_criteria = get_default_playoff_stage_criteria()
+
+        main_keys = [c['key'] for c in main_criteria if c.get('enabled', True)]
+        playoff_keys = [c['key'] for c in playoff_criteria if c.get('enabled', True)]
+
+        self.assertNotIn('games_played', main_keys)
+        self.assertNotIn('games_played', playoff_keys)
