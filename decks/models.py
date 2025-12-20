@@ -8,6 +8,8 @@ class Set(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     name = models.CharField(max_length=200, unique=True)
     src = models.URLField()
+    is_legacy = models.BooleanField(default=False)
+    is_tournament_legal = models.BooleanField(default=True)
 
     class Meta:
         ordering = ['id']
