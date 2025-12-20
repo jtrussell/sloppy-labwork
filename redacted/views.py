@@ -155,9 +155,9 @@ def get_expansions_from_form(expansion_value):
     if not expansion_value:
         return []
     if expansion_value in ('modern', 1):
-        return [*Set.objects.filter(is_legacy=False).values_list('id', flat=True)]
+        return [*Set.objects.filter(is_legacy=False, is_tournament_legal=True).values_list('id', flat=True)]
     if expansion_value in ('legacy', 2):
-        return [*Set.objects.filter(is_legacy=True).values_list('id', flat=True)]
+        return [*Set.objects.filter(is_legacy=True, is_tournament_legal=True).values_list('id', flat=True)]
     if expansion_value in ('tournament', 3):
         return [*Set.objects.filter(is_tournament_legal=True).values_list('id', flat=True)]
     return [int(expansion_value)]
