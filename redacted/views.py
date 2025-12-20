@@ -100,7 +100,7 @@ def discord_webhook_ingress(request):
                     sa_id = int(body_json['member']['user']['id'])
                     sa = SocialAccount.objects.get(uid=sa_id)
                     owner = sa.user.profile.dok_handle
-                expansions = [expansion] if expansion else []
+                expansions = get_expansions_from_form(expansion)
                 filters = get_filters(owner, min_sas, max_sas, expansions)
                 deck_info = get_random_deck_from_dok(filters)
                 content = deck_info['url']
@@ -154,11 +154,11 @@ def get_filters(owner, min_sas=None, max_sas=None, expansions=None):
 def get_expansions_from_form(expansion_value):
     if not expansion_value:
         return []
-    if expansion_value == 'legacy':
-        return [*Set.objects.filter(is_legacy=True).values_list('id', flat=True)]
-    if expansion_value == 'modern':
+    if expansion_value in ('modern', 1):
         return [*Set.objects.filter(is_legacy=False).values_list('id', flat=True)]
-    if expansion_value == 'tournament':
+    if expansion_value in ('legacy', 2):
+        return [*Set.objects.filter(is_legacy=True).values_list('id', flat=True)]
+    if expansion_value in ('tournament', 3):
         return [*Set.objects.filter(is_tournament_legal=True).values_list('id', flat=True)]
     return [int(expansion_value)]
 
