@@ -24,7 +24,7 @@
          data-end-time-ms="{{ end_time_ms|default:'' }}"
          data-pause-time-remaining-seconds="{{ pause_time_remaining_seconds|default:'' }}">
         <div class="timer__name">{{ name }}</div>
-        <div class="timer__countdown">--:--</div>
+        <div class="timer__countdown" onclick="location.reload()">--:--</div>
     </div>
     <script src="{% static 'timekeeper/timer.js' %}"></script>
 </body>

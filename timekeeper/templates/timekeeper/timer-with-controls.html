@@ -5,7 +5,10 @@
      data-end-time-ms="{{ end_time_ms|default:'' }}"
      data-pause-time-remaining-seconds="{{ pause_time_remaining_seconds|default:'' }}">
     <div class="timer__name">{{ name }}</div>
-    <div class="timer__countdown">--:--</div>
+    <div class="timer__countdown"
+         hx-get="{% url 'timekeeper:timer_detail' code %}"
+         hx-target="#timer-{{ code }}"
+         hx-swap="outerHTML">--:--</div>
     <div class="timer__code"><a href="{% url 'timekeeper:timer_full_page' code %}">{{ code }}</a></div>
     <div class="timer__controls">
         {% if state == 'paused' %}

@@ -116,13 +116,14 @@ class TimerCountdown {
 
     update() {
         const remaining = this.calculateRemainingSeconds();
-        const { formatted, isNegative } = this.formatTime(remaining);
+        const isExpired = remaining <= 0;
+        const displaySeconds = isExpired ? 0 : remaining;
+        const { formatted } = this.formatTime(displaySeconds);
 
         if (formatted.length !== this.digitSlots.length) {
             this.buildDigitStructure();
         }
 
-        let slotIndex = 0;
         for (let i = 0; i < formatted.length; i++) {
             const char = formatted[i];
             const slot = this.digitSlots[i];
@@ -137,11 +138,10 @@ class TimerCountdown {
             }
         }
 
-        this.element.classList.toggle('timer--expired', remaining <= 0);
+        this.element.classList.toggle('timer--expired', isExpired);
         this.element.classList.toggle('timer--paused', !this.isActive());
-        this.element.classList.toggle('timer--negative', isNegative);
 
-        if (this.isActive()) {
+        if (this.isActive() && !isExpired) {
             this.animationId = requestAnimationFrame(() => this.update());
         }
     }

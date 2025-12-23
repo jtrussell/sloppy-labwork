@@ -16,13 +16,32 @@
     justify-content: center;
 }
 
+.timer__countdown[hx-get],
+.timer__countdown[onclick] {
+    cursor: pointer;
+}
+
 .timer__digit-slot {
     display: inline-block;
-    height: 1.2em;
+    height: 1.1em;
     width: 0.6em;
     overflow: hidden;
     position: relative;
     vertical-align: top;
+    -webkit-mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black 15%,
+        black 85%,
+        transparent 100%
+    );
+    mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black 15%,
+        black 85%,
+        transparent 100%
+    );
 }
 
 .timer__digit-track {
@@ -32,8 +51,8 @@
 
 .timer__digit {
     display: block;
-    height: 1.2em;
-    line-height: 1.2em;
+    height: 1.1em;
+    line-height: 1;
     text-align: center;
 }
 
@@ -43,14 +62,14 @@
 }
 
 .timer__name {
-    font-size: 1rem;
-    color: var(--text-muted, #666);
+    font-size: 2rem;
+    color: var(--color-text-muted, #888);
     margin-bottom: 0.5rem;
 }
 
 .timer__code {
-    font-size: 0.875rem;
-    color: var(--text-muted, #999);
+    font-size: 1.25rem;
+    color: var(--color-text-muted, #888);
     font-family: monospace;
     letter-spacing: 0.1em;
     margin-top: 0.5rem;
@@ -66,11 +85,7 @@
 }
 
 .timer--expired .timer__countdown {
-    color: var(--danger, #dc3545);
-}
-
-.timer--negative .timer__countdown::before {
-    content: '-';
+    color: var(--color-text-muted, #888);
 }
 
 .timer--paused .timer__countdown {
@@ -86,18 +101,15 @@
 }
 
 .timer__control-link {
-    font-size: 0.875rem;
-    color: var(--link-color, #1eaedb);
+    font-size: 1.5rem;
+    color: var(--color-primary, #855cd6);
     text-decoration: none;
     cursor: pointer;
 }
 
 .timer__control-link:hover {
+    color: var(--color-primary-active, #7547d1);
     text-decoration: underline;
-}
-
-.timer__control-link--danger {
-    color: var(--danger, #dc3545);
 }
 
 .timer-full-page {
@@ -106,8 +118,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: var(--bg-color, #1a1a1a);
-    color: var(--text-color, #fff);
+    background: var(--color-bg, #1a1a1a);
+    color: var(--color-text-normal, #fff);
 }
 
 .timer-full-page .timer__countdown {
@@ -126,5 +138,5 @@
 .timer-deleted {
     text-align: center;
     padding: 2rem;
-    color: var(--text-muted, #666);
+    color: var(--color-text-muted, #888);
 }
