@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'transporter_platform',
     'pmc',
     'tourney',
+    'timekeeper',
     'common',
     'django_hosts',
     'django_htmx',
