@@ -1,0 +1,84 @@
+.timer {
+    text-align: center;
+    font-family: 'Raleway', monospace;
+}
+
+.timer__countdown {
+    font-size: 4rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.timer__name {
+    font-size: 1rem;
+    color: var(--text-muted, #666);
+    margin-bottom: 0.5rem;
+}
+
+.timer__code {
+    font-size: 0.875rem;
+    color: var(--text-muted, #999);
+    font-family: monospace;
+    letter-spacing: 0.1em;
+}
+
+.timer--expired .timer__countdown {
+    color: var(--danger, #dc3545);
+}
+
+.timer--paused .timer__countdown {
+    opacity: 0.6;
+}
+
+.timer__controls {
+    margin-top: 1rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.timer__control-link {
+    font-size: 0.875rem;
+    color: var(--link-color, #1eaedb);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.timer__control-link:hover {
+    text-decoration: underline;
+}
+
+.timer__control-link--danger {
+    color: var(--danger, #dc3545);
+}
+
+.timer-full-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-color, #1a1a1a);
+    color: var(--text-color, #fff);
+}
+
+.timer-full-page .timer__countdown {
+    font-size: 20vw;
+}
+
+.timer-full-page .timer__name {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.timer-full-page .timer__code {
+    font-size: 1.25rem;
+}
+
+.timer-deleted {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted, #666);
+}

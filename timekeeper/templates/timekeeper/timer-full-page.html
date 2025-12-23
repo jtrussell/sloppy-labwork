@@ -1,0 +1,31 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ name }} - Timer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href='//fonts.googleapis.com/css?family=Raleway:400,300,600' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="{% static 'timekeeper/timer.css' %}">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #fff;
+            --text-muted: #888;
+            --danger: #dc3545;
+        }
+    </style>
+</head>
+<body class="timer-full-page">
+    <div class="timer"
+         data-code="{{ code }}"
+         data-state="{{ state }}"
+         data-end-time-ms="{{ end_time_ms|default:'' }}"
+         data-pause-time-remaining-seconds="{{ pause_time_remaining_seconds|default:'' }}">
+        <div class="timer__name">{{ name }}</div>
+        <div class="timer__countdown">--:--</div>
+    </div>
+    <script src="{% static 'timekeeper/timer.js' %}"></script>
+</body>
+</html>

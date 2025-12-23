@@ -16,6 +16,7 @@ urlpatterns = [
     path('kagi-live/', include('transporter_platform.urls')),
     path('pmc/', include('pmc.urls')),
     path('tourney/', include('tourney.urls')),
+    path('timer/', include('timekeeper.urls')),
 
     # Common to all hosts
     path('admin/', admin.site.urls),

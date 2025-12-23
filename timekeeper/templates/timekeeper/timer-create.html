@@ -1,0 +1,34 @@
+{% extends base_template %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'timekeeper/timer.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1>Create Timer</h1>
+
+<section>
+    <form method="post" id="timer-create-form" hx-post="{% url 'timekeeper:timer_create' %}" hx-target="#timer-result" hx-swap="innerHTML">
+        {% csrf_token %}
+        <div class="row">
+            <div class="six columns">
+                <label for="id_name">Timer Name</label>
+                {{ form.name }}
+            </div>
+            <div class="six columns">
+                <label for="id_minutes">Duration (minutes)</label>
+                {{ form.minutes }}
+            </div>
+        </div>
+        <button type="submit" class="button button-primary">Create Timer</button>
+    </form>
+</section>
+
+<section id="timer-result">
+</section>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{% static 'timekeeper/timer.js' %}"></script>
+{% endblock %}
