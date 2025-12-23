@@ -28,6 +28,7 @@ class CountdownTimer(models.Model):
     end_time = models.DateTimeField(default=None, blank=True, null=True)
     pause_time_remaining_seconds = models.IntegerField(
         default=None, blank=True, null=True)
+    created_on = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
@@ -59,11 +60,21 @@ class CountdownTimer(models.Model):
         self.pause_time_remaining_seconds = None
         self.save()
 
+    def is_expired(self):
+        if self.pause_time_remaining_seconds is not None:
+            return self.pause_time_remaining_seconds <= 0
+        if self.end_time is not None:
+            return self.end_time <= timezone.now()
+        return True
+
     def add_seconds(self, num_seconds):
         if self.pause_time_remaining_seconds is not None:
             self.pause_time_remaining_seconds += num_seconds
         elif self.end_time is not None:
-            self.end_time += timedelta(seconds=num_seconds)
+            if self.is_expired():
+                self.end_time = timezone.now() + timedelta(seconds=num_seconds)
+            else:
+                self.end_time += timedelta(seconds=num_seconds)
         self.save()
 
     def subtract_seconds(self, num_seconds):

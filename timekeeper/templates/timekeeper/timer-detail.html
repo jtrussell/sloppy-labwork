@@ -1,0 +1,20 @@
+{% extends base_template %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'timekeeper/timer.css' %}">
+{% endblock %}
+
+{% block content %}
+<section>
+    {% include 'timekeeper/timer-with-controls.html' %}
+</section>
+
+<section>
+    <p><a href="{% url 'timekeeper:timer_create' %}">&larr; My Timers</a></p>
+</section>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{% static 'timekeeper/timer.js' %}"></script>
+{% endblock %}

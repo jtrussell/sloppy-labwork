@@ -1,4 +1,5 @@
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST, require_GET
@@ -35,7 +36,11 @@ def _timer_context(timer):
 def timer_detail(request, timer_code):
     timer = get_object_or_404(CountdownTimer, code=timer_code)
     context = _timer_context(timer)
-    return render(request, 'timekeeper/timer-with-controls.html', context)
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'timekeeper/timer-with-controls.html', context)
+
+    return render(request, 'timekeeper/timer-detail.html', context)
 
 
 @require_GET
@@ -58,7 +63,17 @@ def timer_create(request):
     else:
         form = TimerCreateForm()
 
-    return render(request, 'timekeeper/timer-create.html', {'form': form})
+    context = {'form': form}
+
+    if request.user.is_authenticated:
+        my_timers = CountdownTimer.objects.filter(
+            owner=request.user
+        ).order_by('-created_on')
+        paginator = Paginator(my_timers, 20)
+        page_number = request.GET.get('page', 1)
+        context['my_timers'] = paginator.get_page(page_number)
+
+    return render(request, 'timekeeper/timer-create.html', context)
 
 
 @require_POST
