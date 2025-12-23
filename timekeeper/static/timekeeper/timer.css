@@ -10,6 +10,38 @@
     line-height: 1;
 }
 
+.timer__countdown--sliding {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timer__digit-slot {
+    display: inline-block;
+    height: 1.2em;
+    width: 0.6em;
+    overflow: hidden;
+    position: relative;
+    vertical-align: top;
+}
+
+.timer__digit-track {
+    display: block;
+    transition: transform 0.3s ease-in-out;
+}
+
+.timer__digit {
+    display: block;
+    height: 1.2em;
+    line-height: 1.2em;
+    text-align: center;
+}
+
+.timer__separator {
+    display: inline-block;
+    margin: 0 0.05em;
+}
+
 .timer__name {
     font-size: 1rem;
     color: var(--text-muted, #666);
@@ -21,10 +53,24 @@
     color: var(--text-muted, #999);
     font-family: monospace;
     letter-spacing: 0.1em;
+    margin-top: 0.5rem;
+}
+
+.timer__code a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.timer__code a:hover {
+    text-decoration: underline;
 }
 
 .timer--expired .timer__countdown {
     color: var(--danger, #dc3545);
+}
+
+.timer--negative .timer__countdown::before {
+    content: '-';
 }
 
 .timer--paused .timer__countdown {
