@@ -1,4 +1,5 @@
 {% load static %}
+{% load django_htmx %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -7,6 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href='//fonts.googleapis.com/css?family=Raleway:400,300,600' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" href="{% static 'timekeeper/timer.css' %}">
+    {% htmx_script %}
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -18,13 +20,10 @@
     </style>
 </head>
 <body class="timer-full-page">
-    <div class="timer"
-         data-code="{{ code }}"
-         data-state="{{ state }}"
-         data-end-time-ms="{{ end_time_ms|default:'' }}"
-         data-pause-time-remaining-seconds="{{ pause_time_remaining_seconds|default:'' }}">
-        <div class="timer__name">{{ name }}</div>
-        <div class="timer__countdown" onclick="location.reload()">--:--</div>
+    <div hx-get="{% url 'timekeeper:timer_full_page' code %}"
+         hx-trigger="every 3s"
+         hx-swap="innerHTML">
+        {% include 'timekeeper/timer-full-page-inner.html' %}
     </div>
     <script src="{% static 'timekeeper/timer.js' %}"></script>
 </body>

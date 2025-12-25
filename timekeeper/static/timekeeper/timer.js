@@ -64,8 +64,8 @@ class TimerCountdown {
 
     getInitialFormat() {
         const remaining = this.calculateRemainingSeconds();
-        const absSeconds = Math.abs(remaining);
-        const hours = Math.floor(absSeconds / 3600);
+        const displaySeconds = remaining <= 0 ? 0 : remaining;
+        const hours = Math.floor(displaySeconds / 3600);
         return hours > 0 ? '00:00:00' : '00:00';
     }
 

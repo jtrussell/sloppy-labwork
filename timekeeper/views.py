@@ -1,6 +1,5 @@
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST, require_GET
 from functools import wraps
@@ -47,6 +46,10 @@ def timer_detail(request, timer_code):
 def timer_full_page(request, timer_code):
     timer = get_object_or_404(CountdownTimer, code=timer_code)
     context = _timer_context(timer)
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'timekeeper/timer-full-page-inner.html', context)
+
     return render(request, 'timekeeper/timer-full-page.html', context)
 
 
