@@ -5,6 +5,9 @@
 
 {% block content %}
     <link rel="stylesheet" href="{% static 'tourney/round-countdown.css' %}">
+    {% if active_timer %}
+    <link rel="stylesheet" href="{% static 'timekeeper/timer.css' %}">
+    {% endif %}
     <h1>{{ tournament.name }}</h1>
 
     {% if tournament.description %}
@@ -13,7 +16,15 @@
 
     {% include "tourney/partials/tournament-detail-registration-status.html" %}
 
-    {% if current_round.get_end_timestamp %}
+    {% if active_timer %}
+    <div class="tournament-timer-display">
+        {% if is_admin %}
+            {% include "timekeeper/timer-with-controls.html" with code=timer_context.code name=timer_context.name state=timer_context.state end_time_ms=timer_context.end_time_ms pause_time_remaining_seconds=timer_context.pause_time_remaining_seconds %}
+        {% else %}
+            {% include "timekeeper/timer.html" with code=timer_context.code name=timer_context.name state=timer_context.state end_time_ms=timer_context.end_time_ms pause_time_remaining_seconds=timer_context.pause_time_remaining_seconds %}
+        {% endif %}
+    </div>
+    {% elif current_round.get_end_timestamp %}
     <div class="round-countdown-container">
         <div class="round-countdown-label">Round Time Remaining:</div>
         <div class="round-countdown" data-end-timestamp="{{ current_round.get_end_timestamp }}">
@@ -197,4 +208,7 @@
 
     <script src="{% static 'tourney/tournament-modals.js' %}"></script>
     <script src="{% static 'tourney/round-countdown.js' %}"></script>
+    {% if active_timer %}
+    <script src="{% static 'timekeeper/timer.js' %}"></script>
+    {% endif %}
 {% endblock %}

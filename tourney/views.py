@@ -278,6 +278,17 @@ def get_tournament_base_context(request, tournament):
                 'player_two__player'
             ).order_by('round__stage__order', 'round__order')
 
+    active_timer = tournament.get_active_timer()
+    timer_context = None
+    if active_timer:
+        timer_context = {
+            'code': active_timer.code,
+            'name': active_timer.name,
+            'state': active_timer.get_state().value,
+            'end_time_ms': int(active_timer.end_time.timestamp() * 1000) if active_timer.end_time else None,
+            'pause_time_remaining_seconds': active_timer.pause_time_remaining_seconds,
+        }
+
     return {
         'tournament': tournament,
         'stages': tournament.stages.all(),
@@ -294,6 +305,8 @@ def get_tournament_base_context(request, tournament):
         'current_round': current_round,
         'pending_matches': pending_matches,
         'user': request.user,
+        'active_timer': active_timer,
+        'timer_context': timer_context,
     }
 
 
@@ -739,6 +752,9 @@ def create_round(request, tournament_code):
 
         pairing_strategy.make_pairings_for_round(new_round)
 
+        if new_round.round_length_in_minutes:
+            tournament.create_round_timer(new_round, tournament.owner)
+
         TournamentActionLog.objects.create(
             tournament=tournament,
             user=request.user,
@@ -835,6 +851,9 @@ def prepare_current_stage_seeding(request, tournament_code):
                     round_length_in_minutes=current_stage.round_length_in_minutes
                 )
                 pairing_strategy.make_pairings_for_round(new_round)
+
+                if new_round.round_length_in_minutes:
+                    tournament.create_round_timer(new_round, tournament.owner)
 
                 TournamentActionLog.objects.create(
                     tournament=tournament,
@@ -1011,6 +1030,9 @@ def start_next_stage(request, tournament_code):
                 )
                 pairing_strategy.make_pairings_for_round(new_round)
 
+                if new_round.round_length_in_minutes:
+                    tournament.create_round_timer(new_round, tournament.owner)
+
                 TournamentActionLog.objects.create(
                     tournament=tournament,
                     user=request.user,
@@ -1025,7 +1047,10 @@ def start_next_stage(request, tournament_code):
     elif next_stage and tournament.can_modify_next_stage_seeding():
         try:
             with transaction.atomic():
-                tournament.advance_to_next_stage()
+                next_stage_result = tournament.advance_to_next_stage()
+                current_round = next_stage_result.get_current_round()
+                if current_round and current_round.round_length_in_minutes:
+                    tournament.create_round_timer(current_round, tournament.owner)
 
                 TournamentActionLog.objects.create(
                     tournament=tournament,

@@ -228,11 +228,45 @@ class Tournament(models.Model):
 
         next_order = (next_stage.rounds.aggregate(
             models.Max('order'))['order__max'] or 0) + 1
-        new_round = Round.objects.create(stage=next_stage, order=next_order)
+        new_round = Round.objects.create(
+            stage=next_stage,
+            order=next_order,
+            round_length_in_minutes=next_stage.round_length_in_minutes
+        )
 
         pairing_strategy.make_pairings_for_round(new_round)
 
         return next_stage
+
+    def get_active_timer(self):
+        """Returns the active CountdownTimer for this tournament, or None."""
+        tt = self.tournament_timers.filter(is_active=True).first()
+        return tt.timer if tt else None
+
+    def create_round_timer(self, round_obj, owner):
+        """Create and start a timer for a round. Deletes old timers first."""
+        from timekeeper.models import CountdownTimer
+
+        if not round_obj.round_length_in_minutes:
+            return None
+
+        for tt in self.tournament_timers.all():
+            tt.timer.delete()
+
+        timer = CountdownTimer.objects.create(
+            name=f'{self.name} - Round {round_obj.order}',
+            owner=owner,
+            pause_time_remaining_seconds=round_obj.round_length_in_minutes * 60
+        )
+        timer.start()
+
+        TournamentTimer.objects.create(
+            tournament=self,
+            timer=timer,
+            is_active=True
+        )
+
+        return timer
 
 
 class Player(models.Model):
@@ -1337,3 +1371,18 @@ class TournamentActionLog(models.Model):
 
     def __str__(self):
         return f'{self.user.username} - {self.get_action_type_display()} - {self.tournament.name}'
+
+
+class TournamentTimer(models.Model):
+    tournament = models.ForeignKey(
+        Tournament, on_delete=models.CASCADE, related_name='tournament_timers')
+    timer = models.OneToOneField(
+        'timekeeper.CountdownTimer', on_delete=models.CASCADE)
+    is_active = models.BooleanField(default=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_on']
+
+    def __str__(self):
+        return f'{self.tournament.name} - {self.timer.name}'
