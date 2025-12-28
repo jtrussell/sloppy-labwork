@@ -65,6 +65,15 @@
             <div class="text-small text-muted">Add new player, drop/undrop existing ones</div>
             <a href="{% url 'tourney-manage-players' tournament.code %}" class="button sm-w100">Manage Players</a>
         </div>
+
+        <div>
+            <div class="text-small text-muted">Start a new round timer manually</div>
+            <button type="button"
+                    class="button sm-w100"
+                    onclick="openStartTimerModal()">
+                Start Timer
+            </button>
+        </div>
     </div>
 </section>
 {% endif %}

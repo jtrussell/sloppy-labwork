@@ -289,6 +289,8 @@ def get_tournament_base_context(request, tournament):
             'pause_time_remaining_seconds': active_timer.pause_time_remaining_seconds,
         }
 
+    default_timer_name = f'{tournament.name} - Round {current_round.order}' if current_round else f'{tournament.name} - Timer'
+
     return {
         'tournament': tournament,
         'stages': tournament.stages.all(),
@@ -307,6 +309,7 @@ def get_tournament_base_context(request, tournament):
         'user': request.user,
         'active_timer': active_timer,
         'timer_context': timer_context,
+        'default_timer_name': default_timer_name,
     }
 
 
@@ -1836,3 +1839,66 @@ def export_to_keychain_form(request, tournament_code, playgroup_slug):
         tournament)
 
     return render(request, 'tourney/export-form.html', context)
+
+
+@login_required
+@require_POST
+@is_tournament_admin
+def create_tournament_timer(request, tournament_code):
+    tournament = get_object_or_404(Tournament, code=tournament_code)
+
+    minutes = request.POST.get('minutes')
+    name = request.POST.get('name', '').strip()
+
+    if not minutes:
+        messages.error(request, 'Timer length is required.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+
+    try:
+        minutes = int(minutes)
+        if minutes <= 0:
+            raise ValueError()
+    except (ValueError, TypeError):
+        messages.error(request, 'Timer length must be a positive number.')
+        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+
+    current_round = None
+    current_stage = tournament.get_current_stage()
+    if current_stage:
+        current_round = current_stage.get_current_round()
+
+    if not name:
+        if current_round:
+            name = f'{tournament.name} - Round {current_round.order}'
+        else:
+            name = f'{tournament.name} - Timer'
+
+    from timekeeper.models import CountdownTimer
+    from .models import TournamentTimer
+
+    with transaction.atomic():
+        for tt in tournament.tournament_timers.all():
+            tt.timer.delete()
+
+        timer = CountdownTimer.objects.create(
+            name=name,
+            owner=tournament.owner,
+            pause_time_remaining_seconds=minutes * 60
+        )
+        timer.start()
+
+        TournamentTimer.objects.create(
+            tournament=tournament,
+            timer=timer,
+            is_active=True
+        )
+
+        TournamentActionLog.objects.create(
+            tournament=tournament,
+            user=request.user,
+            action_type=TournamentActionLog.ActionType.CREATE_ROUND,
+            description=f'Started timer "{name}" for {minutes} minutes'
+        )
+
+    messages.success(request, f'Timer "{name}" started for {minutes} minutes.')
+    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))

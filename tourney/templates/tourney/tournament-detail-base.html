@@ -123,7 +123,7 @@
          data-current-user-id="{{ user.id|default:"null" }}">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="addMatchModalTitle">Add Match</h3>
+                <h3 id="addMatchModalTitle" class="modal-title">Add Match</h3>
                 <button class="modal-close" onclick="closeAddMatchModal()"></button>
             </div>
 
@@ -205,6 +205,48 @@
             </form>
         </div>
     </div>
+
+    {% if is_admin %}
+    <!-- Start Timer Modal -->
+    <div id="startTimerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Start Timer</h3>
+                <button class="modal-close" onclick="closeStartTimerModal()"></button>
+            </div>
+
+            <form method="post" action="{% url 'tourney-create-timer' tournament.code %}" class="form-wide">
+                {% csrf_token %}
+                <div>
+                    <label for="timerMinutes">Timer Length (minutes):</label>
+                    <input type="number" id="timerMinutes" name="minutes" min="1" required value="50">
+                </div>
+
+                <div>
+                    <label for="timerName">Timer Name (optional):</label>
+                    <input type="text" id="timerName" name="name" placeholder="{{ default_timer_name }}" value="">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="button button-primary">Start Timer</button>
+                    <button type="button" class="button" onclick="closeStartTimerModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openStartTimerModal() {
+            document.getElementById('startTimerModal').classList.add('modal--active');
+        }
+        function closeStartTimerModal() {
+            document.getElementById('startTimerModal').classList.remove('modal--active');
+        }
+        document.getElementById('startTimerModal').addEventListener('click', function(e) {
+            if (e.target === this) closeStartTimerModal();
+        });
+    </script>
+    {% endif %}
 
     <script src="{% static 'tourney/tournament-modals.js' %}"></script>
     <script src="{% static 'tourney/round-countdown.js' %}"></script>

@@ -4,14 +4,17 @@ main {
   min-height: 100dvh;
 }
 
-body { background-color: var(--color-bg); }
+body {
+  background-color: var(--color-bg);
+}
+
 @media (min-width: 550px) {
   body {
     background-color: var(--color-bg-secondary);
   }
+
   main,
-  main.container
-  {
+  main.container {
     background-color: var(--color-bg);
     box-sizing: content-box;
     border-left: 8rem solid var(--color-bg);
@@ -30,21 +33,23 @@ hr {
   margin-top: -1.2rem;
 }
 
-h1 + .subheading {
+h1+.subheading {
   margin-bottom: 1.8rem;
   font-size: 12px;
   line-height: 12px;
 }
 
 @media (max-width: 680px) {
-  h1 + .subheading { margin-top: -.8rem }
+  h1+.subheading {
+    margin-top: -.8rem
+  }
 }
 
-h2 + .subheading,
-h3 + .subheading,
-h4 + .subheading,
-h5 + .subheading,
-h6 + .subheading {
+h2+.subheading,
+h3+.subheading,
+h4+.subheading,
+h5+.subheading,
+h6+.subheading {
   font-size: 12px;
   line-height: 12px;
   margin-bottom: 1.4rem;
@@ -58,7 +63,7 @@ h6 + .subheading {
   text-transform: uppercase;
 }
 
-section + section {
+section+section {
   margin-top: 2.5rem;
 }
 
@@ -102,7 +107,8 @@ form.form-inline {
 .button-jumbo {
   display: block;
   width: 100%;
-  height: 76px;;
+  height: 76px;
+  ;
 }
 
 input:disabled {
@@ -143,11 +149,13 @@ input[type="date"]:focus {
   border-bottom-left-radius: 0;
 }
 
-ul.flat-list, ol.flat-list {
+ul.flat-list,
+ol.flat-list {
   list-style-type: none;
 }
 
-ul.flat-list li, ol.flat-list li {
+ul.flat-list li,
+ol.flat-list li {
   margin: 0;
 }
 
@@ -155,12 +163,25 @@ a {
   text-decoration: var(--link-decoration);
 }
 
-.text-success { color: var(--color-text-success);  }
-.text-danger { color: var(--color-text-danger); }
-.text-muted { color: var(--color-text-muted); }
-.text-right { text-align: right; }
+.text-success {
+  color: var(--color-text-success);
+}
 
-img.icon { height: 2rem }
+.text-danger {
+  color: var(--color-text-danger);
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.text-right {
+  text-align: right;
+}
+
+img.icon {
+  height: 2rem
+}
 
 aside {
   border-top: 1px dotted var(--color-lines);
@@ -172,6 +193,7 @@ table {
   font-size: 1.5rem;
   width: 100%;
 }
+
 /* helptext is built in to Django forms */
 form .helptext {
   display: block;
@@ -209,28 +231,61 @@ form .helptext {
   border-color: var(--color-text-danger);
 }
 
-.note__list { margin: 0; }
-.note__list li { margin: 0; }
-.note__list li:only-child { list-style-type: none; }
+.note__list {
+  margin: 0;
+}
+
+.note__list li {
+  margin: 0;
+}
+
+.note__list li:only-child {
+  list-style-type: none;
+}
 
 /*
  * Stack
  *
  * Helps keep our footer at the bottom of the page.
  */
-.stack { display: flex; flex-direction: column; }
-.stack__spacer { flex-grow: 1; }
+.stack {
+  display: flex;
+  flex-direction: column;
+}
 
-.hstack { display: flex; flex-direction: row; }
+.stack__spacer {
+  flex-grow: 1;
+}
 
-.gap-1 { gap: 1rem; }
-.gap-2 { gap: 2rem; }
+.hstack {
+  display: flex;
+  flex-direction: row;
+}
+
+.gap-1 {
+  gap: 1rem;
+}
+
+.gap-2 {
+  gap: 2rem;
+}
 
 @media (max-width: 550px) {
-  .hstack { flex-direction: column; }
-  .gap-1 { gap: 0.5rem; }
-  .gap-2 { gap: 1rem; }
-  .sm-w100 { width: 100%; }
+  .hstack {
+    flex-direction: column;
+  }
+
+  .gap-1 {
+    gap: 0.5rem;
+  }
+
+  .gap-2 {
+    gap: 1rem;
+  }
+
+  .sm-w100 {
+    width: 100%;
+  }
 }
 
 
@@ -247,11 +302,21 @@ form .helptext {
   border-bottom: 1px solid var(--color-lines);
 }
 
-.nav__item { margin: 0 1.5rem; }
-.nav__item:first-child { margin-left: 0; }
-.nav__item:last-child { margin-right: 0; }
+.nav__item {
+  margin: 0 1.5rem;
+}
 
-.nav__spacer { flex-grow: 1; }
+.nav__item:first-child {
+  margin-left: 0;
+}
+
+.nav__item:last-child {
+  margin-right: 0;
+}
+
+.nav__spacer {
+  flex-grow: 1;
+}
 
 .nav__link {
   color: var(--color-nav-links);
@@ -283,6 +348,7 @@ form .helptext {
   background-color: var(--color-overlay);
 }
 
+.modal-title,
 #modalTitle {
   margin: 0;
 }
@@ -348,7 +414,8 @@ footer {
 
 @media (max-width: 750px) {
   .nav-footer {
-    margin-top: 1rem;;
+    margin-top: 1rem;
+    ;
     flex-direction: column;
     align-items: center;
   }
@@ -366,12 +433,23 @@ footer {
 }
 
 /* Post helpers */
-.img-left { float: left; margin: 0 1rem 0 0; }
-.img-right { float: right; margin-left: 0 0 0 1rem; }
-.with-shadow img { box-shadow: 0 0 7px var(--color-primary); }
+.img-left {
+  float: left;
+  margin: 0 1rem 0 0;
+}
+
+.img-right {
+  float: right;
+  margin-left: 0 0 0 1rem;
+}
+
+.with-shadow img {
+  box-shadow: 0 0 7px var(--color-primary);
+}
+
 .caption {
   margin-top: -2rem;
-  font-size: smaller; 
+  font-size: smaller;
   font-style: italic;
   text-align: center;
 }
@@ -384,31 +462,74 @@ footer {
 
 /* Fancy Transition Junk */
 /* * { transition: background-color 0.3s linear, color 0.3s linear, border-color: 0.3s linear; } */
-* { transition: all 0.3s linear;}
-body.preload * { transition: all none !important;}
+* {
+  transition: all 0.3s linear;
+}
+
+body.preload * {
+  transition: all none !important;
+}
 
 /* Skeleton Overrides */
-.container { max-width: 600px; }
+.container {
+  max-width: 600px;
+}
 
 /* Responsible breakpoints */
-.d-none { display: none; }
-.d-inline { display: inline; }
-.d-block { display: block;}
+.d-none {
+  display: none;
+}
+
+.d-inline {
+  display: inline;
+}
+
+.d-block {
+  display: block;
+}
+
 @media (min-width: 400px) {
-  .d-xs-none { display: none; }
-  .d-xs-inline { display: inline; }
-  .d-xs-block { display: block; }
+  .d-xs-none {
+    display: none;
+  }
+
+  .d-xs-inline {
+    display: inline;
+  }
+
+  .d-xs-block {
+    display: block;
+  }
 }
+
 @media (min-width: 550px) {
-  .d-md-none { display: none; }
-  .d-md-inline { display: inline; }
-  .d-md-block { display: block; }
+  .d-md-none {
+    display: none;
+  }
+
+  .d-md-inline {
+    display: inline;
+  }
+
+  .d-md-block {
+    display: block;
+  }
 }
+
 @media (min-width: 750px) {
-  .d-lg-none { display: none; }
-  .d-lg-inline { display: inline; }
-  .d-lg-block { display: block; }
+  .d-lg-none {
+    display: none;
+  }
+
+  .d-lg-inline {
+    display: inline;
+  }
+
+  .d-lg-block {
+    display: block;
+  }
 }
+
 /*
 @media (min-width: 1000px) {}
 @media (min-width: 1200px) {} 

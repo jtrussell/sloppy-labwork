@@ -60,4 +60,6 @@ urlpatterns = [
          views.add_match, name='tourney-add-match'),
     path('<str:tournament_code>/player/match/add-result/',
          views.player_add_match_result, name='tourney-player-add-match-result'),
+    path('<str:tournament_code>/timer/create/',
+         views.create_tournament_timer, name='tourney-create-timer'),
 ]
