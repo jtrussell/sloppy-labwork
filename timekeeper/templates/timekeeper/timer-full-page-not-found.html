@@ -1,0 +1,26 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Timer Not Found</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href='//fonts.googleapis.com/css?family=Raleway:400,300,600' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="{% static 'timekeeper/timer.css' %}">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #fff;
+            --text-muted: #888;
+            --danger: #dc3545;
+        }
+    </style>
+</head>
+<body class="timer-full-page">
+    <div class="timer timer--not-found">
+        <div class="timer__countdown">--:--</div>
+        <div class="timer__message">Timer not found or has been cancelled.</div>
+    </div>
+</body>
+</html>

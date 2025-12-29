@@ -33,7 +33,13 @@ def _timer_context(timer):
 
 @require_GET
 def timer_detail(request, timer_code):
-    timer = get_object_or_404(CountdownTimer, code=timer_code)
+    try:
+        timer = CountdownTimer.objects.get(code=timer_code)
+    except CountdownTimer.DoesNotExist:
+        if request.headers.get('HX-Request'):
+            return render(request, 'timekeeper/timer-not-found.html', {'code': timer_code})
+        return render(request, 'timekeeper/timer-detail-not-found.html', {'code': timer_code})
+
     context = _timer_context(timer)
 
     if request.headers.get('HX-Request'):
@@ -44,7 +50,13 @@ def timer_detail(request, timer_code):
 
 @require_GET
 def timer_full_page(request, timer_code):
-    timer = get_object_or_404(CountdownTimer, code=timer_code)
+    try:
+        timer = CountdownTimer.objects.get(code=timer_code)
+    except CountdownTimer.DoesNotExist:
+        if request.headers.get('HX-Request'):
+            return render(request, 'timekeeper/timer-not-found.html', {'code': timer_code})
+        return render(request, 'timekeeper/timer-full-page-not-found.html', {'code': timer_code})
+
     context = _timer_context(timer)
 
     if request.headers.get('HX-Request'):

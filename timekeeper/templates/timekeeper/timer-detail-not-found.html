@@ -1,0 +1,19 @@
+{% extends base_template %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'timekeeper/timer.css' %}">
+{% endblock %}
+
+{% block content %}
+<section>
+    <div class="timer timer--not-found">
+        <div class="timer__countdown">--:--</div>
+        <div class="timer__message">Timer not found or has been cancelled.</div>
+    </div>
+</section>
+
+<section>
+    <p><a href="{% url 'timekeeper:timer_create' %}">&larr; My Timers</a></p>
+</section>
+{% endblock %}

@@ -140,3 +140,17 @@
     padding: 2rem;
     color: var(--color-text-muted, #888);
 }
+
+.timer--not-found .timer__countdown {
+    color: var(--color-text-muted, #888);
+}
+
+.timer__message {
+    font-size: 1.25rem;
+    color: var(--color-text-muted, #888);
+    margin-top: 1rem;
+}
+
+.timer-full-page .timer__message {
+    font-size: 1.5rem;
+}
