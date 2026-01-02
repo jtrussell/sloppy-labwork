@@ -29,7 +29,7 @@ class Tournament(models.Model):
         help_text="Unique code used in URLs for security"
     )
     owner = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='owned_tournaments')
+        User, on_delete=models.SET_NULL, related_name='owned_tournaments', null=True, blank=True)
     is_accepting_registrations = models.BooleanField(default=True)
     is_closed = models.BooleanField(default=False)
     pmc_event = models.ForeignKey(
@@ -275,7 +275,7 @@ class Player(models.Model):
         DROPPED = 'dropped', _('Dropped')
 
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='tournament_players',
+        User, on_delete=models.SET_NULL, related_name='tournament_players',
         null=True, blank=True, help_text="Leave empty for guest players")
     tournament = models.ForeignKey(
         Tournament, on_delete=models.CASCADE, related_name='players')
@@ -324,7 +324,7 @@ class Player(models.Model):
 
 class TournamentAdmin(models.Model):
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='tournament_admin_roles')
+        User, on_delete=models.SET_NULL, related_name='tournament_admin_roles', null=True, blank=True)
     tournament = models.ForeignKey(
         Tournament, on_delete=models.CASCADE, related_name='tournament_admins')
     name = models.CharField(
@@ -1361,7 +1361,7 @@ class TournamentActionLog(models.Model):
     tournament = models.ForeignKey(
         Tournament, on_delete=models.CASCADE, related_name='action_logs')
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='tournament_actions')
+        User, on_delete=models.SET_NULL, related_name='tournament_actions', null=True, blank=True)
     action_type = models.CharField(max_length=20, choices=ActionType.choices)
     description = models.TextField(default=None, null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
