@@ -22,32 +22,19 @@
   </div>
 
   <div class="form-group">
+    <label for="id_visibility">Visibility</label>
+    {{ form.visibility }}
+    {% if form.visibility.errors %}
+    <div class="form-errors">{{ form.visibility.errors }}</div>
+    {% endif %}
+  </div>
+
+  <div class="form-group">
     <label for="id_description">Description (Markdown supported)</label>
     {{ form.description }}
     {% if form.description.errors %}
     <div class="form-errors">{{ form.description.errors }}</div>
     {% endif %}
-  </div>
-
-  <div class="row">
-    <div class="six columns">
-      <div class="form-group">
-        <label for="id_format">Format</label>
-        {{ form.format }}
-        {% if form.format.errors %}
-        <div class="form-errors">{{ form.format.errors }}</div>
-        {% endif %}
-      </div>
-    </div>
-    <div class="six columns">
-      <div class="form-group">
-        <label for="id_visibility">Visibility</label>
-        {{ form.visibility }}
-        {% if form.visibility.errors %}
-        <div class="form-errors">{{ form.visibility.errors }}</div>
-        {% endif %}
-      </div>
-    </div>
   </div>
 
   <div class="form-actions">

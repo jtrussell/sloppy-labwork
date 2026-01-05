@@ -16,12 +16,14 @@
 <form class="lineups-filters" hx-get="{% url 'lineups-list' %}" hx-target="#lineup-results" hx-swap="innerHTML" hx-trigger="input delay:300ms from:#search-input, change from:#format-select">
   <div class="filter-row">
     <input type="text" name="q" id="search-input" value="{{ search_query }}" placeholder="Search lineups...">
+    <!--
     <select name="format" id="format-select">
       <option value="">All Formats</option>
       {% for format in formats %}
       <option value="{{ format.id }}" {% if format_filter == format.id|stringformat:"s" %}selected{% endif %}>{{ format.name }}</option>
       {% endfor %}
     </select>
+    -->
   </div>
 </form>
 
