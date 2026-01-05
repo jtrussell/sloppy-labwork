@@ -575,14 +575,11 @@ def lineup_to_xml(lineup, user):
             deck_elem = SubElement(decks_elem, 'deck')
             SubElement(deck_elem, 'id').text = str(vd.deck.id)
             SubElement(deck_elem, 'name').text = vd.deck.name or ''
+            SubElement(deck_elem, 'dok_url').text = vd.deck.get_dok_url()
             SubElement(deck_elem, 'set').text = vd.deck.set.name if vd.deck.set else ''
-            houses_elem = SubElement(deck_elem, 'houses')
-            if vd.deck.house_1:
-                SubElement(houses_elem, 'house').text = vd.deck.house_1.name
-            if vd.deck.house_2:
-                SubElement(houses_elem, 'house').text = vd.deck.house_2.name
-            if vd.deck.house_3:
-                SubElement(houses_elem, 'house').text = vd.deck.house_3.name
+            SubElement(deck_elem, 'house_1').text = vd.deck.house_1.name if vd.deck.house_1 else ''
+            SubElement(deck_elem, 'house_2').text = vd.deck.house_2.name if vd.deck.house_2 else ''
+            SubElement(deck_elem, 'house_3').text = vd.deck.house_3.name if vd.deck.house_3 else ''
 
     return HttpResponse(
         '<?xml version="1.0" encoding="UTF-8"?>\n' + tostring(root, encoding='unicode'),
@@ -609,14 +606,11 @@ def version_to_xml(version):
         deck_elem = SubElement(decks_elem, 'deck')
         SubElement(deck_elem, 'id').text = str(vd.deck.id)
         SubElement(deck_elem, 'name').text = vd.deck.name or ''
+        SubElement(deck_elem, 'dok_url').text = vd.deck.get_dok_url()
         SubElement(deck_elem, 'set').text = vd.deck.set.name if vd.deck.set else ''
-        houses_elem = SubElement(deck_elem, 'houses')
-        if vd.deck.house_1:
-            SubElement(houses_elem, 'house').text = vd.deck.house_1.name
-        if vd.deck.house_2:
-            SubElement(houses_elem, 'house').text = vd.deck.house_2.name
-        if vd.deck.house_3:
-            SubElement(houses_elem, 'house').text = vd.deck.house_3.name
+        SubElement(deck_elem, 'house_1').text = vd.deck.house_1.name if vd.deck.house_1 else ''
+        SubElement(deck_elem, 'house_2').text = vd.deck.house_2.name if vd.deck.house_2 else ''
+        SubElement(deck_elem, 'house_3').text = vd.deck.house_3.name if vd.deck.house_3 else ''
 
     return HttpResponse(
         '<?xml version="1.0" encoding="UTF-8"?>\n' + tostring(root, encoding='unicode'),
