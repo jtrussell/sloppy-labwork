@@ -1,0 +1,39 @@
+{% if lineups %}
+<div class="lineup-list">
+  {% for lineup in lineups %}
+  <div class="lineup-card">
+    <h3 class="lineup-card__title"><a href="{% url 'lineups-detail' lineup.code %}">{{ lineup.name }}</a></h3>
+    <div class="lineup-card__meta">
+      <span>{{ lineup.format.name|default:"No format" }}</span>
+      <span>{{ lineup.versions.count }} version{{ lineup.versions.count|pluralize }}</span>
+      <span>{{ lineup.get_visibility_display }}</span>
+      <span>{{ lineup.created_on|date:"M j, Y" }}</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if lineups.paginator.num_pages > 1 %}
+<div class="pagination">
+  {% if lineups.has_previous %}
+  <a href="?page={{ lineups.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if format_filter %}&format={{ format_filter }}{% endif %}" class="button" hx-get="?page={{ lineups.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if format_filter %}&format={{ format_filter }}{% endif %}" hx-target="#lineup-results" hx-swap="innerHTML">&laquo; Prev</a>
+  {% endif %}
+
+  <span class="pagination-info">Page {{ lineups.number }} of {{ lineups.paginator.num_pages }}</span>
+
+  {% if lineups.has_next %}
+  <a href="?page={{ lineups.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if format_filter %}&format={{ format_filter }}{% endif %}" class="button" hx-get="?page={{ lineups.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if format_filter %}&format={{ format_filter }}{% endif %}" hx-target="#lineup-results" hx-swap="innerHTML">Next &raquo;</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  {% if search_query or format_filter %}
+  <p>No lineups match your search.</p>
+  {% else %}
+  <p>You don't have any lineups yet.</p>
+  <a href="{% url 'lineups-create' %}" class="button button-primary">Create Your First Lineup</a>
+  {% endif %}
+</div>
+{% endif %}

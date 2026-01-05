@@ -253,6 +253,7 @@ form .helptext {
   flex-direction: column;
 }
 
+.spacer,
 .stack__spacer {
   flex-grow: 1;
 }

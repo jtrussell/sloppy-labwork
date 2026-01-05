@@ -1,0 +1,399 @@
+.lineups-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.lineups-header h1 {
+  margin: 0;
+}
+
+.lineups-filters {
+  margin-bottom: 2rem;
+}
+
+.lineups-filters .filter-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lineups-filters .filter-row input,
+.lineups-filters .filter-row select {
+  margin-bottom: 0;
+}
+
+@media (min-width: 550px) {
+  .lineups-filters .filter-row {
+    flex-direction: row;
+    gap: 1rem;
+  }
+
+  .lineups-filters .filter-row input {
+    flex: 2;
+  }
+
+  .lineups-filters .filter-row select {
+    flex: 1;
+  }
+
+  .lineups-filters .filter-row button {
+    flex-shrink: 0;
+  }
+}
+
+.lineup-header,
+.version-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 550px) {
+  .lineup-header,
+  .version-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+}
+
+.lineup-header__info,
+.version-header__info {
+  flex: 1;
+}
+
+.lineup-header__info h1,
+.version-header__info h1 {
+  margin-bottom: 0.5rem;
+}
+
+.lineup-header__actions,
+.version-header__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.lineup-format {
+  display: inline-block;
+  color: var(--color-text-muted);
+  margin-right: 0.5rem;
+}
+
+.lineup-visibility {
+  display: inline-block;
+  color: var(--color-text-muted);
+}
+
+.visibility-inherited {
+  font-style: italic;
+}
+
+.lineup-description,
+.version-description {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--color-lines);
+  border-radius: 3px;
+}
+
+.lineup-meta,
+.version-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--color-text-muted);
+}
+
+@media (min-width: 550px) {
+  .lineup-meta,
+  .version-meta {
+    flex-direction: row;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+}
+
+.entity-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--color-lines);
+  padding-bottom: 0.5rem;
+}
+
+@media (min-width: 550px) {
+  .section-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.section-header h2 {
+  margin: 0;
+}
+
+.breadcrumb {
+  margin-bottom: 1.5rem;
+  color: var(--color-text-muted);
+}
+
+.breadcrumb a {
+  color: var(--color-text-muted);
+}
+
+.breadcrumb a:hover {
+  color: var(--color-text-active);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  border: 1px solid var(--color-lines);
+  border-radius: 3px;
+}
+
+.empty-message {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.pagination-info {
+  color: var(--color-text-muted);
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+}
+
+.form-errors {
+  color: var(--color-text-danger);
+  margin-top: 0.25rem;
+}
+
+.form-help {
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.lineup-form,
+.version-form {
+  max-width: 600px;
+}
+
+.note-form {
+  margin-bottom: 1.5rem;
+}
+
+.note-form textarea {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+#notes-list,
+#decks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.note-item {
+  padding: 1rem;
+  border: 1px solid var(--color-lines);
+  border-radius: 3px;
+}
+
+.note-item--editing {
+  border-color: var(--color-primary);
+}
+
+.note-content {
+  margin-bottom: 0.5rem;
+}
+
+.note-content p:last-child {
+  margin-bottom: 0;
+}
+
+.note-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: baseline;
+  color: var(--color-text-muted);
+}
+
+.note-meta .button:first-of-type {
+  margin-left: auto;
+}
+
+.note-item--editing textarea {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.note-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.deck-add-form {
+  margin-bottom: 1.5rem;
+}
+
+.deck-add-form .deck-add-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.deck-add-form .deck-add-row input {
+  margin-bottom: 0;
+}
+
+@media (min-width: 550px) {
+  .deck-add-form .deck-add-row {
+    flex-direction: row;
+  }
+
+  .deck-add-form .deck-add-row input {
+    flex: 1;
+  }
+
+  .deck-add-form .deck-add-row button {
+    flex-shrink: 0;
+  }
+}
+
+.lineup-list,
+.version-list,
+.deck-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.lineup-card,
+.version-card,
+.deck-card {
+  padding: 1rem;
+  border: 1px solid var(--color-lines);
+  border-radius: 3px;
+}
+
+.lineup-card__title,
+.version-card__title {
+  margin: 0 0 0.5rem 0;
+}
+
+.lineup-card__title a,
+.version-card__title a,
+.deck-card__title a {
+  text-decoration: none;
+}
+
+.lineup-card__meta,
+.version-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  color: var(--color-text-muted);
+}
+
+.deck-card__title {
+  margin: 0 0 0.5rem 0;
+}
+
+.deck-card__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (min-width: 550px) {
+  .deck-card__footer {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.deck-card__icons {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.deck-icon {
+  height: 24px;
+  width: auto;
+}
+
+.deck-icon--set {
+  margin-right: 0.25rem;
+}
+
+.deck-card__actions {
+  text-align: right;
+}
+
+.button-small {
+  padding: 0.25rem 0.75rem;
+  height: auto;
+  line-height: 1.4;
+}
+
+.inline-form {
+  display: inline;
+}

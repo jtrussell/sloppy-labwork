@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'pmc',
     'tourney',
     'timekeeper',
+    'lineups',
     'common',
     'django_hosts',
     'django_htmx',

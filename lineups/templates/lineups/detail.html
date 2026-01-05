@@ -1,0 +1,119 @@
+{% extends 'page.html' %}
+{% load static %}
+{% load posts_extras %}
+
+{% block head_title %}{{ lineup.name }} - Sloppy Labwork{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'lineups/main.css' %}">
+{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb">
+  <a href="{% url 'lineups-list' %}">Lineups</a> &raquo;
+  {{ lineup.name }}
+</nav>
+
+<div class="lineup-header">
+  <div class="lineup-header__info">
+    <h1>{{ lineup.name }}</h1>
+    {% if lineup.format %}
+    <span class="lineup-format">{{ lineup.format.name }}</span>
+    {% endif %}
+    <span class="lineup-visibility lineup-visibility--{{ lineup.visibility }}">{{ lineup.get_visibility_display }}</span>
+  </div>
+</div>
+
+{% if lineup.description %}
+<div class="lineup-description">
+  {{ lineup.description|markdown|safe }}
+</div>
+{% endif %}
+
+<div class="lineup-meta">
+  <span>Created: {{ lineup.created_on|date:"M j, Y" }}</span>
+  <span>Updated: {{ lineup.updated_on|date:"M j, Y" }}</span>
+</div>
+
+{% if is_owner %}
+<div class="entity-actions">
+  <a href="{% url 'lineups-edit' lineup.code %}" class="button">Edit</a>
+  <form method="post" action="{% url 'lineups-delete' lineup.code %}" class="inline-form">
+    {% csrf_token %}
+    <button type="submit" class="button" hx-confirm="Are you sure you want to delete this lineup?">Delete</button>
+  </form>
+</div>
+{% endif %}
+
+<section class="lineup-section">
+  <div class="section-header">
+    <h2>Versions</h2>
+    {% if is_owner %}
+    <a href="{% url 'lineups-version-create' lineup.code %}" class="button button-primary">Add Version</a>
+    {% endif %}
+  </div>
+
+  {% if versions %}
+  <div class="version-list">
+    {% for version in versions %}
+    <div class="version-card">
+      <h3 class="version-card__title"><a href="{% url 'lineups-version-detail' lineup.code version.code %}">{{ version.name }}</a></h3>
+      <div class="version-card__meta">
+        <span>{{ version.version_decks.count }} deck{{ version.version_decks.count|pluralize }}</span>
+        <span>{{ version.notes.count }} note{{ version.notes.count|pluralize }}</span>
+        <span>{{ version.created_on|date:"M j, Y" }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if versions.paginator.num_pages > 1 %}
+  <div class="pagination">
+    {% if versions.has_previous %}
+    <a href="?vp={{ versions.previous_page_number }}{% if notes.number != 1 %}&np={{ notes.number }}{% endif %}" class="button">&laquo; Prev</a>
+    {% endif %}
+    <span class="pagination-info">Page {{ versions.number }} of {{ versions.paginator.num_pages }}</span>
+    {% if versions.has_next %}
+    <a href="?vp={{ versions.next_page_number }}{% if notes.number != 1 %}&np={{ notes.number }}{% endif %}" class="button">Next &raquo;</a>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <p class="empty-message">No versions yet.</p>
+  {% endif %}
+</section>
+
+<section class="lineup-section">
+  <div class="section-header">
+    <h2>Notes</h2>
+  </div>
+
+  {% if is_owner %}
+  <form method="post" action="{% url 'lineups-note-add' lineup.code %}" class="note-form">
+    {% csrf_token %}
+    {{ note_form.text }}
+    <button type="submit" class="button button-primary">Add Note</button>
+  </form>
+  {% endif %}
+
+  <div id="notes-list">
+    {% for note in notes %}
+    {% include 'lineups/partials/note-item.html' %}
+    {% empty %}
+    <p class="empty-message">No notes yet.</p>
+    {% endfor %}
+  </div>
+
+  {% if notes.paginator.num_pages > 1 %}
+  <div class="pagination">
+    {% if notes.has_previous %}
+    <a href="?np={{ notes.previous_page_number }}{% if versions.number != 1 %}&vp={{ versions.number }}{% endif %}" class="button">&laquo; Prev</a>
+    {% endif %}
+    <span class="pagination-info">Page {{ notes.number }} of {{ notes.paginator.num_pages }}</span>
+    {% if notes.has_next %}
+    <a href="?np={{ notes.next_page_number }}{% if versions.number != 1 %}&vp={{ versions.number }}{% endif %}" class="button">Next &raquo;</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

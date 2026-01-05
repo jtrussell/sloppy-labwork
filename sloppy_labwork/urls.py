@@ -17,6 +17,7 @@ urlpatterns = [
     path('pmc/', include('pmc.urls')),
     path('tourney/', include('tourney.urls')),
     path('timer/', include('timekeeper.urls')),
+    path('lineups/', include('lineups.urls')),
 
     # Common to all hosts
     path('admin/', admin.site.urls),

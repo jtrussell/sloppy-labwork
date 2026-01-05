@@ -1,0 +1,19 @@
+{% load posts_extras %}
+<div class="note-item" id="note-{{ note.id }}">
+  <div class="note-content">
+    {{ note.text|markdown|safe }}
+  </div>
+  <div class="note-meta">
+    <span>{{ note.created_on|date:"M j, Y g:i A" }}</span>
+    {% if note.updated_on != note.created_on %}
+    <span>(edited)</span>
+    {% endif %}
+    {% if is_owner %}
+    <button class="button button-small" hx-get="{% url 'lineups-note-edit' lineup.code note.id %}" hx-target="#note-{{ note.id }}" hx-swap="outerHTML">Edit</button>
+    <form method="post" action="{% url 'lineups-note-delete' lineup.code note.id %}" class="inline-form">
+      {% csrf_token %}
+      <button type="submit" class="button button-small" hx-target="#note-{{ note.id }}" hx-swap="outerHTML" hx-confirm="Delete this note?">Delete</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
