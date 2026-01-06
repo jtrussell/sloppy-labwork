@@ -10,7 +10,7 @@ from django.db.models import F
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.utils.translation import gettext_lazy as _
 import json
 
@@ -1902,3 +1902,36 @@ def create_tournament_timer(request, tournament_code):
 
     messages.success(request, f'Timer "{name}" started for {minutes} minutes.')
     return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+
+
+@require_GET
+def tournament_timer_full_page(request, tournament_code):
+    tournament = get_object_or_404(Tournament, code=tournament_code)
+    timer = tournament.get_active_timer()
+
+    context = {
+        'tournament': tournament,
+        'tournament_code': tournament_code,
+    }
+
+    if timer:
+        context.update({
+            'code': timer.code,
+            'name': timer.name,
+            'state': timer.get_state().value,
+            'end_time_ms': int(timer.end_time.timestamp() * 1000) if timer.end_time else None,
+            'pause_time_remaining_seconds': timer.pause_time_remaining_seconds,
+        })
+    else:
+        context.update({
+            'code': None,
+            'name': tournament.name,
+            'state': 'paused',
+            'end_time_ms': None,
+            'pause_time_remaining_seconds': 0,
+        })
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'tourney/tournament-timer-full-page-inner.html', context)
+
+    return render(request, 'tourney/tournament-timer-full-page.html', context)

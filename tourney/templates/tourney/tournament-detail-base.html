@@ -19,9 +19,9 @@
     {% if active_timer %}
     <div class="tournament-timer-display">
         {% if is_admin %}
-            {% include "timekeeper/timer-with-controls.html" with code=timer_context.code name=timer_context.name state=timer_context.state end_time_ms=timer_context.end_time_ms pause_time_remaining_seconds=timer_context.pause_time_remaining_seconds %}
+            {% include "tourney/tournament-timer-with-controls.html" with code=timer_context.code name=timer_context.name state=timer_context.state end_time_ms=timer_context.end_time_ms pause_time_remaining_seconds=timer_context.pause_time_remaining_seconds tournament_code=tournament.code %}
         {% else %}
-            {% include "timekeeper/timer.html" with code=timer_context.code name=timer_context.name state=timer_context.state end_time_ms=timer_context.end_time_ms pause_time_remaining_seconds=timer_context.pause_time_remaining_seconds %}
+            {% include "tourney/tournament-timer.html" with code=timer_context.code name=timer_context.name state=timer_context.state end_time_ms=timer_context.end_time_ms pause_time_remaining_seconds=timer_context.pause_time_remaining_seconds tournament_code=tournament.code %}
         {% endif %}
     </div>
     {% elif current_round.get_end_timestamp %}

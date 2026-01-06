@@ -1,0 +1,36 @@
+<div class="timer"
+     id="timer-{{ code }}"
+     data-code="{{ code }}"
+     data-state="{{ state }}"
+     data-end-time-ms="{{ end_time_ms|default:'' }}"
+     data-pause-time-remaining-seconds="{{ pause_time_remaining_seconds|default:'' }}">
+    <div class="timer__name">{{ name }}</div>
+    <div class="timer__countdown"
+         hx-get="{% url 'timekeeper:timer_detail' code %}"
+         hx-target="#timer-{{ code }}"
+         hx-swap="outerHTML">--:--</div>
+    <div class="timer__code"><a href="{% url 'tourney-timer-full-page' tournament_code %}">{{ code }}</a></div>
+    <div class="timer__controls">
+        {% if state == 'paused' %}
+        <a class="timer__control-link"
+           hx-post="{% url 'timekeeper:timer_start' code %}"
+           hx-target="#timer-{{ code }}"
+           hx-swap="outerHTML">Start</a>
+        {% else %}
+        <a class="timer__control-link"
+           hx-post="{% url 'timekeeper:timer_pause' code %}"
+           hx-target="#timer-{{ code }}"
+           hx-swap="outerHTML">Pause</a>
+        {% endif %}
+        <a class="timer__control-link"
+           hx-post="{% url 'timekeeper:timer_add_time' code %}"
+           hx-vals='{"seconds": 300}'
+           hx-target="#timer-{{ code }}"
+           hx-swap="outerHTML">+5 min</a>
+        <a class="timer__control-link timer__control-link--danger"
+           hx-post="{% url 'timekeeper:timer_delete' code %}"
+           hx-target="#timer-{{ code }}"
+           hx-swap="outerHTML"
+           hx-confirm="Are you sure you want to delete this timer?">Cancel</a>
+    </div>
+</div>

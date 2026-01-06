@@ -1,0 +1,30 @@
+{% load static %}
+{% load django_htmx %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ name }} - Timer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href='//fonts.googleapis.com/css?family=Raleway:400,300,600' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="{% static 'timekeeper/timer.css' %}">
+    {% htmx_script %}
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #fff;
+            --text-muted: #888;
+            --danger: #dc3545;
+        }
+    </style>
+</head>
+<body class="timer-full-page">
+    <div hx-get="{% url 'tourney-timer-full-page' tournament_code %}"
+         hx-trigger="every 3s"
+         hx-swap="innerHTML">
+        {% include 'tourney/tournament-timer-full-page-inner.html' %}
+    </div>
+    <script src="{% static 'timekeeper/timer.js' %}"></script>
+</body>
+</html>
