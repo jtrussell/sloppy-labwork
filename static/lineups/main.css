@@ -163,6 +163,10 @@
   color: var(--color-text-active);
 }
 
+.breadcrumb-private {
+  font-style: italic;
+}
+
 .empty-state {
   text-align: center;
   padding: 3rem;

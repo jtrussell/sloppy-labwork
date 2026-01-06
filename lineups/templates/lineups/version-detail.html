@@ -106,9 +106,13 @@
   </div>
   <script>
     document.getElementById('copy-deck-links').addEventListener('click', function() {
+      const btn = this;
       const deckLinks = [{% for vd in decks %}'{{ vd.deck.get_dok_url }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
       navigator.clipboard.writeText(deckLinks.join('\n')).then(function() {
-        alert('Deck links copied to clipboard!');
+        btn.textContent = '✅ Copy Deck Links';
+        setTimeout(function() {
+          btn.textContent = '📋 Copy Deck Links';
+        }, 2000);
       });
     });
   </script>
