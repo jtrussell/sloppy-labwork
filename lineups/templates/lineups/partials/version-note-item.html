@@ -9,8 +9,8 @@
     <span>(edited)</span>
     {% endif %}
     {% if is_owner %}
-    <button class="button button-small" hx-get="{% url 'lineups-version-note-edit' lineup.code version.code note.id %}" hx-target="#version-note-{{ note.id }}" hx-swap="outerHTML">Edit</button>
-    <form method="post" action="{% url 'lineups-version-note-delete' lineup.code version.code note.id %}" class="inline-form">
+    <button class="button button-small" hx-get="{% url 'lineups-version-note-edit' version.code note.id %}" hx-target="#version-note-{{ note.id }}" hx-swap="outerHTML">Edit</button>
+    <form method="post" action="{% url 'lineups-version-note-delete' version.code note.id %}" class="inline-form">
       {% csrf_token %}
       <button type="submit" class="button button-small" hx-target="#version-note-{{ note.id }}" hx-swap="outerHTML" hx-confirm="Delete this note?">Delete</button>
     </form>

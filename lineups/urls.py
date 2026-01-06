@@ -13,15 +13,16 @@ urlpatterns = [
     path('<str:lineup_code>/notes/<int:note_id>/delete/', views.lineup_note_delete, name='lineups-note-delete'),
 
     path('<str:lineup_code>/versions/new/', views.version_create, name='lineups-version-create'),
-    path('<str:lineup_code>/versions/<str:version_code>/', views.version_detail, name='lineups-version-detail'),
-    path('<str:lineup_code>/versions/<str:version_code>/edit/', views.version_edit, name='lineups-version-edit'),
-    path('<str:lineup_code>/versions/<str:version_code>/delete/', views.version_delete, name='lineups-version-delete'),
 
-    path('<str:lineup_code>/versions/<str:version_code>/notes/add/', views.version_note_add, name='lineups-version-note-add'),
-    path('<str:lineup_code>/versions/<str:version_code>/notes/<int:note_id>/edit/', views.version_note_edit, name='lineups-version-note-edit'),
-    path('<str:lineup_code>/versions/<str:version_code>/notes/<int:note_id>/delete/', views.version_note_delete, name='lineups-version-note-delete'),
+    path('versions/<str:version_code>/', views.version_detail, name='lineups-version-detail'),
+    path('versions/<str:version_code>/edit/', views.version_edit, name='lineups-version-edit'),
+    path('versions/<str:version_code>/delete/', views.version_delete, name='lineups-version-delete'),
 
-    path('<str:lineup_code>/versions/<str:version_code>/decks/add/', views.version_deck_add, name='lineups-version-deck-add'),
-    path('<str:lineup_code>/versions/<str:version_code>/decks/<int:deck_id>/remove/', views.version_deck_remove, name='lineups-version-deck-remove'),
-    path('<str:lineup_code>/versions/<str:version_code>/decks/reorder/', views.version_deck_reorder, name='lineups-version-deck-reorder'),
+    path('versions/<str:version_code>/notes/add/', views.version_note_add, name='lineups-version-note-add'),
+    path('versions/<str:version_code>/notes/<int:note_id>/edit/', views.version_note_edit, name='lineups-version-note-edit'),
+    path('versions/<str:version_code>/notes/<int:note_id>/delete/', views.version_note_delete, name='lineups-version-note-delete'),
+
+    path('versions/<str:version_code>/decks/add/', views.version_deck_add, name='lineups-version-deck-add'),
+    path('versions/<str:version_code>/decks/<int:deck_id>/remove/', views.version_deck_remove, name='lineups-version-deck-remove'),
+    path('versions/<str:version_code>/decks/reorder/', views.version_deck_reorder, name='lineups-version-deck-reorder'),
 ]

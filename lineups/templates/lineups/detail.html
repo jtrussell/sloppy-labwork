@@ -57,7 +57,7 @@
   <div class="version-list">
     {% for version in versions %}
     <div class="version-card">
-      <h3 class="version-card__title"><a href="{% url 'lineups-version-detail' lineup.code version.code %}">{{ version.name }}</a></h3>
+      <h3 class="version-card__title"><a href="{% url 'lineups-version-detail' version.code %}">{{ version.name }}</a></h3>
       <div class="version-card__meta">
         <span>{{ version.version_decks.count }} deck{{ version.version_decks.count|pluralize }}</span>
         <span>{{ version.notes.count }} note{{ version.notes.count|pluralize }}</span>

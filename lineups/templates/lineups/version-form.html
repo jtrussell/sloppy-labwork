@@ -10,8 +10,12 @@
 {% block content %}
 <nav class="breadcrumb">
   <a href="{% url 'lineups-list' %}">Lineups</a> &raquo;
-  <a href="{% url 'lineups-detail' lineup.code %}">{{ lineup.name }}</a> &raquo;
-  {% if is_edit %}Edit Version{% else %}New Version{% endif %}
+  {% if show_lineup_details %}
+  <a href="{% url 'lineups-detail' lineup.code %}">{{ lineup.name }}</a>
+  {% else %}
+  <span class="breadcrumb-private">Private Lineup</span>
+  {% endif %}
+  &raquo; {% if is_edit %}Edit Version{% else %}New Version{% endif %}
 </nav>
 
 <h1>{% if is_edit %}Edit Version{% else %}New Version{% endif %}</h1>
@@ -60,7 +64,7 @@
   <div class="form-actions">
     <button type="submit" class="button button-primary">{% if is_edit %}Save Changes{% else %}Create Version{% endif %}</button>
     {% if is_edit %}
-    <a href="{% url 'lineups-version-detail' lineup.code version.code %}" class="button">Cancel</a>
+    <a href="{% url 'lineups-version-detail' version.code %}" class="button">Cancel</a>
     {% else %}
     <a href="{% url 'lineups-detail' lineup.code %}" class="button">Cancel</a>
     {% endif %}

@@ -22,6 +22,14 @@ def redirect_to(request, url):
     return redirect(url)
 
 
+def should_show_lineup_details(lineup, user):
+    if lineup.visibility == Lineup.Visibility.PUBLIC:
+        return True
+    if user.is_authenticated and lineup.owner == user:
+        return True
+    return False
+
+
 @login_required
 def lineup_list(request):
     lineups = Lineup.objects.filter(owner=request.user)
@@ -61,8 +69,15 @@ def lineup_create(request):
             lineup = form.save(commit=False)
             lineup.owner = request.user
             lineup.save()
+
+            version = LineupVersion.objects.create(
+                lineup=lineup,
+                name="Version 1",
+                sort_order=1
+            )
+
             messages.success(request, f'Lineup "{lineup.name}" created!')
-            return redirect_to(request, f'/lineups/{lineup.code}/')
+            return redirect_to(request, f'/lineups/versions/{version.code}/')
     else:
         form = LineupForm()
 
@@ -229,6 +244,8 @@ def version_create(request, lineup_code):
     if not lineup.can_edit(request.user):
         raise PermissionDenied
 
+    next_sort_order = lineup.lineupversion_set.count() + 1
+
     if request.method == 'POST':
         form = LineupVersionForm(request.POST)
         if form.is_valid():
@@ -236,20 +253,21 @@ def version_create(request, lineup_code):
             version.lineup = lineup
             version.save()
             messages.success(request, f'Version "{version.name}" created!')
-            return redirect_to(request, f'/lineups/{lineup.code}/versions/{version.code}/')
+            return redirect_to(request, f'/lineups/versions/{version.code}/')
     else:
-        form = LineupVersionForm()
+        form = LineupVersionForm(initial={'name': f'Version {next_sort_order}'})
 
     return render(request, 'lineups/version-form.html', {
         'form': form,
         'lineup': lineup,
         'is_edit': False,
+        'show_lineup_details': should_show_lineup_details(lineup, request.user),
     })
 
 
-def version_detail(request, lineup_code, version_code):
-    lineup = get_object_or_404(Lineup, code=lineup_code)
-    version = get_object_or_404(LineupVersion, code=version_code, lineup=lineup)
+def version_detail(request, version_code):
+    version = get_object_or_404(LineupVersion, code=version_code)
+    lineup = version.lineup
 
     if not version.can_view(request.user):
         raise PermissionDenied
@@ -278,14 +296,15 @@ def version_detail(request, lineup_code, version_code):
         'is_owner': is_owner,
         'note_form': LineupVersionNoteForm() if is_owner else None,
         'deck_form': DeckAddForm() if is_owner else None,
+        'show_lineup_details': should_show_lineup_details(lineup, request.user),
     }
     return render(request, 'lineups/version-detail.html', context)
 
 
 @login_required
-def version_edit(request, lineup_code, version_code):
-    lineup = get_object_or_404(Lineup, code=lineup_code)
-    version = get_object_or_404(LineupVersion, code=version_code, lineup=lineup)
+def version_edit(request, version_code):
+    version = get_object_or_404(LineupVersion, code=version_code)
+    lineup = version.lineup
 
     if not lineup.can_edit(request.user):
         raise PermissionDenied
@@ -295,7 +314,7 @@ def version_edit(request, lineup_code, version_code):
         if form.is_valid():
             form.save()
             messages.success(request, f'Version "{version.name}" updated!')
-            return redirect_to(request, f'/lineups/{lineup.code}/versions/{version.code}/')
+            return redirect_to(request, f'/lineups/versions/{version.code}/')
     else:
         form = LineupVersionForm(instance=version)
 
@@ -304,14 +323,15 @@ def version_edit(request, lineup_code, version_code):
         'lineup': lineup,
         'version': version,
         'is_edit': True,
+        'show_lineup_details': should_show_lineup_details(lineup, request.user),
     })
 
 
 @login_required
 @require_POST
-def version_delete(request, lineup_code, version_code):
-    lineup = get_object_or_404(Lineup, code=lineup_code)
-    version = get_object_or_404(LineupVersion, code=version_code, lineup=lineup)
+def version_delete(request, version_code):
+    version = get_object_or_404(LineupVersion, code=version_code)
+    lineup = version.lineup
 
     if not lineup.can_edit(request.user):
         raise PermissionDenied
@@ -324,9 +344,9 @@ def version_delete(request, lineup_code, version_code):
 
 @login_required
 @require_POST
-def version_note_add(request, lineup_code, version_code):
-    lineup = get_object_or_404(Lineup, code=lineup_code)
-    version = get_object_or_404(LineupVersion, code=version_code, lineup=lineup)
+def version_note_add(request, version_code):
+    version = get_object_or_404(LineupVersion, code=version_code)
+    lineup = version.lineup
 
     if not lineup.can_edit(request.user):
         raise PermissionDenied
@@ -338,13 +358,13 @@ def version_note_add(request, lineup_code, version_code):
         note.save()
         messages.success(request, 'Note added.')
 
-    return redirect_to(request, f'/lineups/{lineup.code}/versions/{version.code}/')
+    return redirect_to(request, f'/lineups/versions/{version.code}/')
 
 
 @login_required
-def version_note_edit(request, lineup_code, version_code, note_id):
-    lineup = get_object_or_404(Lineup, code=lineup_code)
-    version = get_object_or_404(LineupVersion, code=version_code, lineup=lineup)
+def version_note_edit(request, version_code, note_id):
+    version = get_object_or_404(LineupVersion, code=version_code)
+    lineup = version.lineup
     note = get_object_or_404(LineupVersionNote, id=note_id, version=version)
 
     if not lineup.can_edit(request.user):
@@ -362,7 +382,7 @@ def version_note_edit(request, lineup_code, version_code, note_id):
                     'version': version,
                 })
             messages.success(request, 'Note updated.')
-            return redirect_to(request, f'/lineups/{lineup.code}/versions/{version.code}/')
+            return redirect_to(request, f'/lineups/versions/{version.code}/')
     else:
         if request.GET.get('cancel'):
             return render(request, 'lineups/partials/version-note-item.html', {
@@ -391,9 +411,9 @@ def version_note_edit(request, lineup_code, version_code, note_id):
 
 @login_required
 @require_POST
-def version_note_delete(request, lineup_code, version_code, note_id):
-    lineup = get_object_or_404(Lineup, code=lineup_code)
-    version = get_object_or_404(LineupVersion, code=version_code, lineup=lineup)
+def version_note_delete(request, version_code, note_id):
+    version = get_object_or_404(LineupVersion, code=version_code)
+    lineup = version.lineup
     note = get_object_or_404(LineupVersionNote, id=note_id, version=version)
 
     if not lineup.can_edit(request.user):
@@ -405,14 +425,14 @@ def version_note_delete(request, lineup_code, version_code, note_id):
     if hasattr(request, 'htmx') and request.htmx:
         return HttpResponse('')
 
-    return redirect_to(request, f'/lineups/{lineup.code}/versions/{version.code}/')
+    return redirect_to(request, f'/lineups/versions/{version.code}/')
 
 
 @login_required
 @require_POST
-def version_deck_add(request, lineup_code, version_code):
-    lineup = get_object_or_404(Lineup, code=lineup_code)
-    version = get_object_or_404(LineupVersion, code=version_code, lineup=lineup)
+def version_deck_add(request, version_code):
+    version = get_object_or_404(LineupVersion, code=version_code)
+    lineup = version.lineup
 
     if not lineup.can_edit(request.user):
         raise PermissionDenied
@@ -439,14 +459,14 @@ def version_deck_add(request, lineup_code, version_code):
     else:
         messages.error(request, 'Invalid deck URL.')
 
-    return redirect_to(request, f'/lineups/{lineup.code}/versions/{version.code}/')
+    return redirect_to(request, f'/lineups/versions/{version.code}/')
 
 
 @login_required
 @require_POST
-def version_deck_remove(request, lineup_code, version_code, deck_id):
-    lineup = get_object_or_404(Lineup, code=lineup_code)
-    version = get_object_or_404(LineupVersion, code=version_code, lineup=lineup)
+def version_deck_remove(request, version_code, deck_id):
+    version = get_object_or_404(LineupVersion, code=version_code)
+    lineup = version.lineup
     version_deck = get_object_or_404(LineupVersionDeck, id=deck_id, version=version)
 
     if not lineup.can_edit(request.user):
@@ -459,14 +479,14 @@ def version_deck_remove(request, lineup_code, version_code, deck_id):
     if hasattr(request, 'htmx') and request.htmx:
         return HttpResponse('')
 
-    return redirect_to(request, f'/lineups/{lineup.code}/versions/{version.code}/')
+    return redirect_to(request, f'/lineups/versions/{version.code}/')
 
 
 @login_required
 @require_POST
-def version_deck_reorder(request, lineup_code, version_code):
-    lineup = get_object_or_404(Lineup, code=lineup_code)
-    version = get_object_or_404(LineupVersion, code=version_code, lineup=lineup)
+def version_deck_reorder(request, version_code):
+    version = get_object_or_404(LineupVersion, code=version_code)
+    lineup = version.lineup
 
     if not lineup.can_edit(request.user):
         raise PermissionDenied
@@ -478,7 +498,7 @@ def version_deck_reorder(request, lineup_code, version_code):
     if hasattr(request, 'htmx') and request.htmx:
         return HttpResponse('')
 
-    return redirect_to(request, f'/lineups/{lineup.code}/versions/{version.code}/')
+    return redirect_to(request, f'/lineups/versions/{version.code}/')
 
 
 def lineup_to_json(lineup, user):
@@ -528,7 +548,6 @@ def version_to_json(version):
         'created_on': version.created_on.isoformat(),
         'updated_on': version.updated_on.isoformat(),
         'lineup': {
-            'code': version.lineup.code,
             'name': version.lineup.name,
         },
         'decks': [
@@ -597,7 +616,6 @@ def version_to_xml(version):
     SubElement(root, 'updated_on').text = version.updated_on.isoformat()
 
     lineup_elem = SubElement(root, 'lineup')
-    SubElement(lineup_elem, 'code').text = version.lineup.code
     SubElement(lineup_elem, 'name').text = version.lineup.name
 
     decks_elem = SubElement(root, 'decks')

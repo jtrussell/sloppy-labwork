@@ -67,11 +67,6 @@
   flex: 1;
 }
 
-.lineup-header__info h1,
-.version-header__info h1 {
-  margin-bottom: 0.5rem;
-}
-
 .lineup-header__actions,
 .version-header__actions {
   display: flex;
@@ -378,10 +373,6 @@
 .deck-icon {
   height: 24px;
   width: auto;
-}
-
-.deck-icon--set {
-  margin-right: 0.25rem;
 }
 
 .deck-card__actions {

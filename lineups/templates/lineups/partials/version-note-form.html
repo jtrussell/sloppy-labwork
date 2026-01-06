@@ -1,10 +1,10 @@
 <div class="note-item note-item--editing" id="version-note-{{ note.id }}">
-  <form method="post" action="{% url 'lineups-version-note-edit' lineup.code version.code note.id %}" hx-post="{% url 'lineups-version-note-edit' lineup.code version.code note.id %}" hx-target="#version-note-{{ note.id }}" hx-swap="outerHTML">
+  <form method="post" action="{% url 'lineups-version-note-edit' version.code note.id %}" hx-post="{% url 'lineups-version-note-edit' version.code note.id %}" hx-target="#version-note-{{ note.id }}" hx-swap="outerHTML">
     {% csrf_token %}
     {{ form.text }}
     <div class="note-form-actions">
       <button type="submit" class="button button-primary button-small">Save</button>
-      <button type="button" class="button button-small" hx-get="{% url 'lineups-version-note-edit' lineup.code version.code note.id %}" hx-target="#version-note-{{ note.id }}" hx-swap="outerHTML" hx-vals='{"cancel": "true"}'>Cancel</button>
+      <button type="button" class="button button-small" hx-get="{% url 'lineups-version-note-edit' version.code note.id %}" hx-target="#version-note-{{ note.id }}" hx-swap="outerHTML" hx-vals='{"cancel": "true"}'>Cancel</button>
     </div>
   </form>
 </div>
