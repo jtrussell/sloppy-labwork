@@ -38,7 +38,7 @@
 {% if is_owner %}
 <div class="entity-actions">
   <a href="{% url 'lineups-version-edit' version.code %}" class="button">Edit</a>
-  <form method="post" action="{% url 'lineups-version-delete' version.code %}" class="inline-form">
+  <form method="post" action="{% url 'lineups-version-delete' version.code %}" class="form-inline">
     {% csrf_token %}
     <button type="submit" class="button" hx-confirm="Are you sure you want to delete this version?">Delete</button>
   </form>
@@ -76,7 +76,7 @@
         </div>
         {% if is_owner %}
         <div class="deck-card__actions">
-          <form method="post" action="{% url 'lineups-version-deck-remove' version.code vd.id %}" class="inline-form">
+          <form method="post" action="{% url 'lineups-version-deck-remove' version.code vd.id %}" class="form-inline">
             {% csrf_token %}
             <button type="submit" class="button button-small" hx-confirm="Remove this deck?" hx-target="#deck-{{ vd.id }}" hx-swap="outerHTML">Remove</button>
           </form>

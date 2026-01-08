@@ -4,6 +4,37 @@
 {% block tab_content %}
 <div id="tournament-content">
     <section>
+        <h2>Tournament Admins</h2>
+        <p class="text-muted">Manage who can administer this tournament.</p>
+
+        <div class="admin-item">
+            <span class="admin-username">{{ tournament.owner.username }}</span>
+            <span class="admin-role">Owner</span>
+        </div>
+        {% for admin in tournament_admins %}
+        <div class="admin-item">
+            <span class="admin-username">{% if admin.user %}{{ admin.user.username }}{% else %}(deleted user){% endif %}</span>
+            {% if is_owner %}
+            <form method="post" action="{% url 'tourney-remove-admin' tournament.code admin.id %}" class="form-inline">
+                {% csrf_token %}
+                <button type="submit" class="button button-small" hx-confirm="Remove {{ admin.user.username }} as admin?">Remove</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        {% if is_owner %}
+        <form method="post" action="{% url 'tourney-add-admin' tournament.code %}">
+            {% csrf_token %}
+            <div class="admin-add-row">
+                <input type="text" name="username" placeholder="Enter username" required>
+                <button type="submit" class="button button-primary">Add Admin</button>
+            </div>
+        </form>
+        {% endif %}
+    </section>
+
+    <section>
         <h2>Admin Actions</h2>
         <p class="text-muted">Manage tournament settings and configuration.</p>
 

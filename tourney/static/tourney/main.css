@@ -518,3 +518,35 @@ tr.with-actions td {
 .standings-table th, .standings-table td {
   white-space: nowrap;
 }
+
+/* Admin Management Section */
+.admin-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-lines);
+}
+
+.admin-item:last-child {
+  border-bottom: none;
+}
+
+.admin-username {
+  flex: 1;
+}
+
+.admin-role {
+  color: var(--color-text-muted);
+}
+
+.admin-add-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.admin-add-row input {
+  flex: 1;
+  margin-bottom: 0;
+}

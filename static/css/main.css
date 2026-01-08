@@ -68,6 +68,7 @@ section+section {
 }
 
 form.form-inline {
+  display: inline;
   margin-bottom: 0;
 }
 

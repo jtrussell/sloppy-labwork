@@ -36,7 +36,7 @@
 <div class="entity-actions">
   <a href="{% url 'lineups-edit' lineup.code %}" class="button">Edit</a>
   
-  <form method="post" action="{% url 'lineups-delete' lineup.code %}" class="inline-form">
+  <form method="post" action="{% url 'lineups-delete' lineup.code %}" class="form-inline">
     {% csrf_token %}
     <button type="submit" class="button" hx-confirm="Are you sure you want to delete this lineup?">Delete</button>
   </form>
