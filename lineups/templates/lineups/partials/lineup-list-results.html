@@ -3,12 +3,10 @@
   {% for lineup in lineups %}
   <div class="lineup-card">
     <h3 class="lineup-card__title"><a href="{% url 'lineups-detail' lineup.code %}">{{ lineup.name }}</a></h3>
-    <div class="lineup-card__meta">
-      <span>{{ lineup.format.name|default:"No format" }}</span>
-      <span>{{ lineup.versions.count }} version{{ lineup.versions.count|pluralize }}</span>
-      <span>{{ lineup.get_visibility_display }}</span>
-      <span>{{ lineup.created_on|date:"M j, Y" }}</span>
-    </div>
+    <ul class="lineup-card__meta inline-list">
+      <li>{{ lineup.versions.count }} Version{{ lineup.versions.count|pluralize }}</li>
+      <li>{{ lineup.get_visibility_display|capfirst }}</li>
+    </ul>
   </div>
   {% endfor %}
 </div>

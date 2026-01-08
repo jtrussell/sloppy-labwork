@@ -22,10 +22,10 @@
 <div class="version-header">
   <div class="version-header__info">
     <h1>{{ lineup.name }}</h1>
-    <div class="subheading">{{ version.name }}</div>
-    <span class="lineup-visibility lineup-visibility--{{ version.get_effective_visibility }}">
-      {{ version.get_effective_visibility|capfirst }}{% if not version.visibility_override %} <span class="visibility-inherited">(inherited)</span>{% endif %}
-    </span>
+    <ul class="subheading inline-list">
+      <li>{{ version.name }}</li>
+      <li>{{ version.get_effective_visibility|capfirst }}</li>
+    </ul>
   </div>
 </div>
 
@@ -34,11 +34,6 @@
   {{ version.description|markdown|safe }}
 </div>
 {% endif %}
-
-<div class="version-meta">
-  <span>Created: {{ version.created_on|date:"M j, Y" }}</span>
-  <span>Updated: {{ version.updated_on|date:"M j, Y" }}</span>
-</div>
 
 {% if is_owner %}
 <div class="entity-actions">

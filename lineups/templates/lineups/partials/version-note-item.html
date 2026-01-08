@@ -5,9 +5,6 @@
   </div>
   <div class="note-meta">
     <span>{{ note.created_on|date:"M j, Y g:i A" }}</span>
-    {% if note.updated_on != note.created_on %}
-    <span>(edited)</span>
-    {% endif %}
     {% if is_owner %}
     <button class="button button-small" hx-get="{% url 'lineups-version-note-edit' version.code note.id %}" hx-target="#version-note-{{ note.id }}" hx-swap="outerHTML">Edit</button>
     <form method="post" action="{% url 'lineups-version-note-delete' version.code note.id %}" class="inline-form">
