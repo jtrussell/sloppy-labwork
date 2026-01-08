@@ -14,16 +14,13 @@
         {% for admin in tournament_admins %}
         <div class="admin-item">
             <span class="admin-username">{% if admin.user %}{{ admin.user.username }}{% else %}(deleted user){% endif %}</span>
-            {% if is_owner %}
             <form method="post" action="{% url 'tourney-remove-admin' tournament.code admin.id %}" class="form-inline">
                 {% csrf_token %}
                 <button type="submit" class="button button-small" hx-confirm="Remove {{ admin.user.username }} as admin?">Remove</button>
             </form>
-            {% endif %}
         </div>
         {% endfor %}
 
-        {% if is_owner %}
         <form method="post" action="{% url 'tourney-add-admin' tournament.code %}">
             {% csrf_token %}
             <div class="admin-add-row">
@@ -31,7 +28,6 @@
                 <button type="submit" class="button button-primary">Add Admin</button>
             </div>
         </form>
-        {% endif %}
     </section>
 
     <section>

@@ -452,7 +452,6 @@ def tournament_detail_admin(request, tournament_code):
 
     tournament_admins = tournament.tournament_admins.select_related('user').order_by('created_on')
     context['tournament_admins'] = tournament_admins
-    context['is_owner'] = request.user == tournament.owner
 
     if request.htmx:
         return render(request, 'tourney/partials/tournament-detail-admin-content.html', context)
@@ -506,10 +505,6 @@ def add_tournament_admin(request, tournament_code):
 def remove_tournament_admin(request, tournament_code, admin_id):
     tournament = get_object_or_404(Tournament, code=tournament_code)
     tournament_admin = get_object_or_404(TournamentAdmin, id=admin_id, tournament=tournament)
-
-    if request.user != tournament.owner:
-        messages.error(request, 'Only the tournament owner can remove admins.')
-        return redirect_to(request, reverse('tourney-tournament-detail-admin', kwargs={'tournament_code': tournament.code}))
 
     admin_username = tournament_admin.user.username if tournament_admin.user else 'Unknown'
     tournament_admin.delete()
