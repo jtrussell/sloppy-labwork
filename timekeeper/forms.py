@@ -21,7 +21,9 @@ class TimerCreateForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
         minutes = self.cleaned_data.get('minutes', 0)
-        instance.pause_time_remaining_seconds = minutes * 60
+        seconds = minutes * 60
+        instance.pause_time_remaining_seconds = seconds
+        instance.original_duration_seconds = seconds
         if commit:
             instance.save()
         return instance

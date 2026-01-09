@@ -13,5 +13,6 @@ urlpatterns = [
     path('<str:timer_code>/subtract/',
          views.timer_subtract_time, name='timer_subtract_time'),
     path('<str:timer_code>/set/', views.timer_set_time, name='timer_set_time'),
+    path('<str:timer_code>/reset/', views.timer_reset, name='timer_reset'),
     path('<str:timer_code>/delete/', views.timer_delete, name='timer_delete'),
 ]

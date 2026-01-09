@@ -253,10 +253,12 @@ class Tournament(models.Model):
         for tt in self.tournament_timers.all():
             tt.timer.delete()
 
+        seconds = round_obj.round_length_in_minutes * 60
         timer = CountdownTimer.objects.create(
             name=f'{self.name} - Round {round_obj.order}',
             owner=owner,
-            pause_time_remaining_seconds=round_obj.round_length_in_minutes * 60
+            pause_time_remaining_seconds=seconds,
+            original_duration_seconds=seconds
         )
         timer.start()
 

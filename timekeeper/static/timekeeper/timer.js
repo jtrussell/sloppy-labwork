@@ -4,6 +4,7 @@ class TimerCountdown {
         this.countdownEl = element.querySelector('.timer__countdown');
         this.animationId = null;
         this.currentDisplay = '';
+        this.negativeSign = null;
         this.init();
     }
 
@@ -15,6 +16,12 @@ class TimerCountdown {
     buildDigitStructure() {
         this.countdownEl.innerHTML = '';
         this.countdownEl.classList.add('timer__countdown--sliding');
+
+        this.negativeSign = document.createElement('span');
+        this.negativeSign.className = 'timer__negative-sign';
+        this.negativeSign.textContent = '-';
+        this.negativeSign.style.display = 'none';
+        this.countdownEl.appendChild(this.negativeSign);
 
         this.digitSlots = [];
         const format = this.getInitialFormat();
@@ -64,8 +71,8 @@ class TimerCountdown {
 
     getInitialFormat() {
         const remaining = this.calculateRemainingSeconds();
-        const displaySeconds = remaining <= 0 ? 0 : remaining;
-        const hours = Math.floor(displaySeconds / 3600);
+        const absSeconds = Math.abs(remaining);
+        const hours = Math.floor(absSeconds / 3600);
         return hours > 0 ? '00:00:00' : '00:00';
     }
 
@@ -116,12 +123,26 @@ class TimerCountdown {
 
     update() {
         const remaining = this.calculateRemainingSeconds();
-        const isExpired = remaining <= 0;
-        const displaySeconds = isExpired ? 0 : remaining;
-        const { formatted } = this.formatTime(displaySeconds);
+        const isNegative = remaining < 0;
+        const maxNegativeSeconds = -24 * 60 * 60;
+        const isTrulyExpired = remaining <= maxNegativeSeconds;
+        const { formatted } = this.formatTime(remaining);
+
+        if (isTrulyExpired) {
+            this.countdownEl.innerHTML = '';
+            this.countdownEl.classList.remove('timer__countdown--sliding');
+            this.countdownEl.textContent = 'Expired';
+            this.element.classList.add('timer--expired');
+            this.element.classList.remove('timer--negative');
+            return;
+        }
 
         if (formatted.length !== this.digitSlots.length) {
             this.buildDigitStructure();
+        }
+
+        if (this.negativeSign) {
+            this.negativeSign.style.display = isNegative ? 'inline' : 'none';
         }
 
         for (let i = 0; i < formatted.length; i++) {
@@ -138,10 +159,11 @@ class TimerCountdown {
             }
         }
 
-        this.element.classList.toggle('timer--expired', isExpired);
+        this.element.classList.toggle('timer--negative', isNegative);
+        this.element.classList.toggle('timer--expired', isTrulyExpired);
         this.element.classList.toggle('timer--paused', !this.isActive());
 
-        if (this.isActive() && !isExpired) {
+        if (this.isActive() && !isTrulyExpired) {
             this.animationId = requestAnimationFrame(() => this.update());
         }
     }

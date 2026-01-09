@@ -290,6 +290,7 @@ def get_tournament_base_context(request, tournament):
         }
 
     default_timer_name = f'{tournament.name} - Round {current_round.order}' if current_round else f'{tournament.name} - Timer'
+    default_timer_minutes = current_stage.round_length_in_minutes if current_stage and current_stage.round_length_in_minutes else 50
 
     return {
         'tournament': tournament,
@@ -310,6 +311,7 @@ def get_tournament_base_context(request, tournament):
         'active_timer': active_timer,
         'timer_context': timer_context,
         'default_timer_name': default_timer_name,
+        'default_timer_minutes': default_timer_minutes,
     }
 
 
@@ -1945,10 +1947,12 @@ def create_tournament_timer(request, tournament_code):
         for tt in tournament.tournament_timers.all():
             tt.timer.delete()
 
+        seconds = minutes * 60
         timer = CountdownTimer.objects.create(
             name=name,
             owner=tournament.owner,
-            pause_time_remaining_seconds=minutes * 60
+            pause_time_remaining_seconds=seconds,
+            original_duration_seconds=seconds
         )
         timer.start()
 

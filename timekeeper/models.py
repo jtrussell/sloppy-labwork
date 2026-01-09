@@ -28,6 +28,8 @@ class CountdownTimer(models.Model):
     end_time = models.DateTimeField(default=None, blank=True, null=True)
     pause_time_remaining_seconds = models.IntegerField(
         default=None, blank=True, null=True)
+    original_duration_seconds = models.IntegerField(
+        default=None, blank=True, null=True)
     created_on = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -91,6 +93,14 @@ class CountdownTimer(models.Model):
             self.pause_time_remaining_seconds = num_seconds
         elif self.end_time is not None:
             self.end_time = timezone.now() + timedelta(seconds=num_seconds)
+        self.save()
+
+    def reset(self):
+        if self.original_duration_seconds is None:
+            return
+
+        self.pause_time_remaining_seconds = self.original_duration_seconds
+        self.end_time = None
         self.save()
 
     def get_state(self):

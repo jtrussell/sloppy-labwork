@@ -88,6 +88,14 @@
     color: var(--color-text-muted, #888);
 }
 
+.timer--negative .timer__countdown {
+    color: var(--color-text-danger, #ff4444);
+}
+
+.timer__negative-sign {
+    margin-right: 0.1em;
+}
+
 .timer--paused .timer__countdown {
     opacity: 0.6;
 }

@@ -141,6 +141,15 @@ def timer_set_time(request, timer_code):
 
 @require_POST
 @can_modify_timer
+def timer_reset(request, timer_code):
+    timer = request.timer
+    timer.reset()
+    context = _timer_context(timer)
+    return render(request, 'timekeeper/timer-with-controls.html', context)
+
+
+@require_POST
+@can_modify_timer
 def timer_delete(request, timer_code):
     timer = request.timer
     timer.delete()

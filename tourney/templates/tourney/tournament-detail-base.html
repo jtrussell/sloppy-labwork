@@ -219,7 +219,7 @@
                 {% csrf_token %}
                 <div>
                     <label for="timerMinutes">Timer Length (minutes):</label>
-                    <input type="number" id="timerMinutes" name="minutes" min="1" required value="50">
+                    <input type="number" id="timerMinutes" name="minutes" min="1" required value="{{ default_timer_minutes }}">
                 </div>
 
                 <div>

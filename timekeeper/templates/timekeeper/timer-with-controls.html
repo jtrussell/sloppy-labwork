@@ -23,10 +23,10 @@
            hx-swap="outerHTML">Pause</a>
         {% endif %}
         <a class="timer__control-link"
-           hx-post="{% url 'timekeeper:timer_add_time' code %}"
-           hx-vals='{"seconds": 300}'
+           hx-post="{% url 'timekeeper:timer_reset' code %}"
            hx-target="#timer-{{ code }}"
-           hx-swap="outerHTML">+5 min</a>
+           hx-swap="outerHTML"
+           hx-confirm="Are you sure you want to reset this timer?">Reset</a>
         <a class="timer__control-link timer__control-link--danger"
            hx-post="{% url 'timekeeper:timer_delete' code %}"
            hx-target="#timer-{{ code }}"
