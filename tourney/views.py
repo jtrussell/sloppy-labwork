@@ -914,7 +914,16 @@ def prepare_current_stage_seeding(request, tournament_code):
 
     if not pairing_strategy.is_seeding_required():
         try:
+            closed_registrations = False
             with transaction.atomic():
+                is_first_stage = not Round.objects.filter(stage__tournament=tournament).exists()
+                if (is_first_stage and
+                    tournament.is_accepting_registrations and
+                        pairing_strategy.closes_registration_on_start()):
+                    tournament.is_accepting_registrations = False
+                    tournament.save()
+                    closed_registrations = True
+
                 new_round = Round.objects.create(
                     stage=current_stage,
                     order=1,
@@ -932,8 +941,10 @@ def prepare_current_stage_seeding(request, tournament_code):
                     description=f'Started {current_stage.name} (no seeding required)'
                 )
 
-            messages.success(
-                request, f'{current_stage.name} started successfully!')
+            success_message = f'{current_stage.name} started successfully!'
+            if closed_registrations:
+                success_message += ' Registrations are now closed.'
+            messages.success(request, success_message)
             return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
         except ValueError as e:
             messages.error(request, str(e))
@@ -1090,9 +1101,19 @@ def start_next_stage(request, tournament_code):
         stage_name = current_stage.name
 
         try:
+            closed_registrations = False
             with transaction.atomic():
                 pairing_strategy = get_pairing_strategy(
                     current_stage.pairing_strategy)
+
+                is_first_stage = not Round.objects.filter(stage__tournament=tournament).exists()
+                if (is_first_stage and
+                    tournament.is_accepting_registrations and
+                        pairing_strategy.closes_registration_on_start()):
+                    tournament.is_accepting_registrations = False
+                    tournament.save()
+                    closed_registrations = True
+
                 new_round = Round.objects.create(
                     stage=current_stage,
                     order=1,
@@ -1110,7 +1131,10 @@ def start_next_stage(request, tournament_code):
                     description=f'Started {stage_name} with confirmed seeding'
                 )
 
-            messages.success(request, f'{stage_name} started successfully!')
+            success_message = f'{stage_name} started successfully!'
+            if closed_registrations:
+                success_message += ' Registrations are now closed.'
+            messages.success(request, success_message)
         except ValueError as e:
             messages.error(request, str(e))
 

@@ -1744,3 +1744,104 @@ class GamesPlayedRankingCriterionTestCase(TestCase):
 
         self.assertNotIn('games_played', main_keys)
         self.assertNotIn('games_played', playoff_keys)
+
+
+class AutoCloseRegistrationTestCase(TestCase):
+    """Test automatic registration closing when first stage starts."""
+
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        self.user1 = User.objects.create_user('user1', 'user1@test.com', 'password')
+        self.user2 = User.objects.create_user('user2', 'user2@test.com', 'password')
+
+    def test_swiss_strategy_closes_registration(self):
+        """Test that Swiss strategy has closes_registration_on_start() returning True."""
+        strategy = get_pairing_strategy('swiss')
+        self.assertTrue(strategy.closes_registration_on_start())
+
+    def test_ffa_strategy_does_not_close_registration(self):
+        """Test that Free-For-All strategy has closes_registration_on_start() returning False."""
+        strategy = get_pairing_strategy('round_robin')
+        self.assertFalse(strategy.closes_registration_on_start())
+
+    def test_single_elimination_closes_registration(self):
+        """Test that Single Elimination strategy has closes_registration_on_start() returning True."""
+        strategy = get_pairing_strategy('single_elimination')
+        self.assertTrue(strategy.closes_registration_on_start())
+
+    def test_round_robin_scheduled_closes_registration(self):
+        """Test that Round Robin Scheduled strategy has closes_registration_on_start() returning True."""
+        strategy = get_pairing_strategy('round_robin_scheduled')
+        self.assertTrue(strategy.closes_registration_on_start())
+
+    def test_swiss_tournament_closes_registration_on_first_stage(self):
+        """Test that starting a Swiss tournament's first stage closes registration."""
+        tournament = Tournament.objects.create(
+            name='Swiss Tournament',
+            owner=self.owner,
+            is_accepting_registrations=True
+        )
+        stage = Stage.objects.create(
+            tournament=tournament,
+            name='Main Stage',
+            order=1,
+            pairing_strategy='swiss'
+        )
+        player1 = Player.objects.create(user=self.user1, tournament=tournament)
+        player2 = Player.objects.create(user=self.user2, tournament=tournament)
+        StagePlayer.objects.create(player=player1, stage=stage, seed=1)
+        StagePlayer.objects.create(player=player2, stage=stage, seed=2)
+
+        self.assertTrue(tournament.is_accepting_registrations)
+
+        pairing_strategy = get_pairing_strategy(stage.pairing_strategy)
+        is_first_stage = not Round.objects.filter(stage__tournament=tournament).exists()
+        self.assertTrue(is_first_stage)
+
+        if (is_first_stage and
+            tournament.is_accepting_registrations and
+                pairing_strategy.closes_registration_on_start()):
+            tournament.is_accepting_registrations = False
+            tournament.save()
+
+        Round.objects.create(stage=stage, order=1)
+        pairing_strategy.make_pairings_for_round(stage.rounds.first())
+
+        tournament.refresh_from_db()
+        self.assertFalse(tournament.is_accepting_registrations)
+
+    def test_ffa_tournament_keeps_registration_open_on_first_stage(self):
+        """Test that starting a Free-For-All tournament's first stage keeps registration open."""
+        tournament = Tournament.objects.create(
+            name='FFA Tournament',
+            owner=self.owner,
+            is_accepting_registrations=True
+        )
+        stage = Stage.objects.create(
+            tournament=tournament,
+            name='Main Stage',
+            order=1,
+            pairing_strategy='round_robin'
+        )
+        player1 = Player.objects.create(user=self.user1, tournament=tournament)
+        player2 = Player.objects.create(user=self.user2, tournament=tournament)
+        StagePlayer.objects.create(player=player1, stage=stage, seed=1)
+        StagePlayer.objects.create(player=player2, stage=stage, seed=2)
+
+        self.assertTrue(tournament.is_accepting_registrations)
+
+        pairing_strategy = get_pairing_strategy(stage.pairing_strategy)
+        is_first_stage = not Round.objects.filter(stage__tournament=tournament).exists()
+        self.assertTrue(is_first_stage)
+
+        if (is_first_stage and
+            tournament.is_accepting_registrations and
+                pairing_strategy.closes_registration_on_start()):
+            tournament.is_accepting_registrations = False
+            tournament.save()
+
+        Round.objects.create(stage=stage, order=1)
+        pairing_strategy.make_pairings_for_round(stage.rounds.first())
+
+        tournament.refresh_from_db()
+        self.assertTrue(tournament.is_accepting_registrations)

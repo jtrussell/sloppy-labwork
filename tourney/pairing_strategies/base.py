@@ -76,6 +76,15 @@ class PairingStrategy(ABC):
         """
         return False
 
+    def closes_registration_on_start(self):
+        """
+        Determine if starting this stage should automatically close registration.
+
+        Returns:
+            bool: True if registration should close when the first stage starts
+        """
+        return True
+
     @classmethod
     def validate_strategy(cls):
         """

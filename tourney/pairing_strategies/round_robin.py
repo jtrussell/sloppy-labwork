@@ -47,3 +47,6 @@ class RoundRobinSelfScheduledPairingStrategy(PairingStrategy):
 
     def is_elimination_style(self):
         return False
+
+    def closes_registration_on_start(self):
+        return False
