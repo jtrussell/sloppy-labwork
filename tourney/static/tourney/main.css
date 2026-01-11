@@ -484,24 +484,6 @@ tr.with-actions td {
   color: var(--color-text-muted);
 }
 
-.button-link {
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  height: auto;
-  font-size: inherit;
-  line-height: inherit;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  text-decoration: none;
-  vertical-align: baseline;
-}
-
-.button-link:hover {
-  color: var(--color-text);
-}
-
 /* Tournament Admin Page */
 .tournament-logs {
   margin-top: 2rem;
