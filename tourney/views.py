@@ -1761,6 +1761,7 @@ def copy_tournament(request, tournament_code):
             'name': f'Copy of {source_tournament.name}',
             'description': source_tournament.description,
             'is_accepting_registrations': source_tournament.is_accepting_registrations,
+            'is_public': source_tournament.is_public,
         }
 
         source_main_stage = source_tournament.stages.filter(order=1).first()

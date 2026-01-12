@@ -87,7 +87,7 @@ class TournamentForm(forms.ModelForm):
     class Meta:
         model = Tournament
         fields = ['name', 'description',
-                  'is_accepting_registrations', 'is_closed']
+                  'is_accepting_registrations', 'is_closed', 'is_public']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4, 'style': 'text-wrap: auto'})
         }

@@ -32,6 +32,10 @@ class Tournament(models.Model):
         User, on_delete=models.SET_NULL, related_name='owned_tournaments', null=True, blank=True)
     is_accepting_registrations = models.BooleanField(default=True)
     is_closed = models.BooleanField(default=False)
+    is_public = models.BooleanField(
+        default=False,
+        help_text="Allow unauthenticated users to view standings and matches"
+    )
     pmc_event = models.ForeignKey(
         'pmc.Event', on_delete=models.SET_NULL,
         related_name='tournaments', default=None, null=True, blank=True,

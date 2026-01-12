@@ -1845,3 +1845,34 @@ class AutoCloseRegistrationTestCase(TestCase):
 
         tournament.refresh_from_db()
         self.assertTrue(tournament.is_accepting_registrations)
+
+
+class PublicTournamentAccessTestCase(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+
+    def test_is_public_defaults_to_false(self):
+        tournament = Tournament.objects.create(
+            name='Test Tournament',
+            owner=self.owner
+        )
+        self.assertFalse(tournament.is_public)
+
+    def test_is_public_can_be_set_to_true(self):
+        tournament = Tournament.objects.create(
+            name='Public Tournament',
+            owner=self.owner,
+            is_public=True
+        )
+        self.assertTrue(tournament.is_public)
+
+    def test_is_public_persists_after_save(self):
+        tournament = Tournament.objects.create(
+            name='Test Tournament',
+            owner=self.owner,
+            is_public=False
+        )
+        tournament.is_public = True
+        tournament.save()
+        tournament.refresh_from_db()
+        self.assertTrue(tournament.is_public)

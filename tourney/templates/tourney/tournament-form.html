@@ -72,6 +72,19 @@
             </div>
         </div>
         {% endif %}
+
+        <div class="row">
+            <div class="twelve columns">
+                <label>
+                    {{ form.is_public }}
+                    Public tournament
+                </label>
+                <span class="helptext">Allow anyone to view standings and matches without logging in</span>
+                {% if form.is_public.errors %}
+                    <div class="form-error">{{ form.is_public.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
     </section>
 
     <section>

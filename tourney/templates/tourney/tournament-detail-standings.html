@@ -2,7 +2,7 @@
 
 {% block tab_content %}
 <div id="tournament-content">
-    {% if not user.is_authenticated %}
+    {% if not user.is_authenticated and not tournament.is_public %}
         <section>
             <p class="text-muted" style="text-align: center; font-style: italic;">
                 Please log in to view tournament standings and player details.
