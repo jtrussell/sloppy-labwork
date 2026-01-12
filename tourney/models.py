@@ -244,7 +244,7 @@ class Tournament(models.Model):
         return tt.timer if tt else None
 
     def create_round_timer(self, round_obj, owner):
-        """Create and start a timer for a round. Deletes old timers first."""
+        """Create a paused timer for a round. Deletes old timers first."""
         from timekeeper.models import CountdownTimer
 
         if not round_obj.round_length_in_minutes:
@@ -260,7 +260,6 @@ class Tournament(models.Model):
             pause_time_remaining_seconds=seconds,
             original_duration_seconds=seconds
         )
-        timer.start()
 
         TournamentTimer.objects.create(
             tournament=self,
