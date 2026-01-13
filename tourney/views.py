@@ -5,8 +5,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction, IntegrityError
 from django.db import models
-from django.db.models import Q
-from django.db.models import F
+from django.db.models import Q, F, Case, When, Value, IntegerField
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
@@ -73,14 +72,25 @@ def redirect_to(request, url):
 
 @login_required
 def my_tournaments(request):
+    status_order = Case(
+        When(is_closed=True, then=Value(2)),
+        When(is_accepting_registrations=True, then=Value(1)),
+        default=Value(0),
+        output_field=IntegerField()
+    )
+
     admin_tournaments = Tournament.objects.filter(
         models.Q(owner=request.user) |
         models.Q(tournament_admins__user=request.user)
-    ).distinct().order_by('-created_on')
+    ).distinct().annotate(
+        status_order=status_order
+    ).order_by('status_order', '-created_on')
 
     player_tournaments = Tournament.objects.filter(
         players__user=request.user
-    ).order_by('-created_on')
+    ).annotate(
+        status_order=status_order
+    ).order_by('status_order', '-created_on')
 
     admin_paginator = Paginator(admin_tournaments, 10)
     player_paginator = Paginator(player_tournaments, 10)
