@@ -15,7 +15,7 @@
     <div class="match-players">
         {% if match.is_bye %}
             <div class="match-player match-player--winner">
-                {{ match.player_one.player.get_display_name }}
+                <span class="player-name-text" title="{{ match.player_one.player.get_display_name }}">{{ match.player_one.player.get_display_name }}</span>
                 {% if match.player_one.player.is_guest %}
                     <span class="player-guest-badge"></span>
                 {% endif %}
@@ -27,7 +27,7 @@
             {% if match.has_result %}
                 {% if match.result.winner == match.player_one %}
                     <div class="match-player match-player--winner">
-                        {{ match.player_one.player.get_display_name }}
+                        <span class="player-name-text" title="{{ match.player_one.player.get_display_name }}">{{ match.player_one.player.get_display_name }}</span>
                         {% if match.player_one.player.is_guest %}
                             <span class="player-guest-badge"></span>
                         {% endif %}
@@ -36,7 +36,7 @@
                         {% endif %}
                     </div>
                     <div class="match-player match-player--loser">
-                        {{ match.player_two.player.get_display_name }}
+                        <span class="player-name-text" title="{{ match.player_two.player.get_display_name }}">{{ match.player_two.player.get_display_name }}</span>
                         {% if match.player_two.player.is_guest %}
                             <span class="player-guest-badge"></span>
                         {% endif %}
@@ -46,7 +46,7 @@
                     </div>
                 {% elif match.result.winner == match.player_two %}
                     <div class="match-player match-player--loser">
-                        {{ match.player_one.player.get_display_name }}
+                        <span class="player-name-text" title="{{ match.player_one.player.get_display_name }}">{{ match.player_one.player.get_display_name }}</span>
                         {% if match.player_one.player.is_guest %}
                             <span class="player-guest-badge"></span>
                         {% endif %}
@@ -55,7 +55,7 @@
                         {% endif %}
                     </div>
                     <div class="match-player match-player--winner">
-                        {{ match.player_two.player.get_display_name }}
+                        <span class="player-name-text" title="{{ match.player_two.player.get_display_name }}">{{ match.player_two.player.get_display_name }}</span>
                         {% if match.player_two.player.is_guest %}
                             <span class="player-guest-badge"></span>
                         {% endif %}
@@ -66,7 +66,7 @@
                 {% else %}
                     <!-- Tie -->
                     <div class="match-player">
-                        {{ match.player_one.player.get_display_name }}
+                        <span class="player-name-text" title="{{ match.player_one.player.get_display_name }}">{{ match.player_one.player.get_display_name }}</span>
                         {% if match.player_one.player.is_guest %}
                             <span class="player-guest-badge"></span>
                         {% endif %}
@@ -75,7 +75,7 @@
                         {% endif %}
                     </div>
                     <div class="match-player">
-                        {{ match.player_two.player.get_display_name }}
+                        <span class="player-name-text" title="{{ match.player_two.player.get_display_name }}">{{ match.player_two.player.get_display_name }}</span>
                         {% if match.player_two.player.is_guest %}
                             <span class="player-guest-badge"></span>
                         {% endif %}
@@ -87,14 +87,14 @@
             {% else %}
                 <!-- Pending match -->
                 <div class="match-player match-player--pending">
-                    {{ match.player_one.player.get_display_name }}
+                    <span class="player-name-text" title="{{ match.player_one.player.get_display_name }}">{{ match.player_one.player.get_display_name }}</span>
                     {% if match.player_one.player.is_guest %}
                         <span class="player-guest-badge"></span>
                     {% endif %}
                 </div>
                 <div class="match-player match-player--pending">
                     {% if match.player_two %}
-                        {{ match.player_two.player.get_display_name }}
+                        <span class="player-name-text" title="{{ match.player_two.player.get_display_name }}">{{ match.player_two.player.get_display_name }}</span>
                         {% if match.player_two.player.is_guest %}
                             <span class="player-guest-badge"></span>
                         {% endif %}

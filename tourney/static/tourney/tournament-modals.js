@@ -1,3 +1,8 @@
+function truncateName(name, maxLength = 25) {
+    if (!name || name.length <= maxLength) return name;
+    return name.substring(0, maxLength - 1) + '…';
+}
+
 function openMatchModal(button) {
     const modal = document.getElementById('matchModal');
     const form = document.getElementById('matchForm');
@@ -59,13 +64,15 @@ function openMatchModal(button) {
         winnerSelect.innerHTML = '<option value="">Select Winner</option>';
 
         if (playerOne) {
-            const option1 = new Option(playerOne, playerOneId);
+            const option1 = new Option(truncateName(playerOne), playerOneId);
+            option1.title = playerOne;
             if (currentWinnerId === playerOneId) option1.selected = true;
             winnerSelect.appendChild(option1);
         }
 
         if (playerTwo) {
-            const option2 = new Option(playerTwo, playerTwoId);
+            const option2 = new Option(truncateName(playerTwo), playerTwoId);
+            option2.title = playerTwo;
             if (currentWinnerId === playerTwoId) option2.selected = true;
             winnerSelect.appendChild(option2);
         }
@@ -93,10 +100,12 @@ function openMatchModal(button) {
         const playerTwoScoreInput = document.getElementById('playerTwoScore');
 
         if (playerOneScoreLabel && playerOne) {
-            playerOneScoreLabel.textContent = `${playerOne}`;
+            playerOneScoreLabel.textContent = truncateName(playerOne);
+            playerOneScoreLabel.title = playerOne;
         }
         if (playerTwoScoreLabel && playerTwo) {
-            playerTwoScoreLabel.textContent = `${playerTwo}`;
+            playerTwoScoreLabel.textContent = truncateName(playerTwo);
+            playerTwoScoreLabel.title = playerTwo;
         } else if (playerTwoScoreLabel) {
             playerTwoScoreLabel.textContent = 'Player Two';
         }
@@ -174,8 +183,10 @@ function openAddMatchModal() {
     let currentUserStagePlayerId = null;
 
     unmatchedPlayers.forEach(player => {
-        const option1 = new Option(player.name, player.id);
-        const option2 = new Option(player.name, player.id);
+        const option1 = new Option(truncateName(player.name), player.id);
+        const option2 = new Option(truncateName(player.name), player.id);
+        option1.title = player.name;
+        option2.title = player.name;
 
         if (player.userId === currentUserId) {
             currentUserStagePlayerId = player.id;
@@ -224,7 +235,8 @@ function openPlayerMatchReportModal() {
 
     unmatchedPlayers.forEach(player => {
         if (player.userId !== currentUserId) {
-            const option = new Option(player.name, player.id);
+            const option = new Option(truncateName(player.name), player.id);
+            option.title = player.name;
             opponentSelect.appendChild(option);
         }
     });
