@@ -15,19 +15,31 @@ around that will get you off the ground:
 cp ./sloppy_labwork/local_environment.py-example ./sloppy_labwork/local_environment.py
 ```
 
-### Ye Olde Python
+### Local Development with uv
 
-We recommend using a virtual environment for your project, our dependencies
-listed in `requirements.txt` and the version of python used in production is given in `runtime.txt`.
+We use [uv](https://docs.astral.sh/uv/) for package and environment management.
+The Python version is specified in `.python-version`.
 
-Install the dependencies listed in our requirements file and then ensure you
-have a local settings file prepared:
+1. Install uv if you haven't already:
+   ```
+   # macOS/Linux
+   curl -LsSf https://astral.sh/uv/install.sh | sh
 
-```
-cp ./sloppy_labwork/local_environment.py-example ./sloppy_labwork/local_environment.py
-```
+   # Windows
+   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+   ```
 
-You may update the this local environment file to turn features on/off and update app secrets.
+2. Sync dependencies (this creates the virtual environment automatically):
+   ```
+   uv sync
+   ```
+
+3. Copy the local environment template:
+   ```
+   cp ./sloppy_labwork/local_environment.py-example ./sloppy_labwork/local_environment.py
+   ```
+
+You may update this local environment file to turn features on/off and update app secrets.
 
 
 ## Run It
@@ -49,18 +61,18 @@ apply database migrations, you'll have to do so with the following command:
 docker-compose exec web python manage.py migrate
 ```
 
-### Python
+### Local Development
 
-Once setup is compelete, you can apply database migrations with:
+Once setup is complete, you can apply database migrations with:
 
 ```
-python manage.py migrate
+uv run python manage.py migrate
 ```
 
 And run the development server with:
 
 ```
-python manage.py runserver
+uv run python manage.py runserver
 ```
 
 

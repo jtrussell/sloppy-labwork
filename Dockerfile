@@ -1,6 +1,7 @@
 FROM python:3.12
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
-COPY requirements.txt /app/
-RUN pip install -r requirements.txt
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY pyproject.toml uv.lock /app/
+RUN uv sync --frozen --no-dev
 COPY . /app/

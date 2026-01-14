@@ -1,0 +1,23 @@
+[project]
+name = "sloppy-labwork"
+version = "1.0.0"
+description = "Sloppy Labwork and KeyChain Django applications"
+requires-python = ">=3.12"
+dependencies = [
+    "Django==5.2.9",
+    "django-allauth[socialaccount]==0.63",
+    "markdown==3.7",
+    "Pillow==10.3",
+    "boto3==1.34",
+    "gunicorn==23.0",
+    "psycopg2-binary==2.9.10",
+    "requests",
+    "pynacl",
+    "qrcode==8.0",
+    "colorama==0.4",
+    "django-hosts==6.0",
+    "django-ses==4.4",
+    "dj-database-url==2.2",
+    "django-template-partials==24.4",
+    "django-htmx==1.23",
+]

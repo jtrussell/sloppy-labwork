@@ -11,20 +11,17 @@ This is a Python/Django project which contains code for two sites:
 ## The Golden Rule(s)
 
 - Always confirm changes before applying them unless explicitly asked to skip confirmation.
-- Treat `git` as read only. Never commit, push, rebase, etc. unless explicitly asked.,
-- Prefer self-documenting code over comments. NEVER add comments to the code
-unless asked to directly.
-- Prefer using existing tools and dependencies, but do suggest when a popular
-  3rd party solution exists and would offer a better solve.
-- Favor existing styles and patterns, but do suggest alternatives -
-  especially when a best practice is not being observed.
+- Treat `git` as read only. Never commit, push, rebase, etc. unless explicitly asked.
+- Prefer self-documenting code over comments. Do not add comments to the code.
+- Favor consistency. Be reluctant to introduce new styles, patterns, or
+  dependencies without asking first.
 
 ## Technology
 
-- Python/Django - see `./requirements.txt` and `./.python-version` for a complete list of dependencies
-- Deployment envionment: Heroku
+- Python/Django - see `./pyproject.toml` and `./.python-version` for dependencies
+- [uv](https://docs.astral.sh/uv/) - package and environment management
+- Deployment environment: Heroku
 - htmx
-
 
 ## App Structure
 
@@ -60,9 +57,9 @@ Please coordinate with the following agents to plan tasks:
 
 - `ui-researcher` - Coordinate with this agent when planning a UI intensive task.
 - `django-expert` - This agent should be consulted on most tasks, any that
-   interact with the Django framework.
+  interact with the Django framework.
 - `htmx-expert` - Consult this agent when using htmx or when asked to add
-   SPA-like behavior to our experiences.
+  SPA-like behavior to our experiences.
 
 Use the folder `.claude/.local/agent-artifacts` as a context cache and to share
 artifacts with your agents. Please create this folder if it doesn't exist.
