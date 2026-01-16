@@ -675,8 +675,6 @@ class RankingPointsService():
             effective_on__lte=event_results[0].event.start_date
         ).order_by('-effective_on').first()
 
-        print('foobar', rp_map_version, event_results[0].event.start_date)
-
         rp_map_entries = RankingPointsMap.objects.filter(
             version=rp_map_version,
             max_players=RankingPointsMap.objects
@@ -1160,7 +1158,8 @@ class AwardAssignmentService():
         UserTrophy.objects.filter(trophy=trophy).delete()
         users = User.objects.all()
         for user in users:
-            value = AwardAssignmentService.get_user_criteria_value(user, trophy)
+            value = AwardAssignmentService.get_user_criteria_value(
+                user, trophy)
             amount = value // trophy.criteria_value if trophy.criteria_value else 0
             if amount > 0:
                 UserTrophy.objects.update_or_create(
@@ -1181,7 +1180,8 @@ class AwardAssignmentService():
         tiers = achievement.tiers.all()
         users = User.objects.all()
         for user in users:
-            user_value = AwardAssignmentService.get_user_criteria_value(user, achievement)
+            user_value = AwardAssignmentService.get_user_criteria_value(
+                user, achievement)
             for tier in tiers:
                 if user_value >= tier.criteria_value:
                     UserAchievementTier.objects.update_or_create(
