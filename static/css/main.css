@@ -55,6 +55,14 @@ h6+.subheading {
   margin-bottom: 1.4rem;
 }
 
+.subheading+h2,
+.subheading+h3,
+.subheading+h4,
+.subheading+h5,
+.subheading+h6 {
+  margin-top: 0;
+}
+
 
 /* Misc */
 .brand {

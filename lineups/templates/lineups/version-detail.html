@@ -19,22 +19,20 @@
   &raquo; {{ version.name }}
 </nav>
 
-<div>
-  <h1>{{ lineup.name }}</h1>
-  <ul class="subheading inline-list">
-    <li>{{ version.name }}</li>
-    <li>{{ version.get_effective_visibility|capfirst }}</li>
-    {% if is_owner %}
-    <li><a href="{% url 'lineups-version-edit' version.code %}" class="button button-link">Edit</a></li>
-    <li>
-      <form method="post" action="{% url 'lineups-version-delete' version.code %}" class="form-inline">
-        {% csrf_token %}
-        <button type="submit" class="button button-link" hx-confirm="Are you sure you want to delete this version?">Delete</button>
-      </form>
-    </li>
-    {% endif %}
-  </ul>
-</div>
+<h1>{{ lineup.name }}</h1>
+<ul class="subheading inline-list">
+  <li>{{ version.name }}</li>
+  <li>{{ version.get_effective_visibility|capfirst }}</li>
+  {% if is_owner %}
+  <li><a href="{% url 'lineups-version-edit' version.code %}" class="button button-link">Edit</a></li>
+  <li>
+    <form method="post" action="{% url 'lineups-version-delete' version.code %}" class="form-inline">
+      {% csrf_token %}
+      <button type="submit" class="button button-link" hx-confirm="Are you sure you want to delete this version?">Delete</button>
+    </form>
+  </li>
+  {% endif %}
+</ul>
 
 {% if version.description %}
 <div>
@@ -42,48 +40,45 @@
 </div>
 {% endif %}
 
-<div class="version-section">
-  <h2>Decks</h2>
-
-  {% if is_owner %}
-  <form method="post" action="{% url 'lineups-version-deck-add' version.code %}" class="deck-add-form">
-    {% csrf_token %}
-    <div class="deck-add-row" style="padding-bottom: 0.5rem">
-      {{ deck_form.deck_url }}
-      <button type="submit" class="button button-primary">Add Deck</button>
-    </div>
-    <p class="helptext">Paste a Master Vault URL or DoK URL</p>
-  </form>
-  {% endif %}
-
-  <div id="decks-list">
-    {% if decks %}
-    {% for vd in decks %}
-    <div class="deck-card" id="deck-{{ vd.id }}">
-      <h3 class="deck-card__title"><a href="{{ vd.deck.get_dok_url }}" target="_blank" rel="noopener">{{ vd.deck.name }}</a></h3>
-      <div class="deck-card__footer">
-        <div class="deck-card__icons">
-          {% if vd.deck.set.src %}<img src="{{ vd.deck.set.src }}" alt="{{ vd.deck.set.name }}" class="deck-icon">{% endif %}
-          <span>&nbsp;</span>
-          {% if vd.deck.house_1.src %}<img src="{{ vd.deck.house_1.src }}" alt="{{ vd.deck.house_1.name }}" class="deck-icon">{% endif %}
-          {% if vd.deck.house_2.src %}<img src="{{ vd.deck.house_2.src }}" alt="{{ vd.deck.house_2.name }}" class="deck-icon">{% endif %}
-          {% if vd.deck.house_3.src %}<img src="{{ vd.deck.house_3.src }}" alt="{{ vd.deck.house_3.name }}" class="deck-icon">{% endif %}
-        </div>
-        {% if is_owner %}
-        <div class="deck-card__actions">
-          <form method="post" action="{% url 'lineups-version-deck-remove' version.code vd.id %}" class="form-inline">
-            {% csrf_token %}
-            <button type="submit" class="button button-small" hx-confirm="Remove this deck?" hx-target="#deck-{{ vd.id }}" hx-swap="outerHTML">Remove</button>
-          </form>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-    {% endfor %}
-    {% else %}
-    <p class="empty-message">No decks in this version yet.</p>
-    {% endif %}
+<h2>Decks</h2>
+{% if is_owner %}
+<form method="post" action="{% url 'lineups-version-deck-add' version.code %}" class="deck-add-form">
+  {% csrf_token %}
+  <div class="deck-add-row" style="padding-bottom: 0.5rem">
+    {{ deck_form.deck_url }}
+    <button type="submit" class="button button-primary">Add Deck</button>
   </div>
+  <p class="helptext">Paste a Master Vault URL or DoK URL</p>
+</form>
+{% endif %}
+
+<div id="decks-list">
+  {% if decks %}
+  {% for vd in decks %}
+  <div class="deck-card" id="deck-{{ vd.id }}">
+    <h3 class="deck-card__title"><a href="{{ vd.deck.get_dok_url }}" target="_blank" rel="noopener">{{ vd.deck.name }}</a></h3>
+    <div class="deck-card__footer">
+      <div class="deck-card__icons">
+        {% if vd.deck.set.src %}<img src="{{ vd.deck.set.src }}" alt="{{ vd.deck.set.name }}" class="deck-icon">{% endif %}
+        <span>&nbsp;</span>
+        {% if vd.deck.house_1.src %}<img src="{{ vd.deck.house_1.src }}" alt="{{ vd.deck.house_1.name }}" class="deck-icon">{% endif %}
+        {% if vd.deck.house_2.src %}<img src="{{ vd.deck.house_2.src }}" alt="{{ vd.deck.house_2.name }}" class="deck-icon">{% endif %}
+        {% if vd.deck.house_3.src %}<img src="{{ vd.deck.house_3.src }}" alt="{{ vd.deck.house_3.name }}" class="deck-icon">{% endif %}
+      </div>
+      {% if is_owner %}
+      <div class="deck-card__actions">
+        <form method="post" action="{% url 'lineups-version-deck-remove' version.code vd.id %}" class="form-inline">
+          {% csrf_token %}
+          <button type="submit" class="button button-small" hx-confirm="Remove this deck?" hx-target="#deck-{{ vd.id }}" hx-swap="outerHTML">Remove</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="empty-message">No decks in this version yet.</p>
+  {% endif %}
 
   {% if decks %}
   <div class="export-actions">

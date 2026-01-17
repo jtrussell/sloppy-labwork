@@ -244,7 +244,7 @@ def version_create(request, lineup_code):
     if not lineup.can_edit(request.user):
         raise PermissionDenied
 
-    next_sort_order = lineup.lineupversion_set.count() + 1
+    next_sort_order = lineup.versions.count() + 1
 
     if request.method == 'POST':
         form = LineupVersionForm(request.POST)
