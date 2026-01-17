@@ -14,17 +14,14 @@
   {{ lineup.name }}
 </nav>
 
-<div class="lineup-header">
-  <div class="lineup-header__info">
-    <h1>{{ lineup.name }}</h1>
-    <ul class="subheading inline-list">
-      {% if lineup.format %}<li>{{ lineup.format.name }}</li>{% endif %}
-      <li>{{ lineup.get_visibility_display }}</li>
-      {% if is_owner %}
-      {% endif %}
-    </ul>
-  </div>
-</div>
+<h1>{{ lineup.name }}</h1>
+<ul class="subheading inline-list">
+  {% if lineup.format %}<li>{{ lineup.format.name }}</li>{% endif %}
+  <li>{{ lineup.get_visibility_display }}</li>
+  {% if is_owner %}
+  <li><a href="{% url 'lineups-edit' lineup.code %}" class="button button-link button-link-bordered">Edit</a></li>
+  {% endif %}
+</ul>
 
 {% if lineup.description %}
 <div class="lineup-description">
@@ -32,54 +29,41 @@
 </div>
 {% endif %}
 
+<h2>Versions</h2>
 {% if is_owner %}
-<div class="entity-actions">
-  <a href="{% url 'lineups-edit' lineup.code %}" class="button">Edit</a>
-  
-  <form method="post" action="{% url 'lineups-delete' lineup.code %}" class="form-inline">
-    {% csrf_token %}
-    <button type="submit" class="button" hx-confirm="Are you sure you want to delete this lineup?">Delete</button>
-  </form>
-</div>
+<ul class="subheading inline-list">
+  <li><a href="{% url 'lineups-version-create' lineup.code %}" class="button button-link button-link-bordered">Add Version</a></li>
+</ul>
 {% endif %}
 
-<section class="lineup-section">
-  <div class="section-header">
-    <h2>Versions</h2>
-    {% if is_owner %}
-    <a href="{% url 'lineups-version-create' lineup.code %}" class="button button-primary">Add Version</a>
-    {% endif %}
+{% if versions %}
+<div class="version-list">
+  {% for version in versions %}
+  <div class="version-card">
+    <h3 class="version-card__title"><a href="{% url 'lineups-version-detail' version.code %}">{{ version.name }}</a></h3>
+    <ul class="version-card__meta inline-list">
+      <li>{{ version.version_decks.count }} Deck{{ version.version_decks.count|pluralize }}</li>
+      <li>{{ version.notes.count }} Note{{ version.notes.count|pluralize }}</li>
+      <li>{{ version.get_effective_visibility|capfirst }}</li>
+    </ul>
   </div>
+  {% endfor %}
+</div>
 
-  {% if versions %}
-  <div class="version-list">
-    {% for version in versions %}
-    <div class="version-card">
-      <h3 class="version-card__title"><a href="{% url 'lineups-version-detail' version.code %}">{{ version.name }}</a></h3>
-      <ul class="version-card__meta inline-list">
-        <li>{{ version.version_decks.count }} Deck{{ version.version_decks.count|pluralize }}</li>
-        <li>{{ version.notes.count }} Note{{ version.notes.count|pluralize }}</li>
-        <li>{{ version.get_effective_visibility|capfirst }}</li>
-      </ul>
-    </div>
-    {% endfor %}
-  </div>
-
-  {% if versions.paginator.num_pages > 1 %}
-  <div class="pagination">
-    {% if versions.has_previous %}
-    <a href="?vp={{ versions.previous_page_number }}{% if notes.number != 1 %}&np={{ notes.number }}{% endif %}" class="button">&laquo; Prev</a>
-    {% endif %}
-    <span class="pagination-info">Page {{ versions.number }} of {{ versions.paginator.num_pages }}</span>
-    {% if versions.has_next %}
-    <a href="?vp={{ versions.next_page_number }}{% if notes.number != 1 %}&np={{ notes.number }}{% endif %}" class="button">Next &raquo;</a>
-    {% endif %}
-  </div>
+{% if versions.paginator.num_pages > 1 %}
+<div class="pagination">
+  {% if versions.has_previous %}
+  <a href="?vp={{ versions.previous_page_number }}{% if notes.number != 1 %}&np={{ notes.number }}{% endif %}" class="button">&laquo; Prev</a>
   {% endif %}
-  {% else %}
-  <p class="empty-message">No versions yet.</p>
+  <span class="pagination-info">Page {{ versions.number }} of {{ versions.paginator.num_pages }}</span>
+  {% if versions.has_next %}
+  <a href="?vp={{ versions.next_page_number }}{% if notes.number != 1 %}&np={{ notes.number }}{% endif %}" class="button">Next &raquo;</a>
   {% endif %}
-</section>
+</div>
+{% endif %}
+{% else %}
+<p class="empty-message">No versions yet.</p>
+{% endif %}
 
 <section class="lineup-section">
   <div class="section-header">

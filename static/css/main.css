@@ -129,6 +129,19 @@ form.form-inline {
   color: var(--color-text);
 }
 
+.button-link.button-link-bordered {
+  border: 1px solid var(--color-lines);
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+}
+
+.button-link.button-link-bordered:hover,
+.button-link.button-link-bordered:active,
+.button-link.button-link-bordered:focus {
+  border-color: var(--color-text-active);
+  color: var(--color-text-active);
+}
+
 input:disabled {
   color: var(--color-text-muted);
 }
@@ -181,9 +194,10 @@ ul.inline-list {
   display: flex;
   flex-direction: row;
   list-style-type: none;
+  align-items: center;
 }
 
-ul.inline-list li:not(.spacer) + li:not(.spacer)::before {
+ul.inline-list li:not(.spacer)+li:not(.spacer)::before {
   content: '•';
   margin: 0 0.5rem;
 }

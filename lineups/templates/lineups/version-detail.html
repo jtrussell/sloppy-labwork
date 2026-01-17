@@ -19,36 +19,31 @@
   &raquo; {{ version.name }}
 </nav>
 
-<div class="version-header">
-  <div class="version-header__info">
-    <h1>{{ lineup.name }}</h1>
-    <ul class="subheading inline-list">
-      <li>{{ version.name }}</li>
-      <li>{{ version.get_effective_visibility|capfirst }}</li>
-    </ul>
-  </div>
+<div>
+  <h1>{{ lineup.name }}</h1>
+  <ul class="subheading inline-list">
+    <li>{{ version.name }}</li>
+    <li>{{ version.get_effective_visibility|capfirst }}</li>
+    {% if is_owner %}
+    <li><a href="{% url 'lineups-version-edit' version.code %}" class="button button-link">Edit</a></li>
+    <li>
+      <form method="post" action="{% url 'lineups-version-delete' version.code %}" class="form-inline">
+        {% csrf_token %}
+        <button type="submit" class="button button-link" hx-confirm="Are you sure you want to delete this version?">Delete</button>
+      </form>
+    </li>
+    {% endif %}
+  </ul>
 </div>
 
 {% if version.description %}
-<div class="version-description">
+<div>
   {{ version.description|markdown|safe }}
 </div>
 {% endif %}
 
-{% if is_owner %}
-<div class="entity-actions">
-  <a href="{% url 'lineups-version-edit' version.code %}" class="button">Edit</a>
-  <form method="post" action="{% url 'lineups-version-delete' version.code %}" class="form-inline">
-    {% csrf_token %}
-    <button type="submit" class="button" hx-confirm="Are you sure you want to delete this version?">Delete</button>
-  </form>
-</div>
-{% endif %}
-
-<section class="version-section">
-  <div class="section-header">
-    <h2>Decks</h2>
-  </div>
+<div class="version-section">
+  <h2>Decks</h2>
 
   {% if is_owner %}
   <form method="post" action="{% url 'lineups-version-deck-add' version.code %}" class="deck-add-form">
@@ -112,7 +107,7 @@
     });
   </script>
   {% endif %}
-</section>
+</div>
 
 <section class="version-section">
   <div class="section-header">

@@ -8,10 +8,11 @@
 {% endblock %}
 
 {% block content %}
-<div class="lineups-header">
-  <h1>My Lineups</h1>
-  <a href="{% url 'lineups-create' %}" class="button button-primary">New Lineup</a>
-</div>
+<h1>My Lineups</h1>
+<ul class="subheading inline-list">
+  <li>Foo</li>
+  <li><a href="{% url 'lineups-create' %}" class="button button-link button-link-bordered">New Lineup</a></li>
+</ul>
 
 <form class="lineups-filters" hx-get="{% url 'lineups-list' %}" hx-target="#lineup-results" hx-swap="innerHTML" hx-trigger="input delay:300ms from:#search-input, change from:#format-select">
   <div class="filter-row">
