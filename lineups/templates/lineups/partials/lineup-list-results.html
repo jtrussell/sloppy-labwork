@@ -1,13 +1,22 @@
 {% if lineups %}
 <div class="lineup-list">
   {% for lineup in lineups %}
+  {% with latest=lineup.latest_version %}
   <div class="lineup-card">
+    {% if latest %}
+    <h3 class="lineup-card__title"><a href="{% url 'lineups-version-detail' latest.code %}">{{ lineup.name }}</a></h3>
+    <ul class="lineup-card__meta inline-list">
+      <li>{{ latest.deck_count }} Deck{{ latest.deck_count|pluralize }}</li>
+      <li><a href="{% url 'lineups-detail' lineup.code %}">{{ lineup.versions.count }} Version{{ lineup.versions.count|pluralize }}</a></li>
+    </ul>
+    {% else %}
     <h3 class="lineup-card__title"><a href="{% url 'lineups-detail' lineup.code %}">{{ lineup.name }}</a></h3>
     <ul class="lineup-card__meta inline-list">
-      <li>{{ lineup.versions.count }} Version{{ lineup.versions.count|pluralize }}</li>
-      <li>{{ lineup.get_visibility_display|capfirst }}</li>
+      <li>No versions</li>
     </ul>
+    {% endif %}
   </div>
+  {% endwith %}
   {% endfor %}
 </div>
 

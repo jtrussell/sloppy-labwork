@@ -10,22 +10,12 @@
 {% block content %}
 <h1>My Lineups</h1>
 <ul class="subheading inline-list">
-  <li>Foo</li>
   <li><a href="{% url 'lineups-create' %}" class="button button-link button-link-bordered">New Lineup</a></li>
 </ul>
 
-<form class="lineups-filters" hx-get="{% url 'lineups-list' %}" hx-target="#lineup-results" hx-swap="innerHTML" hx-trigger="input delay:300ms from:#search-input, change from:#format-select">
-  <div class="filter-row">
-    <input type="text" name="q" id="search-input" value="{{ search_query }}" placeholder="Search lineups...">
-    <!--
-    <select name="format" id="format-select">
-      <option value="">All Formats</option>
-      {% for format in formats %}
-      <option value="{{ format.id }}" {% if format_filter == format.id|stringformat:"s" %}selected{% endif %}>{{ format.name }}</option>
-      {% endfor %}
-    </select>
-    -->
-  </div>
+<form class="form-wide" hx-get="{% url 'lineups-list' %}" hx-target="#lineup-results" hx-swap="innerHTML" hx-trigger="input delay:300ms from:#search-input, change from:#format-select">
+  <input type="text" name="q" id="search-input" value="{{ search_query }}" placeholder="Search lineups...">
+  <span class="helptext">Type to search</span>
 </form>
 
 <div id="lineup-results">

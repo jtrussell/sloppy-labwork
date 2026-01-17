@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
+from django.db.models import Count, Prefetch
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST, require_http_methods
@@ -32,7 +33,12 @@ def should_show_lineup_details(lineup, user):
 
 @login_required
 def lineup_list(request):
-    lineups = Lineup.objects.filter(owner=request.user)
+    lineups = Lineup.objects.filter(owner=request.user).prefetch_related(
+        Prefetch(
+            'versions',
+            queryset=LineupVersion.objects.annotate(deck_count=Count('version_decks'))
+        )
+    )
 
     search_query = request.GET.get('q', '').strip()
     if search_query:

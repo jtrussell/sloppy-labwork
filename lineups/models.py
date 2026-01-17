@@ -72,6 +72,10 @@ class Lineup(models.Model):
             models.Q(visibility_override=LineupVersion.Visibility.PUBLIC)
         )
 
+    @property
+    def latest_version(self):
+        return self.versions.first()
+
 
 class LineupNote(models.Model):
     lineup = models.ForeignKey(

@@ -11,21 +11,6 @@
   margin: 0;
 }
 
-.lineups-filters {
-  margin-bottom: 2rem;
-}
-
-.lineups-filters .filter-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.lineups-filters .filter-row input,
-.lineups-filters .filter-row select {
-  margin-bottom: 0;
-}
-
 @media (min-width: 550px) {
   .lineups-filters .filter-row {
     flex-direction: row;
@@ -53,6 +38,7 @@
 }
 
 @media (min-width: 550px) {
+
   .lineup-header,
   .version-header {
     flex-direction: row;
@@ -106,6 +92,7 @@
 }
 
 @media (min-width: 550px) {
+
   .lineup-meta,
   .version-meta {
     flex-direction: row;

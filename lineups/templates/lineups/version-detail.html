@@ -24,11 +24,11 @@
   <li>{{ version.name }}</li>
   <li>{{ version.get_effective_visibility|capfirst }}</li>
   {% if is_owner %}
-  <li><a href="{% url 'lineups-version-edit' version.code %}" class="button button-link">Edit</a></li>
+  <li><a href="{% url 'lineups-version-edit' version.code %}" class="button button-link button-link-bordered">Edit</a></li>
   <li>
     <form method="post" action="{% url 'lineups-version-delete' version.code %}" class="form-inline">
       {% csrf_token %}
-      <button type="submit" class="button button-link" hx-confirm="Are you sure you want to delete this version?">Delete</button>
+      <button type="submit" class="button button-link button-link-bordered" hx-confirm="Are you sure you want to delete this version?">Delete</button>
     </form>
   </li>
   {% endif %}
