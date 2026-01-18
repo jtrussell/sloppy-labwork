@@ -207,6 +207,7 @@ ul.inline-list {
 
 ul.inline-list li:not(.spacer)+li:not(.spacer)::before {
   content: '•';
+  color: var(--color-text-muted);
   margin: 0 0.5rem;
 }
 

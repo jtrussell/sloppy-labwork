@@ -83,8 +83,8 @@
   {% if decks %}
   <div class="export-actions">
     {% if version.get_effective_visibility != 'private' %}
-    <a href="{{ request.path }}?f=json" class="button button-small">⚙️ JSON</a>
-    <a href="{{ request.path }}?f=xml" class="button button-small">⚙️ XML</a>
+    <a target="_blank" href="{{ request.path }}?f=json" class="button button-small">⚙️ JSON</a>
+    <a target="_blank" href="{{ request.path }}?f=xml" class="button button-small">⚙️ XML</a>
     {% endif %}
     <span class="spacer"></span>
     <button type="button" class="button button-small" id="copy-deck-links">📋 Copy Deck Links</button>
