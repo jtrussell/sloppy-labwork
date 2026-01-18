@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST, require_http_methods
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 from .models import Lineup, LineupNote, LineupVersion, LineupVersionNote, LineupVersionDeck
-from .forms import LineupForm, LineupNoteForm, LineupVersionForm, LineupVersionNoteForm, DeckAddForm
+from .forms import LineupForm, LineupNoteForm, LineupVersionForm, LineupVersionNoteForm
 from pmc.models import EventFormat
 from decks.models import Deck
 
@@ -305,7 +305,6 @@ def version_detail(request, version_code):
         'notes': notes_page,
         'is_owner': is_owner,
         'note_form': LineupVersionNoteForm() if is_owner else None,
-        'deck_form': DeckAddForm() if is_owner else None,
         'show_lineup_details': should_show_lineup_details(lineup, request.user),
     }
     return render(request, 'lineups/version-detail.html', context)
@@ -468,6 +467,33 @@ def version_note_delete(request, version_code, note_id):
 
 
 @login_required
+def version_deck_search(request, version_code):
+    version = get_object_or_404(LineupVersion, code=version_code)
+    lineup = version.lineup
+
+    if not lineup.can_edit(request.user):
+        raise PermissionDenied
+
+    query = request.GET.get('deck_input', '').strip()
+
+    if not query or len(query) < 2:
+        return HttpResponse('')
+
+    if '/' in query or 'http' in query.lower():
+        return HttpResponse('')
+
+    matching_decks = Deck.objects.filter(
+        lineup_versions__version__lineup__owner=request.user,
+        name__icontains=query
+    ).exclude(
+        lineup_versions__version=version
+    ).distinct().order_by('name')[:5]
+
+    options = ''.join(f'<option value="{deck.name}">' for deck in matching_decks)
+    return HttpResponse(options)
+
+
+@login_required
 @require_POST
 def version_deck_add(request, version_code):
     version = get_object_or_404(LineupVersion, code=version_code)
@@ -476,27 +502,42 @@ def version_deck_add(request, version_code):
     if not lineup.can_edit(request.user):
         raise PermissionDenied
 
-    form = DeckAddForm(request.POST)
-    if form.is_valid():
-        deck_id = form.cleaned_data['deck_url']
-        try:
-            with transaction.atomic():
+    deck_input = request.POST.get('deck_input', '').strip()
+
+    if not deck_input:
+        messages.error(request, 'Please enter a deck name or URL.')
+        return redirect_to(request, f'/lineups/versions/{version.code}/')
+
+    deck = None
+    is_url_or_uuid = '/' in deck_input or 'http' in deck_input.lower() or len(deck_input) == 36
+
+    try:
+        with transaction.atomic():
+            if is_url_or_uuid:
+                deck_id = Deck.get_id_from_master_vault_url(deck_input)
                 deck, created = Deck.objects.get_or_create(id=deck_id)
                 if created or not deck.name:
                     deck.hydrate_from_master_vault(save=True)
+            else:
+                deck = Deck.objects.filter(
+                    lineup_versions__version__lineup__owner=request.user,
+                    name=deck_input
+                ).first()
 
-                if not LineupVersionDeck.objects.filter(version=version, deck=deck).exists():
-                    LineupVersionDeck.objects.create(
-                        version=version,
-                        deck=deck
-                    )
-                    messages.success(request, f'Deck "{deck.name}" added.')
-                else:
-                    messages.warning(request, f'Deck "{deck.name}" is already in this version.')
-        except Exception as e:
-            messages.error(request, f'Failed to add deck: {str(e)}')
-    else:
-        messages.error(request, 'Invalid deck URL.')
+                if not deck:
+                    messages.error(request, f'Deck "{deck_input}" not found. Try pasting a URL instead.')
+                    return redirect_to(request, f'/lineups/versions/{version.code}/')
+
+            if not LineupVersionDeck.objects.filter(version=version, deck=deck).exists():
+                LineupVersionDeck.objects.create(
+                    version=version,
+                    deck=deck
+                )
+                messages.success(request, f'Deck "{deck.name}" added.')
+            else:
+                messages.warning(request, f'Deck "{deck.name}" is already in this version.')
+    except Exception as e:
+        messages.error(request, f'Failed to add deck: {str(e)}')
 
     return redirect_to(request, f'/lineups/versions/{version.code}/')
 

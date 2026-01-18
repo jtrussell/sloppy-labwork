@@ -36,6 +36,8 @@ urlpatterns = [
 
     path('versions/<str:version_code>/decks/add/',
          views.version_deck_add, name='lineups-version-deck-add'),
+    path('versions/<str:version_code>/decks/search/',
+         views.version_deck_search, name='lineups-version-deck-search'),
     path('versions/<str:version_code>/decks/<int:deck_id>/remove/',
          views.version_deck_remove, name='lineups-version-deck-remove'),
     path('versions/<str:version_code>/decks/reorder/',

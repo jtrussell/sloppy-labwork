@@ -28,7 +28,7 @@
   <li>
     <form method="post" action="{% url 'lineups-version-clone' version.code %}" class="form-inline">
       {% csrf_token %}
-      <button type="submit" class="button button-link button-link-bordered">Clone</button>
+      <button type="submit" class="button button-link button-link-bordered">Version</button>
     </form>
   </li>
   <li>
@@ -50,11 +50,17 @@
 {% if is_owner %}
 <form method="post" action="{% url 'lineups-version-deck-add' version.code %}" class="deck-add-form">
   {% csrf_token %}
-  <div class="deck-add-row" style="padding-bottom: 0.5rem">
-    {{ deck_form.deck_url }}
+  <div class="deck-add-row">
+    <input type="text" name="deck_input" list="deck-suggestions"
+           placeholder="Search your decks or paste a URL"
+           hx-get="{% url 'lineups-version-deck-search' version.code %}"
+           hx-trigger="input changed delay:300ms"
+           hx-target="#deck-suggestions"
+           hx-include="this"
+           autocomplete="off">
     <button type="submit" class="button button-primary">Add Deck</button>
   </div>
-  <p class="helptext">Paste a Master Vault URL or DoK URL</p>
+  <datalist id="deck-suggestions"></datalist>
 </form>
 {% endif %}
 
