@@ -442,10 +442,19 @@ tr.with-actions td {
 
 .modal #scoreInputs > div > div {
   flex: 1;
+  min-width: 0;
 }
 
 .modal #scoreInputs input {
   width: 100%;
+}
+
+.modal #scoreInputs label {
+  width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .modal .modal-actions {
