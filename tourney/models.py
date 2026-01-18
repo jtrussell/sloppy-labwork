@@ -1227,6 +1227,57 @@ class StandingCalculator:
         return total_opponent_points / len(opponents) if opponents else 0
 
     @staticmethod
+    def _get_player_total_stats(player, tournament):
+        from django.db.models import Q
+
+        stage_players = StagePlayer.objects.filter(
+            player=player,
+            stage__tournament=tournament
+        )
+
+        total_wins = 0
+        total_losses = 0
+        total_ties = 0
+        total_byes = 0
+
+        for stage_player in stage_players:
+            stage = stage_player.stage
+
+            wins = MatchResult.objects.filter(
+                match__round__stage=stage,
+                winner=stage_player
+            ).count()
+
+            byes = MatchResult.objects.filter(
+                match__round__stage=stage,
+                winner=stage_player,
+                match__player_two__isnull=True
+            ).count()
+
+            losses = MatchResult.objects.filter(
+                Q(match__player_one=stage_player) | Q(match__player_two=stage_player),
+                match__round__stage=stage
+            ).exclude(winner=stage_player).exclude(winner=None).count()
+
+            ties = MatchResult.objects.filter(
+                Q(match__player_one=stage_player) | Q(match__player_two=stage_player),
+                match__round__stage=stage,
+                winner=None
+            ).count()
+
+            total_wins += wins
+            total_losses += losses
+            total_ties += ties
+            total_byes += byes
+
+        return {
+            'wins': total_wins,
+            'losses': total_losses,
+            'ties': total_ties,
+            'byes': total_byes,
+        }
+
+    @staticmethod
     def get_tournament_standings(tournament):
         """
         Get comprehensive tournament standings for all players registered.
@@ -1262,6 +1313,9 @@ class StandingCalculator:
             player = current_standing['stage_player'].player
             current_stage_player_ids.add(player.id)
 
+            total_stats = StandingCalculator._get_player_total_stats(
+                player, tournament)
+
             standing_data = {
                 'player': player,
                 'stage_player': current_standing['stage_player'],
@@ -1270,10 +1324,10 @@ class StandingCalculator:
                 'is_dropped': player.status == Player.PlayerStatus.DROPPED,
                 'is_in_current_stage': True,
                 'rank': current_standing['rank'],
-                'wins': current_standing['wins'],
-                'losses': current_standing['losses'],
-                'byes': current_standing['byes'],
-                'ties': current_standing['ties'],
+                'wins': total_stats['wins'],
+                'losses': total_stats['losses'],
+                'byes': total_stats['byes'],
+                'ties': total_stats['ties'],
                 'points': current_standing['points'],
                 'strength_of_schedule': current_standing['strength_of_schedule'],
                 'seed': current_standing['seed'],
@@ -1313,6 +1367,9 @@ class StandingCalculator:
             highest_stage_player = player_stages.first()
             highest_stage = highest_stage_player.stage
 
+            total_stats = StandingCalculator._get_player_total_stats(
+                player, tournament)
+
             standing_data = {
                 'player': player,
                 'stage_player': highest_stage_player,
@@ -1321,10 +1378,10 @@ class StandingCalculator:
                 'is_dropped': player.status == Player.PlayerStatus.DROPPED,
                 'is_in_current_stage': False,
                 'rank': highest_stage_player.rank or 999,
-                'wins': None,
-                'losses': None,
-                'ties': None,
-                'byes': None,
+                'wins': total_stats['wins'],
+                'losses': total_stats['losses'],
+                'ties': total_stats['ties'],
+                'byes': total_stats['byes'],
                 'points': None,
                 'strength_of_schedule': None,
                 'seed': highest_stage_player.seed,

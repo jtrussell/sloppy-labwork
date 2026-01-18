@@ -215,6 +215,136 @@ class TournamentStandingsTestCase(StandingsTestCase):
         self.assertFalse(standings[2]['is_in_current_stage']) # Player3 not in playoff
         self.assertFalse(standings[3]['is_in_current_stage']) # Player4 not in playoff
 
+    def test_tournament_standings_aggregates_stats_across_stages(self):
+        """Test that wins/losses are aggregated across all stages for export."""
+        # Create main stage round with 2 rounds of matches
+        main_round1 = Round.objects.create(stage=self.main_stage, order=1)
+        main_round2 = Round.objects.create(stage=self.main_stage, order=2)
+
+        # Round 1: Player1 beats Player4, Player2 beats Player3
+        match1 = Match.objects.create(
+            round=main_round1, player_one=self.stage_player1, player_two=self.stage_player4)
+        MatchResult.objects.create(match=match1, winner=self.stage_player1)
+
+        match2 = Match.objects.create(
+            round=main_round1, player_one=self.stage_player2, player_two=self.stage_player3)
+        MatchResult.objects.create(match=match2, winner=self.stage_player2)
+
+        # Round 2: Player1 beats Player3, Player2 beats Player4
+        match3 = Match.objects.create(
+            round=main_round2, player_one=self.stage_player1, player_two=self.stage_player3)
+        MatchResult.objects.create(match=match3, winner=self.stage_player1)
+
+        match4 = Match.objects.create(
+            round=main_round2, player_one=self.stage_player2, player_two=self.stage_player4)
+        MatchResult.objects.create(match=match4, winner=self.stage_player2)
+
+        # Main stage results: Player1 2-0, Player2 2-0, Player3 0-2, Player4 0-2
+        # Set ranks on main stage
+        self.stage_player1.rank = 1
+        self.stage_player1.save()
+        self.stage_player2.rank = 2
+        self.stage_player2.save()
+        self.stage_player3.rank = 3
+        self.stage_player3.save()
+        self.stage_player4.rank = 4
+        self.stage_player4.save()
+
+        # Create playoff stage (top 2 advance)
+        playoff_stage = Stage.objects.create(
+            tournament=self.tournament,
+            name='Playoff Stage',
+            order=2,
+            pairing_strategy='single_elimination',
+            max_players=2
+        )
+        playoff_stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+
+        # Create playoff stage players
+        playoff_player1 = StagePlayer.objects.create(
+            player=self.player1, stage=playoff_stage, seed=1)
+        playoff_player2 = StagePlayer.objects.create(
+            player=self.player2, stage=playoff_stage, seed=2)
+
+        # Playoff match: Player1 beats Player2
+        playoff_round = Round.objects.create(stage=playoff_stage, order=1)
+        playoff_match = Match.objects.create(
+            round=playoff_round, player_one=playoff_player1, player_two=playoff_player2)
+        MatchResult.objects.create(match=playoff_match, winner=playoff_player1)
+
+        # Get tournament standings
+        standings = StandingCalculator.get_tournament_standings(self.tournament)
+
+        # Player1: 2 wins (main) + 1 win (playoff) = 3 wins, 0 losses
+        self.assertEqual(standings[0]['player'], self.player1)
+        self.assertEqual(standings[0]['wins'], 3)
+        self.assertEqual(standings[0]['losses'], 0)
+
+        # Player2: 2 wins (main) + 0 wins (playoff) = 2 wins, 1 loss
+        self.assertEqual(standings[1]['player'], self.player2)
+        self.assertEqual(standings[1]['wins'], 2)
+        self.assertEqual(standings[1]['losses'], 1)
+
+        # Player3: 0 wins (main), 2 losses (main) - did not advance
+        self.assertEqual(standings[2]['player'], self.player3)
+        self.assertEqual(standings[2]['wins'], 0)
+        self.assertEqual(standings[2]['losses'], 2)
+
+        # Player4: 0 wins (main), 2 losses (main) - did not advance
+        self.assertEqual(standings[3]['player'], self.player4)
+        self.assertEqual(standings[3]['wins'], 0)
+        self.assertEqual(standings[3]['losses'], 2)
+
+    def test_tournament_standings_eliminated_players_have_stats(self):
+        """Test that players who didn't advance to current stage still have stats."""
+        # Create main stage match
+        main_round = Round.objects.create(stage=self.main_stage, order=1)
+        match = Match.objects.create(
+            round=main_round, player_one=self.stage_player1, player_two=self.stage_player2)
+        MatchResult.objects.create(match=match, winner=self.stage_player1)
+
+        # Set ranks
+        self.stage_player1.rank = 1
+        self.stage_player1.save()
+        self.stage_player2.rank = 2
+        self.stage_player2.save()
+        self.stage_player3.rank = 3
+        self.stage_player3.save()
+        self.stage_player4.rank = 4
+        self.stage_player4.save()
+
+        # Create playoff stage with only player1
+        playoff_stage = Stage.objects.create(
+            tournament=self.tournament,
+            name='Playoff Stage',
+            order=2,
+            pairing_strategy='single_elimination',
+            max_players=1
+        )
+        playoff_stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+
+        playoff_player1 = StagePlayer.objects.create(
+            player=self.player1, stage=playoff_stage, seed=1)
+
+        standings = StandingCalculator.get_tournament_standings(self.tournament)
+
+        # Player1 is in playoffs, has main stage stats
+        self.assertEqual(standings[0]['wins'], 1)
+        self.assertEqual(standings[0]['losses'], 0)
+
+        # Players 2, 3, 4 are NOT in playoffs but should have stats (not None)
+        for standing in standings[1:]:
+            self.assertIsNotNone(standing['wins'])
+            self.assertIsNotNone(standing['losses'])
+            self.assertIsInstance(standing['wins'], int)
+            self.assertIsInstance(standing['losses'], int)
+
 
 class StageAdvancementTestCase(StandingsTestCase):
     """Test rank assignment during stage advancement."""
@@ -1876,3 +2006,126 @@ class PublicTournamentAccessTestCase(TestCase):
         tournament.save()
         tournament.refresh_from_db()
         self.assertTrue(tournament.is_public)
+
+
+class KeyChainExportTestCase(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        self.user1 = User.objects.create_user('user1', 'user1@test.com', 'password')
+        self.user2 = User.objects.create_user('user2', 'user2@test.com', 'password')
+        self.user3 = User.objects.create_user('user3', 'user3@test.com', 'password')
+        self.user4 = User.objects.create_user('user4', 'user4@test.com', 'password')
+
+        self.tournament = Tournament.objects.create(
+            name='Test Tournament',
+            owner=self.owner,
+            is_accepting_registrations=True
+        )
+
+        self.main_stage = Stage.objects.create(
+            tournament=self.tournament,
+            name='Main Stage',
+            order=1,
+            pairing_strategy='swiss'
+        )
+        self.main_stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+
+        self.player1 = Player.objects.create(user=self.user1, tournament=self.tournament)
+        self.player2 = Player.objects.create(user=self.user2, tournament=self.tournament)
+        self.player3 = Player.objects.create(user=self.user3, tournament=self.tournament)
+        self.player4 = Player.objects.create(user=self.user4, tournament=self.tournament)
+
+        self.stage_player1 = StagePlayer.objects.create(
+            player=self.player1, stage=self.main_stage, seed=1)
+        self.stage_player2 = StagePlayer.objects.create(
+            player=self.player2, stage=self.main_stage, seed=2)
+        self.stage_player3 = StagePlayer.objects.create(
+            player=self.player3, stage=self.main_stage, seed=3)
+        self.stage_player4 = StagePlayer.objects.create(
+            player=self.player4, stage=self.main_stage, seed=4)
+
+    def test_player_count_calculation_does_not_raise_type_error(self):
+        """Test that player_count calculation handles standings correctly."""
+        main_round = Round.objects.create(stage=self.main_stage, order=1)
+        match = Match.objects.create(
+            round=main_round, player_one=self.stage_player1, player_two=self.stage_player2)
+        MatchResult.objects.create(match=match, winner=self.stage_player1)
+
+        self.stage_player1.rank = 1
+        self.stage_player1.save()
+        self.stage_player2.rank = 2
+        self.stage_player2.save()
+        self.stage_player3.rank = 3
+        self.stage_player3.save()
+        self.stage_player4.rank = 4
+        self.stage_player4.save()
+
+        playoff_stage = Stage.objects.create(
+            tournament=self.tournament,
+            name='Playoff Stage',
+            order=2,
+            pairing_strategy='single_elimination',
+            max_players=2
+        )
+        playoff_stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+
+        playoff_player1 = StagePlayer.objects.create(
+            player=self.player1, stage=playoff_stage, seed=1)
+        playoff_player2 = StagePlayer.objects.create(
+            player=self.player2, stage=playoff_stage, seed=2)
+
+        standings = StandingCalculator.get_tournament_standings(self.tournament)
+
+        player_count = len(
+            [s for s in standings if (s.get('wins') or 0) > 0 or (s.get('losses') or 0) > 0])
+
+        self.assertEqual(player_count, 2)
+
+    def test_export_standings_have_valid_stats_for_all_players(self):
+        """Test that all players have valid integer stats for export."""
+        main_round = Round.objects.create(stage=self.main_stage, order=1)
+        match = Match.objects.create(
+            round=main_round, player_one=self.stage_player1, player_two=self.stage_player2)
+        MatchResult.objects.create(match=match, winner=self.stage_player1)
+
+        self.stage_player1.rank = 1
+        self.stage_player1.save()
+        self.stage_player2.rank = 2
+        self.stage_player2.save()
+        self.stage_player3.rank = 3
+        self.stage_player3.save()
+        self.stage_player4.rank = 4
+        self.stage_player4.save()
+
+        playoff_stage = Stage.objects.create(
+            tournament=self.tournament,
+            name='Playoff Stage',
+            order=2,
+            pairing_strategy='single_elimination',
+            max_players=2
+        )
+        playoff_stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+
+        playoff_player1 = StagePlayer.objects.create(
+            player=self.player1, stage=playoff_stage, seed=1)
+        playoff_player2 = StagePlayer.objects.create(
+            player=self.player2, stage=playoff_stage, seed=2)
+
+        standings = StandingCalculator.get_tournament_standings(self.tournament)
+
+        for standing in standings:
+            self.assertIsNotNone(standing['wins'])
+            self.assertIsNotNone(standing['losses'])
+            self.assertIsInstance(standing['wins'], int)
+            self.assertIsInstance(standing['losses'], int)
+            self.assertGreaterEqual(standing['wins'], 0)
+            self.assertGreaterEqual(standing['losses'], 0)
