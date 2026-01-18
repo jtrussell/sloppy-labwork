@@ -24,6 +24,8 @@ urlpatterns = [
          views.version_edit, name='lineups-version-edit'),
     path('versions/<str:version_code>/delete/',
          views.version_delete, name='lineups-version-delete'),
+    path('versions/<str:version_code>/clone/',
+         views.version_clone, name='lineups-version-clone'),
 
     path('versions/<str:version_code>/notes/add/',
          views.version_note_add, name='lineups-version-note-add'),

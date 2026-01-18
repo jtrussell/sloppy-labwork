@@ -112,10 +112,12 @@ def lineup_detail(request, lineup_code):
     version_page = request.GET.get('vp', 1)
     versions_page = version_paginator.get_page(version_page)
 
-    notes = lineup.notes.all()
-    note_paginator = Paginator(notes, 5)
-    note_page = request.GET.get('np', 1)
-    notes_page = note_paginator.get_page(note_page)
+    notes_page = None
+    if is_owner:
+        notes = lineup.notes.all()
+        note_paginator = Paginator(notes, 5)
+        note_page = request.GET.get('np', 1)
+        notes_page = note_paginator.get_page(note_page)
 
     context = {
         'lineup': lineup,
@@ -286,10 +288,12 @@ def version_detail(request, version_code):
     elif export_format == 'xml':
         return version_to_xml(version)
 
-    notes = version.notes.all()
-    note_paginator = Paginator(notes, 5)
-    note_page = request.GET.get('np', 1)
-    notes_page = note_paginator.get_page(note_page)
+    notes_page = None
+    if is_owner:
+        notes = version.notes.all()
+        note_paginator = Paginator(notes, 5)
+        note_page = request.GET.get('np', 1)
+        notes_page = note_paginator.get_page(note_page)
 
     decks = version.version_decks.select_related(
         'deck__set', 'deck__house_1', 'deck__house_2', 'deck__house_3')
@@ -346,6 +350,35 @@ def version_delete(request, version_code):
     version.delete()
     messages.success(request, f'Version "{version_name}" deleted.')
     return redirect_to(request, f'/lineups/{lineup.code}/')
+
+
+@login_required
+@require_POST
+def version_clone(request, version_code):
+    source_version = get_object_or_404(LineupVersion, code=version_code)
+    lineup = source_version.lineup
+
+    if not lineup.can_edit(request.user):
+        raise PermissionDenied
+
+    next_sort_order = lineup.versions.count() + 1
+
+    with transaction.atomic():
+        new_version = LineupVersion.objects.create(
+            lineup=lineup,
+            name=f'Version {next_sort_order}',
+            sort_order=next_sort_order
+        )
+
+        for source_deck in source_version.version_decks.all():
+            LineupVersionDeck.objects.create(
+                version=new_version,
+                deck=source_deck.deck,
+                sort_order=source_deck.sort_order
+            )
+
+    messages.success(request, f'Created "{new_version.name}" from "{source_version.name}".')
+    return redirect_to(request, f'/lineups/versions/{new_version.code}/')
 
 
 @login_required

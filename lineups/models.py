@@ -74,7 +74,7 @@ class Lineup(models.Model):
 
     @property
     def latest_version(self):
-        return self.versions.first()
+        return self.versions.order_by('-sort_order').first()
 
 
 class LineupNote(models.Model):

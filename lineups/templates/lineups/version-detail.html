@@ -26,9 +26,15 @@
   {% if is_owner %}
   <li><a href="{% url 'lineups-version-edit' version.code %}" class="button button-link button-link-bordered">Edit</a></li>
   <li>
+    <form method="post" action="{% url 'lineups-version-clone' version.code %}" class="form-inline">
+      {% csrf_token %}
+      <button type="submit" class="button button-link button-link-bordered">Clone</button>
+    </form>
+  </li>
+  <li>
     <form method="post" action="{% url 'lineups-version-delete' version.code %}" class="form-inline">
       {% csrf_token %}
-      <button type="submit" class="button button-link button-link-bordered" hx-confirm="Are you sure you want to delete this version?">Delete</button>
+      <button type="submit" class="button button-link button-link-bordered" hx-post="{% url 'lineups-version-delete' version.code %}" hx-confirm="Are you sure you want to delete this version?">Delete</button>
     </form>
   </li>
   {% endif %}
@@ -104,18 +110,17 @@
   {% endif %}
 </div>
 
+{% if is_owner %}
 <section class="version-section">
   <div class="section-header">
     <h2>Notes</h2>
   </div>
 
-  {% if is_owner %}
   <form method="post" action="{% url 'lineups-version-note-add' version.code %}" class="note-form">
     {% csrf_token %}
     {{ note_form.text }}
     <button type="submit" class="button button-primary">Add Note</button>
   </form>
-  {% endif %}
 
   <div id="notes-list">
     {% for note in notes %}
@@ -137,4 +142,5 @@
   </div>
   {% endif %}
 </section>
+{% endif %}
 {% endblock %}
