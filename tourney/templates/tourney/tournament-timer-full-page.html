@@ -20,7 +20,7 @@
     </style>
 </head>
 <body class="timer-full-page">
-    <div hx-get="{% url 'tourney-timer-full-page' tournament_code %}"
+    <div hx-get="{% url 'tourney:tourney-timer-full-page' tournament_code %}"
          hx-trigger="every 3s"
          hx-swap="innerHTML">
         {% include 'tourney/tournament-timer-full-page-inner.html' %}

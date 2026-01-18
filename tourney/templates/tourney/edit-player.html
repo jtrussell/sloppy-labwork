@@ -3,7 +3,7 @@
 {% block content %}
 <h1>{{ tournament.name }}</h1>
 <div class="subheading">
-    <a href="{% url 'tourney-manage-players' tournament.code %}">&larr; Back</a> • Edit Player
+    <a href="{% url 'tourney:tourney-manage-players' tournament.code %}">&larr; Back</a> • Edit Player
 </div>
 
 <section>
@@ -44,7 +44,7 @@
         </div>
 
         <button type="submit" class="button button-primary">Save Changes</button>
-        <a href="{% url 'tourney-manage-players' tournament.code %}" class="button">Cancel</a>
+        <a href="{% url 'tourney:tourney-manage-players' tournament.code %}" class="button">Cancel</a>
     </form>
 </section>
 {% endblock %}

@@ -40,20 +40,20 @@
      <section>
         <ul class="nav short">
             <li class="nav__item">
-                <a href="{% url 'tourney-detail-matches' tournament.code %}"
+                <a href="{% url 'tourney:tourney-detail-matches' tournament.code %}"
                 class="nav__link {% if current_tab == 'matches' %}nav__link--active{% endif %}">
                     Matches
                 </a>
             </li>
             <li class="nav__item">
-                <a href="{% url 'tourney-detail-standings' tournament.code %}"
+                <a href="{% url 'tourney:tourney-detail-standings' tournament.code %}"
                 class="nav__link {% if current_tab == 'standings' %}nav__link--active{% endif %}">
                     Standings
                 </a>
             </li>
             {% if is_admin %}
             <li class="nav__item">
-                <a href="{% url 'tourney-tournament-detail-admin' tournament.code %}"
+                <a href="{% url 'tourney:tourney-tournament-detail-admin' tournament.code %}"
                 class="nav__link {% if current_tab == 'admin' %}nav__link--active{% endif %}">
                     Admin
                 </a>
@@ -117,7 +117,7 @@
 
     <!-- Add Match Modal -->
     <div id="addMatchModal" class="modal"
-         data-add-match-url="{% url 'tourney-add-match' tournament.code %}"
+         data-add-match-url="{% url 'tourney:tourney-add-match' tournament.code %}"
          data-unmatched-players='{{ unmatched_players_json|default:"[]"|safe }}'
          data-is-admin="{{ is_admin|yesno:"true,false" }}"
          data-current-user-id="{{ user.id|default:"null" }}">
@@ -155,7 +155,7 @@
 
     <!-- Player Match Report Modal -->
     <div id="playerMatchReportModal" class="modal"
-         data-report-url="{% url 'tourney-player-add-match-result' tournament.code %}"
+         data-report-url="{% url 'tourney:tourney-player-add-match-result' tournament.code %}"
          data-unmatched-players='{{ unmatched_players_json|default:"[]"|safe }}'
          data-current-user-id="{{ user.id|default:"null" }}"
          data-stage-allow-ties="{{ selected_stage.are_ties_allowed|yesno:"true,false"|default:"false" }}"
@@ -215,7 +215,7 @@
                 <button class="modal-close" onclick="closeStartTimerModal()"></button>
             </div>
 
-            <form method="post" action="{% url 'tourney-create-timer' tournament.code %}" class="form-wide">
+            <form method="post" action="{% url 'tourney:tourney-create-timer' tournament.code %}" class="form-wide">
                 {% csrf_token %}
                 <div>
                     <label for="timerMinutes">Timer Length (minutes):</label>

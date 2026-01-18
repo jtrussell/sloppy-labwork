@@ -214,6 +214,10 @@ a {
   text-decoration: var(--link-decoration);
 }
 
+.text-normal {
+  color: var(--color-text);
+}
+
 .text-success {
   color: var(--color-text-success);
 }

@@ -14,14 +14,14 @@
         {% for admin in tournament_admins %}
         <div class="admin-item">
             <span class="admin-username">{% if admin.user %}{{ admin.user.username }}{% else %}(deleted user){% endif %}</span>
-            <form method="post" action="{% url 'tourney-remove-admin' tournament.code admin.id %}" class="form-inline">
+            <form method="post" action="{% url 'tourney:tourney-remove-admin' tournament.code admin.id %}" class="form-inline">
                 {% csrf_token %}
                 <button type="submit" class="button button-small" hx-confirm="Remove {{ admin.user.username }} as admin?">Remove</button>
             </form>
         </div>
         {% endfor %}
 
-        <form method="post" action="{% url 'tourney-add-admin' tournament.code %}">
+        <form method="post" action="{% url 'tourney:tourney-add-admin' tournament.code %}">
             {% csrf_token %}
             <div class="admin-add-row">
                 <input type="text" name="username" placeholder="Enter username" required>
@@ -35,14 +35,14 @@
         <p class="text-muted">Manage tournament settings and configuration.</p>
 
         <div class="hstack gap-1">
-            <a href="{% url 'tourney-edit-tournament' tournament.code %}" class="button button-primary">
+            <a href="{% url 'tourney:tourney-edit-tournament' tournament.code %}" class="button button-primary">
                 Edit Tournament
             </a>
 
             <form style="display: inline-block">
                 <button type="button"
                         class="button button-danger sm-w100"
-                        hx-post="{% url 'tourney-delete-tournament' tournament.code %}"
+                        hx-post="{% url 'tourney:tourney-delete-tournament' tournament.code %}"
                         hx-confirm="Are you sure you want to delete the tournament '{{ tournament.name }}'? This action cannot be undone and will permanently remove all tournament data including matches and results.">
                     Delete Tournament
                 </button>
@@ -55,7 +55,7 @@
         <h2>Export to KeyChain</h2>
         <p class="text-muted">Export tournament standings as a KeyChain event.</p>
 
-        <form method="get" action="{% url 'tourney-export-to-keychain-select-playgroup' tournament.code %}">
+        <form method="get" action="{% url 'tourney:tourney-export-to-keychain-select-playgroup' tournament.code %}">
             <button type="submit" class="button button-primary">
                 Export to KeyChain
             </button>

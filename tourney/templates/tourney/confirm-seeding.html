@@ -23,7 +23,7 @@
             <button
                 type="button"
                 class="button button-secondary"
-                hx-post="{% url 'tourney-randomize-seeding' tournament.code %}"
+                hx-post="{% url 'tourney:tourney-randomize-seeding' tournament.code %}"
                 hx-target="#seeding-list"
                 hx-swap="innerHTML">
                 Randomize Seeding
@@ -41,8 +41,8 @@
         {% endif %}
 
         <div class="seeding-actions">
-            <a href="{% url 'tourney-detail-matches' tournament.code %}" class="button button-secondary">Cancel</a>
-            <form method="post" action="{% url 'tourney-start-next-stage' tournament.code %}" style="display: inline;">
+            <a href="{% url 'tourney:tourney-detail-matches' tournament.code %}" class="button button-secondary">Cancel</a>
+            <form method="post" action="{% url 'tourney:tourney-start-next-stage' tournament.code %}" style="display: inline;">
                 {% csrf_token %}
                 <button type="submit" class="button button-primary">Start {{ next_stage.name }}</button>
             </form>

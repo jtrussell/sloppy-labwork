@@ -5,5 +5,5 @@
      data-pause-time-remaining-seconds="{{ pause_time_remaining_seconds|default:'' }}">
     <div class="timer__name">{{ name }}</div>
     <div class="timer__countdown">--:--</div>
-    <div class="timer__code"><a href="{% url 'tourney-timer-full-page' tournament_code %}">{{ code }}</a></div>
+    <div class="timer__code"><a href="{% url 'tourney:tourney-timer-full-page' tournament_code %}">{{ code }}</a></div>
 </div>

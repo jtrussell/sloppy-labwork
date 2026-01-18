@@ -146,7 +146,7 @@ def create_tournament(request):
 
             messages.success(
                 request, f'Tournament "{tournament.name}" created successfully!')
-            return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+            return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
     else:
         form = TournamentForm(is_edit_mode=False)
 
@@ -212,7 +212,7 @@ def edit_tournament(request, tournament_code):
                     playoff_stage.delete()
 
             messages.success(request, 'Tournament updated successfully!')
-            return redirect_to(request, reverse('tourney-edit-tournament', kwargs={'tournament_code': tournament.code}))
+            return redirect_to(request, reverse('tourney:tourney-edit-tournament', kwargs={'tournament_code': tournament.code}))
     else:
         form = TournamentForm(instance=tournament, is_edit_mode=True)
 
@@ -462,7 +462,8 @@ def tournament_detail_admin(request, tournament_code):
     ).exists()
     context['user_has_playgroup_staff_access'] = user_has_playgroup_staff_access
 
-    tournament_admins = tournament.tournament_admins.select_related('user').order_by('created_on')
+    tournament_admins = tournament.tournament_admins.select_related(
+        'user').order_by('created_on')
     context['tournament_admins'] = tournament_admins
 
     if request.htmx:
@@ -479,21 +480,22 @@ def add_tournament_admin(request, tournament_code):
     username = request.POST.get('username', '').strip()
     if not username:
         messages.error(request, 'Username is required.')
-        return redirect_to(request, reverse('tourney-tournament-detail-admin', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-tournament-detail-admin', kwargs={'tournament_code': tournament.code}))
 
     try:
         user = User.objects.get(username__iexact=username)
     except User.DoesNotExist:
         messages.error(request, f'User "{username}" not found.')
-        return redirect_to(request, reverse('tourney-tournament-detail-admin', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-tournament-detail-admin', kwargs={'tournament_code': tournament.code}))
 
     if user == tournament.owner:
-        messages.error(request, f'{user.username} is already the tournament owner.')
-        return redirect_to(request, reverse('tourney-tournament-detail-admin', kwargs={'tournament_code': tournament.code}))
+        messages.error(
+            request, f'{user.username} is already the tournament owner.')
+        return redirect_to(request, reverse('tourney:tourney-tournament-detail-admin', kwargs={'tournament_code': tournament.code}))
 
     if tournament.tournament_admins.filter(user=user).exists():
         messages.error(request, f'{user.username} is already an admin.')
-        return redirect_to(request, reverse('tourney-tournament-detail-admin', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-tournament-detail-admin', kwargs={'tournament_code': tournament.code}))
 
     TournamentAdmin.objects.create(
         tournament=tournament,
@@ -508,7 +510,7 @@ def add_tournament_admin(request, tournament_code):
     )
 
     messages.success(request, f'{user.username} added as tournament admin.')
-    return redirect_to(request, reverse('tourney-tournament-detail-admin', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-tournament-detail-admin', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -516,7 +518,8 @@ def add_tournament_admin(request, tournament_code):
 @is_tournament_admin
 def remove_tournament_admin(request, tournament_code, admin_id):
     tournament = get_object_or_404(Tournament, code=tournament_code)
-    tournament_admin = get_object_or_404(TournamentAdmin, id=admin_id, tournament=tournament)
+    tournament_admin = get_object_or_404(
+        TournamentAdmin, id=admin_id, tournament=tournament)
 
     admin_username = tournament_admin.user.username if tournament_admin.user else 'Unknown'
     tournament_admin.delete()
@@ -529,7 +532,7 @@ def remove_tournament_admin(request, tournament_code, admin_id):
     )
 
     messages.success(request, f'{admin_username} removed as tournament admin.')
-    return redirect_to(request, reverse('tourney-tournament-detail-admin', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-tournament-detail-admin', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -678,7 +681,7 @@ def manage_players(request, tournament_code):
                 if request.htmx:
                     return HttpResponse('')
 
-        return redirect_to(request, reverse('tourney-manage-players', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-manage-players', kwargs={'tournament_code': tournament.code}))
 
     players = tournament.players.all().order_by('status', 'created_on')
     form = PlayerForm()
@@ -724,7 +727,7 @@ def edit_player(request, tournament_code, player_id):
 
                 messages.success(
                     request, f'Player {new_display_name} updated successfully!')
-                return redirect_to(request, reverse('tourney-manage-players', kwargs={'tournament_code': tournament.code}))
+                return redirect_to(request, reverse('tourney:tourney-manage-players', kwargs={'tournament_code': tournament.code}))
             except IntegrityError:
                 messages.error(
                     request, 'A player with this username or nickname already exists in this tournament.')
@@ -767,11 +770,11 @@ def report_match_result(request, tournament_code, match_id):
     if tournament.is_closed and not is_admin:
         messages.error(
             request, 'This tournament is closed. Match results can no longer be submitted by players.')
-        return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
     if match.has_result() and not is_admin:
         messages.error(request, 'This match already has a result.')
-        return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
     form = MatchResultForm(request.POST, match=match)
     if form.is_valid():
@@ -805,7 +808,7 @@ def report_match_result(request, tournament_code, match_id):
         messages.error(
             request, 'Error reporting match result. Please check the form.')
 
-    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -816,7 +819,7 @@ def create_round(request, tournament_code):
 
     if not tournament.can_create_round_in_current_stage():
         messages.error(request, 'Cannot create new round at this time.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     current_stage = tournament.get_current_stage()
     pairing_strategy = get_pairing_strategy(current_stage.pairing_strategy)
@@ -845,7 +848,7 @@ def create_round(request, tournament_code):
     messages.success(
         request, f'Round {next_order} created successfully in {current_stage.name}!')
 
-    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -856,7 +859,7 @@ def prepare_stage_seeding(request, tournament_code):
 
     if not tournament.can_start_next_stage():
         messages.error(request, 'Cannot start next stage at this time.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     next_stage = tournament.get_next_stage()
     pairing_strategy = get_pairing_strategy(next_stage.pairing_strategy)
@@ -875,10 +878,10 @@ def prepare_stage_seeding(request, tournament_code):
 
             messages.success(
                 request, f'{next_stage.name} started successfully!')
-            return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+            return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
         except ValueError as e:
             messages.error(request, str(e))
-            return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+            return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     try:
         with transaction.atomic():
@@ -891,10 +894,10 @@ def prepare_stage_seeding(request, tournament_code):
                 description=f'Prepared seeding for {next_stage.name}'
             )
 
-        return redirect_to(request, reverse('tourney-confirm-seeding', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-confirm-seeding', kwargs={'tournament_code': tournament.code}))
     except ValueError as e:
         messages.error(request, str(e))
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -906,11 +909,11 @@ def prepare_current_stage_seeding(request, tournament_code):
 
     if not current_stage:
         messages.error(request, 'No current stage found.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     if current_stage.rounds.exists():
         messages.error(request, 'Current stage already has rounds.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     pairing_strategy = get_pairing_strategy(current_stage.pairing_strategy)
 
@@ -926,7 +929,8 @@ def prepare_current_stage_seeding(request, tournament_code):
         try:
             closed_registrations = False
             with transaction.atomic():
-                is_first_stage = not Round.objects.filter(stage__tournament=tournament).exists()
+                is_first_stage = not Round.objects.filter(
+                    stage__tournament=tournament).exists()
                 if (is_first_stage and
                     tournament.is_accepting_registrations and
                         pairing_strategy.closes_registration_on_start()):
@@ -955,10 +959,10 @@ def prepare_current_stage_seeding(request, tournament_code):
             if closed_registrations:
                 success_message += ' Registrations are now closed.'
             messages.success(request, success_message)
-            return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+            return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
         except ValueError as e:
             messages.error(request, str(e))
-            return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+            return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     try:
         with transaction.atomic():
@@ -969,10 +973,10 @@ def prepare_current_stage_seeding(request, tournament_code):
                 description=f'Prepared seeding for {current_stage.name}'
             )
 
-        return redirect_to(request, reverse('tourney-confirm-seeding', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-confirm-seeding', kwargs={'tournament_code': tournament.code}))
     except ValueError as e:
         messages.error(request, str(e))
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -990,7 +994,7 @@ def confirm_seeding(request, tournament_code):
         stage_name = next_stage.name
     else:
         messages.error(request, 'No stage available for seeding confirmation.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     stage_players = target_stage.stage_players.order_by('seed')
 
@@ -1116,7 +1120,8 @@ def start_next_stage(request, tournament_code):
                 pairing_strategy = get_pairing_strategy(
                     current_stage.pairing_strategy)
 
-                is_first_stage = not Round.objects.filter(stage__tournament=tournament).exists()
+                is_first_stage = not Round.objects.filter(
+                    stage__tournament=tournament).exists()
                 if (is_first_stage and
                     tournament.is_accepting_registrations and
                         pairing_strategy.closes_registration_on_start()):
@@ -1154,7 +1159,8 @@ def start_next_stage(request, tournament_code):
                 next_stage_result = tournament.advance_to_next_stage()
                 current_round = next_stage_result.get_current_round()
                 if current_round and current_round.round_length_in_minutes:
-                    tournament.create_round_timer(current_round, tournament.owner)
+                    tournament.create_round_timer(
+                        current_round, tournament.owner)
 
                 TournamentActionLog.objects.create(
                     tournament=tournament,
@@ -1170,7 +1176,7 @@ def start_next_stage(request, tournament_code):
     else:
         messages.error(request, 'Cannot start stage at this time.')
 
-    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -1181,17 +1187,17 @@ def register_for_tournament(request, tournament_code):
     if tournament.is_closed:
         messages.error(
             request, 'This tournament is closed. No further registrations are allowed.')
-        return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
     if not tournament.is_accepting_registrations:
         messages.error(
             request, 'This tournament is not accepting registrations.')
-        return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
     if tournament.players.filter(user=request.user).exists():
         messages.error(
             request, 'You are already registered for this tournament.')
-        return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
     form = PlayerRegistrationForm(request.POST)
     if form.is_valid():
@@ -1227,7 +1233,7 @@ def register_for_tournament(request, tournament_code):
     else:
         messages.error(request, 'Error registering for tournament.')
 
-    return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -1250,7 +1256,7 @@ def unregister_from_tournament(request, tournament_code):
     except Player.DoesNotExist:
         messages.error(request, 'You are not registered for this tournament.')
 
-    return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -1261,14 +1267,14 @@ def drop_from_tournament(request, tournament_code):
     if tournament.is_closed:
         messages.error(
             request, 'This tournament is closed. Players can no longer drop or make changes.')
-        return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
     try:
         player = tournament.players.get(user=request.user)
         if player.status == Player.PlayerStatus.DROPPED:
             messages.error(
                 request, 'You are already dropped from this tournament.')
-            return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+            return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
         player.status = Player.PlayerStatus.DROPPED
         player.save()
@@ -1312,7 +1318,7 @@ def drop_from_tournament(request, tournament_code):
         }
         return render(request, 'tourney/partials/tournament-detail-registration-status.html', context)
 
-    return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -1323,19 +1329,19 @@ def undrop_from_tournament(request, tournament_code):
     if tournament.is_closed:
         messages.error(
             request, 'This tournament is closed. Players can no longer rejoin or make changes.')
-        return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
     if not tournament.is_accepting_registrations:
         messages.error(
             request, 'Cannot undrop when tournament is no longer accepting registrations.')
-        return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
     try:
         player = tournament.players.get(user=request.user)
         if player.status == Player.PlayerStatus.ACTIVE:
             messages.error(
                 request, 'You are already active in this tournament.')
-            return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+            return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
         player.status = Player.PlayerStatus.ACTIVE
         player.save()
@@ -1359,7 +1365,7 @@ def undrop_from_tournament(request, tournament_code):
         }
         return render(request, 'tourney/partials/tournament-detail-registration-status.html', context)
 
-    return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -1394,7 +1400,7 @@ def delete_round(request, tournament_code, round_id):
     messages.success(
         request, f'Round {round_number} deleted successfully from {stage_name}!')
 
-    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -1424,7 +1430,7 @@ def delete_match(request, tournament_code, match_id):
     messages.success(
         request, f'Match between {player_one_name} and {player_two_name} deleted successfully!')
 
-    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -1437,7 +1443,7 @@ def reset_match(request, tournament_code, match_id):
 
     if not match.has_result():
         messages.error(request, 'This match has no result to reset.')
-        return redirect_to(request, reverse('tourney-detail-standings', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-standings', kwargs={'tournament_code': tournament.code}))
 
     player_one_name = match.player_one.player.get_display_name(
     ) if match.player_one else "Unknown"
@@ -1458,7 +1464,7 @@ def reset_match(request, tournament_code, match_id):
     messages.success(
         request, f'Match result between {player_one_name} and {player_two_name} has been reset successfully!')
 
-    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -1470,13 +1476,13 @@ def add_match(request, tournament_code):
 
     if not current_stage:
         messages.error(request, 'No active stage found.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     current_round = current_stage.get_current_round()
     if not current_round:
         messages.error(
             request, 'No active round found. Please create a round first.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     stage_players = current_stage.stage_players.filter(
         player__status=Player.PlayerStatus.ACTIVE)
@@ -1500,13 +1506,13 @@ def add_match(request, tournament_code):
         if not user_stage_player:
             messages.error(
                 request, 'You are not available to create a match in this round.')
-            return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+            return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     if available_players.count() < 1:
         error_message = ('No active players available to create a match.' if pairing_strategy.is_self_scheduled()
                          else 'No unmatched players available to create a match.')
         messages.error(request, error_message)
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     form = AddMatchForm(request.POST, available_players=available_players)
     if form.is_valid():
@@ -1521,12 +1527,12 @@ def add_match(request, tournament_code):
             if user_stage_player not in participants:
                 messages.error(
                     request, 'You can only create matches where you are a participant.')
-                return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+                return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
             if player_two is None and player_one == user_stage_player:
                 messages.error(
                     request, 'You cannot award yourself a bye. Only admins can create bye matches.')
-                return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+                return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
         with transaction.atomic():
             match = Match.objects.create(
@@ -1570,7 +1576,7 @@ def add_match(request, tournament_code):
             messages.error(
                 request, 'Error creating match. Please check your selections.')
 
-    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -1582,36 +1588,36 @@ def player_add_match_result(request, tournament_code):
     if tournament.is_closed:
         messages.error(
             request, 'This tournament is closed. Match results can no longer be submitted by players.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     current_stage = tournament.get_current_stage()
 
     if not current_stage:
         messages.error(request, 'No active stage found.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     current_round = current_stage.get_current_round()
     if not current_round:
         messages.error(
             request, 'No active round found. Please create a round first.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     user_stage_player = current_stage.stage_players.filter(
         player__user=request.user).first()
     if not user_stage_player:
         messages.error(request, 'You are not a participant in this stage.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     opponent_id = request.POST.get('opponent')
     if not opponent_id:
         messages.error(request, 'Please select an opponent.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     try:
         opponent_stage_player = current_stage.stage_players.get(id=opponent_id)
     except StagePlayer.DoesNotExist:
         messages.error(request, 'Invalid opponent selected.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     existing_match = current_round.matches.filter(
         Q(player_one=user_stage_player, player_two=opponent_stage_player) |
@@ -1621,12 +1627,12 @@ def player_add_match_result(request, tournament_code):
     if existing_match:
         messages.error(
             request, 'You already have a match against this opponent in this round.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     winner_choice = request.POST.get('winner')
     if not winner_choice:
         messages.error(request, 'Please select a winner.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     if winner_choice == 'me':
         winner = user_stage_player
@@ -1635,11 +1641,11 @@ def player_add_match_result(request, tournament_code):
     elif winner_choice == 'tie':
         if not current_stage.are_ties_allowed:
             messages.error(request, 'Ties are not allowed in this stage.')
-            return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+            return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
         winner = None
     else:
         messages.error(request, 'Invalid winner selection.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     my_score = request.POST.get('my_score', '').strip()
     their_score = request.POST.get('their_score', '').strip()
@@ -1651,7 +1657,7 @@ def player_add_match_result(request, tournament_code):
         if current_stage.report_full_scores == 2:
             if my_score is None or their_score is None:
                 messages.error(request, 'Scores are required for this stage.')
-                return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+                return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
         if my_score:
             try:
@@ -1660,7 +1666,7 @@ def player_add_match_result(request, tournament_code):
                     raise ValueError()
             except (ValueError, TypeError):
                 messages.error(request, 'Invalid score entered.')
-                return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+                return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
         else:
             my_score = None
 
@@ -1671,7 +1677,7 @@ def player_add_match_result(request, tournament_code):
                     raise ValueError()
             except (ValueError, TypeError):
                 messages.error(request, 'Invalid score entered.')
-                return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+                return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
         else:
             their_score = None
 
@@ -1703,7 +1709,7 @@ def player_add_match_result(request, tournament_code):
     messages.success(
         request, f'Match result submitted successfully! Winner: {winner_name}')
 
-    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
 
 @login_required
@@ -1765,7 +1771,7 @@ def copy_tournament(request, tournament_code):
 
             messages.success(
                 request, f'Tournament "{tournament.name}" created successfully from copy!')
-            return redirect_to(request, reverse('tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+            return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
     else:
         initial_data = {
             'name': f'Copy of {source_tournament.name}',
@@ -1840,7 +1846,7 @@ def delete_tournament(request, tournament_code):
     tournament.delete()
     messages.success(
         request, f'Tournament "{tournament_name}" has been successfully deleted.')
-    return redirect_to(request, reverse('tourney-my-tournaments'))
+    return redirect_to(request, reverse('tourney:tourney-my-tournaments'))
 
 
 @login_required
@@ -1856,13 +1862,13 @@ def export_to_keychain_select_playgroup(request, tournament_code):
     if not user_playgroups.exists():
         messages.error(
             request, 'You must be staff for at least one playgroup to export events.')
-        return redirect_to(request, reverse('tourney-tournament-detail-admin', args=[tournament_code]))
+        return redirect_to(request, reverse('tourney:tourney-tournament-detail-admin', args=[tournament_code]))
 
     if request.method == 'POST':
         form = SelectPlaygroupForm(request.POST, user=request.user)
         if form.is_valid():
             playgroup = form.cleaned_data['playgroup']
-            return redirect_to(request, reverse('tourney-export-to-keychain-form',
+            return redirect_to(request, reverse('tourney:tourney-export-to-keychain-form',
                                                 args=[tournament_code, playgroup.slug]))
     else:
         form = SelectPlaygroupForm(user=request.user)
@@ -1954,7 +1960,7 @@ def create_tournament_timer(request, tournament_code):
 
     if not minutes:
         messages.error(request, 'Timer length is required.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     try:
         minutes = int(minutes)
@@ -1962,7 +1968,7 @@ def create_tournament_timer(request, tournament_code):
             raise ValueError()
     except (ValueError, TypeError):
         messages.error(request, 'Timer length must be a positive number.')
-        return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
     current_round = None
     current_stage = tournament.get_current_stage()
@@ -2005,7 +2011,7 @@ def create_tournament_timer(request, tournament_code):
         )
 
     messages.success(request, f'Timer "{name}" started for {minutes} minutes.')
-    return redirect_to(request, reverse('tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
 
 
 @require_GET

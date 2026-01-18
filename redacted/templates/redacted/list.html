@@ -10,28 +10,46 @@
 
   <ul class="gizmo-list">
     <li>
-      <a class="gizmo-title" href="https://triad.sloppylabwork.com/">Sloppy Triad</a>
+      <h2><a href="https://triad.sloppylabwork.com/">Sloppy Triad</a></h2>
+      <div class="subheading text-muted">Status: Stable</div>
       <p class="gizmo-description">A fancy pants tool for your triad matches.</p>
     </li>
     <li>
-      <a class="gizmo-title" href="https://jtrussell.me/swindle-tetrad-client/">Swindle Tetrad</a>
+      <h2><a href="https://jtrussell.me/swindle-tetrad-client/">Swindle Tetrad</a></h2>
+      <div class="subheading text-muted">Status: Stable</div>
       <p class="gizmo-description">An awesome collab between our lab and the fine Swindle peeps.</p>
     </li>
     <li>
-      <a class="gizmo-title" href="https://hexad.sloppylabwork.com/">Sloppy Hexad</a>
+      <h2><a href="https://hexad.sloppylabwork.com/">Sloppy Hexad</a></h2>
+      <div class="subheading text-muted">Status: Stable</div>
       <p class="gizmo-description">3... 4... 6? A ban/safe/ban tool for archons.</p>
     </li>
     <li>
-      <a class="gizmo-title" href="{% url 'timekeeper:timer_create' %}">Sloppy Timers</a>
+      <h2><a href="{% url 'timekeeper:timer_create' %}">Sloppy Timers</a></h2>
+      <div class="subheading text-muted">Status: Stable</div>
       <p class="gizmo-description">Round timers with big screen display support.</p>
     </li>
     <li>
-      <a class="gizmo-title" href="{% url 'redacted-knowledge' %}">Shard of Knowledge</a>
+      <h2><a href="{% url 'redacted-knowledge' %}">Shard of Knowledge</a></h2>
+      <div class="subheading text-muted">Status: Stable</div>
       <p class="gizmo-description">Submit your own questions and topic ideas to the Lab!</p>
     </li>
     <li>
-      <a class="gizmo-title" href="{% url 'redacted-random' %}">Random Access Archives</a>
+      <h2><a href="{% url 'redacted-random' %}">Random Access Archives</a></h2>
+      <div class="subheading text-muted">Status: Stable</div>
       <p class="gizmo-description">This gizmo (very strange indeed) grabs random decks from DoK accounts. Use with caution!</p>
+    </li>
+    <li>
+      <h2><a href="{% url 'tourney:tourney-my-tournaments' %}">Sloppy Tourneys</a></h2>
+      <div class="subheading text-muted">Status: Beta</div>
+      <p class="gizmo-description">Simple tournaments that export to KeyChain.</p>
+    </li>
+    <li>
+      <h2><a href="{% url 'tourney:tourney-my-tournaments' %}">Lineup Manager</a></h2>
+      <div class="subheading text-muted">Status: Alpha</div>
+      <p class="gizmo-description">A lineup manager that copies to formats
+      expected by our triad, hexad, and tetrad tools. Includes versioning and support
+      for Google Sheets integrations.</p>
     </li>
   </ul>
 {% endblock %}

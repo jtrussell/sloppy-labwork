@@ -6,7 +6,7 @@
     {% if ft_use_posts %} <option value="{% url 'posts-list' %}">Notes</option> {% endif %}
     {% if ft_use_register %} <option value="{% url 'register-home' %}">Register</option> {% endif %}
     {% if ft_use_ratings %} <option value="{% url 'home-ratings' %}">Ratings</option> {% endif %}
-    {% if ft_use_tourneys %} <option value="{% url 'tourney-my-tournaments' %}">Tournaments</option> {% endif %}
+    {% if ft_use_tourneys %} <option value="{% url 'tourney:tourney-my-tournaments' %}">Tournaments</option> {% endif %}
     <option value="{% url 'redacted-list' %}">Gizmos</option>
     <option value="{% url 'profile' %}">Profile</option>
   </select>
@@ -71,7 +71,7 @@
 
     {% if ft_use_tourneys %}
     <li class="nav__item">
-      <a href="{% url 'tourney-my-tournaments' %}" class="nav__link">
+      <a href="{% url 'tourney:tourney-my-tournaments' %}" class="nav__link">
         Tournaments
       </a>
     </li>

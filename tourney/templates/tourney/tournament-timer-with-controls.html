@@ -9,7 +9,7 @@
          hx-get="{% url 'timekeeper:timer_detail' code %}"
          hx-target="#timer-{{ code }}"
          hx-swap="outerHTML">--:--</div>
-    <div class="timer__code"><a href="{% url 'tourney-timer-full-page' tournament_code %}">{{ code }}</a></div>
+    <div class="timer__code"><a href="{% url 'tourney:tourney-timer-full-page' tournament_code %}">{{ code }}</a></div>
     <div class="timer__controls">
         {% if state == 'paused' %}
         <a class="timer__control-link"

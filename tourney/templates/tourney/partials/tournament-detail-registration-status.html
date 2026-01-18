@@ -15,7 +15,7 @@
       <form
           method="post"
           class="form-wide"
-          action="{% url 'tourney-register' tournament.code %}"
+          action="{% url 'tourney:tourney-register' tournament.code %}"
       >
           {% csrf_token %}
           <div class="input-with-button-group">
@@ -26,7 +26,7 @@
     {% elif is_active_player %}
       <p class="text-muted">You are registered for this tournament.</p>
       <form
-          hx-post="{% url 'tourney-drop' tournament.code %}"
+          hx-post="{% url 'tourney:tourney-drop' tournament.code %}"
           hx-confirm="Are you sure you want to drop from this tournament?"
       >
           <button class="button button-danger sm-w100">
@@ -36,7 +36,7 @@
     {% elif is_dropped_player %}
       <p class="text-muted">You are dropped from this tournament.</p>
       {% if tournament.is_accepting_registrations %}
-          <form hx-post="{% url 'tourney-undrop' tournament.code %}">
+          <form hx-post="{% url 'tourney:tourney-undrop' tournament.code %}">
               <button class="button button-primary sm-w100">
                   Rejoin Tournament
               </button>

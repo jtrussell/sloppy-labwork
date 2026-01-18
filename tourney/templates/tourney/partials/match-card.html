@@ -113,9 +113,9 @@
             {% if is_admin %}
                 <button class="match-edit-btn"
                     data-match-id="{{ match.id }}"
-                    data-update-action="{% url 'tourney-report-result' tournament.code match.id %}"
-                    data-delete-action="{% url 'tourney-delete-match' tournament.code match.id %}"
-                    data-reset-action="{% url 'tourney-reset-match' tournament.code match.id %}"
+                    data-update-action="{% url 'tourney:tourney-report-result' tournament.code match.id %}"
+                    data-delete-action="{% url 'tourney:tourney-delete-match' tournament.code match.id %}"
+                    data-reset-action="{% url 'tourney:tourney-reset-match' tournament.code match.id %}"
                     data-match-player-one="{{ match.player_one.player.get_display_name }}"
                     data-match-player-one-id="{{ match.player_one.id }}"
                     data-match-player-two=""
@@ -135,9 +135,9 @@
                 {% if is_admin or not tournament.is_closed %}
                     <button class="match-edit-btn"
                         data-match-id="{{ match.id }}"
-                        data-update-action="{% url 'tourney-report-result' tournament.code match.id %}"
-                        data-delete-action="{% url 'tourney-delete-match' tournament.code match.id %}"
-                        data-reset-action="{% url 'tourney-reset-match' tournament.code match.id %}"
+                        data-update-action="{% url 'tourney:tourney-report-result' tournament.code match.id %}"
+                        data-delete-action="{% url 'tourney:tourney-delete-match' tournament.code match.id %}"
+                        data-reset-action="{% url 'tourney:tourney-reset-match' tournament.code match.id %}"
                         data-match-player-one="{{ match.player_one.player.get_display_name }}"
                         data-match-player-one-id="{{ match.player_one.id }}"
                         {% if match.player_two %}

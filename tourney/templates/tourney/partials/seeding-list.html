@@ -1,5 +1,5 @@
 {% csrf_token %}
-<div id="sortable-seeding" class="drag-drop-container" data-update-url="{% url 'tourney-update-seeding-order' tournament.code %}">
+<div id="sortable-seeding" class="drag-drop-container" data-update-url="{% url 'tourney:tourney-update-seeding-order' tournament.code %}">
     {% for stage_player in stage_players %}
         <div class="drag-drop-item seeding-item" data-player-id="{{ stage_player.id }}">
             <div class="drag-handle">⋮⋮</div>

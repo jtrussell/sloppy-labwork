@@ -7,7 +7,7 @@
     <h2>Tournaments I Admin</h2>
     
     <div style="margin-bottom: 2rem;">
-        <a href="{% url 'tourney-create-tournament' %}" class="button button-primary">Create Tournament</a>
+        <a href="{% url 'tourney:tourney-create-tournament' %}" class="button button-primary">Create Tournament</a>
     </div>
     
     {% if admin_tournaments %}
@@ -23,7 +23,7 @@
                 {% for tournament in admin_tournaments %}
                 <tr class="with-actions">
                     <td>
-                        <a href="{% url 'tourney-detail-home' tournament.code %}">
+                        <a href="{% url 'tourney:tourney-detail-home' tournament.code %}">
                             {{ tournament.name }}
                         </a>
                     </td>
@@ -41,9 +41,9 @@
                 <tr>
                     <td colspan="3" class="actions-column">
                         <ul class="actions-list">
-                            <li><a class="button button-small" href="{% url 'tourney-edit-tournament' tournament.code %}">Edit</a></li>
-                            <li><a class="button button-small" href="{% url 'tourney-copy-tournament' tournament.code %}">Copy</a></li>
-                            <li><a class="button button-small" href="{% url 'tourney-manage-players' tournament.code %}">Manage Players</a></li>
+                            <li><a class="button button-small" href="{% url 'tourney:tourney-edit-tournament' tournament.code %}">Edit</a></li>
+                            <li><a class="button button-small" href="{% url 'tourney:tourney-copy-tournament' tournament.code %}">Copy</a></li>
+                            <li><a class="button button-small" href="{% url 'tourney:tourney-manage-players' tournament.code %}">Manage Players</a></li>
                         </ul>
                     </td>
                 </tr>
@@ -84,7 +84,7 @@
                 {% for tournament in player_tournaments %}
                 <tr>
                     <td>
-                        <a href="{% url 'tourney-detail-home' tournament.code %}">
+                        <a href="{% url 'tourney:tourney-detail-home' tournament.code %}">
                             {{ tournament.name }}
                         </a>
                     </td>
