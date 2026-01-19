@@ -33,7 +33,12 @@ hr {
   margin-top: -1.2rem;
 }
 
-h1+.subheading {
+.subheading + .subheading {
+  margin-top: -1.8rem;
+}
+
+h1+.subheading,
+h1+.subheading+.subheading {
   margin-bottom: 1.8rem;
   font-size: 12px;
   line-height: 12px;
@@ -45,11 +50,11 @@ h1+.subheading {
   }
 }
 
-h2+.subheading,
-h3+.subheading,
-h4+.subheading,
-h5+.subheading,
-h6+.subheading {
+h2+.subheading, h2+.subheading+.subheading,
+h3+.subheading, h3+.subheading+.subheading,
+h4+.subheading, h4+.subheading+.subheading,
+h5+.subheading, h5+.subheading+.subheading,
+h6+.subheading, h6+.subheading+.subheading {
   font-size: 12px;
   line-height: 12px;
   margin-bottom: 1.4rem;

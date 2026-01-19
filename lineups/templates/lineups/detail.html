@@ -18,7 +18,10 @@
 <ul class="subheading inline-list">
   {% if lineup.format %}<li>{{ lineup.format.name }}</li>{% endif %}
   <li>{{ lineup.get_visibility_display }}</li>
-  {% if is_owner %}
+</ul>
+
+{% if is_owner %}
+<ul class="subheading inline-list">
   <li><a href="{% url 'lineups-edit' lineup.code %}" class="button button-link button-link-bordered">Edit</a></li>
   <li>
     <form method="post" action="{% url 'lineups-delete' lineup.code %}" class="form-inline">
@@ -26,8 +29,8 @@
       <button type="submit" class="button button-link button-link-bordered" hx-post="{% url 'lineups-delete' lineup.code %}" hx-confirm="Are you sure you want to delete this lineup?">Delete</button>
     </form>
   </li>
-  {% endif %}
 </ul>
+{% endif %}
 
 {% if lineup.description %}
 <div class="lineup-description">
