@@ -72,7 +72,7 @@
     {% if ft_use_tourneys %}
     <li class="nav__item">
       <a href="{% url 'tourney:tourney-my-tournaments' %}" class="nav__link">
-        Tournaments
+        {% if request.user.username == 'DRSheep' %}Hookups{% else %}Tournaments{% endif %}
       </a>
     </li>
     {% endif %}
