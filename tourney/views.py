@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST, require_GET
 from django.utils.translation import gettext_lazy as _
 import json
+import re
 
 from .models import (
     Tournament, Player, TournamentAdmin, Stage, StagePlayer, Round,
@@ -1773,8 +1774,16 @@ def copy_tournament(request, tournament_code):
                 request, f'Tournament "{tournament.name}" created successfully from copy!')
             return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
     else:
+        source_name = source_tournament.name
+        suffix_match = re.search(r' #(\d+)$', source_name)
+        if suffix_match:
+            current_num = int(suffix_match.group(1))
+            copy_name = re.sub(r' #\d+$', f' #{current_num + 1}', source_name)
+        else:
+            copy_name = f'{source_name} #2'
+
         initial_data = {
-            'name': f'Copy of {source_tournament.name}',
+            'name': copy_name,
             'description': source_tournament.description,
             'is_accepting_registrations': source_tournament.is_accepting_registrations,
             'is_public': source_tournament.is_public,

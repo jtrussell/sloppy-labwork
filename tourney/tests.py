@@ -2129,3 +2129,29 @@ class KeyChainExportTestCase(TestCase):
             self.assertIsInstance(standing['losses'], int)
             self.assertGreaterEqual(standing['wins'], 0)
             self.assertGreaterEqual(standing['losses'], 0)
+
+
+class TournamentCopyNamingTestCase(TestCase):
+    def _get_copy_name(self, source_name):
+        import re
+        suffix_match = re.search(r' #(\d+)$', source_name)
+        if suffix_match:
+            current_num = int(suffix_match.group(1))
+            return re.sub(r' #\d+$', f' #{current_num + 1}', source_name)
+        else:
+            return f'{source_name} #2'
+
+    def test_basic_name_gets_suffix(self):
+        self.assertEqual(self._get_copy_name('My Tournament'), 'My Tournament #2')
+
+    def test_existing_suffix_increments(self):
+        self.assertEqual(self._get_copy_name('My Tournament #2'), 'My Tournament #3')
+
+    def test_higher_suffix_increments(self):
+        self.assertEqual(self._get_copy_name('My Tournament #15'), 'My Tournament #16')
+
+    def test_no_space_before_hash_gets_new_suffix(self):
+        self.assertEqual(self._get_copy_name('My Tournament#2'), 'My Tournament#2 #2')
+
+    def test_hash_in_middle_gets_new_suffix(self):
+        self.assertEqual(self._get_copy_name('Tournament #2 Finals'), 'Tournament #2 Finals #2')
