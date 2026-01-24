@@ -1377,6 +1377,12 @@ class AwardAssignmentService():
                 event__is_casual=False,
                 event__player_count__gte=11
             ).count()
+        elif criteria_type == AwardBase.CriteriaTypeOptions.store_champion:
+            value = qs.filter(
+                event__is_casual=False,
+                finishing_position=1,
+                event__tags__slug='store-championship'
+            ).count()
         elif criteria_type == AwardBase.CriteriaTypeOptions.level:
             current_level = user.pmc_profile.get_level()
             value = current_level.level if current_level else 0
