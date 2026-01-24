@@ -116,8 +116,18 @@
 
   <div class="card">
     <h2>Results</h2>
+
+    {% if object.tags.exists %}
+      <ul class="inline-list tag-list">
+        {% for tag in object.tags.all %}
+        <li class="tag">{{ tag.name }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
     {% partial results-table-lg %}
 
     {% partial results-table-sm %}
+  {% endblock %}
+
   </div>
-{% endblock %}

@@ -1,10 +1,25 @@
 from django import forms
+from django.utils.safestring import mark_safe
 
 from decks.models import Deck
-from .models import Event, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PlaygroupJoinRequest, PmcProfile, RankingPointsMapVersion
+from .models import Event, EventTag, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PlaygroupJoinRequest, PmcProfile, RankingPointsMapVersion
 from .models import PlaygroupMember
 from .models import EventFormat
 from django.utils.translation import gettext_lazy as _
+
+
+class EmptyableCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
+    empty_message = _('No options available.')
+
+    def __init__(self, *args, empty_message=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if empty_message is not None:
+            self.empty_message = empty_message
+
+    def render(self, name, value, attrs=None, renderer=None):
+        if not self.choices:
+            return mark_safe(f'<span class="form-empty-message">{self.empty_message}</span>')
+        return super().render(name, value, attrs, renderer)
 
 
 class EventForm(forms.ModelForm):
@@ -20,11 +35,18 @@ class EventForm(forms.ModelForm):
         widget=forms.DateInput(attrs={'type': 'date'}),
         label=_('Event Date')
     )
+    tags = forms.ModelMultipleChoiceField(
+        queryset=EventTag.objects.all(),
+        required=False,
+        widget=EmptyableCheckboxSelectMultiple(
+            empty_message=_('No tags available.')),
+        label=_('Tags')
+    )
 
     class Meta:
         model = Event
         fields = ('name', 'start_date', 'is_casual', 'is_digital', 'format',
-                  'player_count', 'is_excluded_from_global_rankings')
+                  'player_count', 'tags', 'is_excluded_from_global_rankings')
         labels = {
             'name': _('Event Name'),
             'player_count': _('Player Count'),
@@ -52,6 +74,8 @@ class EventForm(forms.ModelForm):
 
         if not (self.user and self.user.is_staff):
             self.fields.pop('is_excluded_from_global_rankings', None)
+            self.fields['tags'].queryset = EventTag.objects.filter(
+                is_eo_assignable=True)
 
         if self.playgroup:
             self.fields['is_digital'].initial = self.playgroup.event_default_is_digital
@@ -64,6 +88,7 @@ class EventForm(forms.ModelForm):
 
         if commit:
             event.save()
+            self.save_m2m()
         return event
 
 
@@ -73,11 +98,18 @@ class EventUpdateForm(forms.ModelForm):
         widget=forms.DateInput(attrs={'type': 'date'}),
         label=_('Event Date')
     )
+    tags = forms.ModelMultipleChoiceField(
+        queryset=EventTag.objects.all(),
+        required=False,
+        widget=EmptyableCheckboxSelectMultiple(
+            empty_message=_('No tags available.')),
+        label=_('Tags')
+    )
 
     class Meta:
         model = Event
         fields = ('name', 'start_date', 'is_casual', 'is_digital', 'format',
-                  'player_count', 'is_excluded_from_global_rankings')
+                  'player_count', 'is_excluded_from_global_rankings', 'tags')
         labels = {
             'name': _('Event Name'),
             'player_count': _('Player Count'),
@@ -104,6 +136,8 @@ class EventUpdateForm(forms.ModelForm):
 
         if not (self.user and self.user.is_staff):
             self.fields.pop('is_excluded_from_global_rankings', None)
+            self.fields['tags'].queryset = EventTag.objects.filter(
+                is_eo_assignable=True)
 
     def save(self, commit=True):
         event = super().save(commit=False)
@@ -117,6 +151,7 @@ class EventUpdateForm(forms.ModelForm):
 
         if commit:
             event.save()
+            self.save_m2m()
         return event
 
 

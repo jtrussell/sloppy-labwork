@@ -132,6 +132,20 @@ class EventFormat(models.Model):
         return self.name
 
 
+class EventTag(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    description = models.CharField(
+        max_length=200, default=None, null=True, blank=True)
+    is_eo_assignable = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ('name',)
+
+    def __str__(self):
+        return self.name
+
+
 class Event(models.Model):
     EVENT_TYPE_CHOICES = (
         (False, _('Tournament')),
@@ -147,6 +161,7 @@ class Event(models.Model):
     is_casual = models.BooleanField(default=False, choices=EVENT_TYPE_CHOICES)
     is_excluded_from_global_rankings = models.BooleanField(default=False)
     is_digital = models.BooleanField(default=False)
+    tags = models.ManyToManyField(EventTag, related_name='events', blank=True)
 
     class Meta:
         ordering = ('-start_date',)

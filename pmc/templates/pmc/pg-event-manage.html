@@ -128,6 +128,15 @@
 
   <div class="card">
     <h2>Results</h2>
+
+    {% if object.tags.exists %}
+      <ul class="inline-list tag-list">
+        {% for tag in object.tags.all %}
+        <li class="tag">{{ tag.name }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
     <form
       autocomplete="off"
       hx-post="{% url 'pmc-pg-add-event-result' playgroup.slug object.pk %}"

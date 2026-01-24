@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Badge, LeaderboardLog, Playgroup, PlaygroupEvent, PlaygroupLeaderboard, PlaygroupType, PmcProfile, RankingPointsMap, RankingPointsMapVersion, UserBadge
+from .models import Badge, EventTag, LeaderboardLog, Playgroup, PlaygroupEvent, PlaygroupLeaderboard, PlaygroupType, PmcProfile, RankingPointsMap, RankingPointsMapVersion, UserBadge
 from .models import PlaygroupMember
 from .models import Event
 from .models import EventResult
@@ -31,10 +31,18 @@ class PlaygroupMemberAdmin(admin.ModelAdmin):
     list_filter = ('is_staff',)
 
 
+class EventTagAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'is_eo_assignable')
+    search_fields = ['name', 'slug']
+    list_filter = ('is_eo_assignable',)
+    prepopulated_fields = {'slug': ('name',)}
+
+
 class EventAdmin(admin.ModelAdmin):
     list_display = ('name', 'start_date', 'is_excluded_from_global_rankings')
     search_fields = ['name']
-    list_filter = ('start_date', 'is_excluded_from_global_rankings')
+    list_filter = ('start_date', 'is_excluded_from_global_rankings', 'tags')
+    filter_horizontal = ('tags',)
 
 
 class EventResultAdmin(admin.ModelAdmin):
@@ -221,6 +229,7 @@ class PlaygroupTypeAdmin(admin.ModelAdmin):
 
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
+admin.site.register(EventTag, EventTagAdmin)
 admin.site.register(Event, EventAdmin)
 admin.site.register(EventResult, EventResultAdmin)
 admin.site.register(RankingPointsMapVersion, RankingPointsMapVersionAdmin)
