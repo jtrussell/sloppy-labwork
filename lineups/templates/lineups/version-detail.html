@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="{% static 'lineups/main.css' %}">
 
 {% if version.get_effective_visibility != 'private' %}<meta property="og:title" content="{{ lineup.name }} - {{ version.name }}">{% endif %}
-{% if version.get_effective_visibility != 'private' %}<meta property="og:description" content="{% for vd in decks %}{{ vd.deck.get_dok_url }}{% if not forloop.last %}&#10;{% endif %}{% endfor %}">{% endif %}
+{% if version.get_effective_visibility != 'private' %}<meta property="og:description" content="{% for vd in decks %}{{ vd.deck.name }}&#10;{{ vd.deck.get_dok_url }}{% if not forloop.last %}&#10;&#10;{% endif %}{% endfor %}">{% endif %}
 {% endblock %}
 
 {% block content %}
