@@ -896,6 +896,10 @@ class Background(models.Model):
     artist_credit = models.CharField(
         max_length=100, default=None, null=True, blank=True)
 
+    @property
+    def src_100(self):
+        return self.src.replace('/upload/', '/upload/c_thumb,g_auto,w_100,h_100,f_auto,q_auto/')
+
     class Meta:
         ordering = ('required_level', 'pmc_id')
 
