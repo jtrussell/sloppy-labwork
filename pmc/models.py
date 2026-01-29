@@ -898,7 +898,7 @@ class Background(models.Model):
 
     @property
     def src_100(self):
-        return self.src.replace('/upload/', '/upload/c_thumb,g_auto,w_100,h_100,f_auto,q_auto/')
+        return self.src.replace('/upload/', '/upload/c_thumb,w_100,h_100,f_auto,q_auto/')
 
     class Meta:
         ordering = ('required_level', 'pmc_id')
