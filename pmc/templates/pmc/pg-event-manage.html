@@ -7,8 +7,8 @@
     <td class="col-sm text-larger sm-only">{{ result.finishing_position|default_if_none:"-" }}</td>
     <td class="sm-only">
       <div class="name-with-avatar text-larger">
-      <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
-        {{ result.user }}
+        <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
+        <span class="username">{{ result.user }}</span>
       </div>
       <div class="flex flex-row flex-gap-1 text-muted text-smaller">
         <span>Wins: {{ result.num_wins|default_if_none:"-" }}</span>
@@ -21,8 +21,8 @@
     <td class="col-sm lg-only">{{ result.finishing_position|default_if_none:"-" }}</td>
     <td class="lg-only">
       <div class="name-with-avatar">
-      <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
-        {{ result.user }}
+        <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
+        <span class="username">{{ result.user }}</span>
       </div>
     </td>
     <td class="stat lg-only">{{ result.num_wins|default_if_none:"-" }}</td>

@@ -8,11 +8,11 @@
       <a href="{% url 'pmc-result-detail' playgroup.slug result.pk %}">
         <div class="name-with-avatar">
           <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
-          {{ result.user }}
+          <span class="username">{{ result.user }}</span>
         </div>
       </a>
     </td>
-    <td>
+    <td class="col-sm">
       <a href="{% url 'pmc-result-detail' playgroup.slug result.pk %}">
         {% if result.event_result_decks.first %}
           <i
@@ -35,12 +35,12 @@
 {% partialdef result-row-sm %}
   <tr>
     <td class="col-sm text-larger">{{ result.finishing_position|default_if_none:"-" }}</td>
-    <td style="width: 100%;" class="text-left">
+    <td class="text-left">
         <div class="name-with-avatar text-larger">
           <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
           <div>
             <a href="{% url 'pmc-result-detail' playgroup.slug result.pk %}">
-              <span class="text-larger">{{ result.user }}</span>
+              <span class="username text-larger">{{ result.user }}</span>
             </a>
             <ul class="inline-list text-smaller sm-only">
               <li><span class="text-muted">W:</span> {{ result.num_wins|default_if_none:"-" }}</li>

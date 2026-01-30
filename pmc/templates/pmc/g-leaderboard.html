@@ -18,7 +18,7 @@
             <img class="avatar" src="{{ item.user.pmc_profile.get_avatar.src}}" alt="">
             <div>
               <a href="{% url 'pmc-user-profile' item.user.username %}">
-                <span class="text-larger">{{ item.user }}</span>
+                <span class="username text-larger">{{ item.user }}</span>
               </a>
               <ul class="inline-list text-smaller sm-only">
                 <li><span class="text-muted">Points:</span> {{ item.total_points | floatformat:0 }}</li>

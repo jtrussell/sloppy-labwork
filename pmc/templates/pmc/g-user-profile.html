@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-  <h1>{{ user }}</h1>
+  <h1 class="elide">{{ user }}</h1>
   <div class="subheading">Public Profile</div>
 
   {% include 'pmc/_playercard.html' with my_profile=profile hide_qr_code=True %}

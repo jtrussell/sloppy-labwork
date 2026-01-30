@@ -112,6 +112,7 @@ h1,
 .h1 {
   color: var(--color-primary);
   font-size: 22pt;
+  line-height: 22pt;
   font-weight: 600;
   margin: 2rem 0;
 }
@@ -736,6 +737,22 @@ table .name-with-avatar {
   gap: 5px;
 }
 
+table .name-with-avatar > :not(.avatar) {
+  min-width: 0;
+  overflow: hidden;
+}
+
+table .name-with-avatar .username {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+td:has(.name-with-avatar) {
+  max-width: 1px;
+}
+
 table .avatar {
   height: 32px;
   width: 32px;
@@ -1058,7 +1075,13 @@ ul.messages {
 }
 
 .no-top-margin {
-  margin-top: 0
+  margin-top: 0;
+}
+
+.elide {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-x: hidden;
 }
 
 /* ***********************************

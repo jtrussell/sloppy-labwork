@@ -44,10 +44,10 @@
         {% for ut in top_user_trophies %}
           <tr>
             <td>{{ forloop.counter }}</td>
-            <td style="width: 100%;">
+            <td>
               <div class="name-with-avatar text-larger">
                 <img class="avatar" src="{{ ut.user.pmc_profile.get_avatar.src}}" alt="">
-                {{ ut.user }}
+                <span class="username">{{ ut.user }}</span>
               </div>
             </td>
             <td>{{ ut.amount }}</td>

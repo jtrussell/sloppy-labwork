@@ -48,7 +48,7 @@
           <td>
             <a class="name-with-avatar" style="justify-content: flex-end" href="{% url 'pmc-user-profile' event_result.user.username %}">
               <img class="avatar" src="{{ event_result.user.pmc_profile.get_avatar.src}}" alt="">
-                {{ event_result.user }}
+              <span class="username">{{ event_result.user }}</span>
             </a>
           </td>
         </tr>
