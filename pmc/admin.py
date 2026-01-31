@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import Badge, EventTag, LeaderboardLog, Playgroup, PlaygroupEvent, PlaygroupLeaderboard, PlaygroupType, PmcProfile, RankingPointsMap, RankingPointsMapVersion, UserBadge
 from .models import PlaygroupMember
+from .models import Venue, PlaygroupVenue
 from .models import Event
 from .models import EventResult
 from .models import RankingPoints
@@ -20,9 +21,20 @@ from .models import EventResultDeck
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'created_on')
+    list_display = ('name', 'slug', 'primary_venue', 'created_on')
     search_fields = ['name', 'slug']
     prepopulated_fields = {'slug': ('name',)}
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'primary_venue':
+            object_id = request.resolver_match.kwargs.get('object_id')
+            if object_id:
+                kwargs['queryset'] = Venue.objects.filter(
+                    playgroup_venues__playgroup_id=object_id
+                )
+            else:
+                kwargs['queryset'] = Venue.objects.none()
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 class PlaygroupMemberAdmin(admin.ModelAdmin):
@@ -155,6 +167,37 @@ class PlaygroupJoinRequestAdmin(admin.ModelAdmin):
     list_filter = ('playgroup',)
 
 
+class VenueAdmin(admin.ModelAdmin):
+    list_display = ('name', 'venue_type', 'city', 'state_province', 'country', 'has_coordinates', 'created_on')
+    search_fields = ['name', 'address', 'city', 'state_province', 'country']
+    list_filter = ('venue_type', 'country')
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('formatted_address', 'city', 'state_province', 'country', 'country_code', 'postal_code', 'latitude', 'longitude', 'created_on', 'updated_on')
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'slug', 'venue_type', 'address', 'website', 'notes')
+        }),
+        ('Geocoded Data', {
+            'fields': ('formatted_address', 'city', 'state_province', 'country', 'country_code', 'postal_code', 'latitude', 'longitude'),
+            'classes': ('collapse',),
+        }),
+        ('Metadata', {
+            'fields': ('created_by', 'created_on', 'updated_on'),
+            'classes': ('collapse',),
+        }),
+    )
+
+    def has_coordinates(self, obj):
+        return obj.has_coordinates()
+    has_coordinates.boolean = True
+
+
+class PlaygroupVenueAdmin(admin.ModelAdmin):
+    list_display = ('playgroup', 'venue', 'added_on')
+    search_fields = ['playgroup__name', 'venue__name']
+    list_filter = ('playgroup',)
+
+
 class BadgeAdmin(admin.ModelAdmin):
     list_display = ('pmc_id', 'name', 'reward_category', 'is_hidden')
     search_fields = ['name', 'pmc_id']
@@ -260,3 +303,5 @@ admin.site.register(UserAchievementTier, UserAchievementTierAdmin)
 admin.site.register(EventResultDeck, EventResultDeckAdmin)
 admin.site.register(PlaygroupLeaderboard, PlaygroupLeaderboardAdmin)
 admin.site.register(PlaygroupType, PlaygroupTypeAdmin)
+admin.site.register(Venue, VenueAdmin)
+admin.site.register(PlaygroupVenue, PlaygroupVenueAdmin)

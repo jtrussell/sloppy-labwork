@@ -5,6 +5,7 @@ from django.db.models import UniqueConstraint, OuterRef, Subquery
 from datetime import date
 from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.db.models import Sum, F, Count, Window
@@ -40,6 +41,14 @@ class Playgroup(models.Model):
     events = models.ManyToManyField(
         'Event', through='PlaygroupEvent', related_name='playgroups'
     )
+    venues = models.ManyToManyField(
+        'Venue', through='PlaygroupVenue', related_name='playgroups'
+    )
+    primary_venue = models.ForeignKey(
+        'Venue', on_delete=models.SET_NULL,
+        default=None, null=True, blank=True,
+        related_name='primary_for_playgroups'
+    )
     description = models.TextField(default=None, null=True, blank=True)
     is_global = models.BooleanField(default=False)
     event_default_is_digital = models.BooleanField(
@@ -54,6 +63,14 @@ class Playgroup(models.Model):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        super().clean()
+        if self.primary_venue_id and self.pk:
+            if not self.venues.filter(pk=self.primary_venue_id).exists():
+                raise ValidationError({
+                    'primary_venue': _('Primary venue must be one of the playgroup\'s linked venues.')
+                })
 
     def get_logo_src(self):
         return self.logo_src or 'https://res.cloudinary.com/dig7eguxo/image/upload/v1743023566/Playgroup_yis2hs.svg'
@@ -119,6 +136,87 @@ class PlaygroupJoinRequest(models.Model):
 
     def __str__(self):
         return f'{self.user.username} - {self.playgroup.name}'
+
+
+class Venue(models.Model):
+    class VenueTypeOptions(models.IntegerChoices):
+        GAME_STORE = (0, _('Game Store'))
+        COMMUNITY_CENTER = (1, _('Community Center'))
+        LIBRARY = (2, _('Library'))
+        RESTAURANT_BAR = (3, _('Restaurant/Bar'))
+        CONVENTION_CENTER = (4, _('Convention Center'))
+        PRIVATE_RESIDENCE = (5, _('Private Residence'))
+        OTHER = (99, _('Other'))
+
+    name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=100, unique=True)
+    venue_type = models.IntegerField(
+        choices=VenueTypeOptions.choices,
+        default=VenueTypeOptions.GAME_STORE
+    )
+    address = models.TextField(
+        help_text=_('Enter the full address as it would appear on mail')
+    )
+    latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, default=None, null=True, blank=True
+    )
+    longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, default=None, null=True, blank=True
+    )
+    formatted_address = models.CharField(
+        max_length=500, default=None, null=True, blank=True
+    )
+    city = models.CharField(max_length=100, default=None, null=True, blank=True)
+    state_province = models.CharField(
+        max_length=100, default=None, null=True, blank=True
+    )
+    country = models.CharField(
+        max_length=100, default=None, null=True, blank=True
+    )
+    country_code = models.CharField(
+        max_length=2, default=None, null=True, blank=True
+    )
+    postal_code = models.CharField(
+        max_length=20, default=None, null=True, blank=True
+    )
+    website = models.URLField(default=None, null=True, blank=True)
+    notes = models.TextField(default=None, null=True, blank=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL,
+        default=None, null=True, blank=True, related_name='created_venues'
+    )
+
+    class Meta:
+        ordering = ('name',)
+
+    def __str__(self):
+        return self.name
+
+    def has_coordinates(self):
+        return self.latitude is not None and self.longitude is not None
+
+
+class PlaygroupVenue(models.Model):
+    playgroup = models.ForeignKey(
+        Playgroup, on_delete=models.CASCADE, related_name='playgroup_venues'
+    )
+    venue = models.ForeignKey(
+        Venue, on_delete=models.CASCADE, related_name='playgroup_venues'
+    )
+    added_on = models.DateTimeField(auto_now_add=True)
+    added_by = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL,
+        default=None, null=True, blank=True
+    )
+
+    class Meta:
+        unique_together = ('playgroup', 'venue')
+        ordering = ('venue__name',)
+
+    def __str__(self):
+        return f'{self.playgroup.name} - {self.venue.name}'
 
 
 class EventFormat(models.Model):
