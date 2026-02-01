@@ -26,7 +26,7 @@ from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.context_processors import playgroup
-from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm, PmcProfilePrivacyForm, RankingPointsMapVersionForm
+from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm, PmcProfilePrivacyForm, RankingPointsMapVersionForm, VenueForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
 from .models import AchievementTier, AwardBase, Badge, EventResult, EventResultDeck, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserAchievementTier, UserBadge, Trophy, UserTrophy, Achievement
@@ -43,6 +43,7 @@ from .models import Background
 from .models import BackgroundCategory
 from .models import RankingPointsMap, RankingPointsMapVersion
 from .models import AwardAssignmentService
+from .models import Venue, PlaygroupVenue
 
 
 def is_pg_member(view):
@@ -202,23 +203,100 @@ def playgroup_join_request_manage(request, slug, pk):
 @login_required
 @is_pg_staff
 def manage_playgroup(request, slug):
+    playgroup = get_object_or_404(Playgroup, slug=slug)
     if request.method == 'POST':
-        form = PlaygroupForm(
-            request.POST, instance=Playgroup.objects.get(slug=slug))
+        form = PlaygroupForm(request.POST, instance=playgroup)
         if form.is_valid():
             pg = form.save()
             return HttpResponseRedirect(reverse('pmc-pg-detail', kwargs={'slug': pg.slug}))
     else:
-        form = PlaygroupForm(instance=Playgroup.objects.get(slug=slug))
+        form = PlaygroupForm(instance=playgroup)
 
     context = {
         'form': form,
         'join_requests': PlaygroupJoinRequest.objects.filter(
-            playgroup__slug=slug,
+            playgroup=playgroup,
             status=PlaygroupJoinRequest.RequestStatuses.SUBMITTED
-        )
+        ),
+        'venues': playgroup.venues.all(),
     }
     return render(request, 'pmc/pg-manage.html', context)
+
+
+@login_required
+@is_pg_staff
+def add_playgroup_venue(request, slug):
+    from django.utils.text import slugify
+    playgroup = get_object_or_404(Playgroup, slug=slug)
+    if request.method == 'POST':
+        form = VenueForm(request.POST)
+        if form.is_valid():
+            venue = form.save(commit=False)
+            venue.created_by = request.user
+            base_slug = slugify(venue.name)[:100]
+            venue.slug = base_slug
+            counter = 1
+            while Venue.objects.filter(slug=venue.slug).exists():
+                venue.slug = f"{base_slug}-{counter}"[:100]
+                counter += 1
+            venue.save()
+            if venue.geocode():
+                messages.success(request, _('Venue added and address geocoded.'))
+            else:
+                messages.warning(request, _('Venue added but address could not be geocoded. You may need to update the address.'))
+            PlaygroupVenue.objects.create(
+                playgroup=playgroup,
+                venue=venue,
+                added_by=request.user
+            )
+            return HttpResponseRedirect(reverse('pmc-pg-manage', kwargs={'slug': slug}))
+    else:
+        form = VenueForm()
+
+    return render(request, 'pmc/pg-venue-add.html', {'form': form})
+
+
+@login_required
+@is_pg_staff
+def remove_playgroup_venue(request, slug, venue_id):
+    playgroup = get_object_or_404(Playgroup, slug=slug)
+    venue = get_object_or_404(Venue, pk=venue_id)
+    PlaygroupVenue.objects.filter(playgroup=playgroup, venue=venue).delete()
+    if playgroup.primary_venue == venue:
+        playgroup.primary_venue = None
+        playgroup.save()
+    playgroup.refresh_from_db()
+    messages.success(request, _('Venue removed.'))
+    if request.htmx:
+        return render(request, 'pmc/pg-manage.html#venues-list', {
+            'playgroup': playgroup,
+            'venues': playgroup.venues.all(),
+        })
+    return redirect_to(request, reverse('pmc-pg-manage', kwargs={'slug': slug}))
+
+
+@login_required
+@is_pg_staff
+def set_playgroup_primary_venue(request, slug):
+    playgroup = get_object_or_404(Playgroup, slug=slug)
+    venue_id = request.POST.get('venue_id')
+    if venue_id:
+        venue = get_object_or_404(Venue, pk=venue_id)
+        if playgroup.venues.filter(pk=venue.pk).exists():
+            playgroup.primary_venue = venue
+            playgroup.save()
+            messages.success(request, _('Primary venue updated.'))
+    else:
+        playgroup.primary_venue = None
+        playgroup.save()
+        messages.success(request, _('Primary venue cleared.'))
+    playgroup.refresh_from_db()
+    if request.htmx:
+        return render(request, 'pmc/pg-manage.html#venues-list', {
+            'playgroup': playgroup,
+            'venues': playgroup.venues.all(),
+        })
+    return redirect_to(request, reverse('pmc-pg-manage', kwargs={'slug': slug}))
 
 
 @login_required

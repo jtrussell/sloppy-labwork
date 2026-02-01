@@ -221,7 +221,7 @@ h6+.subheading,
 .staff-only .h4+.subheading,
 .staff-only .h5+.subheading,
 .staff-only .h6+.subheading {
-  color: var(--color-accent);
+  color: var(--staff-color-accent);
 }
 
 p {

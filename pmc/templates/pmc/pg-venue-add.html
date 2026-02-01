@@ -1,0 +1,16 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+<div class="staff-only">
+  <h1>Add Venue</h1>
+
+  <form method="POST">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="card-actions">
+      <a href="{% url 'pmc-pg-manage' playgroup.slug %}" class="btn">Cancel</a>
+      <button type="submit" class="btn btn-solid">Add Venue</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

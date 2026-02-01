@@ -168,14 +168,16 @@ class PlaygroupJoinRequestAdmin(admin.ModelAdmin):
 
 
 class VenueAdmin(admin.ModelAdmin):
-    list_display = ('name', 'venue_type', 'city', 'state_province', 'country', 'has_coordinates', 'created_on')
+    list_display = ('name', 'city', 'state_province',
+                    'country', 'has_coordinates', 'created_on')
     search_fields = ['name', 'address', 'city', 'state_province', 'country']
-    list_filter = ('venue_type', 'country')
+    list_filter = ('country',)
     prepopulated_fields = {'slug': ('name',)}
-    readonly_fields = ('formatted_address', 'city', 'state_province', 'country', 'country_code', 'postal_code', 'latitude', 'longitude', 'created_on', 'updated_on')
+    readonly_fields = ('formatted_address', 'city', 'state_province', 'country',
+                       'country_code', 'postal_code', 'latitude', 'longitude', 'created_on', 'updated_on')
     fieldsets = (
         (None, {
-            'fields': ('name', 'slug', 'venue_type', 'address', 'website', 'notes')
+            'fields': ('name', 'slug', 'address')
         }),
         ('Geocoded Data', {
             'fields': ('formatted_address', 'city', 'state_province', 'country', 'country_code', 'postal_code', 'latitude', 'longitude'),

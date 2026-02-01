@@ -20,4 +20,5 @@ dependencies = [
     "dj-database-url==2.2",
     "django-template-partials==24.4",
     "django-htmx==1.23",
+    "geopy>=2.4.0",
 ]

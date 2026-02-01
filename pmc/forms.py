@@ -4,6 +4,7 @@ from django.utils.safestring import mark_safe
 from decks.models import Deck
 from .models import Event, EventTag, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PlaygroupJoinRequest, PmcProfile, RankingPointsMapVersion
 from .models import PlaygroupMember
+from .models import Venue
 from .models import EventFormat
 from django.utils.translation import gettext_lazy as _
 
@@ -308,3 +309,16 @@ class RankingPointsMapVersionForm(forms.Form):
         widget=forms.Select(
             attrs={'onchange': 'this.closest("form").submit()'})
     )
+
+
+class VenueForm(forms.ModelForm):
+    class Meta:
+        model = Venue
+        fields = ('name', 'address')
+        widgets = {
+            'address': forms.Textarea(attrs={'rows': 3}),
+            'notes': forms.Textarea(attrs={'rows': 2}),
+        }
+        help_texts = {
+            'address': _('Enter the full address as it would appear on mail.'),
+        }

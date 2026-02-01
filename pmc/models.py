@@ -139,21 +139,8 @@ class PlaygroupJoinRequest(models.Model):
 
 
 class Venue(models.Model):
-    class VenueTypeOptions(models.IntegerChoices):
-        GAME_STORE = (0, _('Game Store'))
-        COMMUNITY_CENTER = (1, _('Community Center'))
-        LIBRARY = (2, _('Library'))
-        RESTAURANT_BAR = (3, _('Restaurant/Bar'))
-        CONVENTION_CENTER = (4, _('Convention Center'))
-        PRIVATE_RESIDENCE = (5, _('Private Residence'))
-        OTHER = (99, _('Other'))
-
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=100, unique=True)
-    venue_type = models.IntegerField(
-        choices=VenueTypeOptions.choices,
-        default=VenueTypeOptions.GAME_STORE
-    )
     address = models.TextField(
         help_text=_('Enter the full address as it would appear on mail')
     )
@@ -166,7 +153,8 @@ class Venue(models.Model):
     formatted_address = models.CharField(
         max_length=500, default=None, null=True, blank=True
     )
-    city = models.CharField(max_length=100, default=None, null=True, blank=True)
+    city = models.CharField(
+        max_length=100, default=None, null=True, blank=True)
     state_province = models.CharField(
         max_length=100, default=None, null=True, blank=True
     )
@@ -179,8 +167,6 @@ class Venue(models.Model):
     postal_code = models.CharField(
         max_length=20, default=None, null=True, blank=True
     )
-    website = models.URLField(default=None, null=True, blank=True)
-    notes = models.TextField(default=None, null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
@@ -196,6 +182,44 @@ class Venue(models.Model):
 
     def has_coordinates(self):
         return self.latitude is not None and self.longitude is not None
+
+    def geocode(self, save=True):
+        from geopy.geocoders import Nominatim
+        from geopy.exc import GeocoderTimedOut, GeocoderServiceError
+
+        geolocator = Nominatim(user_agent="keychain-sloppylabwork")
+        try:
+            location = geolocator.geocode(
+                self.address, addressdetails=True, timeout=5)
+            if location:
+                self.latitude = location.latitude
+                self.longitude = location.longitude
+                self.formatted_address = location.address
+
+                address_data = location.raw.get('address', {})
+                self.city = (
+                    address_data.get('city') or
+                    address_data.get('town') or
+                    address_data.get('village') or
+                    address_data.get('municipality')
+                )
+                self.state_province = (
+                    address_data.get('state') or
+                    address_data.get('province') or
+                    address_data.get('region') or
+                    address_data.get('prefecture')
+                )
+                self.country = address_data.get('country')
+                self.country_code = address_data.get(
+                    'country_code', '').upper()
+                self.postal_code = address_data.get('postcode')
+
+                if save:
+                    self.save()
+                return True
+        except (GeocoderTimedOut, GeocoderServiceError):
+            pass
+        return False
 
 
 class PlaygroupVenue(models.Model):

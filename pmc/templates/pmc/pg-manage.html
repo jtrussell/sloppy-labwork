@@ -1,4 +1,47 @@
 {% extends "pmc/_base.html" %}
+{% load partials %}
+
+{% partialdef venues-list %}
+<div id="venues-list">
+  {% for venue in venues %}
+    <div class="staff-only card">
+      <h3>{{ venue.name }}</h3>
+      {% if playgroup.primary_venue == venue %}<div class="subheading">Primary</div>{% endif %}
+      <p style="white-space: pre-wrap;">{{ venue.address }}</p>
+      <div class="card-actions">
+        {% if playgroup.primary_venue == venue %}
+          <button
+            class="btn"
+            hx-post="{% url 'pmc-pg-venue-set-primary' playgroup.slug %}"
+            hx-target="#venues-list"
+            hx-swap="outerHTML"
+          >Not Primary</button>
+        {% else %}
+          <form style="margin: 0;">
+            <input type="hidden" name="venue_id" value="{{ venue.pk }}">
+            <button
+              class="btn"
+              hx-post="{% url 'pmc-pg-venue-set-primary' playgroup.slug %}"
+              hx-target="#venues-list"
+              hx-swap="outerHTML"
+              hx-include="previous input"
+            >Make Primary</button>
+          </form>
+        {% endif %}
+        <button
+          class="btn"
+          hx-delete="{% url 'pmc-pg-venue-remove' playgroup.slug venue.pk %}"
+          hx-target="#venues-list"
+          hx-swap="outerHTML"
+          hx-confirm="Are you sure you want to remove {{ venue.name }} from this playgroup?"
+        >Remove</button>
+      </div>
+    </div>
+  {% empty %}
+    <div class="card text-muted">No venues registered yet.</div>
+  {% endfor %}
+</div>
+{% endpartialdef %}
 
 {% block content %}
   <h1>{{ playgroup }}</h1>
@@ -9,11 +52,11 @@
     <form method="POST">
       {% csrf_token %}
       {{ form.as_p }}
-    
+
       <p class="text-right">
         <a href="https://daringfireball.net/projects/markdown/syntax" target="_blank">Help with formatting.</a>
       </p>
-    
+
       <div class="card-actions">
         <button class="btn btn-solid" type="submit">Submit</button>
       </div>
@@ -49,8 +92,12 @@
     </table>
   </div>
 
-  <div class="card staff-only preview">
-    <h2>Venues</h2>
+  <div class="preview" style="padding: 1rem;">
+    <h2 class="staff-only">Venues</h2>
+      {% partial venues-list %}
+    <div class="staff-only">
+      <a href="{% url 'pmc-pg-venue-add' playgroup.slug %}" class="btn btn-solid">Add Venue</a>
+    </div>
   </div>
 {% endblock %}
 
