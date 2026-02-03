@@ -256,18 +256,22 @@ wheels = [
 
 [[package]]
 name = "django-allauth"
-version = "0.63.0"
+version = "65.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "asgiref" },
     { name = "django" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e2/aa/74fc60d53f89670b16b843eb659312e805d74d3967968145d6e46dec51c7/django-allauth-0.63.0.tar.gz", hash = "sha256:fbe0148c6258eac44e701a8f36e0950b5d0b1c60bde3e178683a4239f49311fc", size = 1074929, upload-time = "2024-05-14T17:05:54.336Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7c/05/36b9de6d0109948717ee0fa8076d5b57396bc838d5239f5b44b7d4c29fb0/django_allauth-65.13.0.tar.gz", hash = "sha256:7d7b7e7ad603eb3864c142f051e2cce7be2f9a9c6945a51172ec83d48c6c843b", size = 1987616, upload-time = "2025-10-31T10:20:03.954Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ff/17/f2fd703781aeeb6d314059408df77360f09625cc3ce85f264b104443108c/django_allauth-65.13.0-py3-none-any.whl", hash = "sha256:119c0cf1cc2e0d1a0fe2f13588f30951d64989256084de2d60f13ab9308f9fa0", size = 1787213, upload-time = "2025-10-31T10:20:00.587Z" },
+]
 
 [package.optional-dependencies]
 socialaccount = [
+    { name = "oauthlib" },
     { name = "pyjwt", extra = ["crypto"] },
     { name = "requests" },
-    { name = "requests-oauthlib" },
 ]
 
 [[package]]
@@ -543,19 +547,6 @@ wheels = [
 ]
 
 [[package]]
-name = "requests-oauthlib"
-version = "2.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "oauthlib" },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/42/f2/05f29bc3913aea15eb670be136045bf5c5bbf4b99ecb839da9b422bb2c85/requests-oauthlib-2.0.0.tar.gz", hash = "sha256:b3dffaebd884d8cd778494369603a9e7b58d29111bf6b41bdc2dcd87203af4e9", size = 55650, upload-time = "2024-03-22T20:32:29.939Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/5d/63d4ae3b9daea098d5d6f5da83984853c1bbacd5dc826764b249fe119d24/requests_oauthlib-2.0.0-py2.py3-none-any.whl", hash = "sha256:7dd8a5c40426b779b0868c404bdef9768deccf22749cde15852df527e6269b36", size = 24179, upload-time = "2024-03-22T20:32:28.055Z" },
-]
-
-[[package]]
 name = "s3transfer"
 version = "0.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -606,7 +597,7 @@ requires-dist = [
     { name = "colorama", specifier = "==0.4" },
     { name = "dj-database-url", specifier = "==2.2" },
     { name = "django", specifier = "==5.2.11" },
-    { name = "django-allauth", extras = ["socialaccount"], specifier = "==0.63" },
+    { name = "django-allauth", extras = ["socialaccount"], specifier = "==65.13.0" },
     { name = "django-hosts", specifier = "==6.0" },
     { name = "django-htmx", specifier = "==1.23" },
     { name = "django-ses", specifier = "==4.4" },

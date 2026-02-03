@@ -5,7 +5,7 @@ description = "Sloppy Labwork and KeyChain Django applications"
 requires-python = ">=3.12"
 dependencies = [
     "Django==5.2.11",
-    "django-allauth[socialaccount]==0.63",
+    "django-allauth[socialaccount]==65.13.0",
     "markdown==3.7",
     "Pillow==10.3",
     "boto3==1.34",
