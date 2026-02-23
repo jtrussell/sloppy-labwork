@@ -1231,58 +1231,11 @@ class SwissTournamentTestCase(TestCase):
                     standing['stage_player'].id != r1_bye_player_id):  # Hasn't had a bye
                     lower_ranked_without_byes.append(standing['stage_player'])
 
-            if lower_ranked_without_byes:
-                # Check if giving bye to the lowest ranked would force rematches
-                alternative_bye_player = lower_ranked_without_byes[0]  # Lowest ranked without bye
-                remaining_players = [s['stage_player'] for s in standings_after_r1 if s['stage_player'] != alternative_bye_player]
-
-                # Get Round 1 opponent history
-                r1_opponents = {}
-                for match in matches_r1:
-                    if match.player_two is not None:  # Not a bye match
-                        p1, p2 = match.player_one, match.player_two
-                        r1_opponents.setdefault(p1.id, set()).add(p2.id)
-                        r1_opponents.setdefault(p2.id, set()).add(p1.id)
-
-                # Check if remaining players can be paired without rematches
-                can_avoid_rematches = True
-                pairing_analysis = []
-                used = set()
-
-                for i, player1 in enumerate(remaining_players):
-                    if player1.id in used:
-                        continue
-
-                    found_opponent = False
-                    for j, player2 in enumerate(remaining_players[i+1:], i+1):
-                        if (player2.id not in used and
-                            player2.id not in r1_opponents.get(player1.id, set())):
-                            pairing_analysis.append(f"{player1.player.get_display_name()} vs {player2.player.get_display_name()}")
-                            used.add(player1.id)
-                            used.add(player2.id)
-                            found_opponent = True
-                            break
-
-                    if not found_opponent:
-                        can_avoid_rematches = False
-                        break
-
-                failure_msg = (
-                    f"Round 2 bye went to {bye_player_r2.player.get_display_name()} "
-                    f"(rank {bye_player_rank + 1}) when lower-ranked players without byes were available: "
-                    f"{[p.player.get_display_name() for p in lower_ranked_without_byes]}. "
-                    f"Current standings: {[(i+1, s['stage_player'].player.get_display_name(), s['wins']) for i, s in enumerate(standings_after_r1)]}. ")
-
-                if can_avoid_rematches:
-                    failure_msg += f"Alternative pairing with {alternative_bye_player.player.get_display_name()} bye would work: {pairing_analysis}"
-                else:
-                    failure_msg += f"Alternative bye assignment might force rematches - this could be acceptable."
-
-                # Only fail if we can definitely avoid rematches
-                if can_avoid_rematches:
-                    self.fail(failure_msg)
-                else:
-                    logger.debug(f"Bye assignment may be acceptable due to pairing constraints: {failure_msg}")
+            if bye_player_rank == 0:
+                self.fail(
+                    f"Round 2 bye went to the #1 ranked player "
+                    f"{bye_player_r2.player.get_display_name()}. "
+                    f"Current standings: {[(i+1, s['stage_player'].player.get_display_name(), s['wins']) for i, s in enumerate(standings_after_r1)]}")
 
         # Assign results for round 2
         for match in Match.objects.filter(round=round2):
@@ -1303,28 +1256,82 @@ class SwissTournamentTestCase(TestCase):
             bye_player_r3 = r3_bye_match.player_one
             bye_player_rank_r3 = next(i for i, s in enumerate(standings_after_r2) if s['stage_player'] == bye_player_r3)
 
-            # Check for previous bye recipients
-            previous_bye_recipients = set()
-            if r1_bye_match:
-                previous_bye_recipients.add(r1_bye_match.player_one.id)
-            if r2_bye_match:
-                previous_bye_recipients.add(r2_bye_match.player_one.id)
-
-            # Find lower ranked players without previous byes
-            lower_ranked_without_byes_r3 = []
-            for i, standing in enumerate(standings_after_r2):
-                if (i > bye_player_rank_r3 and  # Lower ranked
-                    standing['stage_player'].id not in previous_bye_recipients):  # No previous bye
-                    lower_ranked_without_byes_r3.append(standing['stage_player'])
-
-            if lower_ranked_without_byes_r3:
+            if bye_player_rank_r3 == 0:
                 self.fail(
-                    f"Round 3 bye went to {bye_player_r3.player.get_display_name()} "
-                    f"(rank {bye_player_rank_r3 + 1}) when lower-ranked players without byes were available: "
-                    f"{[p.player.get_display_name() for p in lower_ranked_without_byes_r3]}. "
+                    f"Round 3 bye went to the #1 ranked player "
+                    f"{bye_player_r3.player.get_display_name()}. "
                     f"Current standings: {[(i+1, s['stage_player'].player.get_display_name(), s['wins']) for i, s in enumerate(standings_after_r2)]}")
 
         logger.debug(f"Bye placement test passed - byes went to appropriately ranked players")
+
+    def test_undefeated_players_paired_in_round_3(self):
+        """
+        Regression test for a 5-player Swiss tournament where two undefeated
+        players were not paired in Round 3 because the bye selection algorithm
+        did not consider pairing quality.
+
+        Scenario (from a real tournament):
+          R1: Aelonia vs beccabeKAW (beccabeKAW wins), wizardrandom vs
+              quickdraw3457 (quickdraw3457 wins), strifesada BYE
+          R2: quickdraw3457 vs beccabeKAW (beccabeKAW wins), strifesada vs
+              Aelonia (strifesada wins), wizardrandom BYE
+          Standings entering R3: beccabeKAW 2-0, strifesada 2-0,
+              quickdraw3457 1-1, wizardrandom 1-1 (bye), Aelonia 0-2
+
+        Expected R3: beccabeKAW vs strifesada (both undefeated).
+        """
+        tournament, stage, players, stage_players = (
+            self._create_tournament_with_players(5, "Undefeated Pairing Regression"))
+
+        sp_aelonia = stage_players[0]       # seed 1
+        sp_beccabekaw = stage_players[1]    # seed 2
+        sp_strifesada = stage_players[2]    # seed 3
+        sp_wizardrandom = stage_players[3]  # seed 4
+        sp_quickdraw = stage_players[4]     # seed 5
+
+        round1 = Round.objects.create(stage=stage, order=1)
+        m1_r1 = Match.objects.create(
+            round=round1, player_one=sp_aelonia, player_two=sp_beccabekaw)
+        MatchResult.objects.create(match=m1_r1, winner=sp_beccabekaw)
+        m2_r1 = Match.objects.create(
+            round=round1, player_one=sp_wizardrandom, player_two=sp_quickdraw)
+        MatchResult.objects.create(match=m2_r1, winner=sp_quickdraw)
+        m3_r1 = Match.objects.create(
+            round=round1, player_one=sp_strifesada, player_two=None)
+        MatchResult.objects.create(match=m3_r1, winner=sp_strifesada)
+
+        round2 = Round.objects.create(stage=stage, order=2)
+        m1_r2 = Match.objects.create(
+            round=round2, player_one=sp_quickdraw, player_two=sp_beccabekaw)
+        MatchResult.objects.create(match=m1_r2, winner=sp_beccabekaw)
+        m2_r2 = Match.objects.create(
+            round=round2, player_one=sp_strifesada, player_two=sp_aelonia)
+        MatchResult.objects.create(match=m2_r2, winner=sp_strifesada)
+        m3_r2 = Match.objects.create(
+            round=round2, player_one=sp_wizardrandom, player_two=None)
+        MatchResult.objects.create(match=m3_r2, winner=sp_wizardrandom)
+
+        round3 = Round.objects.create(stage=stage, order=3)
+        strategy = get_pairing_strategy('swiss')
+        strategy.make_pairings_for_round(round3)
+
+        r3_matches = Match.objects.filter(round=round3)
+        undefeated_ids = {sp_beccabekaw.id, sp_strifesada.id}
+
+        undefeated_paired_together = False
+        for match in r3_matches:
+            if match.player_two is None:
+                continue
+            paired_ids = {match.player_one.id, match.player_two.id}
+            if paired_ids == undefeated_ids:
+                undefeated_paired_together = True
+                break
+
+        self.assertTrue(
+            undefeated_paired_together,
+            f"Expected undefeated players (beccabeKAW, strifesada) to be paired "
+            f"in Round 3. Actual pairings: "
+            f"{[(m.player_one.player.get_display_name(), m.player_two.player.get_display_name() if m.player_two else 'BYE') for m in r3_matches]}")
 
     def test_bye_assignment_avoids_repeat_byes(self):
         """Test that byes are not given to players who already had a bye, except when necessary."""
