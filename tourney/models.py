@@ -10,6 +10,10 @@ from abc import ABC, abstractmethod
 from .pairing_strategies import get_pairing_strategy
 
 
+def generate_tiebreaker_value():
+    return random.random()
+
+
 def generate_tournament_code():
     """Generate a unique 6-character code for tournament URLs."""
     length = 6
@@ -550,7 +554,7 @@ class RandomRankingCriterion(RankingCriterion):
         return 'Random tiebreaker'
 
     def calculate_value(self, stage_player, stage, standings_cache=None):
-        return random.random()
+        return stage_player.tiebreaker_value
 
     def is_descending(self):
         return False
@@ -861,6 +865,7 @@ class StagePlayer(models.Model):
         Stage, on_delete=models.CASCADE, related_name='stage_players')
     seed = models.PositiveIntegerField()
     rank = models.PositiveIntegerField(default=None, null=True, blank=True)
+    tiebreaker_value = models.FloatField(default=generate_tiebreaker_value)
     group = models.ForeignKey(
         Group, on_delete=models.SET_NULL, related_name='players',
         default=None, null=True, blank=True)
