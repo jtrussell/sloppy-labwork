@@ -3,6 +3,26 @@ function truncateName(name, maxLength = 25) {
   return name.substring(0, maxLength - 1) + '…'
 }
 
+function suggestWinnerFromScores(
+  scoreOneInput,
+  scoreTwoInput,
+  winnerSelect,
+  playerOneValue,
+  playerTwoValue,
+) {
+  if (scoreOneInput.value === '' || scoreTwoInput.value === '') return
+  if (winnerSelect.selectedIndex !== 0) return
+
+  const scoreOne = parseInt(scoreOneInput.value, 10)
+  const scoreTwo = parseInt(scoreTwoInput.value, 10)
+
+  if (scoreOne > scoreTwo) {
+    winnerSelect.value = playerOneValue
+  } else if (scoreTwo > scoreOne) {
+    winnerSelect.value = playerTwoValue
+  }
+}
+
 function openMatchModal(button) {
   const modal = document.getElementById('matchModal')
   const form = document.getElementById('matchForm')
@@ -128,6 +148,17 @@ function openMatchModal(button) {
 
       if (playerOneScoreInput) playerOneScoreInput.value = playerOneScore
       if (playerTwoScoreInput) playerTwoScoreInput.value = playerTwoScore
+
+      const onScoreInput = () =>
+        suggestWinnerFromScores(
+          playerOneScoreInput,
+          playerTwoScoreInput,
+          winnerSelect,
+          playerOneId,
+          playerTwoId,
+        )
+      playerOneScoreInput.oninput = onScoreInput
+      playerTwoScoreInput.oninput = onScoreInput
     }
   }
 
@@ -273,6 +304,17 @@ function openPlayerMatchReportModal() {
       myScoreInput.required = false
       theirScoreInput.required = false
     }
+
+    const onScoreInput = () =>
+      suggestWinnerFromScores(
+        myScoreInput,
+        theirScoreInput,
+        winnerSelect,
+        'me',
+        'them',
+      )
+    myScoreInput.oninput = onScoreInput
+    theirScoreInput.oninput = onScoreInput
   } else {
     scoreInputsSection.style.display = 'none'
   }
