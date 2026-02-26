@@ -279,6 +279,7 @@ select {
   padding: 6px 10px;
   border-radius: var(--border-radius-sm);
   font-size: 16px;
+  max-width: 100%;
 }
 
 .staff-only input,
