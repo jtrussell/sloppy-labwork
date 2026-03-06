@@ -1104,21 +1104,25 @@ class AwardBase(models.Model):
             36, _('Global Leaderboard Monthly - Top Fifty'))
         participate_in_premier_tournament = (
             37, _('Participate in Premier Tournament'))
-        kfc_open_champion = (38, _('KFC Open Champion')) 
+        kfc_open_champion = (38, _('KFC Open Champion'))
         national_champion_belgium = (39, _('National Champion: Belgium'))
         national_champion_brazil = (40, _('National Champion: Brazil'))
         national_champion_canada = (41, _('National Champion: Canada'))
         national_champion_china = (42, _('National Champion: China'))
         national_champion_denmark = (43, _('National Champion: Denmark'))
         national_champion_italy = (44, _('National Champion: Italy'))
-        national_champion_netherlands = (45, _('National Champion: Netherlands'))
+        national_champion_netherlands = (
+            45, _('National Champion: Netherlands'))
         national_champion_poland = (46, _('National Champion: Poland'))
         national_champion_portugal = (47, _('National Champion: Portugal'))
-        national_champion_south_korea = (48, _('National Champion: South Korea'))
+        national_champion_south_korea = (
+            48, _('National Champion: South Korea'))
         national_champion_sweden = (49, _('National Champion: Sweden'))
         national_champion_taiwan = (50, _('National Champion: Taiwan'))
-        national_champion_united_kingdom = (51, _('National Champion: United Kingdom'))
-        national_champion_united_states = (52, _('National Champion: United States'))
+        national_champion_united_kingdom = (
+            51, _('National Champion: United Kingdom'))
+        national_champion_united_states = (
+            52, _('National Champion: United States'))
         manually_awarded = (999, _('Manually Awarded'))
 
     pmc_id = models.CharField(max_length=10, unique=True)
@@ -1688,23 +1692,23 @@ class AwardAssignmentService():
             AwardBase.CriteriaTypeOptions.national_champion_united_states
         ]:
             tag_slug = {
-                AwardBase.CriteriaTypeOptions.kfc_open_champion: 'kfc-open-champion',
+                AwardBase.CriteriaTypeOptions.kfc_open_champion: 'kfc-open',
                 AwardBase.CriteriaTypeOptions.vault_warrior: 'vault-warrior',
-                AwardBase.CriteriaTypeOptions.world_champion: 'world-champion',
-                AwardBase.CriteriaTypeOptions.national_champion_belgium: 'national-champion-belgium',
-                AwardBase.CriteriaTypeOptions.national_champion_brazil: 'national-champion-brazil',
-                AwardBase.CriteriaTypeOptions.national_champion_canada: 'national-champion-canada',
-                AwardBase.CriteriaTypeOptions.national_champion_china: 'national-champion-china',
-                AwardBase.CriteriaTypeOptions.national_champion_denmark: 'national-champion-denmark',
-                AwardBase.CriteriaTypeOptions.national_champion_italy: 'national-champion-italy',
-                AwardBase.CriteriaTypeOptions.national_champion_netherlands: 'national-champion-netherlands',
-                AwardBase.CriteriaTypeOptions.national_champion_poland: 'national-champion-poland',
-                AwardBase.CriteriaTypeOptions.national_champion_portugal: 'national-champion-portugal',
-                AwardBase.CriteriaTypeOptions.national_champion_south_korea: 'national-champion-south-korea',
-                AwardBase.CriteriaTypeOptions.national_champion_sweden: 'national-champion-sweden',
-                AwardBase.CriteriaTypeOptions.national_champion_taiwan: 'national-champion-taiwan',
-                AwardBase.CriteriaTypeOptions.national_champion_united_kingdom: 'national-champion-united-kingdom',
-                AwardBase.CriteriaTypeOptions.national_champion_united_states: 'national-champion-united-states'
+                AwardBase.CriteriaTypeOptions.world_champion: 'world-championship',
+                AwardBase.CriteriaTypeOptions.national_champion_belgium: 'national-championship-belgium',
+                AwardBase.CriteriaTypeOptions.national_champion_brazil: 'national-championship-brazil',
+                AwardBase.CriteriaTypeOptions.national_champion_canada: 'national-championship-canada',
+                AwardBase.CriteriaTypeOptions.national_champion_china: 'national-championship-china',
+                AwardBase.CriteriaTypeOptions.national_champion_denmark: 'national-championship-denmark',
+                AwardBase.CriteriaTypeOptions.national_champion_italy: 'national-championship-italy',
+                AwardBase.CriteriaTypeOptions.national_champion_netherlands: 'national-championship-netherlands',
+                AwardBase.CriteriaTypeOptions.national_champion_poland: 'national-championship-poland',
+                AwardBase.CriteriaTypeOptions.national_champion_portugal: 'national-championship-portugal',
+                AwardBase.CriteriaTypeOptions.national_champion_south_korea: 'national-championship-south-korea',
+                AwardBase.CriteriaTypeOptions.national_champion_sweden: 'national-championship-sweden',
+                AwardBase.CriteriaTypeOptions.national_champion_taiwan: 'national-championship-taiwan',
+                AwardBase.CriteriaTypeOptions.national_champion_united_kingdom: 'national-championship-united-kingdom',
+                AwardBase.CriteriaTypeOptions.national_champion_united_states: 'national-championship-united-states'
             }.get(criteria_type, None)
             if tag_slug:
                 value = qs.filter(
