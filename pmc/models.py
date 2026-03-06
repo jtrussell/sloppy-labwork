@@ -1693,7 +1693,7 @@ class AwardAssignmentService():
         ]:
             tag_slug = {
                 AwardBase.CriteriaTypeOptions.kfc_open_champion: 'kfc-open',
-                AwardBase.CriteriaTypeOptions.vault_warrior: 'vault-warrior',
+                AwardBase.CriteriaTypeOptions.vault_warrior: 'vault-tour',
                 AwardBase.CriteriaTypeOptions.world_champion: 'world-championship',
                 AwardBase.CriteriaTypeOptions.national_champion_belgium: 'national-championship-belgium',
                 AwardBase.CriteriaTypeOptions.national_champion_brazil: 'national-championship-brazil',
