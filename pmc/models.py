@@ -1123,6 +1123,11 @@ class AwardBase(models.Model):
             51, _('National Champion: United Kingdom'))
         national_champion_united_states = (
             52, _('National Champion: United States'))
+        national_champion_france = (53, _('National Champion: France'))
+        national_champion_chile = (54, _('National Champion: Chile'))
+        national_champion_germany = (55, _('National Champion: Germany'))
+        national_champion_greece = (56, _('National Champion: Greece'))
+
         manually_awarded = (999, _('Manually Awarded'))
 
     pmc_id = models.CharField(max_length=10, unique=True)
@@ -1689,7 +1694,12 @@ class AwardAssignmentService():
             AwardBase.CriteriaTypeOptions.national_champion_sweden,
             AwardBase.CriteriaTypeOptions.national_champion_taiwan,
             AwardBase.CriteriaTypeOptions.national_champion_united_kingdom,
-            AwardBase.CriteriaTypeOptions.national_champion_united_states
+            AwardBase.CriteriaTypeOptions.national_champion_united_states,
+            AwardBase.CriteriaTypeOptions.national_champion_france,
+            AwardBase.CriteriaTypeOptions.national_champion_chile,
+            AwardBase.CriteriaTypeOptions.national_champion_germany,
+            AwardBase.CriteriaTypeOptions.national_champion_greece
+
         ]:
             tag_slug = {
                 AwardBase.CriteriaTypeOptions.kfc_open_champion: 'kfc-open',
@@ -1708,7 +1718,11 @@ class AwardAssignmentService():
                 AwardBase.CriteriaTypeOptions.national_champion_sweden: 'national-championship-sweden',
                 AwardBase.CriteriaTypeOptions.national_champion_taiwan: 'national-championship-taiwan',
                 AwardBase.CriteriaTypeOptions.national_champion_united_kingdom: 'national-championship-united-kingdom',
-                AwardBase.CriteriaTypeOptions.national_champion_united_states: 'national-championship-united-states'
+                AwardBase.CriteriaTypeOptions.national_champion_united_states: 'national-championship-united-states',
+                AwardBase.CriteriaTypeOptions.national_champion_france: 'national-championship-france',
+                AwardBase.CriteriaTypeOptions.national_champion_chile: 'national-championship-chile',
+                AwardBase.CriteriaTypeOptions.national_champion_germany: 'national-championship-germany',
+                AwardBase.CriteriaTypeOptions.national_champion_greece: 'national-championship-greece'
             }.get(criteria_type, None)
             if tag_slug:
                 value = qs.filter(
