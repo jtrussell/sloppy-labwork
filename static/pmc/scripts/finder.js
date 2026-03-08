@@ -67,12 +67,19 @@
 		})
 	}
 
-	function renderResults(playgroups) {
+	function renderResults(playgroups, capped, totalCount) {
 		resultsList.innerHTML = ''
 
 		if (playgroups.length === 0) {
 			resultsList.innerHTML = '<li class="finder-no-results">No playgroups found</li>'
 			return
+		}
+
+		if (capped) {
+			var notice = document.createElement('li')
+			notice.className = 'finder-results-notice'
+			notice.textContent = 'Showing first ' + playgroups.length + ' of ' + totalCount + ' results. Use search or filters to narrow down.'
+			resultsList.appendChild(notice)
 		}
 
 		playgroups.forEach(function (pg) {
@@ -135,7 +142,7 @@
 		var maxMembers = maxMembersInput.value.trim()
 		if (maxMembers) params.set('max_members', maxMembers)
 
-		var url = '/pmc/api/finder/'
+		var url = window.FINDER_API_URL
 		var qs = params.toString()
 		if (qs) url += '?' + qs
 
@@ -144,7 +151,7 @@
 			.then(function (data) {
 				allPlaygroups = data.playgroups
 				renderMarkers(allPlaygroups)
-				renderResults(allPlaygroups)
+				renderResults(allPlaygroups, data.capped, data.total_count)
 
 				if (allPlaygroups.length > 0) {
 					var bounds = []

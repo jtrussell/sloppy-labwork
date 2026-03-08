@@ -1306,6 +1306,10 @@ def playgroup_finder_data(request):
         except ValueError:
             pass
 
+    max_results = 10
+    total_count = playgroups_with_venues.count()
+    playgroups_with_venues = playgroups_with_venues[:max_results]
+
     results = []
     for pg in playgroups_with_venues:
         venues_data = []
@@ -1341,4 +1345,8 @@ def playgroup_finder_data(request):
             'venues': venues_data,
         })
 
-    return JsonResponse({'playgroups': results})
+    return JsonResponse({
+        'playgroups': results,
+        'total_count': total_count,
+        'capped': total_count > max_results,
+    })
