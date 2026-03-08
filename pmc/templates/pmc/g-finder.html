@@ -1,0 +1,73 @@
+{% load static %}
+{% load django_htmx %}
+<!DOCTYPE html>
+<html lang="en" class="pmc-theme-{{ my_profile.theme }}">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+	<link rel="manifest" href="{% static 'manifest.json' %}">
+
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reset-css@5.0.2/reset.min.css">
+	<link rel="stylesheet" href="{% static 'pmc/css/main.css' %}">
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap" rel="stylesheet">
+
+	<link rel="icon" type="image/svg+xml" href="{% static 'pmc/img/favicon.png' %}">
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+	<link rel="stylesheet" href="{% static 'pmc/css/finder.css' %}" />
+
+	<title>Find a Group — KeyChain</title>
+</head>
+
+<body>
+	<div class="finder-chrome">
+		<a href="{% url 'pmc-my-keychain' %}" class="finder-wordmark"></a>
+		<nav class="finder-nav">
+			{% for link in nav_links %}
+			<a
+				href="{{ link.url }}"
+				class="{% if link.is_active %}active{% endif %}"
+			>{{ link.name }}</a>
+			{% endfor %}
+		</nav>
+	</div>
+
+	<div class="finder-layout" id="finder-layout">
+		<div class="finder-panel">
+			<h2 class="no-top-margin">Find a Group</h2>
+
+			<div class="finder-search">
+				<input
+					type="text"
+					id="finder-search-input"
+					placeholder="Search by name..."
+					autocomplete="off"
+				/>
+			</div>
+
+			<div class="finder-filters">
+				<details>
+					<summary>Filters</summary>
+					<div class="finder-filter-fields">
+						<label for="finder-min-members">Min Members</label>
+						<input type="number" id="finder-min-members" min="0" placeholder="Any" />
+
+						<label for="finder-max-members">Max Members</label>
+						<input type="number" id="finder-max-members" min="0" placeholder="Any" />
+					</div>
+				</details>
+			</div>
+
+			<ul class="finder-results" id="finder-results"></ul>
+		</div>
+
+		<div class="finder-map" id="finder-map"></div>
+	</div>
+
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+	<script src="{% static 'pmc/scripts/finder.js' %}"></script>
+</body>
+</html>

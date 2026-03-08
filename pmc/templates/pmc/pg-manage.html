@@ -92,12 +92,10 @@
     </table>
   </div>
 
-  <div class="preview" style="padding: 1rem;">
-    <h2 class="staff-only">Venues</h2>
-      {% partial venues-list %}
-    <div class="staff-only">
-      <a href="{% url 'pmc-pg-venue-add' playgroup.slug %}" class="btn btn-solid">Add Venue</a>
-    </div>
+  <h2 class="staff-only">Venues</h2>
+    {% partial venues-list %}
+  <div class="staff-only">
+    <a href="{% url 'pmc-pg-venue-add' playgroup.slug %}" class="btn btn-solid">Add Venue</a>
   </div>
 {% endblock %}
 

@@ -57,6 +57,12 @@ def nav_links(request):
         })
 
     if not playgroup_slug:
+        # nav_links.append({
+        #    'name': _('Find'),
+        #    'url': reverse('pmc-finder'),
+        #    'is_active': False,
+        # })
+
         nav_links.append({
             'name': _('Leaderboards'),
             'url': reverse('pmc-leaderboard'),

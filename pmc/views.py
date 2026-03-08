@@ -43,7 +43,7 @@ from .models import Background
 from .models import BackgroundCategory
 from .models import RankingPointsMap, RankingPointsMapVersion
 from .models import AwardAssignmentService
-from .models import Venue, PlaygroupVenue
+from .models import Venue, PlaygroupVenue, PlaygroupType
 
 
 def is_pg_member(view):
@@ -1268,3 +1268,77 @@ def hydrate_result_decks(request):
         except Exception:
             pass
     return HttpResponse('Done.', content_type='text/plain')
+
+
+def playgroup_finder(request):
+    return render(request, 'pmc/g-finder.html')
+
+
+def playgroup_finder_data(request):
+    playgroups_with_venues = Playgroup.objects.filter(
+        venues__latitude__isnull=False,
+        venues__longitude__isnull=False,
+    ).distinct().annotate(
+        member_count=Count('members')
+    ).prefetch_related('venues', 'playgroup_venues')
+
+    search = request.GET.get('search', '').strip()
+    if search:
+        playgroups_with_venues = playgroups_with_venues.filter(
+            name__icontains=search
+        )
+
+    min_members = request.GET.get('min_members')
+    if min_members:
+        try:
+            playgroups_with_venues = playgroups_with_venues.filter(
+                member_count__gte=int(min_members)
+            )
+        except ValueError:
+            pass
+
+    max_members = request.GET.get('max_members')
+    if max_members:
+        try:
+            playgroups_with_venues = playgroups_with_venues.filter(
+                member_count__lte=int(max_members)
+            )
+        except ValueError:
+            pass
+
+    results = []
+    for pg in playgroups_with_venues:
+        venues_data = []
+        for pv in pg.playgroup_venues.select_related('venue').all():
+            venue = pv.venue
+            if not venue.has_coordinates():
+                continue
+            venues_data.append({
+                'id': venue.id,
+                'name': venue.name,
+                'latitude': float(venue.latitude),
+                'longitude': float(venue.longitude),
+                'city': venue.city or '',
+                'country': venue.country or '',
+                'is_primary': pg.primary_venue_id == venue.id,
+            })
+
+        if not venues_data:
+            continue
+
+        primary = next((v for v in venues_data if v['is_primary']), venues_data[0])
+
+        results.append({
+            'id': pg.id,
+            'name': pg.name,
+            'slug': pg.slug,
+            'member_count': pg.member_count,
+            'type': pg.type.name if pg.type else None,
+            'logo_src': pg.get_logo_src(),
+            'url': reverse('pmc-pg-detail', args=[pg.slug]),
+            'primary_latitude': primary['latitude'],
+            'primary_longitude': primary['longitude'],
+            'venues': venues_data,
+        })
+
+    return JsonResponse({'playgroups': results})
