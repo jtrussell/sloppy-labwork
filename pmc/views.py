@@ -894,10 +894,24 @@ def assign_event_points(request, slug, pk):
 def manage_event_result(request, slug, pk):
     if request.method == 'DELETE':
         result = get_object_or_404(EventResult, pk=pk)
-        # TODO verify that the event is associated with the playgroup
         result.delete()
         RankingPointsService.assign_points_for_event(result.event)
         messages.success(request, _('Result removed.'))
+        if request.htmx:
+            context = {
+                'playgroup': Playgroup.objects.get(slug=slug),
+                'object': result.event,
+            }
+            return render(request, 'pmc/pg-event-manage.html#results-table', context)
+        return HttpResponseRedirect(reverse('pmc-pg-event-manage', kwargs={'slug': slug, 'pk': result.event.pk}))
+    elif request.method == 'POST':
+        result = get_object_or_404(EventResult, pk=pk)
+        result.finishing_position = request.POST.get('finishing_position') or None
+        result.num_wins = request.POST.get('num_wins') or None
+        result.num_losses = request.POST.get('num_losses') or None
+        result.save()
+        RankingPointsService.assign_points_for_event(result.event)
+        messages.success(request, _('Result updated.'))
         if request.htmx:
             context = {
                 'playgroup': Playgroup.objects.get(slug=slug),

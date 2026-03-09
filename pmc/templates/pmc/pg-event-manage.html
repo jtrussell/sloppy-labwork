@@ -31,12 +31,26 @@
 
 
     <td class="staff-only col-sm">
-      <a
-        class="btn"
-        hx-delete="{% url 'pmc-pg-manage-result' playgroup.slug result.pk %}"
-        hx-swap="outerHTML"
-        hx-target="#results-table"
-      >X</a>
+      <div class="flex flex-row flex-gap-1">
+        <a
+          class="btn"
+          onclick="editResult(this)"
+          data-pk="{{ result.pk }}"
+          data-position="{{ result.finishing_position|default_if_none:'' }}"
+          data-wins="{{ result.num_wins|default_if_none:'' }}"
+          data-losses="{{ result.num_losses|default_if_none:'' }}"
+          data-username="{{ result.user }}"
+          data-url="{% url 'pmc-pg-manage-result' playgroup.slug result.pk %}"
+          title="Edit result"
+        >&#9998;</a>
+        <a
+          class="btn"
+          hx-delete="{% url 'pmc-pg-manage-result' playgroup.slug result.pk %}"
+          hx-swap="outerHTML"
+          hx-target="#results-table"
+          title="Delete result"
+        >X</a>
+      </div>
     </td>
   </tr>
 {% endpartialdef %}
@@ -147,4 +161,76 @@
       {% partial results-table %}
     </form>
   </div>
+{% endblock %}
+
+{% block extra_body %}
+<script type="text/javascript">
+	function editResult(el) {
+		const theme = document.documentElement.className.includes('pmc-theme-1') ? 'light' : 'dark'
+		Swal.fire({
+			title: 'Edit Result',
+			html:
+				'<div style="margin-bottom:1rem;font-size:1.1rem">' + el.dataset.username + '</div>' +
+				'<div style="display:flex;flex-direction:column;gap:1rem;text-align:left">' +
+					'<div><label style="display:block;margin-bottom:0.25rem">Finishing Position</label>' +
+					'<input id="swal-position" type="number" style="margin:0;width:100%" min="0" value="' + el.dataset.position + '"></div>' +
+					'<div><label style="display:block;margin-bottom:0.25rem">Wins</label>' +
+					'<input id="swal-wins" type="number" style="margin:0;width:100%" min="0" value="' + el.dataset.wins + '"></div>' +
+					'<div><label style="display:block;margin-bottom:0.25rem">Losses</label>' +
+					'<input id="swal-losses" type="number" style="margin:0;width:100%" min="0" value="' + el.dataset.losses + '"></div>' +
+				'</div>',
+			showCloseButton: true,
+			showCancelButton: true,
+			confirmButtonText: 'Save',
+			theme: theme,
+			customClass: {
+				confirmButton: 'btn btn-solid',
+				cancelButton: 'btn'
+			},
+			didOpen: function() {
+				var cancel = Swal.getCancelButton()
+				cancel.style.boxShadow = 'none'
+				cancel.style.transform = 'none'
+				cancel.addEventListener('mouseenter', function() {
+					this.style.boxShadow = '0 0 5px var(--staff-color-accent)'
+					this.style.transform = 'translate(0, -1px)'
+				})
+				cancel.addEventListener('mouseleave', function() {
+					this.style.boxShadow = 'none'
+					this.style.transform = 'none'
+				})
+			},
+			preConfirm: function() {
+				var csrfToken = document.querySelector('[hx-headers]').getAttribute('hx-headers')
+				csrfToken = JSON.parse(csrfToken)['x-csrftoken']
+				var formData = new URLSearchParams()
+				formData.append('finishing_position', document.getElementById('swal-position').value)
+				formData.append('num_wins', document.getElementById('swal-wins').value)
+				formData.append('num_losses', document.getElementById('swal-losses').value)
+				return fetch(el.dataset.url, {
+					method: 'POST',
+					body: formData,
+					headers: {
+						'HX-Request': 'true',
+						'Content-Type': 'application/x-www-form-urlencoded',
+						'X-CSRFToken': csrfToken
+					}
+				}).then(function(response) {
+					var messagesJson = response.headers.get('HX-Trigger') || '{}'
+					showMessages(messagesJson)
+					if (!response.ok) {
+						Swal.showValidationMessage('Failed to update result')
+						return
+					}
+					return response.text()
+				}).then(function(html) {
+					if (html) {
+						document.getElementById('results-table').outerHTML = html
+						htmx.process(document.getElementById('results-table'))
+					}
+				})
+			}
+		})
+	}
+</script>
 {% endblock %}
