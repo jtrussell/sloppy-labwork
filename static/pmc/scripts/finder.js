@@ -30,21 +30,22 @@
 	var searchInput = document.getElementById('finder-search-input')
 	var minMembersInput = document.getElementById('finder-min-members')
 	var maxMembersInput = document.getElementById('finder-max-members')
+	var upcomingEventsInput = document.getElementById('finder-upcoming-events')
+	var eventFormatInput = document.getElementById('finder-event-format')
 	var resultsList = document.getElementById('finder-results')
 
 	function buildPopupHtml(playgroup, venue) {
 		var primaryLabel = venue.is_primary ? ' (Primary)' : ''
+		var locationParts = []
+		if (venue.city) locationParts.push(escapeHtml(venue.city))
+		if (venue.state_province) locationParts.push(escapeHtml(venue.state_province))
 		return '<div class="finder-popup">' +
 			'<div class="finder-popup-header">' +
 				'<img class="finder-popup-logo" src="' + escapeHtml(playgroup.logo_src) + '" alt="" />' +
 				'<div class="finder-popup-name"><a href="' + playgroup.url + '">' + escapeHtml(playgroup.name) + '</a></div>' +
 			'</div>' +
 			'<div class="finder-popup-venue">' + escapeHtml(venue.name) + primaryLabel + '</div>' +
-			'<div class="finder-popup-meta">' +
-				(venue.city ? escapeHtml(venue.city) : '') +
-				(venue.city && venue.country ? ', ' : '') +
-				(venue.country ? escapeHtml(venue.country) : '') +
-			'</div>' +
+			(locationParts.length ? '<div class="finder-popup-meta">' + locationParts.join(', ') + '</div>' : '') +
 			'<div class="finder-popup-meta">' + playgroup.member_count + ' member' + (playgroup.member_count !== 1 ? 's' : '') + '</div>' +
 		'</div>'
 	}
@@ -141,6 +142,9 @@
 		if (minMembers) params.set('min_members', minMembers)
 		var maxMembers = maxMembersInput.value.trim()
 		if (maxMembers) params.set('max_members', maxMembers)
+		if (upcomingEventsInput.checked) params.set('upcoming_events', '1')
+		var eventFormat = eventFormatInput.value
+		if (eventFormat) params.set('event_format', eventFormat)
 
 		var url = window.FINDER_API_URL
 		var qs = params.toString()
@@ -175,6 +179,8 @@
 	searchInput.addEventListener('input', debouncedFetch)
 	minMembersInput.addEventListener('input', debouncedFetch)
 	maxMembersInput.addEventListener('input', debouncedFetch)
+	upcomingEventsInput.addEventListener('change', fetchPlaygroups)
+	eventFormatInput.addEventListener('change', fetchPlaygroups)
 
 	fetchPlaygroups()
 }())

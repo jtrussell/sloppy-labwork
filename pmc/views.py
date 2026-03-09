@@ -43,7 +43,7 @@ from .models import Background
 from .models import BackgroundCategory
 from .models import RankingPointsMap, RankingPointsMapVersion
 from .models import AwardAssignmentService
-from .models import Venue, PlaygroupVenue, PlaygroupType
+from .models import Venue, PlaygroupVenue, PlaygroupType, EventFormat
 
 
 def is_pg_member(view):
@@ -1330,7 +1330,10 @@ def hydrate_result_decks(request):
 
 
 def playgroup_finder(request):
-    return render(request, 'pmc/g-finder.html')
+    event_formats = EventFormat.objects.all()
+    return render(request, 'pmc/g-finder.html', {
+        'event_formats': event_formats,
+    })
 
 
 def playgroup_finder_data(request):
@@ -1344,7 +1347,9 @@ def playgroup_finder_data(request):
     search = request.GET.get('search', '').strip()
     if search:
         playgroups_with_venues = playgroups_with_venues.filter(
-            name__icontains=search
+            Q(name__icontains=search) |
+            Q(venues__city__icontains=search) |
+            Q(venues__state_province__icontains=search)
         )
 
     min_members = request.GET.get('min_members')
@@ -1361,6 +1366,28 @@ def playgroup_finder_data(request):
         try:
             playgroups_with_venues = playgroups_with_venues.filter(
                 member_count__lte=int(max_members)
+            )
+        except ValueError:
+            pass
+
+    upcoming_only = request.GET.get('upcoming_events')
+    if upcoming_only == '1':
+        cutoff = date.today() - timedelta(days=1)
+        playgroups_with_venues = playgroups_with_venues.filter(
+            events__start_date__gte=cutoff,
+        ).exclude(
+            events__results__finishing_position__isnull=False,
+        )
+
+    event_format = request.GET.get('event_format')
+    if event_format == 'other':
+        playgroups_with_venues = playgroups_with_venues.filter(
+            events__format__isnull=True
+        )
+    elif event_format:
+        try:
+            playgroups_with_venues = playgroups_with_venues.filter(
+                events__format_id=int(event_format)
             )
         except ValueError:
             pass
@@ -1382,7 +1409,7 @@ def playgroup_finder_data(request):
                 'latitude': float(venue.latitude),
                 'longitude': float(venue.longitude),
                 'city': venue.city or '',
-                'country': venue.country or '',
+                'state_province': venue.state_province or '',
                 'is_primary': pg.primary_venue_id == venue.id,
             })
 
