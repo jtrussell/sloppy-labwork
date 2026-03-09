@@ -92,6 +92,28 @@
 {% endpartialdef %}
 
 
+{% partialdef registration-button %}
+  <div id="registration-button">
+    {% if object.is_registration_open %}
+      {% if is_registered %}
+        <button
+          class="btn"
+          hx-post="{% url 'pmc-event-register' playgroup.slug object.pk %}"
+          hx-target="#registration-button"
+          hx-swap="outerHTML"
+        >Cancel Registration</button>
+      {% else %}
+        <button
+          class="btn btn-solid"
+          hx-post="{% url 'pmc-event-register' playgroup.slug object.pk %}"
+          hx-target="#registration-button"
+          hx-swap="outerHTML"
+        >Register</button>
+      {% endif %}
+    {% endif %}
+  </div>
+{% endpartialdef %}
+
 {% block content %}
   <h1>{{ object }}</h1>
   <div class="subheading">
@@ -103,7 +125,7 @@
       {% endif %}
     </ul>
   </div>
-  
+
 	<div class="card staff-only">
 		<h2>Staff Area</h2>
     <div class="card-actions">
@@ -113,6 +135,8 @@
     </div>
 		</a>
 	</div>
+
+  {% partial registration-button %}
 
   <div class="card">
     <h2>Results</h2>

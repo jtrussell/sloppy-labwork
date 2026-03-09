@@ -55,4 +55,30 @@
       {{ object.description | markdown | safe }}
     </div>
   {% endif %}
+
+  {% if upcoming_events %}
+    <h2>Upcoming Events</h2>
+    <ul class="card-list">
+      {% for event in upcoming_events %}
+        <li class="card">
+          <h2>{{ event }}</h2>
+          <ul class="subheading inline-list">
+            <li>{{ event.start_date | date:"SHORT_DATE_FORMAT" }}</li>
+            <li>{{ event.get_player_count }} Players</li>
+            {% if event.format %}
+              <li>{{ event.format }}</li>
+            {% endif %}
+            {% if event.is_registration_open %}
+              <li>Open for registration</li>
+            {% endif %}
+          </ul>
+          <div class="card-actions">
+            <a class="btn btn-solid" href="{% url 'pmc-pg-event-detail' object.slug event.pk %}">
+              Details
+            </a>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
 {% endblock %}

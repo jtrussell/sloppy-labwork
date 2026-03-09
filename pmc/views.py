@@ -98,6 +98,18 @@ class PlaygroupDetail(generic.DetailView):
     model = Playgroup
     template_name = 'pmc/playgroup-detail.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        cutoff = date.today() - timedelta(days=1)
+        upcoming_events = Event.objects.filter(
+            playgroups=self.object,
+            start_date__gte=cutoff,
+        ).exclude(
+            results__finishing_position__isnull=False,
+        ).order_by('start_date')
+        context['upcoming_events'] = upcoming_events
+        return context
+
 
 @login_required
 def playgroup_join_request(request, slug):
@@ -451,6 +463,7 @@ def playgroup_member_manage(request, slug, username):
 class PlaygroupEventsList(LoginRequiredMixin, generic.ListView):
     context_object_name = 'events'
     template_name = 'pmc/pg-events.html'
+    paginate_by = 25
 
     def get_queryset(self):
         return Event.objects.filter(playgroups__slug=self.kwargs['slug'])
@@ -480,6 +493,12 @@ def event_detail_generic(request, pk):
 class EventDetail(LoginRequiredMixin, generic.DetailView):
     model = Event
     template_name = 'pmc/pg-event-detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['is_registered'] = EventResult.objects.filter(
+            event=self.object, user=self.request.user).exists()
+        return context
 
     @method_decorator(login_required)
     @method_decorator(is_pg_member)
@@ -966,6 +985,32 @@ def add_event_result(request, slug, pk):
                 status=status
             )
         return HttpResponseRedirect(reverse('pmc-pg-event-manage', kwargs={'slug': slug, 'pk': pk}))
+
+
+@require_POST
+@login_required
+@is_pg_member
+def toggle_event_registration(request, slug, pk):
+    event = get_object_or_404(Event, pk=pk)
+    if not event.is_registration_open:
+        messages.error(request, _('Registration is not open for this event.'))
+    else:
+        existing = EventResult.objects.filter(event=event, user=request.user).first()
+        if existing:
+            existing.delete()
+            messages.success(request, _('Registration cancelled.'))
+        else:
+            EventResult.objects.create(event=event, user=request.user)
+            messages.success(request, _('You are registered!'))
+    if request.htmx:
+        is_registered = EventResult.objects.filter(event=event, user=request.user).exists()
+        context = {
+            'object': event,
+            'is_registered': is_registered,
+            'playgroup': Playgroup.objects.get(slug=slug),
+        }
+        return render(request, 'pmc/pg-event-detail.html#registration-button', context)
+    return HttpResponseRedirect(reverse('pmc-pg-event-detail', kwargs={'slug': slug, 'pk': pk}))
 
 
 @csrf_exempt

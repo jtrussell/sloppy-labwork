@@ -47,17 +47,19 @@ class EventForm(forms.ModelForm):
     class Meta:
         model = Event
         fields = ('name', 'start_date', 'is_casual', 'is_digital', 'format',
-                  'player_count', 'tags', 'is_excluded_from_global_rankings')
+                  'player_count', 'tags', 'is_accepting_registrations',
+                  'is_excluded_from_global_rankings')
         labels = {
             'name': _('Event Name'),
             'player_count': _('Player Count'),
             'is_casual': _('Event Type'),
             'is_digital': _('Event Mode'),
+            'is_accepting_registrations': _('Accept Registrations'),
             'is_excluded_from_global_rankings': _('PG Only RP'),
         }
         widgets = {
             'player_count': forms.NumberInput(attrs={
-                'min': 2,
+                'min': 0,
             }),
             'is_digital': forms.Select(choices=[
                 (False, _('In-Person')),
@@ -65,6 +67,7 @@ class EventForm(forms.ModelForm):
             ])
         }
         help_texts = {
+            'is_accepting_registrations': _('Allow members to register for this event in advance.'),
             'is_excluded_from_global_rankings': _('If checked, this event will not contribute RP towards global leaderboards. Only available to Django staff.'),
         }
 
@@ -110,17 +113,19 @@ class EventUpdateForm(forms.ModelForm):
     class Meta:
         model = Event
         fields = ('name', 'start_date', 'is_casual', 'is_digital', 'format',
-                  'player_count', 'is_excluded_from_global_rankings', 'tags')
+                  'player_count', 'is_accepting_registrations',
+                  'is_excluded_from_global_rankings', 'tags')
         labels = {
             'name': _('Event Name'),
             'player_count': _('Player Count'),
             'is_casual': _('Event Type'),
             'is_digital': _('Event Mode'),
+            'is_accepting_registrations': _('Accept Registrations'),
             'is_excluded_from_global_rankings': _('PG Only RP'),
         }
         widgets = {
             'player_count': forms.NumberInput(attrs={
-                'min': 2,
+                'min': 0,
             }),
             'is_digital': forms.Select(choices=[
                 (False, _('In-Person')),
@@ -128,6 +133,7 @@ class EventUpdateForm(forms.ModelForm):
             ])
         }
         help_texts = {
+            'is_accepting_registrations': _('Allow members to register for this event in advance.'),
             'is_excluded_from_global_rankings': _('If checked, this event will not contribute RP towards global leaderboards. Only available to Django staff.'),
         }
 

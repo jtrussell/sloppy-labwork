@@ -56,6 +56,8 @@ urlpatterns = [
          views.manage_event, name='pmc-pg-event-manage'),
     path('pg/<slug:slug>/events/<int:pk>/results/',
          views.add_event_result, name='pmc-pg-add-event-result'),
+    path('pg/<slug:slug>/events/<int:pk>/register/',
+         views.toggle_event_registration, name='pmc-event-register'),
     path('pg/<slug:slug>/events/<int:pk>/delete/',
          views.delete_event, name='pmc-delete-event'),
     path('pg/<slug:slug>/events/<int:pk>/points/',

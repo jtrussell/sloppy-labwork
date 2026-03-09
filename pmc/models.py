@@ -283,10 +283,29 @@ class Event(models.Model):
     is_casual = models.BooleanField(default=False, choices=EVENT_TYPE_CHOICES)
     is_excluded_from_global_rankings = models.BooleanField(default=False)
     is_digital = models.BooleanField(default=False)
+    is_accepting_registrations = models.BooleanField(default=False)
     tags = models.ManyToManyField(EventTag, related_name='events', blank=True)
 
     class Meta:
         ordering = ('-start_date',)
+
+    @property
+    def is_registration_open(self):
+        if not self.is_accepting_registrations:
+            return False
+        if self.start_date < date.today() - timedelta(days=1):
+            return False
+        if self.results.filter(finishing_position__isnull=False).exists():
+            return False
+        return True
+
+    @property
+    def is_upcoming(self):
+        if self.start_date < date.today() - timedelta(days=1):
+            return False
+        if self.results.filter(finishing_position__isnull=False).exists():
+            return False
+        return True
 
     def get_player_count(self):
         return self.player_count or self.results.count()
@@ -345,7 +364,7 @@ class EventResult(models.Model):
         return self._get_xp()
 
     def _get_xp(self):
-        if self.event.is_excluded_from_xp:
+        if self.event.is_excluded_from_xp or not self.event.player_count > 1:
             return 0
         if self.event.is_casual:
             return self.xp_for_casual_attendance
@@ -357,7 +376,7 @@ class EventResult(models.Model):
         return min(xp, 100)
 
     def _get_xp_digital(self):
-        if self.event.is_excluded_from_xp:
+        if self.event.is_excluded_from_xp or not self.event.player_count > 1:
             return 0
         if self.event.is_casual:
             return self.xp_for_digital_casual_attendance
