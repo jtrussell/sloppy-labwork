@@ -1341,7 +1341,7 @@ def playgroup_finder_data(request):
         venues__latitude__isnull=False,
         venues__longitude__isnull=False,
     ).distinct().annotate(
-        member_count=Count('members')
+        member_count=Count('members', distinct=True)
     ).prefetch_related('venues', 'playgroup_venues')
 
     search = request.GET.get('search', '').strip()
