@@ -490,20 +490,30 @@ def event_detail_generic(request, pk):
         return render(request, 'pmc/g-event-not-found.html')
 
 
-class EventDetail(LoginRequiredMixin, generic.DetailView):
+class EventDetail(generic.DetailView):
     model = Event
     template_name = 'pmc/pg-event-detail.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['is_registered'] = EventResult.objects.filter(
-            event=self.object, user=self.request.user).exists()
+        user = self.request.user
+        player_count = self.object.results.count()
+        context['player_count'] = player_count
+        if user.is_authenticated:
+            context['is_registered'] = EventResult.objects.filter(
+                event=self.object, user=user).exists()
+            context['is_member'] = PlaygroupMember.objects.filter(
+                user=user, playgroup__slug=self.kwargs['slug']).exists()
+            context['my_result'] = EventResult.objects.filter(
+                event=self.object, user=user).first()
+            has_own_result = context['my_result'] is not None
+            context['other_player_count'] = player_count - (1 if has_own_result else 0)
+        else:
+            context['is_registered'] = False
+            context['is_member'] = False
+            context['my_result'] = None
+            context['other_player_count'] = player_count
         return context
-
-    @method_decorator(login_required)
-    @method_decorator(is_pg_member)
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
 
 
 @login_required
@@ -989,7 +999,6 @@ def add_event_result(request, slug, pk):
 
 @require_POST
 @login_required
-@is_pg_member
 def toggle_event_registration(request, slug, pk):
     event = get_object_or_404(Event, pk=pk)
     if not event.is_registration_open:
@@ -1002,14 +1011,6 @@ def toggle_event_registration(request, slug, pk):
         else:
             EventResult.objects.create(event=event, user=request.user)
             messages.success(request, _('You are registered!'))
-    if request.htmx:
-        is_registered = EventResult.objects.filter(event=event, user=request.user).exists()
-        context = {
-            'object': event,
-            'is_registered': is_registered,
-            'playgroup': Playgroup.objects.get(slug=slug),
-        }
-        return render(request, 'pmc/pg-event-detail.html#registration-button', context)
     return HttpResponseRedirect(reverse('pmc-pg-event-detail', kwargs={'slug': slug, 'pk': pk}))
 
 

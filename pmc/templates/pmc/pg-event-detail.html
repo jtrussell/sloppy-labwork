@@ -69,6 +69,8 @@
       <tbody>
         {% for result in object.results.all %}
           {% partial result-row-lg %}
+        {% empty %}
+          <tr><td colspan="6" class="text-muted">No players registered.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -86,6 +88,8 @@
       <tbody>
         {% for result in object.results.all %}
           {% partial result-row-sm %}
+        {% empty %}
+          <tr><td colspan="2" class="text-muted">No players registered.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -93,25 +97,16 @@
 
 
 {% partialdef registration-button %}
-  <div id="registration-button">
-    {% if object.is_registration_open %}
+  {% if object.is_registration_open and user.is_authenticated %}
+    <form method="POST" action="{% url 'pmc-event-register' playgroup.slug object.pk %}">
+      {% csrf_token %}
       {% if is_registered %}
-        <button
-          class="btn"
-          hx-post="{% url 'pmc-event-register' playgroup.slug object.pk %}"
-          hx-target="#registration-button"
-          hx-swap="outerHTML"
-        >Cancel Registration</button>
+        <button class="btn" type="submit">Cancel Registration</button>
       {% else %}
-        <button
-          class="btn btn-solid"
-          hx-post="{% url 'pmc-event-register' playgroup.slug object.pk %}"
-          hx-target="#registration-button"
-          hx-swap="outerHTML"
-        >Register</button>
+        <button class="btn btn-solid" type="submit">Register</button>
       {% endif %}
-    {% endif %}
-  </div>
+    </form>
+  {% endif %}
 {% endpartialdef %}
 
 {% block content %}
@@ -126,31 +121,99 @@
     </ul>
   </div>
 
-	<div class="card staff-only">
-		<h2>Staff Area</h2>
-    <div class="card-actions">
-      <a href="{% url 'pmc-pg-event-manage' playgroup.slug object.pk %}" class="btn btn-solid">
-        Manage Event
-      </a>
+  {% if is_member %}
+    <div class="card staff-only">
+      <h2>Staff Area</h2>
+      <div class="card-actions">
+        <a href="{% url 'pmc-pg-event-manage' playgroup.slug object.pk %}" class="btn btn-solid">
+          Manage Event
+        </a>
+      </div>
     </div>
-		</a>
-	</div>
 
-  {% partial registration-button %}
+    {% partial registration-button %}
 
-  <div class="card">
-    <h2>Results</h2>
+    <div class="card">
+      <h2>Players</h2>
 
-    {% if object.tags.exists %}
-      <ul class="inline-list tag-list">
-        {% for tag in object.tags.all %}
-        <li class="tag">{{ tag.name }}</li>
-        {% endfor %}
-      </ul>
+      {% if object.tags.exists %}
+        <ul class="inline-list tag-list">
+          {% for tag in object.tags.all %}
+          <li class="tag">{{ tag.name }}</li>
+          {% endfor %}
+        </ul>
       {% endif %}
 
-    {% partial results-table-lg %}
+      {% partial results-table-lg %}
 
-    {% partial results-table-sm %}
-  </div>
+      {% partial results-table-sm %}
+    </div>
+
+  {% else %}
+
+    {% partial registration-button %}
+
+    <div class="card">
+      <h2>Players</h2>
+
+      {% if my_result %}
+        <table class="lg-only">
+          <thead>
+            <tr>
+              <th title="Finishing Position">#</th>
+              <th class="text-left">Player</th>
+              <th>&nbsp;</th>
+              <th title="Wins">W</th>
+              <th title="Losses">L</th>
+              <th title="Ranking Points">RP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% with result=my_result %}
+              {% partial result-row-lg %}
+            {% endwith %}
+          </tbody>
+        </table>
+
+        <table class="sm-only">
+          <thead>
+            <tr>
+              <th title="Finishing Position">#</th>
+              <th class="text-left">Player</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% with result=my_result %}
+              {% partial result-row-sm %}
+            {% endwith %}
+          </tbody>
+        </table>
+      {% endif %}
+
+      {% if other_player_count %}
+        <p class="text-muted">{{ other_player_count }} {% if user.is_authenticated %}other {% endif %}player{{ other_player_count|pluralize }} registered.</p>
+      {% elif not my_result %}
+        <p class="text-muted">No players registered.</p>
+      {% endif %}
+    </div>
+
+    {% if not user.is_authenticated %}
+      {% if object.is_registration_open %}
+        <div class="card">
+          <p>Log in to register for this event or to see more details.</p>
+          <div class="card-actions">
+            <a href="{% url 'account_login' %}" class="btn btn-solid">Log In</a>
+          </div>
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="card">
+        <p>You are not a member of this playgroup.</p>
+        <div class="card-actions">
+          <a href="{% url 'pmc-pg-join' playgroup.slug %}" class="btn">Request to join</a>
+        </div>
+      </div>
+    {% endif %}
+
+  {% endif %}
 {% endblock %}
