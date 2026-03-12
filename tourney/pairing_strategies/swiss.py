@@ -179,7 +179,7 @@ class SwissPairingStrategy(PairingStrategy):
                     used = set()
                     if self._backtrack_pair(remaining, result, used, 0, previous_opponents):
                         score = self._calculate_matching_score(
-                            result, previous_opponents, undefeated_player_ids)
+                            result + [(candidate, None)], previous_opponents, undefeated_player_ids)
                         if score > best_score:
                             best_score = score
                             best_result = (result, candidate)
@@ -236,10 +236,17 @@ class SwissPairingStrategy(PairingStrategy):
         MAX_POINT_DIFF = 1000
         REPEAT_PENALTY = 10000
         UNDEFEATED_MISMATCH_PENALTY = 5000
+        BYE_PAIR_DOWN_WEIGHT = 2000
 
         total_score = 0
         for player_one, player_two in matching:
             if player_two is None:
+                bye_player_score = self._get_player_score(player_one)
+                score = MAX_POINT_DIFF - bye_player_score
+                if undefeated_player_ids and player_one.id in undefeated_player_ids:
+                    score -= UNDEFEATED_MISMATCH_PENALTY
+                score -= BYE_PAIR_DOWN_WEIGHT * (1 + bye_player_score)
+                total_score += score
                 continue
 
             score_diff = abs(self._get_player_score(
@@ -490,7 +497,7 @@ class SwissPairingStrategy(PairingStrategy):
                     matchings = self._generate_perfect_matchings(remaining)
                     for matching in matchings:
                         score = self._calculate_matching_score(
-                            matching, previous_opponents, undefeated_player_ids)
+                            matching + [(candidate, None)], previous_opponents, undefeated_player_ids)
                         if score > best_score:
                             best_score = score
                             best_result = (matching, candidate)
@@ -537,7 +544,7 @@ class SwissPairingStrategy(PairingStrategy):
                         used = set()
                         if self._backtrack_pair(remaining, result, used, 0, previous_opponents):
                             score = self._calculate_matching_score(
-                                result, previous_opponents, undefeated_player_ids)
+                                result + [(candidate, None)], previous_opponents, undefeated_player_ids)
                             if score > best_score:
                                 best_score = score
                                 best_result = (result, candidate)

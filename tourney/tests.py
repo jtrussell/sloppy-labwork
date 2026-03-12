@@ -1264,6 +1264,63 @@ class SwissTournamentTestCase(TestCase):
 
         logger.debug(f"Bye placement test passed - byes went to appropriately ranked players")
 
+    def test_bye_not_given_to_undefeated_player_over_defeated(self):
+        """
+        Regression test: in a 5-player tournament where Round 1 produces 3
+        winners (including one bye winner) and 2 losers, the Round 2 bye
+        should go to a defeated player — not an undefeated one.
+
+        The bye is effectively the lowest-rated "opponent" in the event, so
+        assigning it to an undefeated player is the worst possible pair-down
+        and should be avoided when defeated players are available.
+
+        Scenario (from a real tournament):
+          R1: Mitchell vs Andrew (Andrew wins), Espo vs Tyrell (Espo wins),
+              Barry BYE
+          After R1: Andrew 1-0, Espo 1-0, Barry 1-0 (bye), Mitchell 0-1,
+              Tyrell 0-1
+          R2 bye should go to Mitchell or Tyrell — NOT Andrew, Espo, or Barry.
+        """
+        tournament, stage, players, stage_players = (
+            self._create_tournament_with_players(5, "Bye Pair Down Test"))
+
+        sp_mitchell = stage_players[0]   # seed 1
+        sp_andrew = stage_players[1]     # seed 2
+        sp_espo = stage_players[2]       # seed 3
+        sp_tyrell = stage_players[3]     # seed 4
+        sp_barry = stage_players[4]      # seed 5
+
+        round1 = Round.objects.create(stage=stage, order=1)
+        m1 = Match.objects.create(
+            round=round1, player_one=sp_mitchell, player_two=sp_andrew)
+        MatchResult.objects.create(match=m1, winner=sp_andrew)
+        m2 = Match.objects.create(
+            round=round1, player_one=sp_espo, player_two=sp_tyrell)
+        MatchResult.objects.create(match=m2, winner=sp_espo)
+        m3 = Match.objects.create(
+            round=round1, player_one=sp_barry, player_two=None)
+        MatchResult.objects.create(match=m3, winner=sp_barry)
+
+        round2 = Round.objects.create(stage=stage, order=2)
+        strategy = get_pairing_strategy('swiss')
+        strategy.make_pairings_for_round(round2)
+
+        r2_bye_match = Match.objects.filter(
+            round=round2, player_two__isnull=True).first()
+
+        self.assertIsNotNone(r2_bye_match, "Round 2 should have a bye match")
+
+        bye_player = r2_bye_match.player_one
+        defeated_players = {sp_mitchell.id, sp_tyrell.id}
+
+        self.assertIn(
+            bye_player.id,
+            defeated_players,
+            f"Round 2 bye should go to a defeated player (Mitchell or Tyrell) "
+            f"but went to {bye_player.player.get_display_name()}. "
+            f"Standings after R1: Andrew 1-0, Espo 1-0, Barry 1-0 (bye), "
+            f"Mitchell 0-1, Tyrell 0-1")
+
     def test_undefeated_players_paired_in_round_3(self):
         """
         Regression test for a 5-player Swiss tournament where two undefeated
