@@ -363,21 +363,21 @@ class EventResult(models.Model):
     @property
     def formatted_record(self):
         if self.num_wins is None and self.num_losses is None and self.num_ties is None:
-            return "-"
+            return "–"
         w = self.num_wins if self.num_wins is not None else 0
         l = self.num_losses if self.num_losses is not None else 0
         if self.num_ties:
-            return f"{w}-{l}-{self.num_ties}"
-        return f"{w}-{l}"
+            return f"{w}–{l}–{self.num_ties}"
+        return f"{w}–{l}"
 
     @property
     def formatted_record_with_ties(self):
         if self.num_wins is None and self.num_losses is None and self.num_ties is None:
-            return "-"
+            return "–"
         w = self.num_wins if self.num_wins is not None else 0
         l = self.num_losses if self.num_losses is not None else 0
         t = self.num_ties if self.num_ties is not None else 0
-        return f"{w}-{l}-{t}"
+        return f"{w}–{l}–{t}"
 
     def __str__(self):
         return f'{self.event.name} - {self.user} - ({self.finishing_position})'
