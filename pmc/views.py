@@ -761,7 +761,7 @@ def submit_event_results(request, slug):
                 decoded_file = csv_file.read().decode('utf-8')
                 reader = csv.DictReader(decoded_file.splitlines())
                 available_headers = [
-                    'user', 'username', 'finishing_position', 'place', 'num_wins', 'wins', 'num_losses', 'losses', 'deck', 'list_link']
+                    'user', 'username', 'finishing_position', 'place', 'num_wins', 'wins', 'num_losses', 'losses', 'num_ties', 'ties', 'deck', 'list_link']
                 if not set(reader.fieldnames).issubset(set(available_headers)):
                     form_errors.append(
                         'Your results file may include only these columns: {columns}'.format(
@@ -777,6 +777,7 @@ def submit_event_results(request, slug):
                         ('place', 'finishing_position'),
                         ('wins', 'num_wins'),
                         ('losses', 'num_losses'),
+                        ('ties', 'num_ties'),
                         ('list_link', 'deck'),
                     ]
 
@@ -938,6 +939,7 @@ def manage_event_result(request, slug, pk):
         result.finishing_position = request.POST.get('finishing_position') or None
         result.num_wins = request.POST.get('num_wins') or None
         result.num_losses = request.POST.get('num_losses') or None
+        result.num_ties = request.POST.get('num_ties') or None
         result.save()
         RankingPointsService.assign_points_for_event(result.event)
         messages.success(request, _('Result updated.'))
@@ -1190,10 +1192,10 @@ def get_result_submission_template(request, slug):
     )
     writer = csv.writer(response)
     writer.writerow(['user', 'finishing_position',
-                    'num_wins', 'num_losses', 'deck'])
+                    'num_wins', 'num_losses', 'num_ties', 'deck'])
     members = PlaygroupMember.objects.filter(playgroup__slug=slug)
     for member in members:
-        writer.writerow([member.user.username, '', '', ''])
+        writer.writerow([member.user.username, '', '', '', ''])
     return response
 
 

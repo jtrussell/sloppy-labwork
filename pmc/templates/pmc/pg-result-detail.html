@@ -76,6 +76,12 @@
           <th>Losses</th>
           <td>{{ event_result.num_losses | default_if_none:"-" }}</td>
         </tr>
+        {% if event_result.num_ties is not None %}
+        <tr>
+          <th>Ties</th>
+          <td>{{ event_result.num_ties }}</td>
+        </tr>
+        {% endif %}
         <tr>
           <th>Ranking Points</th>
           <td>{{ event_result.ranking_points.first.points | default_if_none:"-" }}</td>

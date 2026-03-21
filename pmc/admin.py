@@ -59,7 +59,7 @@ class EventAdmin(admin.ModelAdmin):
 
 class EventResultAdmin(admin.ModelAdmin):
     list_display = ('event', 'user', 'finishing_position',
-                    'num_wins', 'num_losses')
+                    'num_wins', 'num_losses', 'num_ties')
     search_fields = ['event', 'user']
     list_filter = ('event',)
 

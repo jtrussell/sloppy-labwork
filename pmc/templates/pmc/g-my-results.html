@@ -10,8 +10,7 @@
         <tr>
           <th class="text-left">Event</th>
           <th class="stat">FP</th>
-          <th class="stat">W</th>
-          <th class="stat">L</th>
+          <th class="stat">Record</th>
           <th class="stat">RP</th>
           <th class="stat">XP</th>
         </tr>
@@ -29,8 +28,7 @@
           </ul>
         </td>
         <td class="stat">{{ item.finishing_position | default:"-" }}</td>
-        <td class="stat">{{ item.num_wins | default_if_none:"-" }}</td>
-        <td class="stat">{{ item.num_losses | default_if_none:"-" }}</td>
+        <td class="stat">{{ item.formatted_record }}</td>
         <td class="stat">{{ item.ranking_points.first.points | default:"-" }}</td>
 
         {% if item.event.is_excluded_from_xp %}

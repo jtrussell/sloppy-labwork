@@ -33,9 +33,8 @@
               <td>{{ my_results.first.event.start_date | date:"SHORT_DATE_FORMAT" }}</td>
             </tr>
             <tr>
-              <td class="text-muted">Record (W/L)</td>
-              <td>{{ my_results.first.num_wins | default_if_none:"-" }} / 
-                {{ my_results.first.num_losses | default_if_none:"-" }}</td>
+              <td class="text-muted">Record</td>
+              <td>{{ my_results.first.formatted_record }}</td>
             </tr>
             <tr>
               <td class="text-muted">Experience <i class="pmc-icon icon-xp"></i></td>

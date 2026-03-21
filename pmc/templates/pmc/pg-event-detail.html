@@ -26,8 +26,7 @@
         {% endif %}
       </a>
     </td>
-    <td class="stat">{{ result.num_wins|default_if_none:"-" }}</td>
-    <td class="stat">{{ result.num_losses|default_if_none:"-" }}</td>
+    <td class="stat">{% if object.has_ties %}{{ result.formatted_record_with_ties }}{% else %}{{ result.formatted_record }}{% endif %}</td>
     <td class="stat">{{ result.ranking_points.first|default_if_none:"-" }}</td>
   </tr>
 {% endpartialdef %}
@@ -43,8 +42,7 @@
               <span class="username text-larger">{{ result.user }}</span>
             </a>
             <ul class="inline-list text-smaller sm-only">
-              <li><span class="text-muted">W:</span> {{ result.num_wins|default_if_none:"-" }}</li>
-              <li><span class="text-muted">L:</span> {{ result.num_losses|default_if_none:"-" }}</li>
+              <li><span class="text-muted">Record:</span> {% if object.has_ties %}{{ result.formatted_record_with_ties }}{% else %}{{ result.formatted_record }}{% endif %}</li>
               <li><span class="text-muted">RP:</span> {{ result.ranking_points.first|default_if_none:"-" }}</li>
             </ul>
           </div>
@@ -60,8 +58,7 @@
           <th title="Finishing Position">#</th>
           <th class="text-left">Player</th>
           <th>&nbsp;</th>
-          <th title="Wins">W</th>
-          <th title="Losses">L</th>
+          <th title="Record">Record</th>
           <th title="Ranking Points">RP</th>
         </tr>
       </thead>
@@ -70,7 +67,7 @@
         {% for result in object.results.all %}
           {% partial result-row-lg %}
         {% empty %}
-          <tr><td colspan="6" class="text-muted">No players registered.</td></tr>
+          <tr><td colspan="5" class="text-muted">No players registered.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -163,8 +160,7 @@
               <th title="Finishing Position">#</th>
               <th class="text-left">Player</th>
               <th>&nbsp;</th>
-              <th title="Wins">W</th>
-              <th title="Losses">L</th>
+              <th title="Record">Record</th>
               <th title="Ranking Points">RP</th>
             </tr>
           </thead>

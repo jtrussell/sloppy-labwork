@@ -307,6 +307,9 @@ class Event(models.Model):
             return False
         return True
 
+    def has_ties(self):
+        return self.results.filter(num_ties__isnull=False, num_ties__gt=0).exists()
+
     def get_player_count(self):
         return self.player_count or self.results.count()
 
@@ -347,13 +350,34 @@ class EventResult(models.Model):
         default=None, null=True, blank=True)
     num_losses = models.PositiveSmallIntegerField(
         default=None, null=True, blank=True)
+    num_ties = models.PositiveSmallIntegerField(
+        default=None, null=True, blank=True)
     uploaded_deck_link = models.URLField(
         default=None, null=True, blank=True)
     uploaded_deck_lookup_attempts = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
-        ordering = ('finishing_position', '-num_wins', 'num_losses',)
+        ordering = ('finishing_position', '-num_wins', 'num_losses', 'num_ties')
         unique_together = ('event', 'user',)
+
+    @property
+    def formatted_record(self):
+        if self.num_wins is None and self.num_losses is None and self.num_ties is None:
+            return "-"
+        w = self.num_wins if self.num_wins is not None else 0
+        l = self.num_losses if self.num_losses is not None else 0
+        if self.num_ties:
+            return f"{w}-{l}-{self.num_ties}"
+        return f"{w}-{l}"
+
+    @property
+    def formatted_record_with_ties(self):
+        if self.num_wins is None and self.num_losses is None and self.num_ties is None:
+            return "-"
+        w = self.num_wins if self.num_wins is not None else 0
+        l = self.num_losses if self.num_losses is not None else 0
+        t = self.num_ties if self.num_ties is not None else 0
+        return f"{w}-{l}-{t}"
 
     def __str__(self):
         return f'{self.event.name} - {self.user} - ({self.finishing_position})'
@@ -373,6 +397,8 @@ class EventResult(models.Model):
             xp += self.num_wins * self.xp_for_win
         if self.num_losses:
             xp += self.num_losses * self.xp_for_loss
+        if self.num_ties:
+            xp += self.num_ties * self.xp_for_loss
         return min(xp, 100)
 
     def _get_xp_digital(self):
@@ -385,6 +411,8 @@ class EventResult(models.Model):
             xp += self.num_wins * self.xp_for_digital_win
         if self.num_losses:
             xp += self.num_losses * self.xp_for_digital_loss
+        if self.num_ties:
+            xp += self.num_ties * self.xp_for_digital_loss
         return min(xp, 100)
 
     def add_deck_by_uploaded_link(self):

@@ -13,6 +13,7 @@
       <div class="flex flex-row flex-gap-1 text-muted text-smaller">
         <span>Wins: {{ result.num_wins|default_if_none:"-" }}</span>
         <span>Losses: {{ result.num_losses|default_if_none:"-" }}</span>
+        <span>Ties: {{ result.num_ties|default_if_none:"-" }}</span>
         <span>RP: {{ result.ranking_points.first|default_if_none:"-" }}</span>
       </div>
     </td>
@@ -27,6 +28,7 @@
     </td>
     <td class="stat lg-only">{{ result.num_wins|default_if_none:"-" }}</td>
     <td class="stat lg-only">{{ result.num_losses|default_if_none:"-" }}</td>
+    <td class="stat lg-only">{{ result.num_ties|default_if_none:"-" }}</td>
     <td class="stat lg-only">{{ result.ranking_points.first|default_if_none:"-" }}</td>
 
 
@@ -39,6 +41,7 @@
           data-position="{{ result.finishing_position|default_if_none:'' }}"
           data-wins="{{ result.num_wins|default_if_none:'' }}"
           data-losses="{{ result.num_losses|default_if_none:'' }}"
+          data-ties="{{ result.num_ties|default_if_none:'' }}"
           data-username="{{ result.user }}"
           data-url="{% url 'pmc-pg-manage-result' playgroup.slug result.pk %}"
           title="Edit result"
@@ -63,6 +66,7 @@
 
         <th class="lg-only" title="Wins">W</th>
         <th class="lg-only" title="Losses">L</th>
+        <th class="lg-only" title="Ties">T</th>
         <th class="lg-only" title="Ranking Points">RP</th>
 
         <th class="staff-only">&nbsp;</th>
@@ -91,6 +95,9 @@
 
             <label class="sm-only" for="num_losses">Number of Losses</label>
             <input type="number" class="stat" placeholder="L" name="num_losses">
+
+            <label class="sm-only" for="num_ties">Number of Ties</label>
+            <input type="number" class="stat" placeholder="T" name="num_ties">
             <button type="submit" class="btn btn-solid">Add</button>
           </div>
         </td>
@@ -178,6 +185,8 @@
 					'<input id="swal-wins" type="number" style="margin:0;width:100%" min="0" value="' + el.dataset.wins + '"></div>' +
 					'<div><label style="display:block;margin-bottom:0.25rem">Losses</label>' +
 					'<input id="swal-losses" type="number" style="margin:0;width:100%" min="0" value="' + el.dataset.losses + '"></div>' +
+					'<div><label style="display:block;margin-bottom:0.25rem">Ties</label>' +
+					'<input id="swal-ties" type="number" style="margin:0;width:100%" min="0" value="' + el.dataset.ties + '"></div>' +
 				'</div>',
 			showCloseButton: true,
 			showCancelButton: true,
@@ -207,6 +216,7 @@
 				formData.append('finishing_position', document.getElementById('swal-position').value)
 				formData.append('num_wins', document.getElementById('swal-wins').value)
 				formData.append('num_losses', document.getElementById('swal-losses').value)
+				formData.append('num_ties', document.getElementById('swal-ties').value)
 				return fetch(el.dataset.url, {
 					method: 'POST',
 					body: formData,
