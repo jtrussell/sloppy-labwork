@@ -28,8 +28,6 @@
 	var debounceTimer = null
 
 	var searchInput = document.getElementById('finder-search-input')
-	var minMembersInput = document.getElementById('finder-min-members')
-	var maxMembersInput = document.getElementById('finder-max-members')
 	var upcomingEventsInput = document.getElementById('finder-upcoming-events')
 	var eventFormatInput = document.getElementById('finder-event-format')
 	var resultsList = document.getElementById('finder-results')
@@ -138,10 +136,6 @@
 		var params = new URLSearchParams()
 		var search = searchInput.value.trim()
 		if (search) params.set('search', search)
-		var minMembers = minMembersInput.value.trim()
-		if (minMembers) params.set('min_members', minMembers)
-		var maxMembers = maxMembersInput.value.trim()
-		if (maxMembers) params.set('max_members', maxMembers)
 		if (upcomingEventsInput.checked) params.set('upcoming_events', '1')
 		var eventFormat = eventFormatInput.value
 		if (eventFormat) params.set('event_format', eventFormat)
@@ -177,8 +171,6 @@
 	}
 
 	searchInput.addEventListener('input', debouncedFetch)
-	minMembersInput.addEventListener('input', debouncedFetch)
-	maxMembersInput.addEventListener('input', debouncedFetch)
 	upcomingEventsInput.addEventListener('change', fetchPlaygroups)
 	eventFormatInput.addEventListener('change', fetchPlaygroups)
 

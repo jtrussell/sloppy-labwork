@@ -9,7 +9,7 @@ from django.conf import settings
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
-from django.db.models import Sum, Count, Q
+from django.db.models import Exists, OuterRef, Sum, Count, Q
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.views import generic
@@ -1364,31 +1364,17 @@ def playgroup_finder_data(request):
             Q(venues__state_province__icontains=search)
         )
 
-    min_members = request.GET.get('min_members')
-    if min_members:
-        try:
-            playgroups_with_venues = playgroups_with_venues.filter(
-                member_count__gte=int(min_members)
-            )
-        except ValueError:
-            pass
-
-    max_members = request.GET.get('max_members')
-    if max_members:
-        try:
-            playgroups_with_venues = playgroups_with_venues.filter(
-                member_count__lte=int(max_members)
-            )
-        except ValueError:
-            pass
-
     upcoming_only = request.GET.get('upcoming_events')
     if upcoming_only == '1':
         cutoff = date.today() - timedelta(days=1)
-        playgroups_with_venues = playgroups_with_venues.filter(
-            events__start_date__gte=cutoff,
+        upcoming_events = Event.objects.filter(
+            playgroups=OuterRef('pk'),
+            start_date__gte=cutoff,
         ).exclude(
-            events__results__finishing_position__isnull=False,
+            results__finishing_position__isnull=False,
+        )
+        playgroups_with_venues = playgroups_with_venues.filter(
+            Exists(upcoming_events)
         )
 
     event_format = request.GET.get('event_format')
