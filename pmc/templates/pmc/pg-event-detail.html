@@ -116,8 +116,8 @@
       {% if object.format is not None %}
       <li>{{ object.format }}</li>
       {% endif %}
-      {% if linked_tournament %}
-      <li><a href="{% url 'tourney:tourney-detail-home' linked_tournament.code %}">View Tournament</a></li>
+      {% if linked_tournament_url %}
+      <li><a href="{{ linked_tournament_url }}">View Tournament</a></li>
       {% endif %}
     </ul>
   </div>

@@ -130,11 +130,11 @@
       </div>
   </form>
 
-  {% if linked_tournament %}
+  {% if linked_tournament_url %}
   <div class="card staff-only">
     <h2>Tournament</h2>
     <div class="card-actions">
-      <a href="{% url 'tourney:tourney-detail-home' linked_tournament.code %}" class="btn">View Tournament</a>
+      <a href="{{ linked_tournament_url }}" class="btn">View Tournament</a>
     </div>
   </div>
   {% elif can_start_tourney %}
@@ -142,7 +142,7 @@
     <h2>Tournament</h2>
     <p>Create a tournament using this event's registered players.</p>
     <div class="card-actions">
-      <a href="{% url 'tourney:tourney-create-from-event' object.pk %}" class="btn btn-solid">Start a Tournament</a>
+      <a href="{{ create_tournament_url }}" class="btn btn-solid">Start a Tournament</a>
     </div>
   </div>
   {% endif %}

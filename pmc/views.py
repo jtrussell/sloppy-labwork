@@ -516,7 +516,10 @@ class EventDetail(generic.DetailView):
             context['is_member'] = False
             context['my_result'] = None
             context['other_player_count'] = player_count
-        context['linked_tournament'] = self.object.tournaments.first()
+        linked_tournament = self.object.tournaments.first()
+        context['linked_tournament'] = linked_tournament
+        if linked_tournament:
+            context['linked_tournament_url'] = f'/tourney/{linked_tournament.code}/'
         return context
 
 
@@ -610,10 +613,13 @@ def manage_event(request, slug, pk):
                 'Oops! That\'s not quite right. Check the form and try again.'))
     else:
         form = EventUpdateForm(instance=event, user=request.user)
+    linked_tournament = event.tournaments.first()
     context = {
         'object': event,
         'form': form,
-        'linked_tournament': event.tournaments.first(),
+        'linked_tournament': linked_tournament,
+        'linked_tournament_url': f'/tourney/{linked_tournament.code}/' if linked_tournament else None,
+        'create_tournament_url': f'/tourney/create/from-event/{event.pk}/',
         'can_start_tourney': event.is_eligible_for_tourney_creation,
     }
     return render(request, 'pmc/pg-event-manage.html', context)
