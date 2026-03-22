@@ -13,6 +13,9 @@
     <div class="subheading">
         <a href="{% url 'tourney:tourney-detail-home' tournament.code %}">&larr; Back</a> • Edit Tournament
     </div>
+{% elif source_event %}
+    <h1>Create Tournament</h1>
+    <div class="subheading">From KeyChain event: {{ source_event.name }} • {{ source_event_playgroup.name }}</div>
 {% else %}
     <h1>Create Tournament</h1>
 {% endif %}
@@ -207,9 +210,37 @@
         </div>
     </section>
 
+    {% if source_event %}
     <section>
-        
-        {% if source_tournament %}
+        <h2>Players ({{ registered_players.count }})</h2>
+        <p class="text-muted">
+            The following registered players from this KeyChain event will be
+            added to the tournament.
+        </p>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in registered_players %}
+                    <tr>
+                        <td>{{ result.user.username }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+
+    <section>
+        {% if source_event %}
+            <button type="submit" class="button button-primary">Create Tournament</button>
+            <a href="{% url 'pmc-event-detail' source_event.pk %}" class="button">Cancel</a>
+        {% elif source_tournament %}
             <button type="submit" class="button button-primary">Clone Tournament</button>
             <a href="{% url 'tourney:tourney-my-tournaments' %}" class="button">Cancel</a>
         {% elif tournament %}

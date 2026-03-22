@@ -1,0 +1,61 @@
+{% extends "tourney/_base.html" %}
+
+{% block content %}
+<div id="tournament-content">
+    <section>
+        <h1>Sync Results to KeyChain</h1>
+        <div class="subheading">{{ tournament.name }}</div>
+
+        <p class="text-muted">
+            Merge standings into <strong>{{ event.name }}</strong>{% if playgroup %} in <strong>{{ playgroup.name }}</strong>{% endif %}.
+        </p>
+
+        {% if existing_result_count %}
+        <p class="text-muted">{{ existing_result_count }} existing result{{ existing_result_count|pluralize }} will be updated.</p>
+        {% endif %}
+    </section>
+
+    <section>
+        <h2>Tournament Standings</h2>
+
+        <p class="text-muted">Only registered users will be included.</p>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Player</th>
+                        <th>Wins</th>
+                        <th>Losses</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for standing in tournament_standings %}
+                        {% if standing.player.user %}
+                        <tr>
+                            <td>{{ standing.tournament_rank }}</td>
+                            <td>{{ standing.player.get_display_name }}</td>
+                            <td>{{ standing.wins|default_if_none:"-" }}</td>
+                            <td>{{ standing.losses|default_if_none:"-" }}</td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="hstack gap-1" style="margin-top: 1.5rem;">
+                <button type="submit" class="button button-primary">
+                    Sync Results
+                </button>
+                <a href="{% url 'tourney:tourney-tournament-detail-admin' tournament.code %}" class="button button-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

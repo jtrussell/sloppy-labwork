@@ -129,7 +129,24 @@
         <button class="btn btn-solid" type="submit">Update</button>
       </div>
   </form>
-    
+
+  {% if linked_tournament %}
+  <div class="card staff-only">
+    <h2>Tournament</h2>
+    <div class="card-actions">
+      <a href="{% url 'tourney:tourney-detail-home' linked_tournament.code %}" class="btn">View Tournament</a>
+    </div>
+  </div>
+  {% elif can_start_tourney %}
+  <div class="card staff-only">
+    <h2>Tournament</h2>
+    <p>Create a tournament using this event's registered players.</p>
+    <div class="card-actions">
+      <a href="{% url 'tourney:tourney-create-from-event' object.pk %}" class="btn btn-solid">Start a Tournament</a>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="card staff-only">
     <h2>Danger Zone</h2>
     <p>No take backsies.</p>

@@ -1,5 +1,6 @@
 {% extends "pmc/_base.html" %}
 {% load partials %}
+{% load posts_extras %}
 
 {% partialdef result-row-lg %}
   <tr>
@@ -115,8 +116,17 @@
       {% if object.format is not None %}
       <li>{{ object.format }}</li>
       {% endif %}
+      {% if linked_tournament %}
+      <li><a href="{% url 'tourney:tourney-detail-home' linked_tournament.code %}">View Tournament</a></li>
+      {% endif %}
     </ul>
   </div>
+
+  {% if object.description %}
+    <div class="card no-top-margin markdown">
+      {{ object.description | markdown | safe }}
+    </div>
+  {% endif %}
 
   {% if is_member %}
     <div class="card staff-only">

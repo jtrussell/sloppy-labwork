@@ -46,8 +46,8 @@ class EventForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ('name', 'start_date', 'is_casual', 'is_digital', 'format',
-                  'player_count', 'tags', 'is_accepting_registrations',
+        fields = ('name', 'description', 'start_date', 'is_casual', 'is_digital',
+                  'format', 'player_count', 'tags', 'is_accepting_registrations',
                   'is_excluded_from_global_rankings')
         labels = {
             'name': _('Event Name'),
@@ -58,6 +58,7 @@ class EventForm(forms.ModelForm):
             'is_excluded_from_global_rankings': _('PG Only RP'),
         }
         widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
             'player_count': forms.NumberInput(attrs={
                 'min': 0,
             }),
@@ -112,8 +113,8 @@ class EventUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ('name', 'start_date', 'is_casual', 'is_digital', 'format',
-                  'player_count', 'is_accepting_registrations',
+        fields = ('name', 'description', 'start_date', 'is_casual', 'is_digital',
+                  'format', 'player_count', 'is_accepting_registrations',
                   'is_excluded_from_global_rankings', 'tags')
         labels = {
             'name': _('Event Name'),
@@ -124,6 +125,7 @@ class EventUpdateForm(forms.ModelForm):
             'is_excluded_from_global_rankings': _('PG Only RP'),
         }
         widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
             'player_count': forms.NumberInput(attrs={
                 'min': 0,
             }),

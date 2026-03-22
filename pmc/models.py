@@ -1,7 +1,7 @@
 from sre_constants import ANY
 from django.contrib.auth.models import User
 from django.db import models, transaction
-from django.db.models import UniqueConstraint, OuterRef, Subquery
+from django.db.models import Q, UniqueConstraint, OuterRef, Subquery, Exists
 from datetime import date
 from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
@@ -16,6 +16,20 @@ import qrcode
 import boto3
 import hashlib
 from decks.models import Deck
+
+
+def exclude_upcoming_event_results(qs):
+    from pmc.models import EventResult
+    has_finished_result = Exists(
+        EventResult.objects.filter(
+            event_id=OuterRef('event_id'),
+            finishing_position__isnull=False,
+        )
+    )
+    cutoff = date.today() - timedelta(days=1)
+    return qs.filter(
+        Q(event__start_date__lt=cutoff) | has_finished_result
+    )
 
 
 class PlaygroupType(models.Model):
@@ -104,10 +118,13 @@ class PlaygroupMember(models.Model):
     def __str__(self):
         return f'{self.nickname} ({self.user.username})' if self.nickname else self.user.username
 
-    def get_events(self):
-        return self.user.event_results.filter(
+    def get_events(self, exclude_upcoming=False):
+        qs = self.user.event_results.filter(
             event__playgroups=self.playgroup
         ).order_by('-event__start_date')
+        if exclude_upcoming:
+            qs = exclude_upcoming_event_results(qs)
+        return qs
 
     def get_events_won(self):
         return self.get_events().filter(finishing_position=1)
@@ -275,6 +292,7 @@ class Event(models.Model):
     )
 
     name = models.CharField(max_length=200)
+    description = models.TextField(default=None, null=True, blank=True)
     start_date = models.DateField(default=date.today)
     player_count = models.SmallIntegerField(default=0)
     format = models.ForeignKey(EventFormat, on_delete=models.SET_NULL,
@@ -306,6 +324,19 @@ class Event(models.Model):
         if self.results.filter(finishing_position__isnull=False).exists():
             return False
         return True
+
+    @property
+    def is_eligible_for_tourney_creation(self):
+        if self.tournaments.exists():
+            return False
+        registrations = self.results.all()
+        if not registrations.exists():
+            return False
+        return not registrations.filter(
+            Q(finishing_position__isnull=False) |
+            Q(num_wins__isnull=False) |
+            Q(num_losses__isnull=False)
+        ).exists()
 
     def has_ties(self):
         return self.results.filter(num_ties__isnull=False, num_ties__gt=0).exists()
@@ -732,8 +763,11 @@ class PmcProfile(models.Model):
         except Background.DoesNotExist:
             return None
 
-    def get_events(self):
-        return self.user.event_results.order_by('-event__start_date')
+    def get_events(self, exclude_upcoming=False):
+        qs = self.user.event_results.order_by('-event__start_date')
+        if exclude_upcoming:
+            qs = exclude_upcoming_event_results(qs)
+        return qs
 
     def get_events_won(self):
         return self.get_events().filter(finishing_position=1)

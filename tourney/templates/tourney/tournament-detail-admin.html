@@ -50,7 +50,16 @@
         </div>
     </section>
 
-    {% if user_has_playgroup_staff_access %}
+    {% if tournament.pmc_event %}
+    <section>
+        <h2>Sync to KeyChain</h2>
+        <p class="text-muted">Sync tournament standings to the linked KeyChain event.</p>
+
+        <a href="{% url 'tourney:tourney-sync-to-keychain' tournament.code %}" class="button button-primary">
+            Sync Results to KeyChain
+        </a>
+    </section>
+    {% elif user_has_playgroup_staff_access %}
     <section>
         <h2>Export to KeyChain</h2>
         <p class="text-muted">Export tournament standings as a KeyChain event.</p>

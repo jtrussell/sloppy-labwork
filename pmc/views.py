@@ -44,6 +44,7 @@ from .models import BackgroundCategory
 from .models import RankingPointsMap, RankingPointsMapVersion
 from .models import AwardAssignmentService
 from .models import Venue, PlaygroupVenue, PlaygroupType, EventFormat
+from .models import exclude_upcoming_event_results
 
 
 def is_pg_member(view):
@@ -314,7 +315,9 @@ def set_playgroup_primary_venue(request, slug):
 @login_required
 def my_results(request):
     return render(request, 'pmc/g-my-results.html', {
-        'results': EventResult.objects.filter(user=request.user).order_by('-event__start_date')
+        'results': exclude_upcoming_event_results(
+            EventResult.objects.filter(user=request.user).order_by('-event__start_date')
+        )
     })
 
 
@@ -324,7 +327,7 @@ def my_keychain(request):
     current_level = profile.get_level()
     next_level = profile.get_next_level()
     level_up_info = profile._get_level_up_info()
-    my_results = profile.get_events()
+    my_results = profile.get_events(exclude_upcoming=True)
 
     return render(request, 'pmc/g-my-keychain.html', {
         'my_results': my_results,
@@ -513,6 +516,7 @@ class EventDetail(generic.DetailView):
             context['is_member'] = False
             context['my_result'] = None
             context['other_player_count'] = player_count
+        context['linked_tournament'] = self.object.tournaments.first()
         return context
 
 
@@ -606,7 +610,12 @@ def manage_event(request, slug, pk):
                 'Oops! That\'s not quite right. Check the form and try again.'))
     else:
         form = EventUpdateForm(instance=event, user=request.user)
-    context = {'object': event, 'form': form}
+    context = {
+        'object': event,
+        'form': form,
+        'linked_tournament': event.tournaments.first(),
+        'can_start_tourney': event.is_eligible_for_tourney_creation,
+    }
     return render(request, 'pmc/pg-event-manage.html', context)
 
 
