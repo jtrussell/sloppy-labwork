@@ -1959,6 +1959,133 @@ def export_to_keychain_form(request, tournament_code, playgroup_slug):
 
 
 @login_required
+def create_tournament_from_event(request, event_id):
+    event = get_object_or_404(Event, pk=event_id)
+
+    if not event.is_eligible_for_tourney_creation:
+        messages.error(request, 'This event is not eligible for tournament creation.')
+        return redirect_to(request, f'/pmc/events/{event.id}/')
+
+    playgroup_event = event.playgroup_events.first()
+    if not playgroup_event:
+        raise PermissionDenied
+
+    playgroup = playgroup_event.playgroup
+    if not playgroup.members.filter(user=request.user, is_staff=True).exists():
+        raise PermissionDenied
+
+    registered_players = event.results.select_related('user')
+
+    if request.method == 'POST':
+        with transaction.atomic():
+            tournament = Tournament(
+                name=event.name,
+                owner=request.user,
+                pmc_event=event,
+                is_accepting_registrations=False,
+            )
+            tournament.save()
+
+            for event_result in registered_players:
+                Player.objects.create(
+                    tournament=tournament,
+                    user=event_result.user,
+                    status=Player.PlayerStatus.ACTIVE,
+                )
+
+            tournament.create_initial_stage()
+
+            event.is_accepting_registrations = False
+            event.save()
+
+            TournamentActionLog.objects.create(
+                tournament=tournament,
+                user=request.user,
+                action_type=TournamentActionLog.ActionType.CREATE_TOURNAMENT,
+                description=f'Tournament created from KeyChain event "{event.name}"',
+            )
+
+        messages.success(request, f'Tournament "{tournament.name}" created successfully!')
+        return redirect_to(request, reverse(
+            'tourney:tourney-detail-home',
+            kwargs={'tournament_code': tournament.code}))
+
+    return render(request, 'tourney/create-from-event.html', {
+        'event': event,
+        'playgroup': playgroup,
+        'registered_players': registered_players,
+    })
+
+
+@login_required
+@is_tournament_admin
+def sync_to_keychain(request, tournament_code):
+    tournament = get_object_or_404(Tournament, code=tournament_code)
+
+    if not tournament.pmc_event:
+        messages.error(request, 'This tournament is not linked to a KeyChain event.')
+        return redirect_to(request, reverse(
+            'tourney:tourney-tournament-detail-admin',
+            kwargs={'tournament_code': tournament.code}))
+
+    event = tournament.pmc_event
+    playgroup_event = event.playgroup_events.first()
+    playgroup = playgroup_event.playgroup if playgroup_event else None
+
+    standings = StandingCalculator.get_tournament_standings(tournament)
+
+    if request.method == 'POST':
+        with transaction.atomic():
+            existing_results_by_user = {
+                result.user_id: result
+                for result in event.results.all()
+            }
+
+            for standing in standings:
+                player = standing['player']
+                if not player.user:
+                    continue
+
+                existing_result = existing_results_by_user.get(player.user_id)
+                if existing_result:
+                    existing_result.finishing_position = standing['tournament_rank']
+                    existing_result.num_wins = standing.get('wins')
+                    existing_result.num_losses = standing.get('losses')
+                    existing_result.save()
+                else:
+                    EventResult.objects.create(
+                        event=event,
+                        user=player.user,
+                        finishing_position=standing['tournament_rank'],
+                        num_wins=standing.get('wins'),
+                        num_losses=standing.get('losses'),
+                    )
+
+            event.player_count = len(
+                [s for s in standings if (s.get('wins') or 0) > 0 or (s.get('losses') or 0) > 0])
+            event.save()
+
+            if not event.is_casual:
+                RankingPointsService.assign_points_for_event(event)
+
+        messages.success(request, f'Results synced to "{event.name}" in KeyChain!')
+        return redirect_to(request, f'/pmc/events/{event.id}/')
+
+    context = get_tournament_base_context(request, tournament)
+    context['event'] = event
+    context['playgroup'] = playgroup
+    context['current_tab'] = 'admin'
+    context['tournament_standings'] = standings
+    context['existing_result_count'] = event.results.filter(
+        Q(finishing_position__isnull=False) |
+        Q(num_wins__isnull=False) |
+        Q(num_losses__isnull=False)
+    ).count()
+
+    return render(request, 'tourney/sync-to-keychain.html', context)
+
+
+@login_required
 @require_POST
 @is_tournament_admin
 def create_tournament_timer(request, tournament_code):

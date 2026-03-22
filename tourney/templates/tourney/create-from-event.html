@@ -1,0 +1,44 @@
+{% extends "tourney/_base.html" %}
+
+{% block content %}
+<div id="tournament-content">
+    <section>
+        <h1>Create Tournament</h1>
+        <div class="subheading">{{ event.name }}</div>
+
+        <p class="text-muted">
+            Create a tournament in <strong>{{ playgroup.name }}</strong>
+            with the following {{ registered_players.count }} registered player{{ registered_players.count|pluralize }}.
+        </p>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in registered_players %}
+                    <tr>
+                        <td>{{ result.user.username }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="hstack gap-1" style="margin-top: 1.5rem;">
+                <button type="submit" class="button button-primary">
+                    Create Tournament
+                </button>
+                <a href="/pmc/events/{{ event.id }}/" class="button button-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

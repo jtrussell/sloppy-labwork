@@ -6,6 +6,8 @@ app_name = 'tourney'
 urlpatterns = [
     path('', views.my_tournaments, name='tourney-my-tournaments'),
     path('create/', views.create_tournament, name='tourney-create-tournament'),
+    path('create/from-event/<int:event_id>/',
+         views.create_tournament_from_event, name='tourney-create-from-event'),
     path('<str:tournament_code>/', views.tournament_detail_matches,
          name='tourney-detail-home'),
     path('<str:tournament_code>/matches/',
@@ -24,6 +26,8 @@ urlpatterns = [
          name='tourney-copy-tournament'),
     path('<str:tournament_code>/delete/', views.delete_tournament,
          name='tourney-delete-tournament'),
+    path('<str:tournament_code>/sync-to-keychain/',
+         views.sync_to_keychain, name='tourney-sync-to-keychain'),
     path('<str:tournament_code>/export/select-playgroup/',
          views.export_to_keychain_select_playgroup, name='tourney-export-to-keychain-select-playgroup'),
     path('<str:tournament_code>/export/<slug:playgroup_slug>/',

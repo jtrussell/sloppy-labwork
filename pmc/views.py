@@ -513,6 +513,7 @@ class EventDetail(generic.DetailView):
             context['is_member'] = False
             context['my_result'] = None
             context['other_player_count'] = player_count
+        context['linked_tournament'] = self.object.tournaments.first()
         return context
 
 
@@ -606,7 +607,12 @@ def manage_event(request, slug, pk):
                 'Oops! That\'s not quite right. Check the form and try again.'))
     else:
         form = EventUpdateForm(instance=event, user=request.user)
-    context = {'object': event, 'form': form}
+    context = {
+        'object': event,
+        'form': form,
+        'linked_tournament': event.tournaments.first(),
+        'can_start_tourney': event.is_eligible_for_tourney_creation,
+    }
     return render(request, 'pmc/pg-event-manage.html', context)
 
 

@@ -1,7 +1,7 @@
 from sre_constants import ANY
 from django.contrib.auth.models import User
 from django.db import models, transaction
-from django.db.models import UniqueConstraint, OuterRef, Subquery
+from django.db.models import Q, UniqueConstraint, OuterRef, Subquery
 from datetime import date
 from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
@@ -275,6 +275,7 @@ class Event(models.Model):
     )
 
     name = models.CharField(max_length=200)
+    description = models.TextField(default=None, null=True, blank=True)
     start_date = models.DateField(default=date.today)
     player_count = models.SmallIntegerField(default=0)
     format = models.ForeignKey(EventFormat, on_delete=models.SET_NULL,
@@ -306,6 +307,19 @@ class Event(models.Model):
         if self.results.filter(finishing_position__isnull=False).exists():
             return False
         return True
+
+    @property
+    def is_eligible_for_tourney_creation(self):
+        if self.tournaments.exists():
+            return False
+        registrations = self.results.all()
+        if not registrations.exists():
+            return False
+        return not registrations.filter(
+            Q(finishing_position__isnull=False) |
+            Q(num_wins__isnull=False) |
+            Q(num_losses__isnull=False)
+        ).exists()
 
     def get_player_count(self):
         return self.player_count or self.results.count()
