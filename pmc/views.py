@@ -86,6 +86,14 @@ def api_key_required(view):
     return decorator(view)
 
 
+def main_site_url(request, path):
+    host = request.get_host()
+    if host.startswith('keychain.'):
+        host = host[len('keychain.'):]
+    scheme = 'https' if request.is_secure() else 'http'
+    return f'{scheme}://{host}{path}'
+
+
 def redirect_to(request, url):
     """Redirect to a URL, using HTMX if available."""
     if request.htmx:
@@ -519,7 +527,8 @@ class EventDetail(generic.DetailView):
         linked_tournament = self.object.tournaments.first()
         context['linked_tournament'] = linked_tournament
         if linked_tournament:
-            context['linked_tournament_url'] = f'/tourney/{linked_tournament.code}/'
+            context['linked_tournament_url'] = main_site_url(
+                self.request, f'/tourney/{linked_tournament.code}/')
         return context
 
 
@@ -618,8 +627,8 @@ def manage_event(request, slug, pk):
         'object': event,
         'form': form,
         'linked_tournament': linked_tournament,
-        'linked_tournament_url': f'/tourney/{linked_tournament.code}/' if linked_tournament else None,
-        'create_tournament_url': f'/tourney/create/from-event/{event.pk}/',
+        'linked_tournament_url': main_site_url(request, f'/tourney/{linked_tournament.code}/') if linked_tournament else None,
+        'create_tournament_url': main_site_url(request, f'/tourney/create/from-event/{event.pk}/'),
         'can_start_tourney': event.is_eligible_for_tourney_creation,
     }
     return render(request, 'pmc/pg-event-manage.html', context)
