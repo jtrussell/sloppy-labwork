@@ -262,9 +262,11 @@ def add_playgroup_venue(request, slug):
                 counter += 1
             venue.save()
             if venue.geocode():
-                messages.success(request, _('Venue added and address geocoded.'))
+                messages.success(request, _(
+                    'Venue added and address geocoded.'))
             else:
-                messages.warning(request, _('Venue added but address could not be geocoded. You may need to update the address.'))
+                messages.warning(request, _(
+                    'Venue added but address could not be geocoded. You may need to update the address.'))
             PlaygroupVenue.objects.create(
                 playgroup=playgroup,
                 venue=venue,
@@ -324,7 +326,8 @@ def set_playgroup_primary_venue(request, slug):
 def my_results(request):
     return render(request, 'pmc/g-my-results.html', {
         'results': exclude_upcoming_event_results(
-            EventResult.objects.filter(user=request.user).order_by('-event__start_date')
+            EventResult.objects.filter(
+                user=request.user).order_by('-event__start_date')
         )
     })
 
@@ -518,7 +521,8 @@ class EventDetail(generic.DetailView):
             context['my_result'] = EventResult.objects.filter(
                 event=self.object, user=user).first()
             has_own_result = context['my_result'] is not None
-            context['other_player_count'] = player_count - (1 if has_own_result else 0)
+            context['other_player_count'] = player_count - \
+                (1 if has_own_result else 0)
         else:
             context['is_registered'] = False
             context['is_member'] = False
@@ -888,7 +892,7 @@ def about_ranking_points(request):
                 16, selected_version)),
             ('17 to 32 Players', RankingPointsMap.list_points_for_fp_ranges(
                 32, selected_version)),
-            ('32 to 64 Players', RankingPointsMap.list_points_for_fp_ranges(
+            ('33 to 64 Players', RankingPointsMap.list_points_for_fp_ranges(
                 64, selected_version)),
         ]
     })
@@ -960,7 +964,8 @@ def manage_event_result(request, slug, pk):
         return HttpResponseRedirect(reverse('pmc-pg-event-manage', kwargs={'slug': slug, 'pk': result.event.pk}))
     elif request.method == 'POST':
         result = get_object_or_404(EventResult, pk=pk)
-        result.finishing_position = request.POST.get('finishing_position') or None
+        result.finishing_position = request.POST.get(
+            'finishing_position') or None
         result.num_wins = request.POST.get('num_wins') or None
         result.num_losses = request.POST.get('num_losses') or None
         result.num_ties = request.POST.get('num_ties') or None
@@ -1030,7 +1035,8 @@ def toggle_event_registration(request, slug, pk):
     if not event.is_registration_open:
         messages.error(request, _('Registration is not open for this event.'))
     else:
-        existing = EventResult.objects.filter(event=event, user=request.user).first()
+        existing = EventResult.objects.filter(
+            event=event, user=request.user).first()
         if existing:
             existing.delete()
             messages.success(request, _('Registration cancelled.'))
@@ -1429,7 +1435,8 @@ def playgroup_finder_data(request):
         if not venues_data:
             continue
 
-        primary = next((v for v in venues_data if v['is_primary']), venues_data[0])
+        primary = next(
+            (v for v in venues_data if v['is_primary']), venues_data[0])
 
         results.append({
             'id': pg.id,
