@@ -1654,7 +1654,7 @@ class AwardAssignmentService():
                 .values('id', 'num_wins')
                 .distinct()
             )
-            value = sum(er['num_wins'] for er in event_results)
+            value = sum(er['num_wins'] or 0 for er in event_results)
         elif criteria_type == AwardBase.CriteriaTypeOptions.sets_with_ten_tournament_match_wins:
             sets_with_10_wins = (
                 EventResultDeck.objects
