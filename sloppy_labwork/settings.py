@@ -29,10 +29,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = os.environ['SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ['DEBUG'] == 'True'
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+IS_HEROKU = os.environ.get('IS_HEROKU', 'False') == 'True'
 
 ALLOWED_HOSTS = []
-if not DEBUG:
+if not DEBUG or IS_HEROKU:
     ALLOWED_HOSTS = ['.sloppylabwork.com', 'sloppy-labwork.herokuapp.com']
 
 SITE_ID = int(os.environ['SITE_ID'])
