@@ -6,6 +6,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'lineups/main.css' %}">
+{% if is_owner %}<link rel="stylesheet" href="{% static 'css/drag-drop.css' %}">{% endif %}
 
 {% if version.get_effective_visibility != 'private' %}<meta property="og:title" content="{{ lineup.name }} - {{ version.name }}">{% endif %}
 {% if version.get_effective_visibility != 'private' %}<meta property="og:description" content="{% for vd in decks %}{{ vd.deck.name }}&#10;{{ vd.deck.get_dok_url }}{% if not forloop.last %}&#10;&#10;{% endif %}{% endfor %}">{% endif %}
@@ -73,24 +74,27 @@
 <div id="decks-list">
   {% if decks %}
   {% for vd in decks %}
-  <div class="deck-card" id="deck-{{ vd.id }}">
-    <h3 class="deck-card__title"><a href="{{ vd.deck.get_dok_url }}" target="_blank" rel="noopener">{{ vd.deck.name }}</a></h3>
-    <div class="deck-card__footer">
-      <div class="deck-card__icons">
-        {% if vd.deck.set.src %}<img src="{{ vd.deck.set.src }}" alt="{{ vd.deck.set.name }}" class="deck-icon">{% endif %}
-        <span>&nbsp;</span>
-        {% if vd.deck.house_1.src %}<img src="{{ vd.deck.house_1.src }}" alt="{{ vd.deck.house_1.name }}" class="deck-icon">{% endif %}
-        {% if vd.deck.house_2.src %}<img src="{{ vd.deck.house_2.src }}" alt="{{ vd.deck.house_2.name }}" class="deck-icon">{% endif %}
-        {% if vd.deck.house_3.src %}<img src="{{ vd.deck.house_3.src }}" alt="{{ vd.deck.house_3.name }}" class="deck-icon">{% endif %}
+  <div class="deck-card{% if is_owner %} drag-drop-item{% endif %}" id="deck-{{ vd.id }}" data-key="{{ vd.id }}">
+    {% if is_owner %}<span class="drag-handle">⠿</span>{% endif %}
+    <div class="drag-drop-content">
+      <h3 class="deck-card__title"><a href="{{ vd.deck.get_dok_url }}" target="_blank" rel="noopener">{{ vd.deck.name }}</a></h3>
+      <div class="deck-card__footer">
+        <div class="deck-card__icons">
+          {% if vd.deck.set.src %}<img src="{{ vd.deck.set.src }}" alt="{{ vd.deck.set.name }}" class="deck-icon">{% endif %}
+          <span>&nbsp;</span>
+          {% if vd.deck.house_1.src %}<img src="{{ vd.deck.house_1.src }}" alt="{{ vd.deck.house_1.name }}" class="deck-icon">{% endif %}
+          {% if vd.deck.house_2.src %}<img src="{{ vd.deck.house_2.src }}" alt="{{ vd.deck.house_2.name }}" class="deck-icon">{% endif %}
+          {% if vd.deck.house_3.src %}<img src="{{ vd.deck.house_3.src }}" alt="{{ vd.deck.house_3.name }}" class="deck-icon">{% endif %}
+        </div>
+        {% if is_owner %}
+        <div class="deck-card__actions">
+          <form method="post" action="{% url 'lineups-version-deck-remove' version.code vd.id %}" class="form-inline">
+            {% csrf_token %}
+            <button type="submit" class="button button-small" hx-confirm="Remove this deck?" hx-target="#deck-{{ vd.id }}" hx-swap="outerHTML">Remove</button>
+          </form>
+        </div>
+        {% endif %}
       </div>
-      {% if is_owner %}
-      <div class="deck-card__actions">
-        <form method="post" action="{% url 'lineups-version-deck-remove' version.code vd.id %}" class="form-inline">
-          {% csrf_token %}
-          <button type="submit" class="button button-small" hx-confirm="Remove this deck?" hx-target="#deck-{{ vd.id }}" hx-swap="outerHTML">Remove</button>
-        </form>
-      </div>
-      {% endif %}
     </div>
   </div>
   {% endfor %}
@@ -154,5 +158,23 @@
   </div>
   {% endif %}
 </section>
+{% endif %}
+
+{% if is_owner %}
+<script src="{% static 'js/drag-drop.js' %}"></script>
+<script>
+  new DragDropManager('#decks-list', {
+    itemSelector: '.drag-drop-item',
+    onReorder: function(orderedIds) {
+      var formData = new FormData();
+      orderedIds.forEach(function(id) { formData.append('order[]', id); });
+      fetch('{% url "lineups-version-deck-reorder" version.code %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        body: formData,
+      });
+    },
+  });
+</script>
 {% endif %}
 {% endblock %}

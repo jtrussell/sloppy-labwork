@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block extra_head %}
-    <link rel="stylesheet" href="{% static 'tourney/drag-drop.css' %}">
+    <link rel="stylesheet" href="{% static 'css/drag-drop.css' %}">
     {{ block.super }}
 {% endblock %}
 
@@ -50,6 +50,6 @@
     </div>
 </div>
 
-<script src="{% static 'tourney/drag-drop.js' %}"></script>
+<script src="{% static 'js/drag-drop.js' %}"></script>
 <script src="{% static 'tourney/confirm-seeding.js' %}"></script>
 {% endblock %}

@@ -153,7 +153,7 @@ class LineupVersionDeck(models.Model):
     sort_order = models.PositiveIntegerField(default=0)
 
     class Meta:
-        ordering = ['-pk']
+        ordering = ['sort_order']
         constraints = [
             models.UniqueConstraint(
                 fields=['version', 'deck'],
