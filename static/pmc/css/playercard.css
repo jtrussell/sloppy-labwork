@@ -19,7 +19,7 @@ img.qrcode {
 }
 
 .has-pinned-awards img.qrcode {
-  bottom: calc(4.5rem + 0.6rem + 0.6rem + 1.2rem);
+  bottom: calc(4.5rem + 0.6rem + 0.6rem + 1.8rem);
 }
 
 .playercard-pinned-awards {
@@ -55,7 +55,7 @@ img.qrcode {
   }
 
   .has-pinned-awards img.qrcode {
-    bottom: calc(3rem + 0.4rem + 0.4rem + 0.8rem);
+    bottom: calc(3rem + 0.4rem + 0.4rem + 1.2rem);
   }
 }
 
@@ -71,7 +71,7 @@ img.qrcode {
   }
 
   .has-pinned-awards img.qrcode {
-    bottom: calc(2.2rem + 0.3rem + 0.3rem + 0.6rem);
+    bottom: calc(2.2rem + 0.3rem + 0.3rem + 0.9rem);
   }
 }
 
