@@ -17,7 +17,9 @@
   {% if pinned_awards %}
     <div class="playercard-pinned-awards">
       {% for award in pinned_awards %}
-        <img src="{{ award.src }}" alt="{{ award.name }}" class="playercard-pinned-award" />
+        <a href="{{ award.detail_url }}">
+          <img src="{{ award.src }}" alt="{{ award.name }}" class="playercard-pinned-award" />
+        </a>
       {% endfor %}
     </div>
   {% endif %}

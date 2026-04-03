@@ -1460,6 +1460,12 @@ class PinnedAward(models.Model):
                 if trophy:
                     src, name = trophy.src, trophy.name
             if src:
+                url_names = {
+                    PinnedAward.AwardTypeOptions.BADGE: 'pmc-my-badge-detail',
+                    PinnedAward.AwardTypeOptions.ACHIEVEMENT: 'pmc-my-achievement-detail',
+                    PinnedAward.AwardTypeOptions.TROPHY: 'pmc-my-trophy-detail',
+                }
+                from django.urls import reverse
                 results.append({
                     'pk': pin.pk,
                     'position': pin.position,
@@ -1467,6 +1473,7 @@ class PinnedAward(models.Model):
                     'name': name,
                     'award_type': pin.award_type,
                     'award_id': pin.award_id,
+                    'detail_url': reverse(url_names[pin.award_type], args=[pin.award_id]),
                 })
 
         return results
