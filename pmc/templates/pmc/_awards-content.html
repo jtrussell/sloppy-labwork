@@ -27,7 +27,7 @@
                   class="pin-btn pinned"
                   hx-post="{% url 'pmc-unpin-award' pin_id %}"
                   hx-target="#awards-content"
-                  hx-swap="outerHTML"
+                  hx-swap="outerHTML show:none"
                   title="Unpin {{ badge.name }}">
                   &#x1F4CC;
                 </button>
@@ -36,7 +36,7 @@
                   class="pin-btn"
                   hx-post="{% url 'pmc-pin-award' %}"
                   hx-target="#awards-content"
-                  hx-swap="outerHTML"
+                  hx-swap="outerHTML show:none"
                   hx-vals='{"award_type": "{{ BADGE }}", "award_id": "{{ badge.pk }}"}'
                   title="Pin {{ badge.name }} to shelf">
                   &#x1F4CC;
@@ -75,7 +75,7 @@
                   class="pin-btn pinned"
                   hx-post="{% url 'pmc-unpin-award' pin_id %}"
                   hx-target="#awards-content"
-                  hx-swap="outerHTML"
+                  hx-swap="outerHTML show:none"
                   title="Unpin {{ achievement.name }}">
                   &#x1F4CC;
                 </button>
@@ -84,7 +84,7 @@
                   class="pin-btn"
                   hx-post="{% url 'pmc-pin-award' %}"
                   hx-target="#awards-content"
-                  hx-swap="outerHTML"
+                  hx-swap="outerHTML show:none"
                   hx-vals='{"award_type": "{{ ACHIEVEMENT }}", "award_id": "{{ achievement.pk }}"}'
                   title="Pin {{ achievement.name }} to shelf">
                   &#x1F4CC;
@@ -123,7 +123,7 @@
                   class="pin-btn pinned"
                   hx-post="{% url 'pmc-unpin-award' pin_id %}"
                   hx-target="#awards-content"
-                  hx-swap="outerHTML"
+                  hx-swap="outerHTML show:none"
                   title="Unpin {{ trophy.name }}">
                   &#x1F4CC;
                 </button>
@@ -132,7 +132,7 @@
                   class="pin-btn"
                   hx-post="{% url 'pmc-pin-award' %}"
                   hx-target="#awards-content"
-                  hx-swap="outerHTML"
+                  hx-swap="outerHTML show:none"
                   hx-vals='{"award_type": "{{ TROPHY }}", "award_id": "{{ trophy.pk }}"}'
                   title="Pin {{ trophy.name }} to shelf">
                   &#x1F4CC;

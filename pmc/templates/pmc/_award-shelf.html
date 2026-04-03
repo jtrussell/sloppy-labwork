@@ -14,7 +14,7 @@
           class="award-shelf-unpin"
           hx-post="{% url 'pmc-unpin-award' award.pk %}"
           hx-target="#awards-content"
-          hx-swap="outerHTML"
+          hx-swap="outerHTML show:none"
           title="Unpin {{ award.name }}">
           &times;
         </button>

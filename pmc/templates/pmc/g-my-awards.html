@@ -32,7 +32,7 @@
           htmx.ajax('POST', '{% url "pmc-reorder-pins" %}', {
             values: { pin_order: orderedIds.join(',') },
             target: '#awards-content',
-            swap: 'outerHTML',
+            swap: 'outerHTML show:none',
           })
         },
       })
