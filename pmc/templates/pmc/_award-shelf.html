@@ -1,0 +1,34 @@
+{% load static %}
+
+<div id="award-shelf" class="card">
+  <h2>Award Shelf</h2>
+  <p>Pin up to 5 awards to display on your playercard.</p>
+
+  <div class="award-shelf-slots" id="award-shelf-slots">
+    {% for award in pinned_awards %}
+      <div class="award-shelf-item drag-drop-item"
+           data-key="{{ award.pk }}"
+           draggable="true">
+        <img src="{{ award.src }}" alt="{{ award.name }}" class="award-shelf-img" />
+        <button
+          class="award-shelf-unpin"
+          hx-post="{% url 'pmc-unpin-award' award.pk %}"
+          hx-target="#awards-content"
+          hx-swap="outerHTML"
+          title="Unpin {{ award.name }}">
+          &times;
+        </button>
+      </div>
+    {% endfor %}
+
+    {% for _ in "xxxxx"|make_list %}
+      {% if forloop.counter > pin_count %}
+        <div class="award-shelf-placeholder">
+          <span class="award-shelf-placeholder-icon">+</span>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <div class="award-shelf-count text-muted">{{ pin_count }} / 5 pinned</div>
+</div>

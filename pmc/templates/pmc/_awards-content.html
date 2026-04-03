@@ -1,0 +1,151 @@
+{% load static %}
+{% load pmc_extras %}
+
+<div id="awards-content">
+  {% include 'pmc/_award-shelf.html' %}
+
+  {% award_type_badge as BADGE %}
+  {% award_type_achievement as ACHIEVEMENT %}
+  {% award_type_trophy as TROPHY %}
+
+  <div class="card">
+    <h2>Badges</h2>
+    <p>Can be earned one-time, typically granted by an EO.</p>
+
+    <ul class="award-list flex flex-wrap flex-gap-2">
+      {% for badge in badges %}
+        {% if badge.user_badge_id or not badge.is_hidden %}
+          <li>
+            <a href="{% url 'pmc-my-badge-detail' badge.pk %}" class="award-container {% if not badge.user_badge_id %}disabled{% endif %}">
+              <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award" />
+              <span class="text-shy text-center">{{ badge.name }}</span>
+            </a>
+            {% if badge.user_badge_id %}
+              {% pinned_pk pinned_map BADGE badge.pk as pin_id %}
+              {% if pin_id %}
+                <button
+                  class="pin-btn pinned"
+                  hx-post="{% url 'pmc-unpin-award' pin_id %}"
+                  hx-target="#awards-content"
+                  hx-swap="outerHTML"
+                  title="Unpin {{ badge.name }}">
+                  &#x1F4CC;
+                </button>
+              {% elif pin_count < 5 %}
+                <button
+                  class="pin-btn"
+                  hx-post="{% url 'pmc-pin-award' %}"
+                  hx-target="#awards-content"
+                  hx-swap="outerHTML"
+                  hx-vals='{"award_type": "{{ BADGE }}", "award_id": "{{ badge.pk }}"}'
+                  title="Pin {{ badge.name }} to shelf">
+                  &#x1F4CC;
+                </button>
+              {% else %}
+                <button class="pin-btn disabled" disabled title="Shelf full - unpin an award first">
+                  &#x1F4CC;
+                </button>
+              {% endif %}
+            {% endif %}
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Achievements</h2>
+    <p>Can be earned and subsequently leveled up to higher tiers.</p>
+
+    <ul class="award-list flex flex-wrap flex-gap-2">
+      {% for achievement in achievements %}
+        {% if achievement.user_achievement_tier or not achievement.is_hidden %}
+          <li>
+            <a href="{% url 'pmc-my-achievement-detail' achievement.pk %}" class="award-container {% if not achievement.user_achievement_tier_src %}disabled{% endif %}">
+              <img src="{{ achievement.user_achievement_tier_src | default:achievement.lowest_tier_src }}" alt="{{ achievement.name }} trophy" class="award" />
+              <span class="text-shy text-center">{{ achievement.name }}</span>
+              <span>
+                {{ achievement.user_achievement_tier | achievement_tier_label }}
+              </span>
+            </a>
+            {% if achievement.user_achievement_tier_src %}
+              {% pinned_pk pinned_map ACHIEVEMENT achievement.pk as pin_id %}
+              {% if pin_id %}
+                <button
+                  class="pin-btn pinned"
+                  hx-post="{% url 'pmc-unpin-award' pin_id %}"
+                  hx-target="#awards-content"
+                  hx-swap="outerHTML"
+                  title="Unpin {{ achievement.name }}">
+                  &#x1F4CC;
+                </button>
+              {% elif pin_count < 5 %}
+                <button
+                  class="pin-btn"
+                  hx-post="{% url 'pmc-pin-award' %}"
+                  hx-target="#awards-content"
+                  hx-swap="outerHTML"
+                  hx-vals='{"award_type": "{{ ACHIEVEMENT }}", "award_id": "{{ achievement.pk }}"}'
+                  title="Pin {{ achievement.name }} to shelf">
+                  &#x1F4CC;
+                </button>
+              {% else %}
+                <button class="pin-btn disabled" disabled title="Shelf full - unpin an award first">
+                  &#x1F4CC;
+                </button>
+              {% endif %}
+            {% endif %}
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Trophies</h2>
+    <p>Can be earned multiple times.</p>
+
+    <ul class="award-list flex flex-wrap flex-gap-2">
+      {% for trophy in trophies %}
+        {% if trophy.user_trophy_amount or not trophy.is_hidden %}
+          <li>
+            <a href="{% url 'pmc-my-trophy-detail' trophy.pk %}" class="award-container {% if not trophy.user_trophy_amount %}disabled{% endif %}">
+              <img src="{{ trophy.src }}" alt="{{ trophy.name }} trophy" class="award" />
+              <span class="text-shy text-center">{{ trophy.name }}</span>
+              <span class="trophy-amount">
+                {{ trophy.user_trophy_amount | default:"0" }}
+              </span>
+            </a>
+            {% if trophy.user_trophy_amount %}
+              {% pinned_pk pinned_map TROPHY trophy.pk as pin_id %}
+              {% if pin_id %}
+                <button
+                  class="pin-btn pinned"
+                  hx-post="{% url 'pmc-unpin-award' pin_id %}"
+                  hx-target="#awards-content"
+                  hx-swap="outerHTML"
+                  title="Unpin {{ trophy.name }}">
+                  &#x1F4CC;
+                </button>
+              {% elif pin_count < 5 %}
+                <button
+                  class="pin-btn"
+                  hx-post="{% url 'pmc-pin-award' %}"
+                  hx-target="#awards-content"
+                  hx-swap="outerHTML"
+                  hx-vals='{"award_type": "{{ TROPHY }}", "award_id": "{{ trophy.pk }}"}'
+                  title="Pin {{ trophy.name }} to shelf">
+                  &#x1F4CC;
+                </button>
+              {% else %}
+                <button class="pin-btn disabled" disabled title="Shelf full - unpin an award first">
+                  &#x1F4CC;
+                </button>
+              {% endif %}
+            {% endif %}
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+</div>

@@ -1,4 +1,4 @@
-<div class="playercard">
+<div class="playercard {% if pinned_awards %}has-pinned-awards{% endif %}">
   <div class="banner" style="background-color: #{{ my_profile.get_avatar.banner_bg_color }}">
     <img class="avatar" src="{{ my_profile.get_avatar.src }}" style="border-right: 5px solid #{{ my_profile.get_avatar.banner_stroke_color }}" alt="my_profile.get_avatar.name">
     <div class="elide" style="color: #{{ my_profile.get_avatar.banner_text_color }}">
@@ -12,6 +12,14 @@
       class="qrcode"
       src="https://static.sloppylabwork.com/{{ my_profile.get_mv_qrcode_path }}"
       alt="Master Vault QR Code" />
+  {% endif %}
+
+  {% if pinned_awards %}
+    <div class="playercard-pinned-awards">
+      {% for award in pinned_awards %}
+        <img src="{{ award.src }}" alt="{{ award.name }}" class="playercard-pinned-award" />
+      {% endfor %}
+    </div>
   {% endif %}
 
   <img class="background" src="{{ my_profile.get_background.src }}" alt="{{ my_profile.get_background.name }}">

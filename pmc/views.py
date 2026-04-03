@@ -29,7 +29,7 @@ from pmc.context_processors import playgroup
 from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm, PmcProfilePrivacyForm, RankingPointsMapVersionForm, VenueForm
 from pmc.forms import PlaygroupMemberForm
 from user_profile.forms import EditUsernameForm
-from .models import AchievementTier, AwardBase, Badge, EventResult, EventResultDeck, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, UserAchievementTier, UserBadge, Trophy, UserTrophy, Achievement
+from .models import AchievementTier, AwardBase, Badge, EventResult, EventResultDeck, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, PinnedAward, UserAchievementTier, UserBadge, Trophy, UserTrophy, Achievement
 from .models import PlayerRank
 from .models import Leaderboard
 from .models import Playgroup
@@ -352,7 +352,8 @@ def my_keychain(request):
         'memberships': PlaygroupMember.objects.filter(
             user=request.user
         ),
-        'global_playgroups': Playgroup.objects.filter(is_global=True)
+        'global_playgroups': Playgroup.objects.filter(is_global=True),
+        'pinned_awards': PinnedAward.get_pinned_awards_for_display(request.user),
     })
 
 
@@ -376,7 +377,8 @@ def user_profile(request, username):
         'percent_level_up': level_up_info['percent_level_up'],
         'level_increment': level_up_info['level_increment'],
         'level_increment_progress': level_up_info['level_increment_progress'],
-        'playgroup_memberships': playgroup_memberships
+        'playgroup_memberships': playgroup_memberships,
+        'pinned_awards': PinnedAward.get_pinned_awards_for_display(user),
     }
 
     return render(request, 'pmc/g-user-profile.html', context)
@@ -1231,10 +1233,15 @@ def get_result_submission_template(request, slug):
 
 @login_required
 def my_awards(request):
+    pinned = PinnedAward.objects.filter(user=request.user)
+    pinned_map = {(p.award_type, p.award_id): p.pk for p in pinned}
     context = {
         'badges': Badge.with_user_badges(request.user).all(),
         'achievements': Achievement.with_highest_user_achievements_tier(request.user).all(),
         'trophies': Trophy.with_user_trophies(request.user).all(),
+        'pinned_awards': PinnedAward.get_pinned_awards_for_display(request.user),
+        'pinned_map': pinned_map,
+        'pin_count': pinned.count(),
     }
     return render(request, 'pmc/g-my-awards.html', context)
 
@@ -1279,6 +1286,80 @@ def my_trophy_detail(request, pk):
         'top_user_trophies': top_user_trophies
     }
     return render(request, 'pmc/g-my-trophy-detail.html', context)
+
+
+def _render_awards_content(request):
+    pinned = PinnedAward.objects.filter(user=request.user)
+    pinned_map = {(p.award_type, p.award_id): p.pk for p in pinned}
+    return render(request, 'pmc/_awards-content.html', {
+        'badges': Badge.with_user_badges(request.user).all(),
+        'achievements': Achievement.with_highest_user_achievements_tier(request.user).all(),
+        'trophies': Trophy.with_user_trophies(request.user).all(),
+        'pinned_awards': PinnedAward.get_pinned_awards_for_display(request.user),
+        'pinned_map': pinned_map,
+        'pin_count': pinned.count(),
+    })
+
+
+@login_required
+@require_POST
+def pin_award(request):
+    award_type = int(request.POST.get('award_type', -1))
+    award_id = int(request.POST.get('award_id', 0))
+
+    if award_type not in PinnedAward.AwardTypeOptions.values:
+        return HttpResponse(status=HTTPStatus.BAD_REQUEST)
+
+    position = PinnedAward.next_position(request.user)
+    if position is None:
+        return HttpResponse(status=HTTPStatus.BAD_REQUEST)
+
+    already_pinned = PinnedAward.objects.filter(
+        user=request.user, award_type=award_type, award_id=award_id
+    ).exists()
+    if already_pinned:
+        return _render_awards_content(request)
+
+    PinnedAward.objects.create(
+        user=request.user,
+        award_type=award_type,
+        award_id=award_id,
+        position=position,
+    )
+    return _render_awards_content(request)
+
+
+@login_required
+@require_POST
+def unpin_award(request, pk):
+    PinnedAward.objects.filter(pk=pk, user=request.user).delete()
+    PinnedAward.recompact_positions(request.user)
+    return _render_awards_content(request)
+
+
+@login_required
+@require_POST
+def reorder_pinned_awards(request):
+    pin_order = request.POST.get('pin_order', '')
+    if not pin_order:
+        return HttpResponse(status=HTTPStatus.BAD_REQUEST)
+
+    pin_ids = [int(x) for x in pin_order.split(',') if x.strip()]
+    pins = PinnedAward.objects.filter(user=request.user, pk__in=pin_ids)
+    pin_map = {p.pk: p for p in pins}
+
+    with transaction.atomic():
+        for i, pin_id in enumerate(pin_ids):
+            PinnedAward.objects.filter(
+                pk=pin_id, user=request.user
+            ).update(position=6 + i)
+
+        for i, pin_id in enumerate(pin_ids, start=1):
+            PinnedAward.objects.filter(
+                pk=pin_id, user=request.user
+            ).update(position=i)
+
+    return _render_awards_content(request)
 
 
 @api_key_required

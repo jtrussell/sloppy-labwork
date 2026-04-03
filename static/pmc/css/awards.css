@@ -113,3 +113,149 @@ img.award {
 .no-awards-message {
   font-style: italic;
 }
+
+.award-shelf-slots {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.award-shelf-item {
+  position: relative;
+  width: 5rem;
+  height: 5rem;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: grab;
+}
+
+.award-shelf-item.dragging {
+  opacity: 0.4;
+}
+
+.award-shelf-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.award-shelf-unpin {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-danger, #c44);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.award-shelf-item:hover .award-shelf-unpin {
+  opacity: 1;
+}
+
+.award-shelf-placeholder {
+  width: 5rem;
+  height: 5rem;
+  border: 2px dashed var(--color-lines);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.award-shelf-placeholder-icon {
+  color: var(--color-text-muted);
+  font-size: 1.4rem;
+}
+
+.award-shelf-count {
+  text-align: center;
+  margin-top: 4px;
+  font-size: 1.1rem;
+}
+
+.award-list li {
+  position: relative;
+}
+
+.pin-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  z-index: 2;
+  border: 1px solid var(--color-lines);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.award-list li:hover .pin-btn {
+  opacity: 1;
+}
+
+.pin-btn:hover {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.pin-btn.pinned {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+  opacity: 1;
+}
+
+.pin-btn.pinned:hover {
+  background: var(--color-danger, #c44);
+  border-color: var(--color-danger, #c44);
+}
+
+.pin-btn.disabled {
+  cursor: not-allowed;
+  opacity: 0;
+}
+
+.award-list li:hover .pin-btn.disabled {
+  opacity: 0.5;
+}
+
+@media (max-width: 680px) {
+  .award-shelf-item,
+  .award-shelf-placeholder {
+    width: 4rem;
+    height: 4rem;
+  }
+
+  .pin-btn {
+    opacity: 1;
+  }
+
+  .award-shelf-unpin {
+    opacity: 1;
+  }
+}

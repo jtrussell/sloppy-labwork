@@ -5,6 +5,7 @@ from django.db.models import Q, UniqueConstraint, OuterRef, Subquery, Exists
 from datetime import date
 from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.dispatch import receiver
 from django.db.models.signals import post_save
@@ -1386,6 +1387,104 @@ class UserTrophy(models.Model):
 
     def __str__(self):
         return f'{self.user.username} - {self.trophy.name}'
+
+
+class PinnedAward(models.Model):
+    class AwardTypeOptions(models.IntegerChoices):
+        BADGE = (0, _('Badge'))
+        ACHIEVEMENT = (1, _('Achievement'))
+        TROPHY = (2, _('Trophy'))
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='pinned_awards')
+    award_type = models.IntegerField(choices=AwardTypeOptions.choices)
+    award_id = models.PositiveIntegerField()
+    position = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)])
+
+    class Meta:
+        ordering = ('position',)
+        constraints = [
+            UniqueConstraint(
+                fields=['user', 'position'],
+                name='unique_user_pin_position'),
+            UniqueConstraint(
+                fields=['user', 'award_type', 'award_id'],
+                name='unique_user_pinned_award'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} - Pin {self.position}: {self.get_award_type_display()} #{self.award_id}'
+
+    @staticmethod
+    def get_pinned_awards_for_display(user):
+        pins = PinnedAward.objects.filter(user=user).order_by('position')
+        if not pins:
+            return []
+
+        badge_ids = [p.award_id for p in pins if p.award_type == PinnedAward.AwardTypeOptions.BADGE]
+        achievement_ids = [p.award_id for p in pins if p.award_type == PinnedAward.AwardTypeOptions.ACHIEVEMENT]
+        trophy_ids = [p.award_id for p in pins if p.award_type == PinnedAward.AwardTypeOptions.TROPHY]
+
+        badges = {b.pk: b for b in Badge.objects.filter(pk__in=badge_ids)} if badge_ids else {}
+        trophies = {t.pk: t for t in Trophy.objects.filter(pk__in=trophy_ids)} if trophy_ids else {}
+
+        achievement_tiers = {}
+        if achievement_ids:
+            user_tiers = UserAchievementTier.objects.filter(
+                user=user,
+                achievement_tier__achievement_id__in=achievement_ids
+            ).select_related('achievement_tier', 'achievement_tier__achievement').order_by(
+                'achievement_tier__achievement_id', '-achievement_tier__tier'
+            )
+            for ut in user_tiers:
+                aid = ut.achievement_tier.achievement_id
+                if aid not in achievement_tiers:
+                    achievement_tiers[aid] = ut.achievement_tier
+
+        results = []
+        for pin in pins:
+            src = None
+            name = None
+            if pin.award_type == PinnedAward.AwardTypeOptions.BADGE:
+                badge = badges.get(pin.award_id)
+                if badge:
+                    src, name = badge.src, badge.name
+            elif pin.award_type == PinnedAward.AwardTypeOptions.ACHIEVEMENT:
+                tier = achievement_tiers.get(pin.award_id)
+                if tier:
+                    src = tier.src
+                    name = tier.achievement.name
+            elif pin.award_type == PinnedAward.AwardTypeOptions.TROPHY:
+                trophy = trophies.get(pin.award_id)
+                if trophy:
+                    src, name = trophy.src, trophy.name
+            if src:
+                results.append({
+                    'pk': pin.pk,
+                    'position': pin.position,
+                    'src': src,
+                    'name': name,
+                    'award_type': pin.award_type,
+                    'award_id': pin.award_id,
+                })
+
+        return results
+
+    @staticmethod
+    def next_position(user):
+        last = PinnedAward.objects.filter(user=user).order_by('-position').first()
+        if not last:
+            return 1
+        return last.position + 1 if last.position < 5 else None
+
+    @staticmethod
+    def recompact_positions(user):
+        pins = PinnedAward.objects.filter(user=user).order_by('position')
+        for i, pin in enumerate(pins, start=1):
+            if pin.position != i:
+                pin.position = i
+                pin.save(update_fields=['position'])
 
 
 class AwardAssignmentService():
