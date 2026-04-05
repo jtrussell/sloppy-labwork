@@ -1,3 +1,4 @@
+{% load static %}
 <div class="playercard {% if pinned_awards %}has-pinned-awards{% endif %}">
   <div class="banner" style="background-color: #{{ my_profile.get_avatar.banner_bg_color }}">
     <img class="avatar" src="{{ my_profile.get_avatar.src }}" style="border-right: 5px solid #{{ my_profile.get_avatar.banner_stroke_color }}" alt="my_profile.get_avatar.name">
@@ -12,6 +13,17 @@
       class="qrcode"
       src="https://static.sloppylabwork.com/{{ my_profile.get_mv_qrcode_path }}"
       alt="Master Vault QR Code" />
+    <button
+      type="button"
+      class="qrcode-shield"
+      onclick="this.remove()"
+      aria-label="Reveal QR Code">
+      <img
+        class="qrcode-shield-pattern"
+        src="{% static 'pmc/img/qr-code-placeholder.png' %}"
+        alt="" />
+      <span class="qrcode-shield-text">[REDACTED]<br>Click to reveal</span>
+    </button>
   {% endif %}
 
   {% if pinned_awards %}

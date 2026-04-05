@@ -9,17 +9,66 @@
   position: relative;
 }
 
-img.qrcode {
+img.qrcode,
+.qrcode-shield {
   position: absolute;
   bottom: 40px;
   left: 30%;
   width: 40%;
   aspect-ratio: 1 / 1;
+}
+
+img.qrcode {
   opacity: 0.8;
 }
 
-.has-pinned-awards img.qrcode {
+img.qrcode:has(+ .qrcode-shield) {
+  visibility: hidden;
+}
+
+.has-pinned-awards img.qrcode,
+.has-pinned-awards .qrcode-shield {
   bottom: calc(4.5rem + 0.6rem + 0.6rem + 1.8rem);
+}
+
+.qrcode-shield {
+  z-index: 3;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: transparent;
+}
+
+.qrcode-shield-pattern {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  filter: blur(3px);
+  opacity: 0.65;
+}
+
+.qrcode-shield-text {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.1em;
+  line-height: 1.25;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .playercard-pinned-awards {
@@ -54,7 +103,8 @@ img.qrcode {
     height: 3rem;
   }
 
-  .has-pinned-awards img.qrcode {
+  .has-pinned-awards img.qrcode,
+  .has-pinned-awards .qrcode-shield {
     bottom: calc(3rem + 0.4rem + 0.4rem + 1.2rem);
   }
 }
@@ -70,7 +120,8 @@ img.qrcode {
     height: 2.2rem;
   }
 
-  .has-pinned-awards img.qrcode {
+  .has-pinned-awards img.qrcode,
+  .has-pinned-awards .qrcode-shield {
     bottom: calc(2.2rem + 0.3rem + 0.3rem + 0.9rem);
   }
 }
