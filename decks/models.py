@@ -1,4 +1,5 @@
 import random
+import re
 from django.db import models
 from requests import get, head
 from django.utils.translation import gettext_lazy as _
@@ -49,7 +50,9 @@ class Deck(models.Model):
 
     @staticmethod
     def get_id_from_master_vault_url(value):
-        return value.strip().rsplit('/', 1)[-1]
+        uuid_pattern = r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+        match = re.search(uuid_pattern, value)
+        return match.group(0) if match else None
 
     @staticmethod
     def get_master_vault_ui_url_from_id(value):
