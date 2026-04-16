@@ -1,8 +1,14 @@
 {% csrf_token %}
-<div id="sortable-seeding" class="drag-drop-container" data-update-url="{% url 'tourney:tourney-update-seeding-order' tournament.code %}">
+<div id="sortable-seeding"
+     class="drag-drop-container"
+     x-data="seedingList('{% url 'tourney:tourney-update-seeding-order' tournament.code %}')"
+     x-sort="handleSort()"
+     x-sort:config="{ ghostClass: 'dragging', animation: 150 }">
     {% for stage_player in stage_players %}
-        <div class="drag-drop-item seeding-item" data-player-id="{{ stage_player.id }}">
-            <div class="drag-handle">⋮⋮</div>
+        <div class="drag-drop-item seeding-item"
+             x-sort:item="{{ stage_player.id }}"
+             data-player-id="{{ stage_player.id }}">
+            <div class="drag-handle" x-sort:handle>⋮⋮</div>
             <span class="seed-number">{{ stage_player.seed }}</span>
             <div class="drag-drop-content player-info">
                 <div>

@@ -7,9 +7,7 @@
 {% endblock %}
 
 {% block extra_body %}
-  <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@3.0.0-rc.0/index.min.js"></script>
-  <script>
-    MobileDragDrop.polyfill();
-  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.14.1/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
   {{ block.super }}
 {% endblock %}

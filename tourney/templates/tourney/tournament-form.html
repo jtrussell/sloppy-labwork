@@ -3,7 +3,6 @@
 
 {% block extra_head %}
     <link rel="stylesheet" href="{% static 'css/drag-drop.css' %}">
-    <link rel="stylesheet" href="{% static 'tourney/ranking-criteria.css' %}">
     {{ block.super }}
 {% endblock %}
 
@@ -142,18 +141,40 @@
         </div>
     </section>
 
-    <section>
+    <section x-data="rankingCriteria({{ ordered_criteria_json }})">
         <h2>Main Stage Ranking Criteria</h2>
         <p>Drag to reorder the criteria by importance. Toggle criteria on/off with the switches.</p>
 
-        <!-- Hidden fields for each criterion -->
-        {% for criterion in available_criteria %}
-            <input type="hidden" id="criterion_{{ criterion.get_key }}_enabled" name="criterion_{{ criterion.get_key }}_enabled" value="">
-            <input type="hidden" id="criterion_{{ criterion.get_key }}_order" name="criterion_{{ criterion.get_key }}_order" value="">
-        {% endfor %}
+        <template x-for="key in order" :key="'enabled-' + key">
+            <input type="hidden" :name="'criterion_' + key + '_enabled'" :value="enabled[key] ? 'on' : ''">
+        </template>
+        <template x-for="key in order" :key="'order-' + key">
+            <input type="hidden" :name="'criterion_' + key + '_order'" :value="orderFor(key)">
+        </template>
 
-        <div id="ranking-criteria-list" class="drag-drop-container ranking-criteria-container">
-            <!-- Criteria items will be populated by JavaScript -->
+        <div id="ranking-criteria-list"
+             class="drag-drop-container ranking-criteria-container"
+             x-sort="handleSort($item, $position)"
+             x-sort:config="{ ghostClass: 'dragging', animation: 150 }">
+            {% for criterion in ordered_criteria_display %}
+                <div class="drag-drop-item ranking-criteria-item"
+                     x-sort:item="'{{ criterion.key }}'"
+                     data-key="{{ criterion.key }}"
+                     :class="{ disabled: !enabled['{{ criterion.key }}'] }">
+                    <div class="drag-handle" x-sort:handle>⋮⋮</div>
+                    <div class="drag-drop-content criteria-info">
+                        <div class="criteria-name">{{ criterion.name }}</div>
+                        <div class="criteria-description">{{ criterion.description }}</div>
+                    </div>
+                    <div class="drag-drop-actions criteria-toggle">
+                        <div class="toggle-switch"
+                             :class="{ enabled: enabled['{{ criterion.key }}'] }"
+                             @click="toggle('{{ criterion.key }}')">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
         </div>
     </section>
 
@@ -260,13 +281,8 @@
 <script src="{% static 'tourney/ranking-criteria.js' %}"></script>
 <script src="{% static 'tourney/tournament-form.js' %}"></script>
 <script>
-{% if tournament %}
-window.currentCriteriaData = {{ current_criteria_json|safe }};
-{% endif %}
-
 document.addEventListener('DOMContentLoaded', function() {
     setupPlayoffToggle('#{{ form.enable_playoffs.id_for_label }}', '#playoff-options');
-    new RankingCriteriaManager('#ranking-criteria-list', null);
 });
 </script>
 {% endblock %}

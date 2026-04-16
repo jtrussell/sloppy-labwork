@@ -1,19 +1,15 @@
-let seedingManager;
+document.addEventListener('alpine:init', () => {
+  Alpine.data('seedingList', (updateUrl) => ({
+    handleSort() {
+      const playerIds = Array.from(
+        this.$el.querySelectorAll('.seeding-item')
+      ).map((item) => item.dataset.playerId)
 
-function initializeSeedingDragDrop() {
-    const container = document.querySelector('#sortable-seeding');
-    if (!container) return;
-
-    const updateUrl = container.dataset.updateUrl;
-    seedingManager = new SeedingDragDropManager('#sortable-seeding', updateUrl);
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    initializeSeedingDragDrop();
-});
-
-document.addEventListener('htmx:afterSwap', function(event) {
-    if (event.detail.target.id === 'seeding-list') {
-        initializeSeedingDragDrop();
-    }
-});
+      htmx.ajax('POST', updateUrl, {
+        values: { player_order: playerIds.join(',') },
+        target: '#seeding-list',
+        swap: 'innerHTML',
+      })
+    },
+  }))
+})

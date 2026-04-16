@@ -707,6 +707,39 @@ def get_default_main_stage_criteria():
     ]
 
 
+def get_ordered_criteria_display(current_criteria=None):
+    available = get_available_ranking_criteria()
+    by_key = {c.get_key(): c for c in available}
+    source = current_criteria if current_criteria else get_default_main_stage_criteria()
+    seen = set()
+    result = []
+
+    for entry in source:
+        key = entry.get('key')
+        if key in seen or key not in by_key:
+            continue
+        seen.add(key)
+        c = by_key[key]
+        result.append({
+            'key': key,
+            'name': c.get_name(),
+            'description': c.get_description(),
+            'enabled': bool(entry.get('enabled')),
+        })
+
+    for c in available:
+        if c.get_key() in seen:
+            continue
+        result.append({
+            'key': c.get_key(),
+            'name': c.get_name(),
+            'description': c.get_description(),
+            'enabled': False,
+        })
+
+    return result
+
+
 def get_default_playoff_stage_criteria():
     return [
         {'key': 'wins', 'enabled': True},

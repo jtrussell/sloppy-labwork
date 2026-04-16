@@ -17,7 +17,8 @@ import re
 from .models import (
     Tournament, Player, TournamentAdmin, Stage, StagePlayer, Round,
     Match, MatchResult, TournamentActionLog, StandingCalculator,
-    get_pairing_strategy, get_available_ranking_criteria
+    get_pairing_strategy, get_available_ranking_criteria,
+    get_ordered_criteria_display
 )
 from .forms import (
     TournamentForm, PlayerForm, EditPlayerForm, StageForm, MatchResultForm,
@@ -151,10 +152,13 @@ def create_tournament(request):
     else:
         form = TournamentForm(is_edit_mode=False)
 
-    available_criteria = get_available_ranking_criteria()
+    ordered_criteria_display = get_ordered_criteria_display()
     return render(request, 'tourney/tournament-form.html', {
         'form': form,
-        'available_criteria': available_criteria
+        'ordered_criteria_display': ordered_criteria_display,
+        'ordered_criteria_json': json.dumps([
+            {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
+        ]),
     })
 
 
@@ -217,18 +221,19 @@ def edit_tournament(request, tournament_code):
     else:
         form = TournamentForm(instance=tournament, is_edit_mode=True)
 
-    available_criteria = get_available_ranking_criteria()
-
     main_stage = tournament.stages.filter(order=1).first()
     current_criteria = []
     if main_stage:
         current_criteria = main_stage.get_ranking_criteria()
 
+    ordered_criteria_display = get_ordered_criteria_display(current_criteria)
     context = {
         'form': form,
         'tournament': tournament,
-        'available_criteria': available_criteria,
-        'current_criteria_json': json.dumps(current_criteria)
+        'ordered_criteria_display': ordered_criteria_display,
+        'ordered_criteria_json': json.dumps([
+            {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
+        ]),
     }
     return render(request, 'tourney/tournament-form.html', context)
 
@@ -1835,12 +1840,15 @@ def copy_tournament(request, tournament_code):
                     'order': 999
                 })
 
+    ordered_criteria_display = get_ordered_criteria_display(ranking_criteria_data)
     context = {
         'form': form,
         'source_tournament': source_tournament,
         'tournament': source_tournament,
-        'current_criteria_json': json.dumps(ranking_criteria_data),
-        'available_criteria': get_available_ranking_criteria(),
+        'ordered_criteria_display': ordered_criteria_display,
+        'ordered_criteria_json': json.dumps([
+            {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
+        ]),
     }
 
     return render(request, 'tourney/tournament-form.html', context)
@@ -2032,13 +2040,16 @@ def create_tournament_from_event(request, event_id):
             'is_accepting_registrations': False,
         }, is_edit_mode=False)
 
-    available_criteria = get_available_ranking_criteria()
+    ordered_criteria_display = get_ordered_criteria_display()
     return render(request, 'tourney/tournament-form.html', {
         'form': form,
         'source_event': event,
         'source_event_playgroup': playgroup,
         'registered_players': registered_players,
-        'available_criteria': available_criteria,
+        'ordered_criteria_display': ordered_criteria_display,
+        'ordered_criteria_json': json.dumps([
+            {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
+        ]),
     })
 
 

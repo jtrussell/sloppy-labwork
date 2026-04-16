@@ -71,11 +71,19 @@
 </form>
 {% endif %}
 
-<div id="decks-list">
+<div id="decks-list"
+     {% if is_owner %}
+     x-data="deckList('{% url 'lineups-version-deck-reorder' version.code %}', '{{ csrf_token }}')"
+     x-sort="handleSort()"
+     x-sort:config="{ ghostClass: 'dragging', animation: 150 }"
+     {% endif %}>
   {% if decks %}
   {% for vd in decks %}
-  <div class="deck-card{% if is_owner %} drag-drop-item{% endif %}" id="deck-{{ vd.id }}" data-key="{{ vd.id }}">
-    {% if is_owner %}<span class="drag-handle">⠿</span>{% endif %}
+  <div class="deck-card{% if is_owner %} drag-drop-item{% endif %}"
+       id="deck-{{ vd.id }}"
+       data-key="{{ vd.id }}"
+       {% if is_owner %}x-sort:item="{{ vd.id }}"{% endif %}>
+    {% if is_owner %}<span class="drag-handle" x-sort:handle>⠿</span>{% endif %}
     <div class="drag-drop-content">
       <h3 class="deck-card__title"><a href="{{ vd.deck.get_dok_url }}" target="_blank" rel="noopener">{{ vd.deck.name }}</a></h3>
       <div class="deck-card__footer">
@@ -160,21 +168,13 @@
 </section>
 {% endif %}
 
-{% if is_owner %}
-<script src="{% static 'js/drag-drop.js' %}"></script>
-<script>
-  new DragDropManager('#decks-list', {
-    itemSelector: '.drag-drop-item',
-    onReorder: function(orderedIds) {
-      var formData = new FormData();
-      orderedIds.forEach(function(id) { formData.append('order[]', id); });
-      fetch('{% url "lineups-version-deck-reorder" version.code %}', {
-        method: 'POST',
-        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
-        body: formData,
-      });
-    },
-  });
-</script>
-{% endif %}
+{% endblock %}
+
+{% block extra_body %}
+  {{ block.super }}
+  {% if is_owner %}
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.14.1/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script src="{% static 'lineups/deck-sort.js' %}"></script>
+  {% endif %}
 {% endblock %}
