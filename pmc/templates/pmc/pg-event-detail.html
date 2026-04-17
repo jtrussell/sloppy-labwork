@@ -1,6 +1,7 @@
 {% extends "pmc/_base.html" %}
 {% load partials %}
 {% load posts_extras %}
+{% load static %}
 
 {% partialdef result-row-lg %}
   <tr>
@@ -131,11 +132,18 @@
   {% if is_member %}
     <div class="card staff-only">
       <h2>Staff Area</h2>
-      <div class="card-actions">
-        <a href="{% url 'pmc-pg-event-manage' playgroup.slug object.pk %}" class="btn btn-solid">
-          Manage Event
-        </a>
-      </div>
+      <form action="{% url 'pmc-event-checkin' playgroup.slug object.pk %}" method="POST">
+        {% csrf_token %}
+        <input id="qr-code-message" type="hidden" name="qr_code_message" value="">
+        <p id="qr-reader"></p>
+        <div class="card-actions">
+          <button type="button" id="qr-btn-start" class="btn">Scan Player</button>
+          <button type="button" id="qr-btn-stop" style="display: none;" class="btn">Cancel</button>
+          <a href="{% url 'pmc-pg-event-manage' playgroup.slug object.pk %}" class="btn btn-solid">
+            Manage Event
+          </a>
+        </div>
+      </form>
     </div>
 
     {% partial registration-button %}
@@ -221,5 +229,12 @@
       </div>
     {% endif %}
 
+  {% endif %}
+{% endblock %}
+
+{% block extra_body %}
+  {% if is_member %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" integrity="sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexq+GAlNkNNqVC7YyIV+NwqCTJe2hDWCiffTyRNOeGEzRRJ9ifvRm/HCzGYg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="{% static 'pmc/scripts/qrcode-form.js' %}"></script>
   {% endif %}
 {% endblock %}

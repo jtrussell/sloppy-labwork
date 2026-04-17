@@ -1180,6 +1180,33 @@ def add_pg_member_by_qrcode(request, slug):
 @require_POST
 @login_required
 @is_pg_staff
+def checkin_player_by_qrcode(request, slug, pk):
+    event = get_object_or_404(Event, pk=pk)
+    message = request.POST.get('qr_code_message')
+    redirect_url = reverse('pmc-pg-event-detail', kwargs={'slug': slug, 'pk': pk})
+    try:
+        message_data = json.loads(message)
+        mv_id = message_data['id']
+    except (json.JSONDecodeError, KeyError, TypeError):
+        messages.error(request, _('Unrecognized QR code.'))
+        return HttpResponseRedirect(redirect_url)
+    User = get_user_model()
+    try:
+        user = User.objects.get(pmc_profile__mv_id=mv_id)
+    except User.DoesNotExist:
+        messages.error(request, _('No KeyChain account found for this QR code.'))
+        return HttpResponseRedirect(redirect_url)
+    if EventResult.objects.filter(event=event, user=user).exists():
+        messages.info(request, _('{} is already checked in.').format(user))
+        return HttpResponseRedirect(redirect_url)
+    EventResult.objects.create(event=event, user=user)
+    messages.success(request, _('{} has been checked in.').format(user))
+    return HttpResponseRedirect(redirect_url)
+
+
+@require_POST
+@login_required
+@is_pg_staff
 def add_pg_member_by_username(request, slug):
     username = request.POST.get('username').strip()
     try:
