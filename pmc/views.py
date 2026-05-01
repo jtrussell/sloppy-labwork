@@ -502,8 +502,8 @@ def event_detail_generic(request, pk):
             'pk': pk
         }))
     except:
-        print('event not found')
-        return render(request, 'pmc/g-event-not-found.html')
+        playgroups = Playgroup.objects.filter(events__pk=pk)
+        return render(request, 'pmc/g-event-not-found.html', {'playgroups': playgroups})
 
 
 class EventDetail(generic.DetailView):

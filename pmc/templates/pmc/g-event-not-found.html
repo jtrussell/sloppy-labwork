@@ -6,5 +6,13 @@
     Welp, this is awkward. It looks like you aren't a member of the playgroup that
     hosted this event.
   </p>
-  <p>Try bugging an event organizer at that playgroup to let you in.</p>
+  {% if playgroups %}
+    <p>
+      This event was hosted by
+      {% for playgroup in playgroups %}<a href="{% url 'pmc-pg-detail' playgroup.slug %}">{{ playgroup.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.
+      Check them out on KeyChain to request to join.
+    </p>
+  {% else %}
+    <p>Try bugging an event organizer at that playgroup to let you in.</p>
+  {% endif %}
 {% endblock %}
