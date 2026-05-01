@@ -37,8 +37,8 @@
                                         <span class="text-muted">(Dropped)</span>
                                     {% endif %}
                                 </td>
-                                <td>
-                                    {% if standing.is_in_current_stage %}
+                                <td{% if not standing.is_in_current_stage %} class="text-muted"{% endif %}>
+                                    {% if standing.wins or standing.losses or standing.ties or standing.byes %}
                                         {{ standing.wins | default:0 }} - {{ standing.losses | default:0 }}
                                         {% if standing.byes is not None and standing.byes > 0 %}
                                             ({{ standing.byes }})
