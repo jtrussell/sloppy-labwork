@@ -790,6 +790,12 @@ class Stage(models.Model):
     def get_current_round(self):
         return self.rounds.order_by('-order').first()
 
+    def cycle_random_tiebreakers(self):
+        for stage_player in self.stage_players.filter(
+                player__status=Player.PlayerStatus.ACTIVE):
+            stage_player.tiebreaker_value = generate_tiebreaker_value()
+            stage_player.save(update_fields=['tiebreaker_value'])
+
     def get_pairing_strategy(self):
         return get_pairing_strategy(self.pairing_strategy)
 

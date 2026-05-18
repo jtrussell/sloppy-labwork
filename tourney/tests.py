@@ -2508,3 +2508,67 @@ class EventTournamentEligibilityTestCase(TestCase):
         Tournament.objects.create(
             name='Existing', owner=self.user, pmc_event=self.event)
         self.assertFalse(self.event.is_eligible_for_tourney_creation)
+
+
+class CycleRandomTiebreakersTestCase(TestCase):
+    """Test Stage.cycle_random_tiebreakers."""
+
+    SENTINEL = 2.0
+
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            'cycle_owner', 'cycle_owner@test.com', 'password')
+        self.tournament = Tournament.objects.create(
+            name='Cycle Test', owner=self.owner)
+        self.stage = Stage.objects.create(
+            tournament=self.tournament, name='Main Stage', order=1,
+            pairing_strategy='swiss')
+
+    def _add_stage_player(self, stage, seed, status=Player.PlayerStatus.ACTIVE):
+        user = User.objects.create_user(
+            f'cycle_player_{stage.id}_{seed}',
+            f'cycle_player_{stage.id}_{seed}@test.com', 'password')
+        player = Player.objects.create(
+            user=user, tournament=stage.tournament, status=status)
+        return StagePlayer.objects.create(
+            player=player, stage=stage, seed=seed,
+            tiebreaker_value=self.SENTINEL)
+
+    def test_cycle_refreshes_active_players(self):
+        sp_one = self._add_stage_player(self.stage, 1)
+        sp_two = self._add_stage_player(self.stage, 2)
+
+        self.stage.cycle_random_tiebreakers()
+
+        sp_one.refresh_from_db()
+        sp_two.refresh_from_db()
+        self.assertNotEqual(sp_one.tiebreaker_value, self.SENTINEL)
+        self.assertNotEqual(sp_two.tiebreaker_value, self.SENTINEL)
+
+    def test_cycle_leaves_dropped_players_untouched(self):
+        active = self._add_stage_player(self.stage, 1)
+        dropped = self._add_stage_player(
+            self.stage, 2, status=Player.PlayerStatus.DROPPED)
+
+        self.stage.cycle_random_tiebreakers()
+
+        active.refresh_from_db()
+        dropped.refresh_from_db()
+        self.assertNotEqual(active.tiebreaker_value, self.SENTINEL)
+        self.assertEqual(dropped.tiebreaker_value, self.SENTINEL)
+
+    def test_cycle_leaves_other_stages_untouched(self):
+        other_stage = Stage.objects.create(
+            tournament=self.tournament, name='Other Stage', order=2,
+            pairing_strategy='swiss')
+        current_sp = self._add_stage_player(self.stage, 1)
+        other_sp = StagePlayer.objects.create(
+            player=current_sp.player, stage=other_stage, seed=1,
+            tiebreaker_value=self.SENTINEL)
+
+        self.stage.cycle_random_tiebreakers()
+
+        current_sp.refresh_from_db()
+        other_sp.refresh_from_db()
+        self.assertNotEqual(current_sp.tiebreaker_value, self.SENTINEL)
+        self.assertEqual(other_sp.tiebreaker_value, self.SENTINEL)

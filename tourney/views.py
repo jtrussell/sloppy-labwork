@@ -839,6 +839,7 @@ def create_round(request, tournament_code):
             round_length_in_minutes=current_stage.round_length_in_minutes
         )
 
+        current_stage.cycle_random_tiebreakers()
         pairing_strategy.make_pairings_for_round(new_round)
 
         if new_round.round_length_in_minutes:

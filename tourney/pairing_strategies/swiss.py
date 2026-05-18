@@ -75,36 +75,21 @@ class SwissPairingStrategy(PairingStrategy):
 
     def _get_sorted_players_by_standings(self, stage):
         """
-        Sort players by their current standings (wins, then losses, then seed).
+        Sort players by the stage's configured ranking criteria.
 
         Args:
             stage: The stage to get standings for
 
         Returns:
-            List of stage_players sorted by performance
+            List of active stage_players sorted by current standings
         """
-        from tourney.models import Player, MatchResult
+        from tourney.models import Player, StandingCalculator
 
-        players_with_stats = []
-        for stage_player in stage.stage_players.filter(player__status=Player.PlayerStatus.ACTIVE):
-            # Count wins
-            wins = MatchResult.objects.filter(
-                match__round__stage=stage,
-                winner=stage_player
-            ).count()
-
-            # Count losses (matches where player participated but didn't win)
-            losses = MatchResult.objects.filter(
-                Q(match__player_one=stage_player) | Q(
-                    match__player_two=stage_player),
-                match__round__stage=stage
-            ).exclude(winner=stage_player).exclude(winner=None).count()
-
-            players_with_stats.append((stage_player, wins, losses))
-
-        # Sort by wins (descending), then losses (ascending), then seed (ascending)
-        players_with_stats.sort(key=lambda x: (-x[1], x[2], x[0].seed))
-        return [player for player, wins, losses in players_with_stats]
+        standings = StandingCalculator.get_stage_standings(stage)
+        return [
+            s['stage_player'] for s in standings
+            if s['stage_player'].player.status == Player.PlayerStatus.ACTIVE
+        ]
 
     def _create_simple_pairings(self, stage_players):
         """
