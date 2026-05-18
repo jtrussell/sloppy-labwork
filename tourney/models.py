@@ -1075,83 +1075,87 @@ class StandingCalculator:
 
     @staticmethod
     def _build_standings_cache(stage_players, stage):
-        from django.db.models import Count, Q
-
         cache = {}
+        opponents = {}
+        for stage_player in stage_players:
+            cache[stage_player.id] = {
+                'wins': 0,
+                'losses': 0,
+                'ties': 0,
+                'byes': 0,
+                'points': 0,
+                'total_matches': 0,
+                'games_played': 0,
+                'strength_of_schedule': 0,
+                'seed': stage_player.seed,
+                'player_score': 0,
+                'opponent_score': 0,
+            }
+            opponents[stage_player.id] = []
+
+        matches = Match.objects.filter(round__stage=stage).values(
+            'id', 'player_one_id', 'player_two_id')
+        results = MatchResult.objects.filter(
+            match__round__stage=stage).values(
+            'match_id', 'winner_id', 'player_one_score', 'player_two_score')
+        results_by_match = {result['match_id']: result for result in results}
+
+        for match in matches:
+            player_one_id = match['player_one_id']
+            player_two_id = match['player_two_id']
+
+            if player_one_id in cache:
+                cache[player_one_id]['total_matches'] += 1
+            if player_two_id in cache:
+                cache[player_two_id]['total_matches'] += 1
+
+            if player_one_id in opponents and player_two_id is not None:
+                opponents[player_one_id].append(player_two_id)
+            if player_two_id in opponents:
+                opponents[player_two_id].append(player_one_id)
+
+            result = results_by_match.get(match['id'])
+            if result is None:
+                continue
+
+            winner_id = result['winner_id']
+            player_one_score = result['player_one_score'] or 0
+            player_two_score = result['player_two_score'] or 0
+
+            if player_one_id in cache:
+                cache[player_one_id]['player_score'] += player_one_score
+                cache[player_one_id]['opponent_score'] += player_two_score
+            if player_two_id in cache:
+                cache[player_two_id]['player_score'] += player_two_score
+                cache[player_two_id]['opponent_score'] += player_one_score
+
+            if winner_id is None:
+                if player_one_id in cache:
+                    cache[player_one_id]['ties'] += 1
+                if player_two_id in cache:
+                    cache[player_two_id]['ties'] += 1
+            else:
+                if winner_id in cache:
+                    cache[winner_id]['wins'] += 1
+                    if player_two_id is None:
+                        cache[winner_id]['byes'] += 1
+                loser_id = player_two_id if winner_id == player_one_id else player_one_id
+                if loser_id is not None and loser_id in cache:
+                    cache[loser_id]['losses'] += 1
 
         for stage_player in stage_players:
-            wins = MatchResult.objects.filter(
-                match__round__stage=stage,
-                winner=stage_player
-            ).count()
+            data = cache[stage_player.id]
+            data['points'] = data['wins'] * 2 + data['ties'] * 1
+            data['games_played'] = data['total_matches']
 
-            byes = MatchResult.objects.filter(
-                match__round__stage=stage,
-                winner=stage_player,
-                match__player_two__isnull=True
-            ).count()
-
-            total_matches = Match.objects.filter(
-                Q(player_one=stage_player) | Q(player_two=stage_player),
-                round__stage=stage
-            ).count()
-
-            losses = MatchResult.objects.filter(
-                Q(match__player_one=stage_player) | Q(
-                    match__player_two=stage_player),
-                match__round__stage=stage
-            ).exclude(winner=stage_player).exclude(winner=None).count()
-
-            ties = MatchResult.objects.filter(
-                Q(match__player_one=stage_player) | Q(
-                    match__player_two=stage_player),
-                match__round__stage=stage,
-                winner=None
-            ).count()
-
-            points = wins * 2 + ties * 1
-
-            opponents = StandingCalculator._get_opponents(stage_player, stage)
-            strength_of_schedule = StandingCalculator._calculate_strength_of_schedule(
-                opponents, stage)
-
-            player_one_score = MatchResult.objects.filter(
-                match__round__stage=stage,
-                match__player_one=stage_player
-            ).aggregate(total=models.Sum('player_one_score'))['total'] or 0
-
-            player_two_score = MatchResult.objects.filter(
-                match__round__stage=stage,
-                match__player_two=stage_player
-            ).aggregate(total=models.Sum('player_two_score'))['total'] or 0
-
-            player_score = player_one_score + player_two_score
-
-            opponent_score_as_player_one = MatchResult.objects.filter(
-                match__round__stage=stage,
-                match__player_one=stage_player
-            ).aggregate(total=models.Sum('player_two_score'))['total'] or 0
-
-            opponent_score_as_player_two = MatchResult.objects.filter(
-                match__round__stage=stage,
-                match__player_two=stage_player
-            ).aggregate(total=models.Sum('player_one_score'))['total'] or 0
-
-            opponent_score = opponent_score_as_player_one + opponent_score_as_player_two
-
-            cache[stage_player.id] = {
-                'wins': wins,
-                'losses': losses,
-                'ties': ties,
-                'byes': byes,
-                'points': points,
-                'total_matches': total_matches,
-                'games_played': total_matches,
-                'strength_of_schedule': strength_of_schedule,
-                'seed': stage_player.seed,
-                'player_score': player_score,
-                'opponent_score': opponent_score,
-            }
+        for stage_player in stage_players:
+            opponent_ids = opponents[stage_player.id]
+            if opponent_ids:
+                total_opponent_points = sum(
+                    cache[opponent_id]['points']
+                    for opponent_id in opponent_ids if opponent_id in cache)
+                cache[stage_player.id]['strength_of_schedule'] = (
+                    total_opponent_points / len(opponent_ids))
 
         return cache
 
@@ -1206,69 +1210,27 @@ class StandingCalculator:
 
     @staticmethod
     def _calculate_head_to_head(tied_players, stage):
-        results = {}
+        tied_ids = {standing['stage_player'].id for standing in tied_players}
+        results = {stage_player_id: 0 for stage_player_id in tied_ids}
 
-        for standing in tied_players:
-            stage_player = standing['stage_player']
-            wins = 0
+        match_results = MatchResult.objects.filter(
+            match__round__stage=stage,
+            winner__isnull=False,
+        ).values('winner_id', 'match__player_one', 'match__player_two')
 
-            for other_standing in tied_players:
-                if other_standing == standing:
-                    continue
+        for match_result in match_results:
+            winner_id = match_result['winner_id']
+            if winner_id not in tied_ids:
+                continue
 
-                other_stage_player = other_standing['stage_player']
+            player_one_id = match_result['match__player_one']
+            player_two_id = match_result['match__player_two']
+            opponent_id = player_two_id if winner_id == player_one_id else player_one_id
 
-                head_to_head_wins = MatchResult.objects.filter(
-                    Q(match__player_one=stage_player, match__player_two=other_stage_player) |
-                    Q(match__player_one=other_stage_player,
-                      match__player_two=stage_player),
-                    match__round__stage=stage,
-                    winner=stage_player
-                ).count()
-
-                wins += head_to_head_wins
-
-            results[stage_player.id] = wins
+            if opponent_id in tied_ids:
+                results[winner_id] += 1
 
         return results
-
-    @staticmethod
-    def _get_opponents(stage_player, stage):
-        opponents = []
-        matches = Match.objects.filter(
-            Q(player_one=stage_player) | Q(player_two=stage_player),
-            round__stage=stage
-        )
-
-        for match in matches:
-            if match.player_one == stage_player and match.player_two:
-                opponents.append(match.player_two)
-            elif match.player_two == stage_player:
-                opponents.append(match.player_one)
-
-        return opponents
-
-    @staticmethod
-    def _calculate_strength_of_schedule(opponents, stage):
-        if not opponents:
-            return 0
-
-        total_opponent_points = 0
-        for opponent in opponents:
-            opponent_wins = MatchResult.objects.filter(
-                match__round__stage=stage,
-                winner=opponent
-            ).count()
-
-            opponent_ties = MatchResult.objects.filter(
-                Q(match__player_one=opponent) | Q(match__player_two=opponent),
-                match__round__stage=stage,
-                winner=None
-            ).count()
-
-            total_opponent_points += (opponent_wins * 2 + opponent_ties * 1)
-
-        return total_opponent_points / len(opponents) if opponents else 0
 
     @staticmethod
     def _get_player_total_stats(player, tournament):
