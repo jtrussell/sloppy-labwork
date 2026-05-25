@@ -31,24 +31,26 @@ hr {
 
 .subheading {
   text-transform: uppercase;
-  color: var(--color-primary);
-  margin-top: -1.2rem;
+  letter-spacing: 0.15rem;
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
+  margin-top: -0.4rem;
 }
 
 .subheading + .subheading {
-  margin-top: -1.8rem;
+  margin-top: -0.2rem;
 }
 
 h1+.subheading,
 h1+.subheading+.subheading {
-  margin-bottom: 1.8rem;
+  margin-bottom: 2.4rem;
   font-size: 12px;
-  line-height: 12px;
+  line-height: 1.4;
 }
 
 @media (max-width: 680px) {
   h1+.subheading {
-    margin-top: -.8rem
+    margin-top: -0.2rem;
   }
 }
 
@@ -58,8 +60,8 @@ h4+.subheading, h4+.subheading+.subheading,
 h5+.subheading, h5+.subheading+.subheading,
 h6+.subheading, h6+.subheading+.subheading {
   font-size: 12px;
-  line-height: 12px;
-  margin-bottom: 1.4rem;
+  line-height: 1.4;
+  margin-bottom: 1.6rem;
 }
 
 .subheading+h2,
@@ -79,7 +81,7 @@ h6+.subheading, h6+.subheading+.subheading {
 }
 
 section+section {
-  margin-top: 2.5rem;
+  margin-top: 4rem;
 }
 
 form.form-inline {
@@ -175,7 +177,7 @@ input[type="date"] {
 }
 
 input[type="date"]:focus {
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--color-accent);
   outline: 0;
 }
 
@@ -395,8 +397,8 @@ form .helptext {
 }
 
 .nav__link--active {
-  color: var(--color-primary);
-  border-bottom: 1px solid var(--color-primary);
+  color: var(--color-accent);
+  border-bottom: 1px solid var(--color-accent);
 }
 
 .breadcrumb {
@@ -464,12 +466,13 @@ form .helptext {
 .modal-close {
   background: none;
   border: none;
-  font-size: 2rem;
+  font-size: 3.6rem;
+  line-height: 1;
   cursor: pointer;
   color: var(--color-text-muted);
   padding: 0;
-  width: 3rem;
-  height: 3rem;
+  width: 4rem;
+  height: 4rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -580,10 +583,6 @@ body.preload * {
   transition: none !important;
 }
 
-/* Skeleton Overrides */
-.container {
-  max-width: 600px;
-}
 
 /* Responsible breakpoints */
 .d-none {

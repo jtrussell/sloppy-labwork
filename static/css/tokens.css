@@ -1,9 +1,6 @@
 /*
  * Sloppy Labwork design tokens.
  *
- * PR 1: values match current site (no visual change). PR 2 reshuffles the
- * color palette and tightens the type ramp.
- *
  * Theme selection: data-theme attribute on <html>. Default block applies when
  * no attribute is set (dark mode).
  *
@@ -22,24 +19,24 @@
  * ============================================================= */
 :root {
   /* --- Color --- */
-  --color-bg: #222025;
-  --color-surface: #111;
-  --color-surface-raised: #1a1a1a;
-  --color-text: #c9c7c7;
-  --color-text-muted: #888;
-  --color-text-subtle: #6b6b6b;
-  --color-border: #444;
-  --color-border-strong: #888;
-  --color-primary: #855cd6;
-  --color-primary-hover: #7547d1;
-  --color-accent: #5cc9d6;
-  --color-accent-hover: #7adae5;
-  --color-highlight: #d65cb6;
-  --color-success: #73b375;
-  --color-danger: #e85c5c;
-  --color-overlay: rgba(0, 0, 0, 0.7);
-  --color-on-primary: #fff;
-  --color-on-accent: #111;
+  --color-bg: #0e0c14;
+  --color-surface: #181522;
+  --color-surface-raised: #221d2e;
+  --color-text: #e8e6ee;
+  --color-text-muted: #9690a3;
+  --color-text-subtle: #6b667a;
+  --color-border: #2e2839;
+  --color-border-strong: #564c66;
+  --color-primary: #8b5cf6;
+  --color-primary-hover: #a78bfa;
+  --color-accent: #22d3ee;
+  --color-accent-hover: #67e8f9;
+  --color-highlight: #f0abfc;
+  --color-success: #5dd39e;
+  --color-danger: #f87171;
+  --color-overlay: rgba(8, 6, 14, 0.78);
+  --color-on-primary: #ffffff;
+  --color-on-accent: #0e0c14;
 
   --link-decoration: none;
 
@@ -65,8 +62,8 @@
   --font-display: var(--font-body);
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
-  /* Note: PR 1 keeps the 62.5% root font trick (1rem = 10px) for compatibility.
-     PR 2 drops that and restates type sizes via these tokens. */
+  /* Note: PR 2 keeps the 62.5% root font trick (1rem = 10px). PR 3 drops
+     it alongside the per-app stylesheet migration. */
   --text-xs: 1.2rem;
   --text-sm: 1.4rem;
   --text-base: 1.6rem;
@@ -88,16 +85,16 @@
   --weight-black: 800;
 
   /* --- Shadows --- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 0 1px var(--color-primary), 0 0 12px -2px var(--color-primary);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 0 1px var(--color-accent), 0 0 16px -2px var(--color-accent);
 
   /* --- Transitions --- */
   --transition-quick: 120ms ease-out;
   --transition-default: 200ms ease-out;
 
   /* --- Layout --- */
-  --container-max: 60rem;
+  --container-max: 72rem;
 
   /* --- Z-index --- */
   --z-base: 0;
@@ -107,21 +104,20 @@
   --z-modal: 1000;
   --z-toast: 1100;
 
-  /* --- Legacy aliases (kept for one release; remove after per-app migration) --- */
+  /* --- Legacy aliases (kept for one release; remove after per-app migration in PR 3) --- */
   --color-bg-secondary: var(--color-surface);
-  --color-nav-links: #a8a6a6;
+  --color-nav-links: var(--color-text-muted);
   --color-text-normal: var(--color-text);
-  --color-text-active: #efefef;
+  --color-text-active: var(--color-text);
   --color-lines: var(--color-border);
   --color-lines-active: var(--color-border-strong);
   --color-primary-active: var(--color-primary-hover);
   --color-text-success: var(--color-success);
   --color-text-danger: var(--color-danger);
-  --color-button-text: #888;
-  --color-button-text-hover: #aaa;
+  --color-button-text: var(--color-text-muted);
+  --color-button-text-hover: var(--color-text);
   --color-button-primary-text: var(--color-on-primary);
-  --color-danger: darkred;
-  --color-danger-active: firebrick;
+  --color-danger-active: var(--color-danger);
 }
 
 
@@ -129,45 +125,30 @@
  * Theme — Light  (data-theme="1")
  * ============================================================= */
 html[data-theme="1"] {
-  --color-bg: #f8f8f8;
-  --color-surface: #fff;
-  --color-surface-raised: #fff;
-  --color-text: #333;
-  --color-text-muted: #888;
-  --color-text-subtle: #aaa;
-  --color-border: #ddd;
-  --color-border-strong: #999;
-  --color-primary: #855cd6;
-  --color-primary-hover: #7547d1;
-  --color-accent: #2d8a99;
-  --color-accent-hover: #1f6b78;
-  --color-highlight: #b03e8b;
-  --color-success: #2d7a30;
-  --color-danger: #c92a2a;
-  --color-overlay: rgba(0, 0, 0, 0.4);
-  --color-on-primary: #fff;
-  --color-on-accent: #fff;
+  --color-bg: #faf8fb;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-text: #1a1622;
+  --color-text-muted: #6b667a;
+  --color-text-subtle: #a39ea8;
+  --color-border: #e6e0eb;
+  --color-border-strong: #b8aec5;
+  --color-primary: #7547d1;
+  --color-primary-hover: #5e2db8;
+  --color-accent: #0891b2;
+  --color-accent-hover: #0e7490;
+  --color-highlight: #c026d3;
+  --color-success: #15803d;
+  --color-danger: #dc2626;
+  --color-overlay: rgba(26, 22, 34, 0.45);
+  --color-on-primary: #ffffff;
+  --color-on-accent: #ffffff;
 
   --link-decoration: none;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
-  --shadow-glow: 0 0 0 1px var(--color-primary), 0 0 12px -2px var(--color-primary);
-
-  --color-bg-secondary: var(--color-surface);
-  --color-nav-links: #666;
-  --color-text-normal: var(--color-text);
-  --color-text-active: #111;
-  --color-lines: var(--color-border);
-  --color-lines-active: var(--color-border-strong);
-  --color-primary-active: var(--color-primary-hover);
-  --color-text-success: var(--color-success);
-  --color-text-danger: var(--color-danger);
-  --color-button-text: #555;
-  --color-button-text-hover: #333;
-  --color-button-primary-text: var(--color-on-primary);
-  --color-danger: #c92a2a;
-  --color-danger-active: #a61e1e;
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.12);
+  --shadow-glow: 0 0 0 1px var(--color-accent), 0 0 16px -2px var(--color-accent);
 }
 
 
@@ -175,41 +156,26 @@ html[data-theme="1"] {
  * Theme — Contrast Dark  (data-theme="2")
  * ============================================================= */
 html[data-theme="2"] {
-  --color-bg: #000;
-  --color-surface: #1a1a1a;
+  --color-bg: #000000;
+  --color-surface: #0a0a0a;
   --color-surface-raised: #1a1a1a;
-  --color-text: #fff;
-  --color-text-muted: #aaa;
-  --color-text-subtle: #888;
-  --color-border: #666;
-  --color-border-strong: #aaa;
-  --color-primary: #a366ff;
-  --color-primary-hover: #b580ff;
-  --color-accent: #66e7ff;
-  --color-accent-hover: #99edff;
-  --color-highlight: #ff8fdc;
-  --color-success: #7fd97f;
-  --color-danger: #ff6b6b;
-  --color-overlay: rgba(0, 0, 0, 0.85);
-  --color-on-primary: #fff;
-  --color-on-accent: #000;
+  --color-text: #ffffff;
+  --color-text-muted: #cccccc;
+  --color-text-subtle: #999999;
+  --color-border: #666666;
+  --color-border-strong: #aaaaaa;
+  --color-primary: #c4a3ff;
+  --color-primary-hover: #d9beff;
+  --color-accent: #5eead4;
+  --color-accent-hover: #99f6e4;
+  --color-highlight: #f5d0fe;
+  --color-success: #4ade80;
+  --color-danger: #fca5a5;
+  --color-overlay: rgba(0, 0, 0, 0.88);
+  --color-on-primary: #000000;
+  --color-on-accent: #000000;
 
   --link-decoration: underline;
-
-  --color-bg-secondary: var(--color-surface);
-  --color-nav-links: #fff;
-  --color-text-normal: var(--color-text);
-  --color-text-active: #fff;
-  --color-lines: var(--color-border);
-  --color-lines-active: var(--color-border-strong);
-  --color-primary-active: var(--color-primary-hover);
-  --color-text-success: var(--color-success);
-  --color-text-danger: var(--color-danger);
-  --color-button-text: #fff;
-  --color-button-text-hover: #fff;
-  --color-button-primary-text: var(--color-on-primary);
-  --color-danger: #ff4444;
-  --color-danger-active: #ff6666;
 }
 
 
@@ -217,39 +183,24 @@ html[data-theme="2"] {
  * Theme — Contrast Light  (data-theme="3")
  * ============================================================= */
 html[data-theme="3"] {
-  --color-bg: #fff;
+  --color-bg: #ffffff;
   --color-surface: #f5f5f5;
   --color-surface-raised: #f5f5f5;
-  --color-text: #000;
-  --color-text-muted: #666;
-  --color-text-subtle: #888;
-  --color-border: #999;
-  --color-border-strong: #666;
-  --color-primary: #7547d1;
-  --color-primary-hover: #5a33b3;
-  --color-accent: #1a5f73;
-  --color-accent-hover: #144a5c;
-  --color-highlight: #8c1b6f;
-  --color-success: #1e5f20;
-  --color-danger: #b71c1c;
-  --color-overlay: rgba(0, 0, 0, 0.5);
-  --color-on-primary: #fff;
-  --color-on-accent: #fff;
+  --color-text: #000000;
+  --color-text-muted: #555555;
+  --color-text-subtle: #888888;
+  --color-border: #999999;
+  --color-border-strong: #666666;
+  --color-primary: #5e2db8;
+  --color-primary-hover: #4a1f99;
+  --color-accent: #0e7490;
+  --color-accent-hover: #155e75;
+  --color-highlight: #86198f;
+  --color-success: #166534;
+  --color-danger: #991b1b;
+  --color-overlay: rgba(0, 0, 0, 0.55);
+  --color-on-primary: #ffffff;
+  --color-on-accent: #ffffff;
 
   --link-decoration: underline;
-
-  --color-bg-secondary: var(--color-surface);
-  --color-nav-links: #000;
-  --color-text-normal: var(--color-text);
-  --color-text-active: #000;
-  --color-lines: var(--color-border);
-  --color-lines-active: var(--color-border-strong);
-  --color-primary-active: var(--color-primary-hover);
-  --color-text-success: var(--color-success);
-  --color-text-danger: var(--color-danger);
-  --color-button-text: #000;
-  --color-button-text-hover: #000;
-  --color-button-primary-text: var(--color-on-primary);
-  --color-danger: #b71c1c;
-  --color-danger-active: #8b1414;
 }

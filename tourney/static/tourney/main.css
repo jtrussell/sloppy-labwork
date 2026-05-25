@@ -1,7 +1,7 @@
 /* Match Display */
 .match-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
   margin: 2rem 0;
 }
@@ -422,6 +422,7 @@ tr.with-actions td {
 /* Tournament Detail Tab Navigation */
 .nav.short {
   justify-content: center;
+  margin: 1.5rem 0;
 }
 
 /* Modal Form Elements */

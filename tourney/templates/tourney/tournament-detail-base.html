@@ -37,7 +37,7 @@
     {% include "tourney/partials/my-pending-matches.html" %}
 
     <!-- Tab Navigation -->
-     <section>
+    <nav>
         <ul class="nav short">
             <li class="nav__item">
                 <a href="{% url 'tourney:tourney-detail-matches' tournament.code %}"
@@ -60,12 +60,10 @@
             </li>
             {% endif %}
         </ul>
-     </section>
+    </nav>
 
-     <section>
-        {% block tab_content %}
-        {% endblock %}
-     </section>
+    {% block tab_content %}
+    {% endblock %}
 
     <!-- Match Result Modal -->
     <div id="matchModal" class="modal">
