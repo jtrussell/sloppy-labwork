@@ -4,7 +4,7 @@
 }
 
 .timer__countdown {
-    font-size: 4rem;
+    font-size: 2.5rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     line-height: 1;
@@ -62,17 +62,17 @@
 }
 
 .timer__name {
-    font-size: 2rem;
+    font-size: 1.25rem;
     color: var(--color-text-muted, #888);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.3125rem;
 }
 
 .timer__code {
-    font-size: 1.25rem;
+    font-size: 0.78125rem;
     color: var(--color-text-muted, #888);
     font-family: monospace;
     letter-spacing: 0.1em;
-    margin-top: 0.5rem;
+    margin-top: 0.3125rem;
 }
 
 .timer__code a {
@@ -101,15 +101,15 @@
 }
 
 .timer__controls {
-    margin-top: 1rem;
+    margin-top: 0.625rem;
     display: flex;
-    gap: 1rem;
+    gap: 0.625rem;
     justify-content: center;
     flex-wrap: wrap;
 }
 
 .timer__control-link {
-    font-size: 1.5rem;
+    font-size: 0.9375rem;
     color: var(--color-primary, #855cd6);
     text-decoration: none;
     cursor: pointer;
@@ -135,17 +135,17 @@
 }
 
 .timer-full-page .timer__name {
-    font-size: 2rem;
-    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    margin-bottom: 0.625rem;
 }
 
 .timer-full-page .timer__code {
-    font-size: 1.25rem;
+    font-size: 0.78125rem;
 }
 
 .timer-deleted {
     text-align: center;
-    padding: 2rem;
+    padding: 1.25rem;
     color: var(--color-text-muted, #888);
 }
 
@@ -154,11 +154,11 @@
 }
 
 .timer__message {
-    font-size: 1.25rem;
+    font-size: 0.78125rem;
     color: var(--color-text-muted, #888);
-    margin-top: 1rem;
+    margin-top: 0.625rem;
 }
 
 .timer-full-page .timer__message {
-    font-size: 1.5rem;
+    font-size: 0.9375rem;
 }

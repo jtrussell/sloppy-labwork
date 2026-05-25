@@ -17,11 +17,11 @@
     font-weight: bold;
     margin-bottom: 2px; /* Reduced from 4px */
     color: var(--color-text-active);
-    font-size: 1.4rem; /* Slightly smaller */
+    font-size: 0.875rem; /* Slightly smaller */
 }
 
 .criteria-description {
-    font-size: 1.1rem; /* Smaller than default */
+    font-size: 0.6875rem; /* Smaller than default */
     color: var(--color-text-muted);
     line-height: 1.2; /* Tighter line height */
 }

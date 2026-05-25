@@ -3,10 +3,10 @@
       <h2>Your Pending Matches</h2>
 
       {% for match in pending_matches %}
-          <div style="margin-bottom: 1rem;">
+          <div style="margin-bottom: 0.625rem;">
               {% include 'tourney/partials/match-card.html' with match=match is_admin=is_admin show_match_number=False match_id_prefix='my-' %}
 
-              <div style="text-align: center; color: var(--color-text-muted); font-size: 1.2rem; margin-top: 0.5rem;">
+              <div style="text-align: center; color: var(--color-text-muted); font-size: 0.75rem; margin-top: 0.3125rem;">
                   {{ match.round.stage.name }} - Round {{ match.round.order }}
               </div>
           </div>

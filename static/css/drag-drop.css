@@ -58,7 +58,7 @@
     padding: 4px;
     border-radius: 2px;
     transition: background-color 0.2s, color 0.2s;
-    font-size: 1.2rem;
+    font-size: 0.75rem;
     line-height: 1;
 }
 
@@ -120,11 +120,11 @@
     font-weight: bold;
     margin-bottom: 2px;
     color: var(--color-text-active);
-    font-size: 1.4rem;
+    font-size: 0.875rem;
 }
 
 .criteria-description {
-    font-size: 1.1rem;
+    font-size: 0.6875rem;
     color: var(--color-text-muted);
     line-height: 1.2;
 }
@@ -175,7 +175,7 @@
     background: var(--color-bg);
     padding: 6px 10px;
     border-radius: 12px;
-    font-size: 1.4rem;
+    font-size: 0.875rem;
     margin-right: 12px;
     display: flex;
     align-items: center;

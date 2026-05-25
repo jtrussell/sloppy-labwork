@@ -42,14 +42,14 @@
 
   /* --- Spacing --- */
   --space-0: 0;
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
-  --space-7: 3rem;
-  --space-8: 4rem;
+  --space-1: 0.15625rem;
+  --space-2: 0.3125rem;
+  --space-3: 0.46875rem;
+  --space-4: 0.625rem;
+  --space-5: 0.9375rem;
+  --space-6: 1.25rem;
+  --space-7: 1.875rem;
+  --space-8: 2.5rem;
 
   /* --- Radius --- */
   --radius-sm: 3px;
@@ -62,15 +62,13 @@
   --font-display: var(--font-body);
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
-  /* Note: PR 2 keeps the 62.5% root font trick (1rem = 10px). PR 3 drops
-     it alongside the per-app stylesheet migration. */
-  --text-xs: 1.2rem;
-  --text-sm: 1.4rem;
-  --text-base: 1.6rem;
-  --text-lg: 1.8rem;
-  --text-xl: 2.2rem;
-  --text-2xl: 2.8rem;
-  --text-3xl: 3.4rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.125rem;
 
   --leading-tight: 1.2;
   --leading-snug: 1.35;
@@ -94,7 +92,7 @@
   --transition-default: 200ms ease-out;
 
   /* --- Layout --- */
-  --container-max: 72rem;
+  --container-max: 45rem;
 
   /* --- Z-index --- */
   --z-base: 0;

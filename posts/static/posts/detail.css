@@ -1,5 +1,5 @@
 .posts-detail__title {
-  margin-bottom: .5rem;
+  margin-bottom: 0.3125rem;
 }
 
 .posts-detail__item-meta {
@@ -7,7 +7,7 @@
 }
 
 .posts-detail__content {
-  margin-top: 2.5rem;
+  margin-top: 1.5625rem;
 }
 
 .posts-detail__content img:only-child {

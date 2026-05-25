@@ -4,18 +4,18 @@ ul.posts-list {
 }
 
 li.posts-list__item {
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .posts-list__item-title {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.3125rem 0;
 }
 
 .posts-list__item-meta {
   color: #ccc;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.3125rem;
 }
 
 .posts-list__content {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.3125rem;
 }
