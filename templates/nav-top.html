@@ -1,32 +1,38 @@
-<div class="d-md-none">
-  <select class="u-full-width" style="margin-top: 15px;" id="responsive-nav-select" value="SELECTED">
-    <option id="responsive-nave-selected--selected-option" value="SELECTED" hidden>Stay Sloppy</option>
-    <option value="{% url 'home' %}">Home</option>
-    {% if ft_use_events %} <option value="{% url 'tournaments-registartion-list' %}">Events</option> {% endif %}
-    {% if ft_use_posts %} <option value="{% url 'posts-list' %}">Notes</option> {% endif %}
-    {% if ft_use_register %} <option value="{% url 'register-home' %}">Register</option> {% endif %}
-    {% if ft_use_ratings %} <option value="{% url 'home-ratings' %}">Ratings</option> {% endif %}
-    {% if ft_use_tourneys %} <option value="{% url 'tourney:tourney-my-tournaments' %}">Tournaments</option> {% endif %}
-    <option value="{% url 'redacted-list' %}">Gizmos</option>
-    <option value="{% url 'profile' %}">Profile</option>
-  </select>
-  <script>
-    (function () {
-      const pathname = document.location.pathname;
-      const elSelect = document.getElementById('responsive-nav-select')
-      const elSelectedOption = document.getElementById('responsive-nave-selected--selected-option')
-      const navValue = '/'
-      elSelect.childNodes.forEach(function (opt) {
-        if (pathname.indexOf(opt.value) === 0) {
-          elSelectedOption.innerHTML = opt.innerHTML
-        }
-      })
-      function slHandleResponsiveNavMenuChange (event) {
-        window.location = event.target.value
-      }
-      elSelect.addEventListener('change', slHandleResponsiveNavMenuChange)
-    }())
-  </script>
+{# Mobile nav: hamburger toggle + slide-in drawer (CSS-only, no JS) #}
+<input type="checkbox" id="mobile-nav-toggle" class="mobile-nav-toggle" hidden>
+
+<div class="d-md-none mobile-nav">
+  <label for="mobile-nav-toggle" class="mobile-nav__button" aria-label="Open menu" aria-controls="mobile-nav-drawer">
+    <svg class="mobile-nav__icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </svg>
+  </label>
+
+  <label for="mobile-nav-toggle" class="mobile-nav__overlay" aria-hidden="true"></label>
+
+  <aside id="mobile-nav-drawer" class="mobile-nav__drawer">
+    <label for="mobile-nav-toggle" class="mobile-nav__close" aria-label="Close menu">
+      <svg class="mobile-nav__icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+      </svg>
+    </label>
+    <ul class="mobile-nav__list">
+      <li><a href="{% url 'home' %}" class="mobile-nav__link">Home</a></li>
+      {% if ft_use_events %}<li><a href="{% url 'tournaments-registartion-list' %}" class="mobile-nav__link">Events</a></li>{% endif %}
+      {% if ft_use_posts %}<li><a href="{% url 'posts-list' %}" class="mobile-nav__link">Notes</a></li>{% endif %}
+      {% if ft_use_register %}<li><a href="{% url 'register-home' %}" class="mobile-nav__link">Register</a></li>{% endif %}
+      {% if ft_use_ratings %}<li><a href="{% url 'home-ratings' %}" class="mobile-nav__link">Ratings</a></li>{% endif %}
+      {% if ft_use_tourneys %}<li><a href="{% url 'tourney:tourney-my-tournaments' %}" class="mobile-nav__link">Tournaments</a></li>{% endif %}
+      <li><a href="{% url 'redacted-list' %}" class="mobile-nav__link">Gizmos</a></li>
+      <li>
+        {% if request.user.is_authenticated %}
+        <a href="{% url 'profile' %}" class="mobile-nav__link">Profile</a>
+        {% else %}
+        <a href="{% url 'account_login' %}" class="mobile-nav__link">Sign In</a>
+        {% endif %}
+      </li>
+    </ul>
+  </aside>
 </div>
 
 <div class="d-none d-md-block">

@@ -427,6 +427,130 @@ form .helptext {
   border-bottom: 1px solid var(--color-accent);
 }
 
+
+/*
+ * Mobile navigation drawer
+ *
+ * CSS-only slide-in panel. The hidden checkbox `#mobile-nav-toggle` is a
+ * sibling of `.mobile-nav` so the general-sibling combinator can drive the
+ * open state without JS.
+ */
+.mobile-nav-toggle[type="checkbox"] {
+  display: none;
+}
+
+.mobile-nav {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+
+.mobile-nav__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+}
+
+.mobile-nav__button:hover {
+  background-color: var(--color-surface);
+  color: var(--color-accent);
+}
+
+.mobile-nav__icon {
+  display: block;
+}
+
+.mobile-nav__overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-overlay);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-default), visibility var(--transition-default);
+  z-index: var(--z-overlay);
+  cursor: pointer;
+}
+
+.mobile-nav__drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100dvh;
+  width: min(280px, 80vw);
+  background-color: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  transform: translateX(100%);
+  transition: transform var(--transition-default);
+  z-index: var(--z-modal);
+  padding: 2rem 1.5rem;
+  overflow-y: auto;
+  box-shadow: var(--shadow-md);
+}
+
+.mobile-nav__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+
+.mobile-nav__close:hover {
+  color: var(--color-text);
+}
+
+.mobile-nav__list {
+  list-style: none;
+  margin: 4rem 0 0;
+  padding: 0;
+}
+
+.mobile-nav__list li {
+  margin: 0;
+}
+
+.mobile-nav__link {
+  display: block;
+  padding: 1rem 0.5rem;
+  color: var(--color-text);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.15rem;
+  font-size: 1.4rem;
+  font-weight: var(--weight-semibold);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mobile-nav__link:hover {
+  color: var(--color-accent);
+}
+
+/* Open state — checkbox sibling drives reveal */
+.mobile-nav-toggle:checked ~ .mobile-nav .mobile-nav__overlay {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mobile-nav-toggle:checked ~ .mobile-nav .mobile-nav__drawer {
+  transform: translateX(0);
+}
+
+/* Lock body scroll while drawer is open */
+body:has(.mobile-nav-toggle:checked) {
+  overflow: hidden;
+}
+
 .breadcrumb {
   color: var(--color-text-muted);
   font-size: smaller;
