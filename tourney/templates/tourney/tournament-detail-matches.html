@@ -53,7 +53,7 @@
                         <h3>Players Not Matched (Latest Round)</h3>
                         <div class="unmatched-players-grid">
                             {% for stage_player in unmatched_players %}
-                                <div class="unmatched-player-card">
+                                <div class="unmatched-player-card surface">
                                     <span class="player-name">{{ stage_player.player.get_display_name }}</span>
                                     {% if stage_player.player.is_guest %}
                                         <span class="player-guest-badge"></span>

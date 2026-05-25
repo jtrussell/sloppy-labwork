@@ -103,17 +103,11 @@
     margin-bottom: 1rem;
   }
 
-  .styles-demo .surface-preview {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+  .styles-demo .surface,
+  .styles-demo .surface.surface--flat,
+  .styles-demo .surface.surface--sunken {
     padding: 1.5rem;
-    background-color: var(--color-surface);
     margin: 1rem 0;
-  }
-
-  .styles-demo .surface-preview--raised {
-    background-color: var(--color-surface-raised);
-    box-shadow: var(--shadow-md);
   }
 
   .styles-demo .theme-switcher {
@@ -344,15 +338,27 @@
 
 
   <section>
-    <h2>Surface preview <span class="text-muted" style="font-size: 1.4rem">(PR 3 adoption)</span></h2>
-    <div class="surface-preview">
-      <h3 style="margin-top: 0">Default surface</h3>
-      <p>Most card-ish containers across SL will collapse into a single
-      <code>.surface</code> primitive in PR 3.</p>
+    <h2>Surface</h2>
+    <div class="subheading">.surface and its variants</div>
+
+    <div class="surface">
+      <h3 style="margin-top: 0">.surface</h3>
+      <p>Default — surface background (slightly raised feel against the page).
+      Used by <code>.unmatched-player-card</code>.</p>
     </div>
-    <div class="surface-preview surface-preview--raised">
-      <h3 style="margin-top: 0">Raised surface</h3>
-      <p>For modals and popovers.</p>
+
+    <div class="surface surface--flat">
+      <h3 style="margin-top: 0">.surface.surface--flat</h3>
+      <p>Transparent background — inherits whatever's behind it. Used by
+      <code>.lineup-card</code>, <code>.version-card</code>,
+      <code>.deck-card</code>, <code>.note-item</code>, and
+      <code>.empty-state</code>.</p>
+    </div>
+
+    <div class="surface surface--sunken">
+      <h3 style="margin-top: 0">.surface.surface--sunken</h3>
+      <p>Page background — sits "deeper" than a surface, useful for grouped
+      lists. Used by <code>.players-list</code>.</p>
     </div>
   </section>
 

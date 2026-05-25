@@ -2,7 +2,7 @@
 <div class="lineup-list">
   {% for lineup in lineups %}
   {% with latest=lineup.latest_version %}
-  <div class="lineup-card">
+  <div class="lineup-card surface surface--flat">
     {% if latest %}
     <h3 class="lineup-card__title"><a href="{% url 'lineups-version-detail' latest.code %}">{{ lineup.name }}</a></h3>
     <ul class="lineup-card__meta inline-list">
@@ -35,7 +35,7 @@
 {% endif %}
 
 {% else %}
-<div class="empty-state">
+<div class="empty-state surface surface--flat">
   {% if search_query or format_filter %}
   <p>No lineups match your search.</p>
   {% else %}

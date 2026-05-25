@@ -33,7 +33,7 @@
 {% endif %}
 
 {% if lineup.description %}
-<div class="lineup-description">
+<div class="lineup-description surface surface--flat">
   {{ lineup.description|markdown|safe }}
 </div>
 {% endif %}
@@ -48,7 +48,7 @@
 {% if versions %}
 <div class="version-list">
   {% for version in versions %}
-  <div class="version-card">
+  <div class="version-card surface surface--flat">
     <h3 class="version-card__title"><a href="{% url 'lineups-version-detail' version.code %}">{{ version.name }}</a></h3>
     <ul class="version-card__meta inline-list">
       <li>{{ version.version_decks.count }} Deck{{ version.version_decks.count|pluralize }}</li>

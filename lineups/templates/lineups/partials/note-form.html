@@ -1,4 +1,4 @@
-<div class="note-item note-item--editing" id="note-{{ note.id }}">
+<div class="note-item note-item--editing surface surface--flat" id="note-{{ note.id }}">
   <form method="post" action="{% url 'lineups-note-edit' lineup.code note.id %}" hx-post="{% url 'lineups-note-edit' lineup.code note.id %}" hx-target="#note-{{ note.id }}" hx-swap="outerHTML">
     {% csrf_token %}
     {{ form.text }}

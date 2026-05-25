@@ -278,13 +278,38 @@ form .helptext {
   letter-spacing: 2rem;
 }
 
+/*
+ * Surface
+ *
+ * Shared primitive for bordered, rounded "panel" elements. Components apply
+ * `.surface` and add their own padding, layout, and state styles.
+ *
+ *   .surface             surface bg (raised feel)
+ *   .surface.surface--flat    transparent bg (inherits parent)
+ *   .surface.surface--sunken  page bg (sunken feel, useful inside other surfaces)
+ */
+.surface {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+}
+
+.surface.surface--flat {
+  background-color: transparent;
+}
+
+.surface.surface--sunken {
+  background-color: var(--color-bg);
+}
+
+
 /* Notes */
 .note {
   margin-bottom: 2.5rem;
   border: 1px solid var(--color-text-muted);
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   padding: 1rem;
-  background-color: var(--color-bg-secondary);
+  background-color: var(--color-surface);
 }
 
 .note *:last-child {

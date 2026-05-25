@@ -79,7 +79,7 @@
      {% endif %}>
   {% if decks %}
   {% for vd in decks %}
-  <div class="deck-card{% if is_owner %} drag-drop-item{% endif %}"
+  <div class="deck-card surface surface--flat{% if is_owner %} drag-drop-item{% endif %}"
        id="deck-{{ vd.id }}"
        data-key="{{ vd.id }}"
        {% if is_owner %}x-sort:item="{{ vd.id }}"{% endif %}>

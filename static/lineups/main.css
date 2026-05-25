@@ -79,8 +79,6 @@
 .version-description {
   margin-bottom: 1.5rem;
   padding: 1rem;
-  border: 1px solid var(--color-lines);
-  border-radius: 3px;
 }
 
 .lineup-meta,
@@ -132,8 +130,6 @@
 .empty-state {
   text-align: center;
   padding: 3rem;
-  border: 1px solid var(--color-lines);
-  border-radius: 3px;
 }
 
 .empty-message {
@@ -210,8 +206,6 @@
 
 .note-item {
   padding: 1rem;
-  border: 1px solid var(--color-lines);
-  border-radius: 3px;
 }
 
 .note-item--editing {
@@ -285,8 +279,6 @@
 .version-card,
 .deck-card {
   padding: 1rem;
-  border: 1px solid var(--color-lines);
-  border-radius: 3px;
 }
 
 .lineup-card__title,
