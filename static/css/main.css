@@ -421,7 +421,7 @@ form .helptext {
 .modal {
   display: none;
   position: fixed;
-  z-index: 1000;
+  z-index: var(--z-modal);
   left: 0;
   top: 0;
   width: 100%;
@@ -541,14 +541,43 @@ footer {
   font-weight: 300;
 }
 
-/* Fancy Transition Junk */
-/* * { transition: background-color 0.3s linear, color 0.3s linear, border-color: 0.3s linear; } */
-* {
-  transition: all 0.3s linear;
+/* Targeted transitions on interactive elements.
+   Replaced the previous global `* { transition: all }` rule, which forced the
+   browser to track every property on every element. */
+a,
+.button,
+button,
+input[type="submit"],
+input[type="reset"],
+input[type="button"],
+input[type="email"],
+input[type="number"],
+input[type="search"],
+input[type="text"],
+input[type="tel"],
+input[type="url"],
+input[type="password"],
+input[type="date"],
+input[type="checkbox"],
+input[type="radio"],
+textarea,
+select,
+.button-link,
+.nav__link,
+.note,
+.modal-close,
+.toggle-switch,
+.toggle-slider {
+  transition:
+    color var(--transition-default),
+    background-color var(--transition-default),
+    border-color var(--transition-default),
+    box-shadow var(--transition-default),
+    transform var(--transition-default);
 }
 
 body.preload * {
-  transition: all none !important;
+  transition: none !important;
 }
 
 /* Skeleton Overrides */

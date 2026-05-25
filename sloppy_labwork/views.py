@@ -33,3 +33,7 @@ def the_team(request):
         'quickdraw3457': birdie(),
         'strussell': birdie(),
     })
+
+
+def styles_demo(request):
+    return render(request, 'styles-demo.html', {})

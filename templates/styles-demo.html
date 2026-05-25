@@ -1,0 +1,422 @@
+{% extends "page.html" %}
+{% load static %}
+
+{% block head_title %}Sloppy Labwork | Styles Demo{% endblock %}
+
+{% block extra_head %}
+<style>
+  .styles-demo section {
+    margin-top: 4rem;
+  }
+
+  .styles-demo h2 {
+    margin-bottom: 0.5rem;
+  }
+
+  .styles-demo .swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .styles-demo .swatch {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background-color: var(--color-surface);
+  }
+
+  .styles-demo .swatch__chip {
+    height: 60px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .styles-demo .swatch__name {
+    display: block;
+    padding: 0.5rem 0.75rem 0.25rem;
+    font-size: 1.2rem;
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+    word-break: break-all;
+  }
+
+  .styles-demo .swatch__value {
+    display: block;
+    padding: 0 0.75rem 0.5rem;
+    font-size: 1.1rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+  }
+
+  .styles-demo .scale-list {
+    list-style: none;
+    margin: 1.5rem 0;
+    padding: 0;
+  }
+
+  .styles-demo .scale-list li {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0 0 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    color: var(--color-text-muted);
+  }
+
+  .styles-demo .scale-list .scale-list__name {
+    width: 8rem;
+    flex-shrink: 0;
+  }
+
+  .styles-demo .scale-list .scale-list__bar {
+    height: 12px;
+    background-color: var(--color-primary);
+    border-radius: var(--radius-sm);
+  }
+
+  .styles-demo .radius-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .styles-demo .radius-box {
+    width: 80px;
+    height: 80px;
+    background-color: var(--color-primary);
+    color: var(--color-on-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+  }
+
+  .styles-demo .demo-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .styles-demo .surface-preview {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    background-color: var(--color-surface);
+    margin: 1rem 0;
+  }
+
+  .styles-demo .surface-preview--raised {
+    background-color: var(--color-surface-raised);
+    box-shadow: var(--shadow-md);
+  }
+
+  .styles-demo .theme-switcher {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1rem 0 2rem;
+    padding: 1rem;
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+  }
+
+  .styles-demo .theme-switcher .label {
+    font-weight: var(--weight-semibold);
+    margin-right: 0.5rem;
+  }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="styles-demo">
+
+  <h1>Styles Demo</h1>
+  <div class="subheading">Sloppy Labwork design system</div>
+
+  <p>Preview of the design tokens, typography, and components used across the
+  Sloppy Labwork site. KeyChain is intentionally not covered here. Use the
+  theme switcher to preview the four themes without changing your profile.</p>
+
+  <div class="theme-switcher">
+    <span class="label">Theme:</span>
+    <button type="button" class="button" data-theme-set="">Default (Dark)</button>
+    <button type="button" class="button" data-theme-set="1">Light</button>
+    <button type="button" class="button" data-theme-set="2">Contrast Dark</button>
+    <button type="button" class="button" data-theme-set="3">Contrast Light</button>
+  </div>
+
+
+  <section>
+    <h2>Colors</h2>
+    <div class="subheading">Surface &amp; text</div>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-bg)"></div><span class="swatch__name">--color-bg</span><span class="swatch__value" data-token-value="color-bg">…</span></div>
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-surface)"></div><span class="swatch__name">--color-surface</span><span class="swatch__value" data-token-value="color-surface">…</span></div>
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-surface-raised)"></div><span class="swatch__name">--color-surface-raised</span><span class="swatch__value" data-token-value="color-surface-raised">…</span></div>
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-text)"></div><span class="swatch__name">--color-text</span><span class="swatch__value" data-token-value="color-text">…</span></div>
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-text-muted)"></div><span class="swatch__name">--color-text-muted</span><span class="swatch__value" data-token-value="color-text-muted">…</span></div>
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-text-subtle)"></div><span class="swatch__name">--color-text-subtle</span><span class="swatch__value" data-token-value="color-text-subtle">…</span></div>
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-border)"></div><span class="swatch__name">--color-border</span><span class="swatch__value" data-token-value="color-border">…</span></div>
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-border-strong)"></div><span class="swatch__name">--color-border-strong</span><span class="swatch__value" data-token-value="color-border-strong">…</span></div>
+    </div>
+
+    <div class="subheading">Brand</div>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-primary)"></div><span class="swatch__name">--color-primary</span><span class="swatch__value" data-token-value="color-primary">…</span></div>
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-primary-hover)"></div><span class="swatch__name">--color-primary-hover</span><span class="swatch__value" data-token-value="color-primary-hover">…</span></div>
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-accent)"></div><span class="swatch__name">--color-accent</span><span class="swatch__value" data-token-value="color-accent">…</span></div>
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-accent-hover)"></div><span class="swatch__name">--color-accent-hover</span><span class="swatch__value" data-token-value="color-accent-hover">…</span></div>
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-highlight)"></div><span class="swatch__name">--color-highlight</span><span class="swatch__value" data-token-value="color-highlight">…</span></div>
+    </div>
+
+    <div class="subheading">Feedback</div>
+    <div class="swatch-grid">
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-success)"></div><span class="swatch__name">--color-success</span><span class="swatch__value" data-token-value="color-success">…</span></div>
+      <div class="swatch"><div class="swatch__chip" style="background-color: var(--color-danger)"></div><span class="swatch__name">--color-danger</span><span class="swatch__value" data-token-value="color-danger">…</span></div>
+    </div>
+  </section>
+
+
+  <section>
+    <h2>Spacing</h2>
+    <div class="subheading">--space-0 through --space-8</div>
+    <ul class="scale-list">
+      <li><span class="scale-list__name">--space-1</span><span class="scale-list__bar" style="width: var(--space-1)"></span></li>
+      <li><span class="scale-list__name">--space-2</span><span class="scale-list__bar" style="width: var(--space-2)"></span></li>
+      <li><span class="scale-list__name">--space-3</span><span class="scale-list__bar" style="width: var(--space-3)"></span></li>
+      <li><span class="scale-list__name">--space-4</span><span class="scale-list__bar" style="width: var(--space-4)"></span></li>
+      <li><span class="scale-list__name">--space-5</span><span class="scale-list__bar" style="width: var(--space-5)"></span></li>
+      <li><span class="scale-list__name">--space-6</span><span class="scale-list__bar" style="width: var(--space-6)"></span></li>
+      <li><span class="scale-list__name">--space-7</span><span class="scale-list__bar" style="width: var(--space-7)"></span></li>
+      <li><span class="scale-list__name">--space-8</span><span class="scale-list__bar" style="width: var(--space-8)"></span></li>
+    </ul>
+  </section>
+
+
+  <section>
+    <h2>Radius</h2>
+    <div class="radius-grid">
+      <div class="radius-box" style="border-radius: var(--radius-sm)">sm</div>
+      <div class="radius-box" style="border-radius: var(--radius-md)">md</div>
+      <div class="radius-box" style="border-radius: var(--radius-lg)">lg</div>
+      <div class="radius-box" style="border-radius: var(--radius-pill)">pill</div>
+    </div>
+  </section>
+
+
+  <section>
+    <h2>Typography</h2>
+    <h1>Heading One</h1>
+    <div class="subheading">subheading element</div>
+    <h2>Heading Two</h2>
+    <h3>Heading Three</h3>
+    <h4>Heading Four</h4>
+    <h5>Heading Five</h5>
+    <h6>Heading Six</h6>
+
+    <p>Lorem ipsum dolor sit amet, <a href="#">a link</a> consectetur adipiscing
+    elit. Nullam <strong>strong text</strong> and <em>emphasis text</em> with a
+    bit of <code>inline code</code> sprinkled in. Aliquam erat volutpat.</p>
+
+    <p class="text-muted">A paragraph using <code>.text-muted</code> for quieter copy.</p>
+    <p class="text-success">A paragraph using <code>.text-success</code>.</p>
+    <p class="text-danger">A paragraph using <code>.text-danger</code>.</p>
+
+    <h3>Lists</h3>
+
+    <h4>Default unordered</h4>
+    <ul>
+      <li>First item</li>
+      <li>Second item</li>
+      <li>Third item</li>
+    </ul>
+
+    <h4>Default ordered</h4>
+    <ol>
+      <li>First item</li>
+      <li>Second item</li>
+      <li>Third item</li>
+    </ol>
+
+    <h4><code>ul.flat-list</code></h4>
+    <ul class="flat-list">
+      <li>No bullets</li>
+      <li>Compact spacing</li>
+      <li>Useful in dense layouts</li>
+    </ul>
+
+    <h4><code>ul.inline-list</code></h4>
+    <ul class="inline-list">
+      <li>Home</li>
+      <li>Notes</li>
+      <li>Gizmos</li>
+      <li>Profile</li>
+    </ul>
+
+    <h3>Blockquote</h3>
+    <blockquote>
+      Stay sloppy.
+    </blockquote>
+  </section>
+
+
+  <section>
+    <h2>Buttons</h2>
+    <div class="demo-row">
+      <a href="#" class="button">.button</a>
+      <a href="#" class="button button-primary">.button.button-primary</a>
+      <a href="#" class="button" disabled>.button[disabled]</a>
+    </div>
+    <div class="demo-row">
+      <a href="#" class="button button-small">.button-small</a>
+      <button type="button" class="button-link">.button-link</button>
+      <button type="button" class="button-link button-link-bordered">.button-link-bordered</button>
+    </div>
+    <div class="demo-row">
+      <a href="#" class="button button-jumbo">.button-jumbo</a>
+    </div>
+  </section>
+
+
+  <section>
+    <h2>Forms</h2>
+    <form onsubmit="event.preventDefault()" class="form-wide">
+      <label for="demo-text">Text input</label>
+      <input type="text" id="demo-text" placeholder="Type something…" />
+
+      <label for="demo-helptext">Field with helptext</label>
+      <input type="text" id="demo-helptext" />
+      <span class="helptext">A short hint about this field.</span>
+
+      <label for="demo-date">Date</label>
+      <input type="date" id="demo-date" />
+
+      <label for="demo-select">Select</label>
+      <select id="demo-select">
+        <option>Option one</option>
+        <option>Option two</option>
+      </select>
+
+      <label for="demo-textarea">Textarea</label>
+      <textarea id="demo-textarea" placeholder="Tell us more…"></textarea>
+
+      <fieldset>
+        <legend>Checkbox + radio</legend>
+        <label><input type="checkbox" /> <span class="label-body">Checkbox</span></label>
+        <label><input type="radio" name="demo-radio" /> <span class="label-body">Radio A</span></label>
+        <label><input type="radio" name="demo-radio" /> <span class="label-body">Radio B</span></label>
+      </fieldset>
+
+      <div class="demo-row">
+        <button type="submit" class="button button-primary">Primary</button>
+        <button type="button" class="button">Cancel</button>
+      </div>
+
+      <div class="input-with-button-group">
+        <input type="text" placeholder="With attached button" />
+        <button type="button" class="button">Go</button>
+      </div>
+    </form>
+  </section>
+
+
+  <section>
+    <h2>Notes</h2>
+    <div class="note">
+      <ul class="note__list">
+        <li>This is a default note message.</li>
+      </ul>
+    </div>
+    <div class="note note-danger">
+      <ul class="note__list">
+        <li>This is a danger note message.</li>
+      </ul>
+    </div>
+  </section>
+
+
+  <section>
+    <h2>Surface preview <span class="text-muted" style="font-size: 1.4rem">(PR 3 adoption)</span></h2>
+    <div class="surface-preview">
+      <h3 style="margin-top: 0">Default surface</h3>
+      <p>Most card-ish containers across SL will collapse into a single
+      <code>.surface</code> primitive in PR 3.</p>
+    </div>
+    <div class="surface-preview surface-preview--raised">
+      <h3 style="margin-top: 0">Raised surface</h3>
+      <p>For modals and popovers.</p>
+    </div>
+  </section>
+
+
+  <section>
+    <h2>Modal</h2>
+    <p>Modal styles are defined in <code>main.css</code> and z-indexed via
+    <code>--z-modal</code>.</p>
+    <button type="button" class="button button-primary" id="demo-open-modal">Open modal</button>
+
+    <div class="modal" id="demo-modal" aria-hidden="true">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">Modal heading</h3>
+          <button type="button" class="modal-close" id="demo-close-modal" aria-label="Close"></button>
+        </div>
+        <p>Sample modal content.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  (function () {
+    var html = document.documentElement;
+
+    // Theme switcher (client-only — does not persist).
+    document.querySelectorAll('[data-theme-set]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var value = btn.getAttribute('data-theme-set');
+        if (value === '' || value === null) {
+          html.removeAttribute('data-theme');
+        } else {
+          html.setAttribute('data-theme', value);
+        }
+        refreshSwatchValues();
+      });
+    });
+
+    // Render computed token values into each swatch.
+    function refreshSwatchValues() {
+      var styles = getComputedStyle(html);
+      document.querySelectorAll('[data-token-value]').forEach(function (el) {
+        var token = el.getAttribute('data-token-value');
+        var value = styles.getPropertyValue('--' + token).trim();
+        el.textContent = value || '(unset)';
+      });
+    }
+    refreshSwatchValues();
+
+    // Modal demo.
+    var modal = document.getElementById('demo-modal');
+    document.getElementById('demo-open-modal').addEventListener('click', function () {
+      modal.classList.add('modal--active');
+    });
+    document.getElementById('demo-close-modal').addEventListener('click', function () {
+      modal.classList.remove('modal--active');
+    });
+    modal.addEventListener('click', function (event) {
+      if (event.target === modal) {
+        modal.classList.remove('modal--active');
+      }
+    });
+  }());
+</script>
+{% endblock %}
