@@ -2572,3 +2572,150 @@ class CycleRandomTiebreakersTestCase(TestCase):
         other_sp.refresh_from_db()
         self.assertNotEqual(current_sp.tiebreaker_value, self.SENTINEL)
         self.assertEqual(other_sp.tiebreaker_value, self.SENTINEL)
+
+
+class SwissFoldInterlaceTestCase(TestCase):
+    """Tests for the fold/interlace ordering used by the 15+ greedy Swiss path.
+
+    The shuffle only decides which top-half player meets which bottom-half
+    player, so these tests assert the deterministic invariants that hold for
+    every shuffle outcome: permutation, score-group order, and the cross-half
+    fold structure.
+    """
+
+    def _new_strategy(self):
+        from tourney.pairing_strategies.swiss import SwissPairingStrategy
+        return SwissPairingStrategy()
+
+    def test_interlace_group_is_a_permutation(self):
+        strategy = self._new_strategy()
+        for size in range(0, 12):
+            group = list(range(size))
+            for _ in range(10):
+                result = strategy._interlace_group(group)
+                self.assertEqual(sorted(result), group)
+
+    def test_interlace_group_passthrough_for_small_groups(self):
+        strategy = self._new_strategy()
+        self.assertEqual(strategy._interlace_group([]), [])
+        self.assertEqual(strategy._interlace_group([1]), [1])
+        self.assertEqual(strategy._interlace_group([1, 2]), [1, 2])
+
+    def test_interlace_group_even_crosses_halves(self):
+        strategy = self._new_strategy()
+        group = list(range(8))
+        top, bottom = set(group[:4]), set(group[4:])
+        for _ in range(20):
+            result = strategy._interlace_group(group)
+            self.assertEqual({result[i] for i in range(0, 8, 2)}, top)
+            self.assertEqual({result[i] for i in range(1, 8, 2)}, bottom)
+
+    def test_interlace_group_odd_floats_bottom_half(self):
+        strategy = self._new_strategy()
+        group = list(range(5))
+        top, bottom = set(group[:2]), set(group[2:])
+        for _ in range(20):
+            result = strategy._interlace_group(group)
+            self.assertEqual({result[0], result[2]}, top)
+            self.assertEqual({result[1], result[3], result[4]}, bottom)
+            self.assertIn(result[-1], bottom)
+
+    def test_fold_interlace_groups_and_folds(self):
+        from types import SimpleNamespace
+
+        strategy = self._new_strategy()
+        scores = [2, 2, 2, 2, 1, 1, 1, 1, 1, 0, 0, 0]
+        players = [SimpleNamespace(id=i) for i in range(len(scores))]
+        score_by_id = {p.id: scores[p.id] for p in players}
+        strategy._get_player_score = lambda p: score_by_id[p.id]
+
+        for _ in range(20):
+            result = strategy._fold_interlace(players)
+
+            self.assertEqual(
+                sorted(p.id for p in result), list(range(len(scores))))
+
+            result_scores = [score_by_id[p.id] for p in result]
+            self.assertEqual(result_scores, sorted(result_scores, reverse=True))
+
+            index = 0
+            for score in (2, 1, 0):
+                group_ids = [p.id for p in players if score_by_id[p.id] == score]
+                size = len(group_ids)
+                block = result[index:index + size]
+                index += size
+
+                self.assertEqual({p.id for p in block}, set(group_ids))
+
+                split = size // 2
+                top = set(group_ids[:split])
+                bottom = set(group_ids[split:])
+                top_positions = {block[i].id for i in range(0, 2 * split, 2)}
+                self.assertEqual(top_positions, top)
+                self.assertEqual(
+                    {p.id for p in block} - top_positions, bottom)
+
+    def _build_swiss_stage(self, player_count, name):
+        owner = User.objects.create_user(
+            f'{name}_owner', f'{name}_owner@test.com', 'password')
+        tournament = Tournament.objects.create(
+            name=name, owner=owner, is_accepting_registrations=True)
+        stage = Stage.objects.create(
+            tournament=tournament, name='Main Stage', order=1,
+            pairing_strategy='swiss')
+        stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+        stage_players = []
+        for i in range(player_count):
+            user = User.objects.create_user(
+                f'{name}_player_{i+1}', f'{name}_player_{i+1}@test.com',
+                'password')
+            player = Player.objects.create(user=user, tournament=tournament)
+            stage_players.append(StagePlayer.objects.create(
+                player=player, stage=stage, seed=i + 1))
+        return stage, stage_players
+
+    def test_round_two_folds_within_score_groups_for_large_field(self):
+        strategy = get_pairing_strategy('swiss')
+        stage, stage_players = self._build_swiss_stage(16, 'fold16')
+
+        round_one = Round.objects.create(stage=stage, order=1)
+        strategy.make_pairings_for_round(round_one)
+        for match in Match.objects.filter(round=round_one):
+            MatchResult.objects.create(match=match, winner=match.player_one)
+
+        round_two = Round.objects.create(stage=stage, order=2)
+        strategy.make_pairings_for_round(round_two)
+        matches = list(Match.objects.filter(round=round_two))
+
+        self.assertEqual(len(matches), 8)
+        self.assertEqual(sum(1 for m in matches if m.player_two is None), 0)
+
+        standings = StandingCalculator.get_stage_standings(stage)
+        wins_by_id = {s['stage_player'].id: s['wins'] for s in standings}
+
+        groups = {}
+        for sp in stage_players:
+            groups.setdefault(wins_by_id[sp.id], []).append(sp)
+
+        top_half_ids = set()
+        for members in groups.values():
+            members.sort(key=lambda sp: sp.seed)
+            split = len(members) // 2
+            top_half_ids.update(sp.id for sp in members[:split])
+
+        paired = []
+        for match in matches:
+            one, two = match.player_one, match.player_two
+            self.assertEqual(
+                wins_by_id[one.id], wins_by_id[two.id],
+                'Round 2 paired players from different score groups')
+            self.assertEqual(
+                {one.id in top_half_ids, two.id in top_half_ids}, {True, False},
+                'Round 2 paired two players from the same half of a score group')
+            paired.extend([one.id, two.id])
+
+        self.assertEqual(
+            sorted(paired), sorted(sp.id for sp in stage_players))

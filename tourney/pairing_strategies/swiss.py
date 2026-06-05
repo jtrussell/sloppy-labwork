@@ -91,6 +91,54 @@ class SwissPairingStrategy(PairingStrategy):
             if s['stage_player'].player.status == Player.PlayerStatus.ACTIVE
         ]
 
+    def _fold_interlace(self, sorted_players):
+        """
+        Reorder standings-sorted players so the greedy matcher produces fold
+        pairings within each score group.
+
+        Players are grouped by win count, each group is split into a top and
+        bottom half (the bottom half taking the extra player in odd groups),
+        both halves are shuffled, and the halves are interlaced so that
+        consecutive positions pair a top-half player against a bottom-half one.
+        """
+        score_by_id = {p.id: self._get_player_score(p) for p in sorted_players}
+
+        ordered = []
+        group = []
+        group_score = None
+        for player in sorted_players:
+            score = score_by_id[player.id]
+            if score != group_score:
+                ordered.extend(self._interlace_group(group))
+                group = [player]
+                group_score = score
+            else:
+                group.append(player)
+        ordered.extend(self._interlace_group(group))
+
+        return ordered
+
+    def _interlace_group(self, group):
+        """
+        Split a single score group into shuffled top and bottom halves and
+        interlace them so adjacency pairing crosses the halves.
+        """
+        if len(group) <= 2:
+            return list(group)
+
+        split = len(group) // 2
+        top = group[:split]
+        bottom = group[split:]
+        random.shuffle(top)
+        random.shuffle(bottom)
+
+        interlaced = []
+        for i in range(len(bottom)):
+            if i < len(top):
+                interlaced.append(top[i])
+            interlaced.append(bottom[i])
+        return interlaced
+
     def _create_simple_pairings(self, stage_players):
         """
         Create simple consecutive pairings for first round.
@@ -148,6 +196,7 @@ class SwissPairingStrategy(PairingStrategy):
         sorted_players = self._get_sorted_players_by_standings(round_obj.stage)
         previous_opponents = self._get_previous_opponents(round_obj.stage)
         undefeated_player_ids = self._get_undefeated_player_ids(round_obj.stage)
+        fold_players = self._fold_interlace(sorted_players)
 
         if len(sorted_players) % 2 == 1:
             bye_history = self._get_bye_history(round_obj.stage)
@@ -159,7 +208,7 @@ class SwissPairingStrategy(PairingStrategy):
                 best_result = None
 
                 for candidate in tier:
-                    remaining = [p for p in sorted_players if p.id != candidate.id]
+                    remaining = [p for p in fold_players if p.id != candidate.id]
                     result = []
                     used = set()
                     if self._backtrack_pair(remaining, result, used, 0, previous_opponents):
@@ -174,7 +223,7 @@ class SwissPairingStrategy(PairingStrategy):
                     return pairings + [(bye_player, None)]
 
             fallback_bye = sorted_players[-1]
-            remaining = [p for p in sorted_players if p.id != fallback_bye.id]
+            remaining = [p for p in fold_players if p.id != fallback_bye.id]
             return self._force_pair_with_repeats(remaining, previous_opponents) + [(fallback_bye, None)]
 
         # Even number of players
@@ -182,11 +231,11 @@ class SwissPairingStrategy(PairingStrategy):
         result = []
         used = set()
 
-        if self._backtrack_pair(sorted_players, result, used, 0, previous_opponents):
+        if self._backtrack_pair(fold_players, result, used, 0, previous_opponents):
             return result
 
         # Fallback to simple pairing if backtracking fails
-        return self._force_pair_with_repeats(sorted_players, previous_opponents)
+        return self._force_pair_with_repeats(fold_players, previous_opponents)
 
     def _generate_perfect_matchings(self, players):
         """
