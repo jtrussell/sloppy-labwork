@@ -38,9 +38,6 @@ if not DEBUG or IS_HEROKU:
 
 SITE_ID = int(os.environ['SITE_ID'])
 
-MAX_UPLOADS_PER_DAY = int(os.environ['MAX_UPLOADS_PER_DAY'])
-
-AWS_S3_BUCKET_VERIFICATION_PHOTOS_BUCKET = os.environ['AWS_S3_BUCKET_VERIFICATION_PHOTOS_BUCKET']
 AWS_S3_BUCKET_MV_QRCODE = os.environ['AWS_S3_BUCKET_MV_QRCODE']
 
 # Application definition
@@ -57,12 +54,10 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.discord',
-    'register',
     'ratings',
     'posts',
     'decks',
     'user_profile',
-    'tournaments',
     'redacted',
     'transporter_platform',
     'pmc',
@@ -224,10 +219,8 @@ STORAGES = {
 }
 
 # Feature Flags
-FT_USE_REGISTER = os.environ['FT_USE_REGISTER'] == 'True'
 FT_USE_RATINGS = os.environ['FT_USE_RATINGS'] == 'True'
 FT_USE_POSTS = os.environ['FT_USE_POSTS'] == 'True'
-FT_USE_EVENTS = os.environ['FT_USE_EVENTS'] == 'True'
 FT_USE_TOURNEYS = os.environ['FT_USE_TOURNEYS'] == 'True'
 
 # Bootstrap Heroku settings

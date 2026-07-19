@@ -1,10 +1,8 @@
 from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
-from django.db.models import Q
 from django.shortcuts import redirect, render
 from allauth.account.decorators import login_required
 from django.forms.models import model_to_dict
-from register.models import DeckRegistration
 from .forms import EditUsernameForm, EditUserProfileForm
 
 
@@ -33,19 +31,8 @@ def index(request):
 
     discord_handle = request.user.profile.discord_handle
 
-    my_registrations = DeckRegistration.objects.filter(user=request.user)
-    my_registrations = my_registrations.filter(
-        Q(status=DeckRegistration.Status.VERIFIED_ACTIVE) | Q(status=DeckRegistration.Status.PENDING))
-
-    num_registrations = len(my_registrations)
-    my_pending_registrations = my_registrations.filter(
-        status=DeckRegistration.Status.PENDING)
-    num_pending_registrations = len(my_pending_registrations)
-
     return render(request, 'user_profile/index.html', {
         'username_form': username_form,
         'profile_form': profile_form,
-        'discord_handle': discord_handle,
-        'num_registrations': num_registrations,
-        'num_pending_registrations': num_pending_registrations
+        'discord_handle': discord_handle
     })

@@ -18,9 +18,7 @@
     </label>
     <ul class="mobile-nav__list">
       <li><a href="{% url 'home' %}" class="mobile-nav__link">Home</a></li>
-      {% if ft_use_events %}<li><a href="{% url 'tournaments-registartion-list' %}" class="mobile-nav__link">Events</a></li>{% endif %}
       {% if ft_use_posts %}<li><a href="{% url 'posts-list' %}" class="mobile-nav__link">Notes</a></li>{% endif %}
-      {% if ft_use_register %}<li><a href="{% url 'register-home' %}" class="mobile-nav__link">Register</a></li>{% endif %}
       {% if ft_use_ratings %}<li><a href="{% url 'home-ratings' %}" class="mobile-nav__link">Ratings</a></li>{% endif %}
       {% if ft_use_tourneys %}<li><a href="{% url 'tourney:tourney-my-tournaments' %}" class="mobile-nav__link">Tournaments</a></li>{% endif %}
       <li><a href="{% url 'redacted-list' %}" class="mobile-nav__link">Gizmos</a></li>
@@ -43,26 +41,10 @@
       </a>
     </li>
 
-    {% if ft_use_events %}
-    <li class="nav__item">
-      <a href="{%url 'tournaments-registartion-list' %}" class="nav__link">
-        Events
-      </a>
-    </li>
-    {% endif %}
-
     {% if ft_use_posts %}
     <li class="nav__item">
       <a href="{%url 'posts-list' %}" class="nav__link">
         Notes
-      </a>
-    </li>
-    {% endif %}
-
-    {% if ft_use_register %}
-    <li class="nav__item">
-      <a href="{% url 'register-home' %}" class="nav__link">
-        Register
       </a>
     </li>
     {% endif %}
