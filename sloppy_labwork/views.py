@@ -12,6 +12,16 @@ def birdie():
     )[0]
 
 
+def birdie_or_moose():
+    """
+    Spits out a random birdie or moose based on science.
+    """
+    return random.choices(
+        [birdie(), "🫎"],
+        [4, 6]
+    )[0]
+
+
 def index(request):
     return render(request, 'page-home.html', {})
 
@@ -28,7 +38,7 @@ def the_team(request):
         'jtrussell': birdie(),
         'kveld': birdie(),
         'miggy9001': birdie(),
-        'moosemandude': birdie(),
+        'moosemandude': birdie_or_moose(),
         'not2night': birdie(),
         'nowinstereo': birdie(),
         'quickdraw3457': birdie(),
