@@ -28,6 +28,7 @@ def the_team(request):
         'jtrussell': birdie(),
         'kveld': birdie(),
         'miggy9001': birdie(),
+        'moosemandude': birdie(),
         'not2night': birdie(),
         'nowinstereo': birdie(),
         'quickdraw3457': birdie(),

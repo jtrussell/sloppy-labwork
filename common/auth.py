@@ -14,6 +14,8 @@ _TEAMMATE_DISCORD_IDS = {
     '558705856019955713',  # not2night
     '405869761902149633',  # nowinstereo
     '577478847243747338',  # strussell
+    '263494488549359616',  # Miggy9001
+    '401916665551650819',  # Moosemandude
 }
 
 
