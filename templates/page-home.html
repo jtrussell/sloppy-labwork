@@ -1,47 +1,51 @@
-{% extends base_template %}
+{% extends base_template %} {% block content %}
+<h1>Hello, Everybody!</h1>
+<p>And welcome back to the <span class="brand">Sloppy Lab</span>!</p>
+<p>
+  You've found a site dedicated to providing tools and resources to the KeyForge
+  community and event organizers.
+</p>
 
-{% block content %}
-  <h1>Hello, Everybody!</h1>
-  <p>And welcome back to the <span class="brand">Sloppy Lab</span>!</p>
-  <p>You've found a site dedicated to providing tools and resources to the
-  KeyForge community and event organizers.</p>
+<p>
+  <span class="brand">Sloppy Labwork</span> is team of KeyForge players invested
+  in not just leveling up our own game, but also creating a better experience
+  for those around us.
+</p>
 
-  <p><span class="brand">Sloppy Labwork</span> is team of KeyForge players
-  invested in not just leveling up our own game, but also creating a better
-  experience for those around us.</p>
+<p>Looking for sweet sweet KeyForge content?</p>
 
-  <p>Looking for sweet sweet KeyForge content?</p>
+<ul>
+  <li>
+    <a href="https://open.spotify.com/show/2P9gscRTrxfjWkGLB5tvtE"
+      >Enjoy our podcast</a
+    >, scraped from the <em>Bottom of the Beaker</em>. New episodes are recorded
+    live every Tuesday on
+    <a href="https://discord.gg/r8PUhmtruM">our Discord server</a>.
+  </li>
+  <li>
+    Check out some of the <a href="{% url 'redacted-list' %}"> strangest gizmos around.</a>
+  </li>
+  <li>
+    Read from our very own <a href="{% url 'posts-list' %}">lab notes 🤓</a>.
+  </li>
+</ul>
 
-  <ul>
-    <li>
-      <a href="https://open.spotify.com/show/2P9gscRTrxfjWkGLB5tvtE">
-        Our podcast, scraped from the bottom of the beaker
-      </a>
-    </li>
-    <li>
-      <a href="https://twitch.tv/SloppyLabwork">
-        <img class="icon" src="https://static.sloppylabwork.com/twitch-brand-assets/purple/glitch.svg" />/SloppyLabwork
-      </a>
-    </li>
-    <li>
-      <a href="https://www.youtube.com/channel/UC70ws5mda2XJ2E6P9kTKPwA">
-        Sloppy Labwork on YouTube
-      </a>
-    </li>
-    <li>
-      <a href="{% url 'posts-list' %}">
-        Our very own notes 🤓
-      </a>
-    </li>
-  </ul>
+<p>
+  Join us on Twitch Wednesdays at 9:30pm Eastern for live recordings of Bottom
+  of the Beaker.
+</p>
 
-  <p>Join us on Twitch Wednesdays at 9:30pm Eastern for live recordings of Bottom
-  of the Beaker.</p>
+<p>
+  <a href="{% url 'redacted-knowledge' %}"
+    >Got a question or topic idea for our show?</a
+  >
+</p>
 
-  <p><a href="{% url 'redacted-knowledge' %}">Got a question or topic idea for our show?</a></p>
+<p>Stay sloppy!</p>
 
-  <p>Stay sloppy!</p>
-
-  <aside><span class="brand">Sloppy Labwork</span> is not affiliated with Ghost Galaxy, Fantasy
-  Flight Games, or Asmodee in any way (but if they want to send us money... I mean... sure?).</aside>
+<aside>
+  <span class="brand">Sloppy Labwork</span> is not affiliated with Ghost Galaxy,
+  Fantasy Flight Games, or Asmodee in any way (but if they want to send us
+  money... I mean... sure?).
+</aside>
 {% endblock %}
