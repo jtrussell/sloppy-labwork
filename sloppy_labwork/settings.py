@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'tourney',
     'timekeeper',
     'lineups',
+    'shortlinks',
     'common',
     'django_hosts',
     'django_htmx',
