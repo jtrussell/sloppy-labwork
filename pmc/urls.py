@@ -67,6 +67,7 @@ urlpatterns = [
     path('pg/<slug:slug>/results/<int:pk>',
          views.result_detail, name='pmc-result-detail'),
     path('find/', views.playgroup_finder, name='pmc-finder'),
+    path('find/groups/', views.playgroup_finder_table, name='pmc-finder-table'),
     path('api/finder/', views.playgroup_finder_data, name='pmc-finder-data'),
     path('leaderboard/', views.global_leaderboard, name='pmc-leaderboard'),
     path('leaderboard/<int:pk>/', views.global_leaderboard, name='pmc-leaderboard'),

@@ -18,15 +18,25 @@
 
 	<link rel="icon" type="image/svg+xml" href="{% static 'pmc/img/favicon.png' %}">
 	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+	<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha256-YU3qCpj/P06tdPBJGPax0bm6Q1wltfwjsho5TR4+TYc=" crossorigin="" />
+	<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" integrity="sha256-YSWCMtmNZNwqex4CEw1nQhvFub2lmU7vcCKP+XVwwXA=" crossorigin="" />
 	<link rel="stylesheet" href="{% static 'pmc/css/finder.css' %}" />
 
 	<title>Find a Group — KeyChain</title>
 </head>
 
-<body>
-	<div class="finder-chrome">
-		<a href="{% url 'pmc-my-keychain' %}" class="finder-wordmark"></a>
-		<nav class="finder-nav">
+<body class="finder-page">
+	<div class="finder-chrome" id="finder-chrome">
+		<a href="{% url 'pmc-my-keychain' %}" class="finder-wordmark" aria-label="KeyChain"></a>
+		<button
+			type="button"
+			class="finder-menu-toggle"
+			id="finder-menu-toggle"
+			aria-controls="finder-nav"
+			aria-expanded="false"
+			aria-label="Menu"
+		><span></span></button>
+		<nav class="finder-nav" id="finder-nav">
 			{% for link in nav_links %}
 			<a
 				href="{{ link.url }}"
@@ -37,15 +47,24 @@
 	</div>
 
 	<div class="finder-layout" id="finder-layout">
-		<div class="finder-panel">
+		<div class="finder-panel" id="finder-panel" data-sheet-state="peek">
+			<button
+				type="button"
+				class="finder-sheet-handle"
+				id="finder-sheet-handle"
+				aria-controls="finder-panel"
+				aria-label="Resize results panel"
+			></button>
+
 			<h2 class="no-top-margin">Find a Group</h2>
 
 			<div class="finder-search">
 				<input
-					type="text"
+					type="search"
 					id="finder-search-input"
-					placeholder="Search..."
+					placeholder="Search groups, venues, places..."
 					autocomplete="off"
+					enterkeyhint="search"
 				/>
 			</div>
 
@@ -66,15 +85,23 @@
 						<input type="checkbox" id="finder-upcoming-events" />
 					</div>
 				</details>
+				<a class="finder-view-link" href="{% url 'pmc-finder-table' %}">Table view</a>
 			</div>
 
+			<div class="finder-results-summary" id="finder-results-summary" aria-live="polite"></div>
 			<ul class="finder-results" id="finder-results"></ul>
+			<div class="finder-pagination" id="finder-pagination" hidden>
+				<button type="button" class="btn" id="finder-page-previous" aria-label="Previous page">&laquo;</button>
+				<span id="finder-page-label"></span>
+				<button type="button" class="btn" id="finder-page-next" aria-label="Next page">&raquo;</button>
+			</div>
 		</div>
 
 		<div class="finder-map" id="finder-map"></div>
 	</div>
 
 	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+	<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
 	<script>window.FINDER_API_URL = '{% url "pmc-finder-data" %}';</script>
 	<script src="{% static 'pmc/scripts/finder.js' %}"></script>
 </body>

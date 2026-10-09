@@ -9,7 +9,7 @@ from django.conf import settings
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
-from django.db.models import Exists, OuterRef, Sum, Count, Q
+from django.db.models import Exists, OuterRef, Sum, Count, Q, Prefetch
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.views import generic
@@ -43,7 +43,7 @@ from .models import Background
 from .models import BackgroundCategory
 from .models import RankingPointsMap, RankingPointsMapVersion
 from .models import AwardAssignmentService
-from .models import Venue, PlaygroupVenue, PlaygroupType, EventFormat
+from .models import Venue, PlaygroupVenue, PlaygroupType, EventFormat, PlaygroupQuerySet
 from .models import exclude_upcoming_event_results
 
 
@@ -1470,6 +1470,20 @@ def hydrate_result_decks(request):
     return HttpResponse('Done.', content_type='text/plain')
 
 
+FINDER_TABLE_PAGE_SIZE = 20
+FINDER_MODE_DIGITAL = 'digital'
+FINDER_MODE_IN_PERSON = 'in_person'
+
+
+def parse_event_format_filter(raw_event_format):
+    if raw_event_format == PlaygroupQuerySet.UNFORMATTED_EVENT_FORMAT:
+        return raw_event_format
+    try:
+        return int(raw_event_format)
+    except (TypeError, ValueError):
+        return None
+
+
 def playgroup_finder(request):
     event_formats = EventFormat.objects.all()
     return render(request, 'pmc/g-finder.html', {
@@ -1478,89 +1492,152 @@ def playgroup_finder(request):
 
 
 def playgroup_finder_data(request):
-    playgroups_with_venues = Playgroup.objects.filter(
-        venues__latitude__isnull=False,
-        venues__longitude__isnull=False,
-    ).distinct().annotate(
+    mappable_venue_links = PlaygroupVenue.objects.filter(
+        venue__latitude__isnull=False,
+        venue__longitude__isnull=False,
+    ).select_related('venue')
+
+    playgroups = Playgroup.objects.discoverable().with_mappable_venues().annotate(
         member_count=Count('members', distinct=True)
-    ).prefetch_related('venues', 'playgroup_venues')
+    ).select_related('type').prefetch_related(
+        Prefetch('playgroup_venues', queryset=mappable_venue_links,
+                 to_attr='mappable_venue_links')
+    ).order_by('name')
 
     search = request.GET.get('search', '').strip()
     if search:
-        playgroups_with_venues = playgroups_with_venues.filter(
-            Q(name__icontains=search) |
-            Q(venues__city__icontains=search) |
-            Q(venues__state_province__icontains=search)
+        playgroups = playgroups.matching_search(
+            search, mappable_venues_only=True)
+
+    event_format = parse_event_format_filter(request.GET.get('event_format'))
+    upcoming_only = request.GET.get('upcoming_events') == '1'
+    if event_format or upcoming_only:
+        playgroups = playgroups.hosting_events(
+            event_format=event_format,
+            upcoming_only=upcoming_only,
+            is_digital=False,
         )
 
-    upcoming_only = request.GET.get('upcoming_events')
-    if upcoming_only == '1':
-        cutoff = date.today() - timedelta(days=1)
-        upcoming_events = Event.objects.filter(
-            playgroups=OuterRef('pk'),
-            start_date__gte=cutoff,
-        ).exclude(
-            results__finishing_position__isnull=False,
-        )
-        playgroups_with_venues = playgroups_with_venues.filter(
-            Exists(upcoming_events)
-        )
-
-    event_format = request.GET.get('event_format')
-    if event_format == 'other':
-        playgroups_with_venues = playgroups_with_venues.filter(
-            events__format__isnull=True
-        )
-    elif event_format:
-        try:
-            playgroups_with_venues = playgroups_with_venues.filter(
-                events__format_id=int(event_format)
-            )
-        except ValueError:
-            pass
-
-    max_results = 10
-    total_count = playgroups_with_venues.count()
-    playgroups_with_venues = playgroups_with_venues[:max_results]
-
-    results = []
-    for pg in playgroups_with_venues:
-        venues_data = []
-        for pv in pg.playgroup_venues.select_related('venue').all():
-            venue = pv.venue
-            if not venue.has_coordinates():
-                continue
-            venues_data.append({
-                'id': venue.id,
-                'name': venue.name,
-                'latitude': float(venue.latitude),
-                'longitude': float(venue.longitude),
-                'city': venue.city or '',
-                'state_province': venue.state_province or '',
-                'is_primary': pg.primary_venue_id == venue.id,
-            })
-
-        if not venues_data:
-            continue
-
-        primary = next(
-            (v for v in venues_data if v['is_primary']), venues_data[0])
-
-        results.append({
-            'id': pg.id,
-            'name': pg.name,
-            'slug': pg.slug,
-            'member_count': pg.member_count,
-            'type': pg.type.name if pg.type else None,
-            'logo_src': pg.get_logo_src(),
-            'url': reverse('pmc-pg-detail', args=[pg.slug]),
-            'primary_latitude': primary['latitude'],
-            'primary_longitude': primary['longitude'],
-            'venues': venues_data,
-        })
+    results = [
+        serialize_playgroup_for_map(playgroup) for playgroup in playgroups
+    ]
 
     return JsonResponse({
         'playgroups': results,
-        'total_count': total_count,
-        'capped': total_count > max_results,
+        'total_count': len(results),
     })
+
+
+def serialize_playgroup_for_map(playgroup):
+    venues_data = [
+        {
+            'id': link.venue.id,
+            'name': link.venue.name,
+            'latitude': float(link.venue.latitude),
+            'longitude': float(link.venue.longitude),
+            'city': link.venue.city or '',
+            'state_province': link.venue.state_province or '',
+            'is_primary': playgroup.primary_venue_id == link.venue.id,
+        }
+        for link in playgroup.mappable_venue_links
+    ]
+    return {
+        'id': playgroup.id,
+        'name': playgroup.name,
+        'slug': playgroup.slug,
+        'member_count': playgroup.member_count,
+        'type': playgroup.type.name if playgroup.type else None,
+        'logo_src': playgroup.get_logo_src(),
+        'url': reverse('pmc-pg-detail', args=[playgroup.slug]),
+        'venues': venues_data,
+    }
+
+
+def playgroup_finder_table(request):
+    search = request.GET.get('search', '').strip()
+    mode = request.GET.get('mode', '')
+    event_format = parse_event_format_filter(request.GET.get('event_format'))
+    upcoming_only = request.GET.get('upcoming_events') == '1'
+    country = request.GET.get('country', '')
+    region = request.GET.get('region', '')
+
+    countries = list(
+        Venue.objects.used_by_discoverable_playgroups()
+        .exclude(country__isnull=True).exclude(country='')
+        .order_by('country').values_list('country', flat=True).distinct()
+    )
+    if country not in countries:
+        country = ''
+
+    regions = []
+    if country:
+        regions = list(
+            Venue.objects.used_by_discoverable_playgroups()
+            .filter(country=country)
+            .exclude(state_province__isnull=True).exclude(state_province='')
+            .order_by('state_province').values_list('state_province', flat=True).distinct()
+        )
+    if region not in regions:
+        region = ''
+
+    playgroups = Playgroup.objects.discoverable().annotate_is_primarily_digital().annotate(
+        member_count=Count('members', distinct=True)
+    ).select_related('type', 'primary_venue').prefetch_related('venues').order_by('name')
+
+    if search:
+        playgroups = playgroups.matching_search(search)
+
+    if country:
+        playgroups = playgroups.located_in(country, region)
+
+    events_are_digital = None
+    if mode == FINDER_MODE_DIGITAL:
+        playgroups = playgroups.filter(is_primarily_digital=True)
+        events_are_digital = True
+    elif mode == FINDER_MODE_IN_PERSON:
+        playgroups = playgroups.filter(is_primarily_digital=False)
+        events_are_digital = False
+
+    if event_format or upcoming_only:
+        playgroups = playgroups.hosting_events(
+            event_format=event_format,
+            upcoming_only=upcoming_only,
+            is_digital=events_are_digital,
+        )
+
+    paginator = Paginator(playgroups, FINDER_TABLE_PAGE_SIZE)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    for playgroup in page_obj:
+        playgroup.display_venue = get_display_venue(playgroup)
+
+    is_partial_request = bool(
+        request.htmx and not request.htmx.history_restore_request)
+
+    context = {
+        'is_partial_request': is_partial_request,
+        'page_obj': page_obj,
+        'event_formats': EventFormat.objects.all(),
+        'countries': countries,
+        'regions': regions,
+        'filters': {
+            'search': search,
+            'mode': mode,
+            'event_format': str(event_format or ''),
+            'upcoming_events': upcoming_only,
+            'country': country,
+            'region': region,
+        },
+    }
+
+    template_name = 'pmc/g-finder-table.html'
+    if is_partial_request:
+        template_name += '#finder-table-results'
+    return render(request, template_name, context)
+
+
+def get_display_venue(playgroup):
+    venues = list(playgroup.venues.all())
+    return next(
+        (venue for venue in venues if venue.id == playgroup.primary_venue_id),
+        venues[0] if venues else None,
+    )

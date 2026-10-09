@@ -9,7 +9,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.dispatch import receiver
 from django.db.models.signals import post_save
-from django.db.models import Sum, F, Count, Window
+from django.db.models import Sum, F, Count, Window, Case, When, Value
 from django.db.models.functions import Coalesce, Rank
 from django.conf import settings
 from io import BytesIO
@@ -31,6 +31,101 @@ def exclude_upcoming_event_results(qs):
     return qs.filter(
         Q(event__start_date__lt=cutoff) | has_finished_result
     )
+
+
+def filter_upcoming_events(qs):
+    from pmc.models import EventResult
+    cutoff = date.today() - timedelta(days=1)
+    has_finished_result = Exists(
+        EventResult.objects.filter(
+            event_id=OuterRef('pk'),
+            finishing_position__isnull=False,
+        )
+    )
+    return qs.filter(start_date__gte=cutoff).exclude(has_finished_result)
+
+
+class PlaygroupQuerySet(models.QuerySet):
+    UNFORMATTED_EVENT_FORMAT = 'other'
+    RECENT_ACTIVITY_WINDOW = timedelta(days=365)
+
+    def discoverable(self):
+        return self.filter(is_global=False)
+
+    def with_mappable_venues(self):
+        return self.filter(Exists(
+            Venue.objects.filter(playgroups=OuterRef('pk')).mappable()
+        ))
+
+    def matching_search(self, search_term, mappable_venues_only=False):
+        matching_venues = Venue.objects.filter(
+            Q(playgroups=OuterRef('pk')) & (
+                Q(name__icontains=search_term) |
+                Q(city__icontains=search_term) |
+                Q(state_province__icontains=search_term) |
+                Q(country__icontains=search_term)
+            )
+        )
+        if mappable_venues_only:
+            matching_venues = matching_venues.mappable()
+        return self.filter(
+            Q(name__icontains=search_term) | Exists(matching_venues)
+        )
+
+    def hosting_events(self, event_format=None, upcoming_only=False, is_digital=None):
+        matching_events = Event.objects.filter(playgroups=OuterRef('pk'))
+
+        if is_digital is not None:
+            matching_events = matching_events.filter(is_digital=is_digital)
+
+        if event_format == self.UNFORMATTED_EVENT_FORMAT:
+            matching_events = matching_events.filter(format__isnull=True)
+        elif event_format:
+            matching_events = matching_events.filter(format_id=event_format)
+
+        if upcoming_only:
+            matching_events = filter_upcoming_events(matching_events)
+        else:
+            matching_events = matching_events.filter(
+                start_date__gte=date.today() - self.RECENT_ACTIVITY_WINDOW)
+
+        return self.filter(Exists(matching_events))
+
+    def located_in(self, country, region=None):
+        matching_venues = Venue.objects.filter(
+            playgroups=OuterRef('pk'), country=country)
+        if region:
+            matching_venues = matching_venues.filter(state_province=region)
+        return self.filter(Exists(matching_venues))
+
+    def annotate_is_primarily_digital(self):
+        is_recent_event = Q(
+            events__start_date__gte=date.today() - self.RECENT_ACTIVITY_WINDOW)
+        return self.annotate(
+            recent_event_count=Count(
+                'events', filter=is_recent_event, distinct=True),
+            recent_digital_event_count=Count(
+                'events', filter=is_recent_event & Q(events__is_digital=True), distinct=True),
+        ).annotate(
+            is_primarily_digital=Case(
+                When(recent_event_count=0, then=F('event_default_is_digital')),
+                When(
+                    recent_digital_event_count__gt=F(
+                        'recent_event_count') - F('recent_digital_event_count'),
+                    then=Value(True),
+                ),
+                default=Value(False),
+                output_field=models.BooleanField(),
+            )
+        )
+
+
+class VenueQuerySet(models.QuerySet):
+    def mappable(self):
+        return self.filter(latitude__isnull=False, longitude__isnull=False)
+
+    def used_by_discoverable_playgroups(self):
+        return self.filter(playgroups__is_global=False).distinct()
 
 
 class PlaygroupType(models.Model):
@@ -72,6 +167,8 @@ class Playgroup(models.Model):
         help_text=_(
             'Should new events in this group default to online or in-person?')
     )
+
+    objects = PlaygroupQuerySet.as_manager()
 
     class Meta:
         ordering = ['-name']
@@ -191,6 +288,8 @@ class Venue(models.Model):
         'auth.User', on_delete=models.SET_NULL,
         default=None, null=True, blank=True, related_name='created_venues'
     )
+
+    objects = VenueQuerySet.as_manager()
 
     class Meta:
         ordering = ('name',)

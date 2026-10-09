@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth.models import User
 from datetime import date, timedelta
 from .models import (
@@ -6,8 +6,10 @@ from .models import (
     LeaderboardSeasonPeriod, PlayerRank, Playgroup, PlaygroupEvent,
     RankingPointsMapVersion, RankingPointsMap, RankingPointsService,
     EventFormat, AwardBase, Achievement, Trophy, AwardAssignmentService,
-    EventResultDeck, AwardCredit, LevelBreakpoint, AchievementTier
+    EventResultDeck, AwardCredit, LevelBreakpoint, AchievementTier,
+    PlaygroupQuerySet, PlaygroupVenue, Venue
 )
+from django.urls import reverse
 from decks.models import House, Set, Deck
 import uuid
 
@@ -1309,3 +1311,196 @@ class LeaderboardPeriodLockingTest(TestCase):
 
         end_date = period.get_end_date()
         self.assertEqual(end_date, date.today() + timedelta(days=1))
+
+
+class UpcomingEventsFilterTestBase(TestCase):
+    def setUp(self):
+        self.today = date.today()
+        self.player = User.objects.create_user(username='finder-player')
+        self.playgroup = self.create_playgroup('Finder Group')
+
+    def create_playgroup(self, name, is_global=False):
+        return Playgroup.objects.create(
+            name=name, slug=name.lower().replace(' ', '-'), is_global=is_global)
+
+    def create_event(self, start_date, playgroup=None, is_digital=False, format_name=None):
+        event = Event.objects.create(
+            name=f'Event on {start_date}',
+            start_date=start_date,
+            is_digital=is_digital,
+        )
+        if format_name:
+            event.format, _ = EventFormat.objects.get_or_create(
+                name=format_name)
+            event.save()
+        PlaygroupEvent.objects.create(
+            playgroup=playgroup or self.playgroup, event=event)
+        return event
+
+    def register_player(self, event, finishing_position=None):
+        return EventResult.objects.create(
+            event=event, user=self.player, finishing_position=finishing_position)
+
+    def add_mappable_venue(self, playgroup):
+        venue = Venue.objects.create(
+            name=f'{playgroup.name} Venue',
+            slug=f'{playgroup.slug}-venue',
+            address='1 Main St',
+            latitude=43.68,
+            longitude=-70.35,
+            city='Westbrook',
+            state_province='Maine',
+            country='United States',
+        )
+        PlaygroupVenue.objects.create(playgroup=playgroup, venue=venue)
+        return venue
+
+
+class PlaygroupHostingUpcomingEventsTests(UpcomingEventsFilterTestBase):
+    def playgroups_hosting_upcoming_events(self, **filters):
+        return list(Playgroup.objects.hosting_events(upcoming_only=True, **filters))
+
+    def test_includes_event_starting_today(self):
+        self.create_event(self.today)
+        self.assertEqual(self.playgroups_hosting_upcoming_events(), [
+                         self.playgroup])
+
+    def test_includes_event_from_yesterday_without_finished_results(self):
+        self.create_event(self.today - timedelta(days=1))
+        self.assertEqual(self.playgroups_hosting_upcoming_events(), [
+                         self.playgroup])
+
+    def test_excludes_event_older_than_yesterday(self):
+        self.create_event(self.today - timedelta(days=2))
+        self.assertEqual(self.playgroups_hosting_upcoming_events(), [])
+
+    def test_includes_future_event_with_registrations_only(self):
+        event = self.create_event(self.today + timedelta(days=7))
+        self.register_player(event)
+        self.assertEqual(self.playgroups_hosting_upcoming_events(), [
+                         self.playgroup])
+
+    def test_excludes_future_event_with_finished_results(self):
+        event = self.create_event(self.today + timedelta(days=7))
+        self.register_player(event, finishing_position=1)
+        self.assertEqual(self.playgroups_hosting_upcoming_events(), [])
+
+    def test_excludes_playgroup_without_events(self):
+        self.assertEqual(self.playgroups_hosting_upcoming_events(), [])
+
+    def test_does_not_count_events_from_other_playgroups(self):
+        other_playgroup = self.create_playgroup('Other Group')
+        self.create_event(self.today + timedelta(days=7),
+                          playgroup=other_playgroup)
+        self.assertEqual(self.playgroups_hosting_upcoming_events(), [
+                         other_playgroup])
+
+    def test_returns_playgroup_once_with_multiple_upcoming_events(self):
+        self.create_event(self.today + timedelta(days=7))
+        self.create_event(self.today + timedelta(days=14))
+        self.assertEqual(self.playgroups_hosting_upcoming_events(), [
+                         self.playgroup])
+
+    def test_format_and_upcoming_must_match_the_same_event(self):
+        self.create_event(self.today - timedelta(days=30), format_name='Archon')
+        self.create_event(self.today + timedelta(days=7), format_name='Sealed')
+        archon = EventFormat.objects.get(name='Archon')
+        self.assertEqual(
+            self.playgroups_hosting_upcoming_events(event_format=archon.id), [])
+
+    def test_matches_upcoming_event_of_requested_format(self):
+        self.create_event(self.today + timedelta(days=7), format_name='Archon')
+        archon = EventFormat.objects.get(name='Archon')
+        self.assertEqual(
+            self.playgroups_hosting_upcoming_events(event_format=archon.id), [self.playgroup])
+
+    def test_unformatted_filter_matches_only_upcoming_unformatted_events(self):
+        self.create_event(self.today - timedelta(days=30))
+        self.create_event(self.today + timedelta(days=7), format_name='Archon')
+        self.assertEqual(
+            self.playgroups_hosting_upcoming_events(
+                event_format=PlaygroupQuerySet.UNFORMATTED_EVENT_FORMAT),
+            [])
+
+    def test_in_person_filter_ignores_upcoming_digital_events(self):
+        self.create_event(self.today + timedelta(days=7), is_digital=True)
+        self.assertEqual(
+            self.playgroups_hosting_upcoming_events(is_digital=False), [])
+
+    def test_unrestricted_mode_counts_upcoming_digital_events(self):
+        self.create_event(self.today + timedelta(days=7), is_digital=True)
+        self.assertEqual(self.playgroups_hosting_upcoming_events(), [
+                         self.playgroup])
+
+
+class FinderMapUpcomingEventsTests(UpcomingEventsFilterTestBase):
+    def setUp(self):
+        super().setUp()
+        self.add_mappable_venue(self.playgroup)
+
+    def fetch_playgroup_names(self, **params):
+        response = self.client.get(reverse('pmc-finder-data'), params)
+        self.assertEqual(response.status_code, 200)
+        return [playgroup['name'] for playgroup in response.json()['playgroups']]
+
+    def test_includes_playgroup_with_upcoming_in_person_event(self):
+        self.create_event(self.today + timedelta(days=7))
+        self.assertEqual(self.fetch_playgroup_names(
+            upcoming_events='1'), ['Finder Group'])
+
+    def test_excludes_playgroup_with_only_past_events(self):
+        self.create_event(self.today - timedelta(days=30))
+        self.assertEqual(self.fetch_playgroup_names(upcoming_events='1'), [])
+        self.assertEqual(self.fetch_playgroup_names(), ['Finder Group'])
+
+    def test_excludes_playgroup_with_only_upcoming_digital_events(self):
+        self.create_event(self.today + timedelta(days=7), is_digital=True)
+        self.assertEqual(self.fetch_playgroup_names(upcoming_events='1'), [])
+
+    def test_excludes_global_playgroup_with_upcoming_event(self):
+        global_playgroup = self.create_playgroup(
+            'Global Group', is_global=True)
+        self.add_mappable_venue(global_playgroup)
+        self.create_event(self.today + timedelta(days=7),
+                          playgroup=global_playgroup)
+        self.assertEqual(self.fetch_playgroup_names(upcoming_events='1'), [])
+
+    def test_ignores_unchecked_upcoming_value(self):
+        self.assertEqual(self.fetch_playgroup_names(
+            upcoming_events='0'), ['Finder Group'])
+
+
+@override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
+class FinderTableUpcomingEventsTests(UpcomingEventsFilterTestBase):
+    def fetch_playgroup_names(self, **params):
+        response = self.client.get(reverse('pmc-finder-table'), params)
+        self.assertEqual(response.status_code, 200)
+        return [playgroup.name for playgroup in response.context['page_obj']]
+
+    def test_includes_playgroup_without_venue_hosting_upcoming_event(self):
+        self.create_event(self.today + timedelta(days=7), is_digital=True)
+        self.assertEqual(self.fetch_playgroup_names(
+            upcoming_events='1'), ['Finder Group'])
+
+    def test_excludes_playgroup_with_only_finished_events(self):
+        event = self.create_event(self.today)
+        self.register_player(event, finishing_position=1)
+        self.assertEqual(self.fetch_playgroup_names(upcoming_events='1'), [])
+
+    def test_digital_mode_requires_upcoming_digital_event(self):
+        for _ in range(2):
+            self.create_event(self.today - timedelta(days=30), is_digital=True)
+        self.create_event(self.today + timedelta(days=7))
+        self.assertEqual(self.fetch_playgroup_names(
+            mode='digital', upcoming_events='1'), [])
+        self.assertEqual(self.fetch_playgroup_names(
+            mode='digital'), ['Finder Group'])
+
+    def test_in_person_mode_requires_upcoming_in_person_event(self):
+        self.create_event(self.today - timedelta(days=30))
+        self.create_event(self.today + timedelta(days=7), is_digital=True)
+        self.assertEqual(self.fetch_playgroup_names(
+            mode='in_person', upcoming_events='1'), [])
