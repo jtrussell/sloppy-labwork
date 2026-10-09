@@ -11,26 +11,26 @@
 		maxZoom: 19,
 	}).addTo(map)
 
-	var primaryIcon = L.divIcon({
-		className: 'finder-marker finder-marker-primary',
-		html: '<svg viewBox="0 0 24 36" width="28" height="40"><path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="#FFB400" stroke="#131313" stroke-width="1.5"/><circle cx="12" cy="11" r="5" fill="#131313"/></svg>',
-		iconSize: [28, 40],
-		iconAnchor: [14, 40],
-		popupAnchor: [0, -36],
-	})
-
-	var secondaryIcon = L.divIcon({
-		className: 'finder-marker finder-marker-secondary',
-		html: '<svg viewBox="0 0 24 36" width="22" height="32"><path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="#888" stroke="#131313" stroke-width="1.5"/><circle cx="12" cy="11" r="4" fill="#131313"/></svg>',
-		iconSize: [22, 32],
-		iconAnchor: [11, 32],
-		popupAnchor: [0, -28],
-	})
+	var SOON_WINDOW_DAYS = 7
+	var MARKER_PIN_PATH = 'M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z'
+	var MARKER_STYLES = {
+		primary: { fill: '#FFB400', width: 28, height: 40, dotRadius: 5 },
+		secondary: { fill: '#888', width: 22, height: 32, dotRadius: 4 },
+	}
+	var CLUSTER_SIZES = [
+		{ maxCount: 9, size: 34 },
+		{ maxCount: 49, size: 40 },
+		{ maxCount: Infinity, size: 48 },
+	]
 
 	var markers = L.markerClusterGroup({
 		showCoverageOnHover: false,
 		maxClusterRadius: 50,
+		iconCreateFunction: buildClusterIcon,
 	}).addTo(map)
+
+	var cardHtmlByUrl = {}
+	var POPUP_EDGE_GAP = 16
 
 	var allPlaygroups = []
 	var markersByPlaygroupVenue = {}
@@ -68,20 +68,98 @@
 		return playgroupId + ':' + venueId
 	}
 
-	function buildPopupHtml(playgroup, venue) {
+	function soonEventLabel(playgroup) {
+		if (!playgroup.next_event) return null
+		var days = window.FinderDates.daysUntil(playgroup.next_event.date)
+		if (days < 0 || days >= SOON_WINDOW_DAYS) return null
+		if (days === 0) return 'Today'
+		if (days === 1) return 'Tomorrow'
+		return window.FinderDates.parseLocalDate(playgroup.next_event.date).toLocaleDateString(undefined, { weekday: 'short' })
+	}
+
+	function buildMarkerIcon(isPrimary, soonLabel) {
+		var style = isPrimary ? MARKER_STYLES.primary : MARKER_STYLES.secondary
+		var classNames = ['finder-marker', isPrimary ? 'finder-marker-primary' : 'finder-marker-secondary']
+		if (soonLabel) classNames.push('finder-marker-soon')
+		return L.divIcon({
+			className: classNames.join(' '),
+			html: '<svg viewBox="0 0 24 36" width="' + style.width + '" height="' + style.height + '">' +
+					'<path d="' + MARKER_PIN_PATH + '" fill="' + style.fill + '" stroke="#131313" stroke-width="1.5"/>' +
+					'<circle cx="12" cy="11" r="' + style.dotRadius + '" fill="#131313"/>' +
+				'</svg>' +
+				(soonLabel ? '<span class="finder-marker-tag">' + escapeHtml(soonLabel) + '</span>' : ''),
+			iconSize: [style.width, style.height],
+			iconAnchor: [style.width / 2, style.height],
+			popupAnchor: [0, -style.height + 4],
+		})
+	}
+
+	function buildClusterIcon(cluster) {
+		var count = cluster.getChildCount()
+		var size = CLUSTER_SIZES.find(function (tier) { return count <= tier.maxCount }).size
+		var hasSoonEvent = cluster.getAllChildMarkers().some(function (marker) {
+			return marker.options.hasSoonEvent
+		})
+		return L.divIcon({
+			className: 'finder-cluster' + (hasSoonEvent ? ' finder-cluster-soon' : ''),
+			html: '<span>' + count + '</span>',
+			iconSize: [size, size],
+		})
+	}
+
+	function buildPopupShell(playgroup, venue) {
 		var primaryLabel = venue.is_primary ? ' (Primary)' : ''
-		var locationParts = []
-		if (venue.city) locationParts.push(escapeHtml(venue.city))
-		if (venue.state_province) locationParts.push(escapeHtml(venue.state_province))
 		return '<div class="finder-popup">' +
-			'<div class="finder-popup-header">' +
-				'<img class="finder-popup-logo" src="' + escapeHtml(playgroup.logo_src) + '" alt="" />' +
-				'<div class="finder-popup-name"><a href="' + escapeHtml(playgroup.url) + '">' + escapeHtml(playgroup.name) + '</a></div>' +
-			'</div>' +
 			'<div class="finder-popup-venue">' + escapeHtml(venue.name) + primaryLabel + '</div>' +
-			(locationParts.length ? '<div class="finder-popup-meta">' + locationParts.join(', ') + '</div>' : '') +
-			'<div class="finder-popup-meta">' + pluralize(playgroup.member_count, 'member', 'members') + '</div>' +
+			'<div class="finder-popup-card" aria-live="polite" data-card-url="' + escapeHtml(playgroup.card_url) + '">' +
+				(cardHtmlByUrl[playgroup.card_url] || '<div class="finder-popup-loading">Loading ' + escapeHtml(playgroup.name) + '…</div>') +
+			'</div>' +
 		'</div>'
+	}
+
+	function popupPaddingTopLeft() {
+		var mapRect = map.getContainer().getBoundingClientRect()
+		var chromeBottom = chrome.getBoundingClientRect().bottom - mapRect.top
+		if (MOBILE_MEDIA_QUERY.matches) {
+			return [POPUP_EDGE_GAP, chromeBottom + POPUP_EDGE_GAP]
+		}
+		var panelRight = panel.getBoundingClientRect().right - mapRect.left
+		return [panelRight + POPUP_EDGE_GAP, chromeBottom + POPUP_EDGE_GAP]
+	}
+
+	function keepPopupClearOfOverlays() {
+		closeMenu()
+		if (MOBILE_MEDIA_QUERY.matches) {
+			setSheetState('peek')
+		}
+	}
+
+	function bindPopupClearOfOverlays(marker, buildContent) {
+		marker.bindPopup(buildContent, { minWidth: 260, maxWidth: 300 })
+		Object.defineProperty(marker.getPopup().options, 'autoPanPaddingTopLeft', {
+			get: popupPaddingTopLeft,
+		})
+	}
+
+	function loadPopupCard(event) {
+		var cardContainer = event.popup.getElement().querySelector('.finder-popup-card')
+		var cardUrl = cardContainer.getAttribute('data-card-url')
+		if (cardHtmlByUrl[cardUrl]) return
+
+		fetch(cardUrl)
+			.then(function (response) {
+				if (!response.ok) throw new Error('Card request failed: ' + response.status)
+				return response.text()
+			})
+			.then(function (html) {
+				cardContainer.innerHTML = html
+				window.FinderDates.relabelRelativeEventDays(cardContainer)
+				cardHtmlByUrl[cardUrl] = cardContainer.innerHTML
+				event.popup.update()
+			})
+			.catch(function () {
+				cardContainer.innerHTML = '<div class="finder-popup-loading">Couldn\u2019t load this group.</div>'
+			})
 	}
 
 	function renderMarkers() {
@@ -89,10 +167,13 @@
 		markersByPlaygroupVenue = {}
 		var newMarkers = []
 		allPlaygroups.forEach(function (playgroup) {
+			var soonLabel = soonEventLabel(playgroup)
 			playgroup.venues.forEach(function (venue) {
-				var icon = venue.is_primary ? primaryIcon : secondaryIcon
-				var marker = L.marker([venue.latitude, venue.longitude], { icon: icon })
-				marker.bindPopup(buildPopupHtml(playgroup, venue))
+				var marker = L.marker([venue.latitude, venue.longitude], {
+					icon: buildMarkerIcon(venue.is_primary, soonLabel),
+					hasSoonEvent: !!soonLabel,
+				})
+				bindPopupClearOfOverlays(marker, function () { return buildPopupShell(playgroup, venue) })
 				markersByPlaygroupVenue[markerKey(playgroup.id, venue.id)] = marker
 				newMarkers.push(marker)
 			})
@@ -408,6 +489,11 @@
 		menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false')
 	}
 
+	function closeMenu() {
+		chrome.classList.remove('is-menu-open')
+		menuToggle.setAttribute('aria-expanded', 'false')
+	}
+
 	searchInput.addEventListener('input', debouncedFetch)
 	searchInput.addEventListener('focus', function () {
 		if (MOBILE_MEDIA_QUERY.matches && panel.getAttribute('data-sheet-state') === 'peek') {
@@ -420,6 +506,10 @@
 	nextPageButton.addEventListener('click', function () { goToPage(currentPage + 1) })
 	menuToggle.addEventListener('click', toggleMenu)
 	map.on('moveend', refreshVisiblePlaygroups)
+	map.on('popupopen', keepPopupClearOfOverlays)
+	map.on('popupopen', loadPopupCard)
+	map.on('click', closeMenu)
+	panel.addEventListener('pointerdown', closeMenu)
 
 	enableSheetDragging()
 	fetchPlaygroups()

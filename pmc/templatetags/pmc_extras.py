@@ -1,4 +1,7 @@
 from django import template
+from datetime import date
+from django.contrib.humanize.templatetags.humanize import naturalday
+from django.utils.formats import date_format
 from ..models import AchievementTier, PinnedAward
 from django.utils.translation import gettext_lazy as _
 
@@ -31,3 +34,18 @@ def award_type_achievement():
 @register.simple_tag
 def award_type_trophy():
     return PinnedAward.AwardTypeOptions.TROPHY
+
+
+UPCOMING_DAYS_SHOWN_AS_COUNT = range(2, 7)
+
+
+@register.filter
+def relative_event_day(value):
+    if not value:
+        return ''
+    days_until = (value - date.today()).days
+    if days_until in UPCOMING_DAYS_SHOWN_AS_COUNT:
+        return _('in %(days)d days') % {'days': days_until}
+    if days_until in (0, 1):
+        return naturalday(value)
+    return date_format(value, 'D, M j')

@@ -80,22 +80,14 @@
 	margin-top: 0.25rem;
 }
 
-.finder-table-mode {
-	display: inline-block;
-	padding: 2px 8px;
-	border: 1px solid var(--color-lines);
-	border-radius: var(--border-radius-sm);
-	font-size: 0.75rem;
-	text-transform: uppercase;
-	font-weight: 600;
+.finder-table-next-event {
 	white-space: nowrap;
-	color: var(--color-text-muted);
 }
 
-.finder-table-mode-digital {
-	background-color: var(--color-primary);
-	border-color: var(--color-primary);
-	color: var(--color-text-on-gradient-primary);
+.finder-table-next-event-day {
+	display: block;
+	font-weight: 600;
+	text-transform: capitalize;
 }
 
 .finder-table-pagination {
@@ -107,4 +99,8 @@
 	.finder-table-filters {
 		grid-template-columns: 1fr 1fr;
 	}
+}
+
+.finder-table th {
+	white-space: nowrap;
 }

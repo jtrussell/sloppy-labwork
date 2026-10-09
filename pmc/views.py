@@ -45,6 +45,7 @@ from .models import RankingPointsMap, RankingPointsMapVersion
 from .models import AwardAssignmentService
 from .models import Venue, PlaygroupVenue, PlaygroupType, EventFormat, PlaygroupQuerySet
 from .models import exclude_upcoming_event_results
+from .models import filter_upcoming_events, get_activity_level
 
 
 def is_pg_member(view):
@@ -1497,9 +1498,13 @@ def playgroup_finder_data(request):
         venue__longitude__isnull=False,
     ).select_related('venue')
 
+    event_format = parse_event_format_filter(request.GET.get('event_format'))
+
     playgroups = Playgroup.objects.discoverable().with_mappable_venues().annotate(
         member_count=Count('members', distinct=True)
-    ).select_related('type').prefetch_related(
+    ).annotate_next_upcoming_event(
+        is_digital=False, event_format=event_format
+    ).annotate_recent_activity().select_related('type').prefetch_related(
         Prefetch('playgroup_venues', queryset=mappable_venue_links,
                  to_attr='mappable_venue_links')
     ).order_by('name')
@@ -1509,7 +1514,6 @@ def playgroup_finder_data(request):
         playgroups = playgroups.matching_search(
             search, mappable_venues_only=True)
 
-    event_format = parse_event_format_filter(request.GET.get('event_format'))
     upcoming_only = request.GET.get('upcoming_events') == '1'
     if event_format or upcoming_only:
         playgroups = playgroups.hosting_events(
@@ -1541,6 +1545,13 @@ def serialize_playgroup_for_map(playgroup):
         }
         for link in playgroup.mappable_venue_links
     ]
+    activity_level = get_activity_level(playgroup.events_last_90_days)
+    next_event = None
+    if playgroup.next_event_date:
+        next_event = {
+            'date': playgroup.next_event_date.isoformat(),
+            'format': playgroup.next_event_format_name,
+        }
     return {
         'id': playgroup.id,
         'name': playgroup.name,
@@ -1549,8 +1560,59 @@ def serialize_playgroup_for_map(playgroup):
         'type': playgroup.type.name if playgroup.type else None,
         'logo_src': playgroup.get_logo_src(),
         'url': reverse('pmc-pg-detail', args=[playgroup.slug]),
+        'card_url': reverse('pmc-finder-card', args=[playgroup.slug]),
+        'next_event': next_event,
+        'activity_level': activity_level.slug if activity_level else None,
         'venues': venues_data,
     }
+
+
+FINDER_CARD_UPCOMING_EVENT_LIMIT = 3
+FINDER_CARD_AVATAR_LIMIT = 5
+
+
+def playgroup_finder_card(request, slug):
+    playgroup = get_object_or_404(
+        Playgroup.objects.discoverable()
+        .annotate_is_primarily_digital()
+        .annotate_recent_activity()
+        .select_related('type', 'primary_venue')
+        .prefetch_related('venues'),
+        slug=slug,
+    )
+    playgroup.display_venue = get_display_venue(playgroup)
+    playgroup.activity_level = get_activity_level(
+        playgroup.events_last_90_days)
+
+    upcoming_events = filter_upcoming_events(
+        Event.objects.filter(playgroups=playgroup)
+    ).select_related('format').order_by('start_date', 'pk')[:FINDER_CARD_UPCOMING_EVENT_LIMIT]
+
+    visible_members = PlaygroupMember.objects.filter(
+        playgroup=playgroup,
+        is_hidden=False,
+        user__pmc_profile__show_playgroups_on_profile=True,
+    ).select_related('user__pmc_profile__avatar').order_by('-joined_on')
+    visible_member_count = visible_members.count()
+    members_shown = list(visible_members[:FINDER_CARD_AVATAR_LIMIT])
+    default_avatar = Avatar.objects.filter(pmc_id='001').first()
+    member_avatar_srcs = [
+        (member.user.pmc_profile.avatar or default_avatar).src
+        for member in members_shown
+        if member.user.pmc_profile.avatar or default_avatar
+    ]
+
+    is_member = request.user.is_authenticated and PlaygroupMember.objects.filter(
+        playgroup=playgroup, user=request.user).exists()
+
+    return render(request, 'pmc/_finder-group-card.html', {
+        'playgroup': playgroup,
+        'upcoming_events': upcoming_events,
+        'member_avatar_srcs': member_avatar_srcs,
+        'visible_member_count': visible_member_count,
+        'hidden_member_avatar_count': visible_member_count - len(members_shown),
+        'is_member': is_member,
+    })
 
 
 def playgroup_finder_table(request):
@@ -1582,7 +1644,7 @@ def playgroup_finder_table(request):
 
     playgroups = Playgroup.objects.discoverable().annotate_is_primarily_digital().annotate(
         member_count=Count('members', distinct=True)
-    ).select_related('type', 'primary_venue').prefetch_related('venues').order_by('name')
+    ).annotate_recent_activity().select_related('type', 'primary_venue').prefetch_related('venues').order_by('name')
 
     if search:
         playgroups = playgroups.matching_search(search)
@@ -1605,10 +1667,15 @@ def playgroup_finder_table(request):
             is_digital=events_are_digital,
         )
 
+    playgroups = playgroups.annotate_next_upcoming_event(
+        is_digital=events_are_digital, event_format=event_format)
+
     paginator = Paginator(playgroups, FINDER_TABLE_PAGE_SIZE)
     page_obj = paginator.get_page(request.GET.get('page'))
     for playgroup in page_obj:
         playgroup.display_venue = get_display_venue(playgroup)
+        playgroup.activity_level = get_activity_level(
+            playgroup.events_last_90_days)
 
     is_partial_request = bool(
         request.htmx and not request.htmx.history_restore_request)

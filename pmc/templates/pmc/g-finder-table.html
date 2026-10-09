@@ -1,8 +1,10 @@
 {% extends "pmc/_base.html" %}
 {% load static %}
 {% load partials %}
+{% load pmc_extras %}
 
 {% block extra_head %}
+	<link rel="stylesheet" href="{% static 'pmc/css/finder-card.css' %}">
 	<link rel="stylesheet" href="{% static 'pmc/css/finder-table.css' %}">
 {% endblock %}
 
@@ -34,9 +36,20 @@
 
 {% partialdef mode-badge %}
 	{% if playgroup.is_primarily_digital %}
-		<span class="finder-table-mode finder-table-mode-digital">Digital</span>
+		<span class="finder-mode-badge finder-mode-badge-digital">Digital</span>
 	{% else %}
-		<span class="finder-table-mode">In person</span>
+		<span class="finder-mode-badge">In person</span>
+	{% endif %}
+{% endpartialdef %}
+
+{% partialdef next-event %}
+	{% if playgroup.next_event_date %}
+		<span class="finder-table-next-event" title="{{ playgroup.next_event_date|date:'DATE_FORMAT' }}">
+			<time class="finder-table-next-event-day" datetime="{{ playgroup.next_event_date|date:'Y-m-d' }}" data-relative-event-day>{{ playgroup.next_event_date|relative_event_day }}</time>
+			{% if playgroup.next_event_format_name %}<span class="finder-format-chip">{{ playgroup.next_event_format_name }}</span>{% endif %}
+		</span>
+	{% else %}
+		<span class="text-muted">Nothing scheduled</span>
 	{% endif %}
 {% endpartialdef %}
 
@@ -60,8 +73,9 @@
 			<tr>
 				<th class="text-left">Group</th>
 				<th class="text-left lg-only">Location</th>
+				<th class="text-left lg-only">Next event</th>
+				<th class="text-left lg-only">Activity</th>
 				<th class="lg-only">Mode</th>
-				<th class="lg-only">Type</th>
 				<th class="lg-only">Members</th>
 			</tr>
 		</thead>
@@ -73,25 +87,35 @@
 							<img class="finder-table-logo" src="{{ playgroup.get_logo_src }}" alt="">
 							<div>
 								<a href="{% url 'pmc-pg-detail' playgroup.slug %}">{{ playgroup.name }}</a>
+								{% if playgroup.type %}
+									<div class="lg-only text-smaller text-muted">{{ playgroup.type }}</div>
+								{% endif %}
 								<div class="sm-only text-smaller text-muted">
 									{% partial location %}
 								</div>
 								<div class="sm-only finder-table-meta text-smaller text-muted">
 									{% partial mode-badge %}
+									{% include 'pmc/_finder-group-card.html#activity-meter' %}
 									<span>{{ playgroup.member_count }} member{{ playgroup.member_count|pluralize }}</span>
 								</div>
+								{% if playgroup.next_event_date %}
+									<div class="sm-only finder-table-meta text-smaller">
+										Next: {% partial next-event %}
+									</div>
+								{% endif %}
 							</div>
 						</div>
 					</td>
 					<td class="text-left lg-only">
 						{% partial location %}
 					</td>
+					<td class="text-left lg-only">{% partial next-event %}</td>
+					<td class="text-left lg-only">{% include 'pmc/_finder-group-card.html#activity-meter' %}</td>
 					<td class="lg-only">{% partial mode-badge %}</td>
-					<td class="lg-only">{{ playgroup.type|default_if_none:"-" }}</td>
 					<td class="lg-only stat">{{ playgroup.member_count }}</td>
 				</tr>
 			{% empty %}
-				<tr><td colspan="5">No groups match your search.</td></tr>
+				<tr><td colspan="6">No groups match your search.</td></tr>
 			{% endfor %}
 		</tbody>
 	</table>
@@ -120,6 +144,10 @@
 		</div>
 	{% endif %}
 {% endpartialdef %}
+
+{% block extra_body %}
+	<script src="{% static 'pmc/scripts/finder-dates.js' %}"></script>
+{% endblock %}
 
 {% block content %}
 	<div class="flex flex-spread flex-align-baseline">

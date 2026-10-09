@@ -9,10 +9,11 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.dispatch import receiver
 from django.db.models.signals import post_save
-from django.db.models import Sum, F, Count, Window, Case, When, Value
+from django.db.models import Sum, F, Count, Window, Case, When, Value, Func
 from django.db.models.functions import Coalesce, Rank
 from django.conf import settings
 from io import BytesIO
+from collections import namedtuple
 import qrcode
 import boto3
 import hashlib
@@ -45,9 +46,27 @@ def filter_upcoming_events(qs):
     return qs.filter(start_date__gte=cutoff).exclude(has_finished_result)
 
 
+ActivityLevel = namedtuple(
+    'ActivityLevel', ['min_events', 'slug', 'label', 'filled_segments'])
+
+ACTIVITY_LEVELS = (
+    ActivityLevel(9, 'blazing', _('Blazing'), 3),
+    ActivityLevel(4, 'busy', _('Busy'), 2),
+    ActivityLevel(1, 'active', _('Active'), 1),
+)
+
+
+def get_activity_level(event_count):
+    return next(
+        (level for level in ACTIVITY_LEVELS if event_count >= level.min_events),
+        None,
+    )
+
+
 class PlaygroupQuerySet(models.QuerySet):
     UNFORMATTED_EVENT_FORMAT = 'other'
     RECENT_ACTIVITY_WINDOW = timedelta(days=365)
+    ACTIVITY_WINDOW = timedelta(days=90)
 
     def discoverable(self):
         return self.filter(is_global=False)
@@ -72,16 +91,22 @@ class PlaygroupQuerySet(models.QuerySet):
             Q(name__icontains=search_term) | Exists(matching_venues)
         )
 
+    @classmethod
+    def filter_events_by_format(cls, events, event_format):
+        if event_format == cls.UNFORMATTED_EVENT_FORMAT:
+            return events.filter(format__isnull=True)
+        if event_format:
+            return events.filter(format_id=event_format)
+        return events
+
     def hosting_events(self, event_format=None, upcoming_only=False, is_digital=None):
         matching_events = Event.objects.filter(playgroups=OuterRef('pk'))
 
         if is_digital is not None:
             matching_events = matching_events.filter(is_digital=is_digital)
 
-        if event_format == self.UNFORMATTED_EVENT_FORMAT:
-            matching_events = matching_events.filter(format__isnull=True)
-        elif event_format:
-            matching_events = matching_events.filter(format_id=event_format)
+        matching_events = self.filter_events_by_format(
+            matching_events, event_format)
 
         if upcoming_only:
             matching_events = filter_upcoming_events(matching_events)
@@ -117,6 +142,38 @@ class PlaygroupQuerySet(models.QuerySet):
                 default=Value(False),
                 output_field=models.BooleanField(),
             )
+        )
+
+    def annotate_next_upcoming_event(self, is_digital=None, event_format=None):
+        upcoming_events = filter_upcoming_events(
+            Event.objects.filter(playgroups=OuterRef('pk')))
+        if is_digital is not None:
+            upcoming_events = upcoming_events.filter(is_digital=is_digital)
+        upcoming_events = self.filter_events_by_format(
+            upcoming_events, event_format)
+        upcoming_events = upcoming_events.order_by('start_date', 'pk')
+        return self.annotate(
+            next_event_date=Subquery(
+                upcoming_events.values('start_date')[:1]),
+            next_event_format_name=Subquery(
+                upcoming_events.values('format__name')[:1]),
+        )
+
+    def annotate_recent_activity(self):
+        recent_events = Event.objects.filter(
+            playgroups=OuterRef('pk'),
+            start_date__gte=date.today() - self.ACTIVITY_WINDOW,
+            start_date__lte=date.today(),
+        ).order_by().annotate(
+            event_count=Func(F('pk'), function='COUNT')
+        ).values('event_count')
+        held_events = Event.objects.filter(
+            playgroups=OuterRef('pk'),
+            start_date__lte=date.today(),
+        ).order_by('-start_date')
+        return self.annotate(
+            events_last_90_days=Coalesce(Subquery(recent_events), Value(0)),
+            last_event_date=Subquery(held_events.values('start_date')[:1]),
         )
 
 

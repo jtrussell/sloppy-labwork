@@ -1,0 +1,236 @@
+.finder-visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.finder-mode-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border: 1px solid var(--color-lines);
+	border-radius: var(--border-radius-sm);
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	font-weight: 600;
+	white-space: nowrap;
+	color: var(--color-text-muted);
+}
+
+.finder-mode-badge-digital {
+	background-color: var(--color-primary);
+	border-color: var(--color-primary);
+	color: var(--color-text-on-gradient-primary);
+}
+
+.finder-format-chip {
+	display: inline-block;
+	padding: 1px 6px;
+	border-radius: 999px;
+	background-color: var(--color-gray);
+	font-size: 0.7rem;
+	font-weight: 600;
+	white-space: nowrap;
+	color: var(--color-text);
+}
+
+.finder-format-chip-digital {
+	background-color: transparent;
+	border: 1px solid var(--color-primary);
+	color: var(--color-primary);
+}
+
+.finder-activity {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.75rem;
+	color: var(--color-text-muted);
+	white-space: nowrap;
+}
+
+.finder-activity-segments {
+	display: inline-flex;
+	gap: 2px;
+}
+
+.finder-activity-segments span {
+	width: 6px;
+	height: 12px;
+	border-radius: 2px;
+	background-color: var(--color-primary);
+}
+
+.finder-activity-blazing .finder-activity-label {
+	color: var(--color-primary);
+	font-weight: 700;
+}
+
+.finder-card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	color: var(--color-text);
+}
+
+.finder-last-event {
+	font-size: 0.75rem;
+	color: var(--color-text-muted);
+	white-space: nowrap;
+}
+
+.finder-card-header {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.finder-card-logo {
+	width: 40px;
+	height: 40px;
+	border-radius: 4px;
+	object-fit: cover;
+	flex-shrink: 0;
+}
+
+.finder-card-title {
+	min-width: 0;
+}
+
+.finder-card-name {
+	display: block;
+	font-weight: 700;
+	font-size: 1rem;
+	color: var(--color-links);
+	text-decoration: none;
+}
+
+.finder-card-name:hover {
+	text-decoration: underline;
+}
+
+.finder-card-subtitle {
+	font-size: 0.8rem;
+	color: var(--color-text-muted);
+}
+
+.finder-card-dot {
+	margin-right: 0.3rem;
+}
+
+.finder-card-badges {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.finder-card-heading {
+	font-size: 0.7rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--color-text-muted);
+	margin-bottom: 0.35rem;
+}
+
+.finder-card-events {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+
+.finder-card-events li {
+	display: grid;
+	grid-template-columns: 5.5rem 1fr;
+	grid-template-areas:
+		"day name"
+		"day tags";
+	column-gap: 0.5rem;
+	font-size: 0.85rem;
+}
+
+.finder-card-event-day {
+	grid-area: day;
+	font-weight: 700;
+	color: var(--color-primary);
+	text-transform: capitalize;
+}
+
+.finder-card-event-name {
+	grid-area: name;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.finder-card-event-tags {
+	grid-area: tags;
+	display: flex;
+	gap: 0.3rem;
+}
+
+.finder-card-event-tags:empty {
+	display: none;
+}
+
+.finder-card-empty {
+	font-size: 0.85rem;
+	color: var(--color-text-muted);
+	margin: 0;
+}
+
+.finder-card-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.6rem;
+}
+
+.finder-avatar-stack {
+	display: flex;
+	align-items: center;
+}
+
+.finder-avatar-stack img,
+.finder-avatar-more {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	border: 2px solid var(--color-paper-bg);
+	object-fit: cover;
+	background-color: var(--color-gray);
+}
+
+.finder-avatar-stack img + img {
+	margin-left: -8px;
+}
+
+.finder-avatar-more {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: -8px;
+	font-size: 0.65rem;
+	font-weight: 700;
+	color: var(--color-text);
+}
+
+.finder-card-cta.btn {
+	padding: 4px 12px;
+	font-size: 0.8rem;
+}
+
+.finder-member-badge {
+	font-size: 0.75rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	color: var(--color-success);
+}

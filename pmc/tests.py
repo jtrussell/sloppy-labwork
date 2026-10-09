@@ -7,8 +7,10 @@ from .models import (
     RankingPointsMapVersion, RankingPointsMap, RankingPointsService,
     EventFormat, AwardBase, Achievement, Trophy, AwardAssignmentService,
     EventResultDeck, AwardCredit, LevelBreakpoint, AchievementTier,
-    PlaygroupQuerySet, PlaygroupVenue, Venue
+    PlaygroupQuerySet, PlaygroupVenue, Venue, PlaygroupMember, Avatar,
+    get_activity_level
 )
+from .templatetags.pmc_extras import relative_event_day
 from django.urls import reverse
 from decks.models import House, Set, Deck
 import uuid
@@ -1504,3 +1506,250 @@ class FinderTableUpcomingEventsTests(UpcomingEventsFilterTestBase):
         self.create_event(self.today + timedelta(days=7), is_digital=True)
         self.assertEqual(self.fetch_playgroup_names(
             mode='in_person', upcoming_events='1'), [])
+
+
+class PlaygroupNextUpcomingEventAnnotationTests(UpcomingEventsFilterTestBase):
+    def annotated_playgroup(self, **filters):
+        return Playgroup.objects.annotate_next_upcoming_event(**filters).get(pk=self.playgroup.pk)
+
+    def test_is_empty_without_upcoming_events(self):
+        self.create_event(self.today - timedelta(days=30))
+        playgroup = self.annotated_playgroup()
+        self.assertIsNone(playgroup.next_event_date)
+        self.assertIsNone(playgroup.next_event_format_name)
+
+    def test_picks_earliest_upcoming_event_and_its_format(self):
+        self.create_event(self.today + timedelta(days=14), format_name='Sealed')
+        self.create_event(self.today + timedelta(days=3), format_name='Archon')
+        playgroup = self.annotated_playgroup()
+        self.assertEqual(playgroup.next_event_date,
+                         self.today + timedelta(days=3))
+        self.assertEqual(playgroup.next_event_format_name, 'Archon')
+
+    def test_skips_event_with_finished_results(self):
+        finished_event = self.create_event(self.today)
+        self.register_player(finished_event, finishing_position=1)
+        self.create_event(self.today + timedelta(days=5))
+        self.assertEqual(self.annotated_playgroup().next_event_date,
+                         self.today + timedelta(days=5))
+
+    def test_respects_requested_mode(self):
+        self.create_event(self.today + timedelta(days=2), is_digital=True)
+        self.create_event(self.today + timedelta(days=9))
+        self.assertEqual(
+            self.annotated_playgroup(is_digital=False).next_event_date,
+            self.today + timedelta(days=9))
+        self.assertEqual(
+            self.annotated_playgroup(is_digital=True).next_event_date,
+            self.today + timedelta(days=2))
+
+
+class PlaygroupRecentActivityAnnotationTests(UpcomingEventsFilterTestBase):
+    def events_last_90_days(self):
+        return Playgroup.objects.annotate_recent_activity().get(pk=self.playgroup.pk).events_last_90_days
+
+    def test_is_zero_without_events(self):
+        self.assertEqual(self.events_last_90_days(), 0)
+
+    def test_counts_events_within_window_inclusive(self):
+        self.create_event(self.today)
+        self.create_event(self.today - timedelta(days=90))
+        self.assertEqual(self.events_last_90_days(), 2)
+
+    def test_ignores_events_outside_window_and_future_events(self):
+        self.create_event(self.today - timedelta(days=91))
+        self.create_event(self.today + timedelta(days=1))
+        self.assertEqual(self.events_last_90_days(), 0)
+
+    def test_ignores_events_from_other_playgroups(self):
+        self.create_event(self.today, playgroup=self.create_playgroup('Other Group'))
+        self.assertEqual(self.events_last_90_days(), 0)
+
+    def test_activity_levels_celebrate_recent_events(self):
+        self.assertEqual(
+            [get_activity_level(count).slug for count in (1, 3, 4, 8, 9)],
+            ['active', 'active', 'busy', 'busy', 'blazing'])
+
+    def test_no_activity_level_without_recent_events(self):
+        self.assertIsNone(get_activity_level(0))
+
+    def test_last_event_date_is_most_recent_held_event(self):
+        self.create_event(self.today - timedelta(days=200))
+        self.create_event(self.today - timedelta(days=120))
+        self.create_event(self.today + timedelta(days=3))
+        playgroup = Playgroup.objects.annotate_recent_activity().get(pk=self.playgroup.pk)
+        self.assertEqual(playgroup.last_event_date, self.today - timedelta(days=120))
+
+    def test_last_event_date_is_empty_without_held_events(self):
+        self.create_event(self.today + timedelta(days=3))
+        playgroup = Playgroup.objects.annotate_recent_activity().get(pk=self.playgroup.pk)
+        self.assertIsNone(playgroup.last_event_date)
+
+
+class RelativeEventDayFilterTests(TestCase):
+    def test_uses_natural_words_near_today(self):
+        today = date.today()
+        self.assertEqual(relative_event_day(today), 'today')
+        self.assertEqual(relative_event_day(today + timedelta(days=1)), 'tomorrow')
+
+    def test_counts_days_within_the_week(self):
+        self.assertEqual(relative_event_day(date.today() + timedelta(days=3)), 'in 3 days')
+
+    def test_falls_back_to_short_date(self):
+        event_day = date.today() + timedelta(days=10)
+        self.assertEqual(relative_event_day(event_day), event_day.strftime('%a, %b ') + str(event_day.day))
+
+    def test_counts_up_to_six_days_then_uses_date(self):
+        six_days_out = date.today() + timedelta(days=6)
+        seven_days_out = date.today() + timedelta(days=7)
+        self.assertEqual(relative_event_day(six_days_out), 'in 6 days')
+        self.assertEqual(relative_event_day(seven_days_out),
+                         seven_days_out.strftime('%a, %b ') + str(seven_days_out.day))
+
+    def test_uses_date_for_unfinished_event_from_yesterday(self):
+        yesterday = date.today() - timedelta(days=1)
+        self.assertEqual(relative_event_day(yesterday),
+                         yesterday.strftime('%a, %b ') + str(yesterday.day))
+
+
+@override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
+class FinderGroupCardTests(UpcomingEventsFilterTestBase):
+    def setUp(self):
+        super().setUp()
+        self.default_avatar = self.create_avatar('001')
+
+    def create_avatar(self, pmc_id):
+        return Avatar.objects.create(
+            pmc_id=pmc_id,
+            src=f'https://example.com/avatar-{pmc_id}.png',
+            category_label='Test',
+            name=f'Avatar {pmc_id}',
+            banner_bg_color='000000',
+            banner_stroke_color='000000',
+        )
+
+    def add_member(self, username, is_hidden=False, shows_playgroups=True, avatar=None):
+        user = User.objects.create_user(username=username)
+        user.pmc_profile.show_playgroups_on_profile = shows_playgroups
+        user.pmc_profile.avatar = avatar
+        user.pmc_profile.save()
+        PlaygroupMember.objects.create(
+            playgroup=self.playgroup, user=user, is_hidden=is_hidden)
+        return user
+
+    def fetch_card(self, slug=None):
+        return self.client.get(reverse('pmc-finder-card', args=[slug or self.playgroup.slug]))
+
+    def test_only_shows_avatars_of_visible_opted_in_members(self):
+        self.add_member('visible', avatar=self.create_avatar('101'))
+        self.add_member('hidden', is_hidden=True, avatar=self.create_avatar('102'))
+        self.add_member('private', shows_playgroups=False, avatar=self.create_avatar('103'))
+        response = self.fetch_card()
+        self.assertEqual(response.context['member_avatar_srcs'], [
+                         'https://example.com/avatar-101.png'])
+        self.assertEqual(response.context['hidden_member_avatar_count'], 0)
+
+    def test_uses_default_avatar_and_counts_overflow(self):
+        for index in range(7):
+            self.add_member(f'member-{index}')
+        response = self.fetch_card()
+        self.assertEqual(len(response.context['member_avatar_srcs']), 5)
+        self.assertEqual(response.context['member_avatar_srcs'][0], self.default_avatar.src)
+        self.assertEqual(response.context['hidden_member_avatar_count'], 2)
+
+    def test_lists_upcoming_events_only(self):
+        self.create_event(self.today - timedelta(days=10))
+        upcoming = self.create_event(self.today + timedelta(days=3))
+        response = self.fetch_card()
+        self.assertEqual(list(response.context['upcoming_events']), [upcoming])
+
+    def test_offers_join_to_anonymous_visitors(self):
+        response = self.fetch_card()
+        self.assertContains(response, reverse('pmc-pg-join', args=[self.playgroup.slug]))
+
+    def test_shows_member_badge_to_members(self):
+        member = self.add_member('member')
+        self.client.force_login(member)
+        response = self.fetch_card()
+        self.assertTrue(response.context['is_member'])
+        self.assertNotContains(response, reverse('pmc-pg-join', args=[self.playgroup.slug]))
+
+    def test_global_playgroups_are_not_found(self):
+        global_playgroup = self.create_playgroup('Global Group', is_global=True)
+        self.assertEqual(self.fetch_card(global_playgroup.slug).status_code, 404)
+
+
+class FinderMapGroupDetailsTests(UpcomingEventsFilterTestBase):
+    def setUp(self):
+        super().setUp()
+        self.add_mappable_venue(self.playgroup)
+
+    def fetch_only_playgroup(self, **params):
+        response = self.client.get(reverse('pmc-finder-data'), params)
+        self.assertEqual(response.status_code, 200)
+        [playgroup] = response.json()['playgroups']
+        return playgroup
+
+    def test_includes_card_url_and_activity_level(self):
+        self.create_event(self.today - timedelta(days=5))
+        playgroup = self.fetch_only_playgroup()
+        self.assertEqual(playgroup['card_url'], reverse(
+            'pmc-finder-card', args=[self.playgroup.slug]))
+        self.assertEqual(playgroup['activity_level'], 'active')
+
+    def test_next_event_is_earliest_in_person_upcoming_event(self):
+        self.create_event(self.today + timedelta(days=1), is_digital=True)
+        self.create_event(self.today + timedelta(days=4), format_name='Archon')
+        self.assertEqual(self.fetch_only_playgroup()['next_event'], {
+            'date': (self.today + timedelta(days=4)).isoformat(),
+            'format': 'Archon',
+        })
+
+    def test_next_event_is_empty_without_upcoming_events(self):
+        self.assertIsNone(self.fetch_only_playgroup()['next_event'])
+
+    def test_activity_level_is_empty_without_recent_events(self):
+        self.create_event(self.today - timedelta(days=120))
+        self.assertIsNone(self.fetch_only_playgroup()['activity_level'])
+
+    def test_next_event_respects_format_filter(self):
+        self.create_event(self.today + timedelta(days=1), format_name='Archon')
+        self.create_event(self.today + timedelta(days=5), format_name='Sealed')
+        sealed = EventFormat.objects.get(name='Sealed')
+        self.assertEqual(
+            self.fetch_only_playgroup(event_format=sealed.id)['next_event']['date'],
+            (self.today + timedelta(days=5)).isoformat())
+
+
+@override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
+class FinderTableNextEventTests(UpcomingEventsFilterTestBase):
+    def fetch_next_event_dates(self, **params):
+        response = self.client.get(reverse('pmc-finder-table'), params)
+        self.assertEqual(response.status_code, 200)
+        return [playgroup.next_event_date for playgroup in response.context['page_obj']]
+
+    def test_unrestricted_mode_uses_any_upcoming_event(self):
+        self.create_event(self.today + timedelta(days=2), is_digital=True)
+        self.create_event(self.today + timedelta(days=6))
+        self.assertEqual(self.fetch_next_event_dates(), [
+                         self.today + timedelta(days=2)])
+
+    def test_in_person_mode_ignores_digital_events(self):
+        self.create_event(self.today - timedelta(days=20))
+        self.create_event(self.today + timedelta(days=2), is_digital=True)
+        self.create_event(self.today + timedelta(days=6))
+        self.assertEqual(self.fetch_next_event_dates(mode='in_person'), [
+                         self.today + timedelta(days=6)])
+
+    def test_respects_format_filter(self):
+        self.create_event(self.today + timedelta(days=1), format_name='Archon')
+        self.create_event(self.today + timedelta(days=5), format_name='Sealed')
+        sealed = EventFormat.objects.get(name='Sealed')
+        self.assertEqual(self.fetch_next_event_dates(event_format=sealed.id), [
+                         self.today + timedelta(days=5)])

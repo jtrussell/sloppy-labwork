@@ -1,0 +1,90 @@
+{% load partials %}
+{% load pmc_extras %}
+
+{% partialdef activity-meter %}
+	{% if playgroup.activity_level %}
+		<span
+			class="finder-activity finder-activity-{{ playgroup.activity_level.slug }}"
+			title="{{ playgroup.events_last_90_days }} event{{ playgroup.events_last_90_days|pluralize }} in the last 90 days"
+		>
+			<span class="finder-activity-segments" aria-hidden="true">
+				<span></span>
+				{% if playgroup.activity_level.filled_segments >= 2 %}<span></span>{% endif %}
+				{% if playgroup.activity_level.filled_segments >= 3 %}<span></span>{% endif %}
+			</span>
+			<span class="finder-activity-label">{{ playgroup.activity_level.label }}</span>
+			<span class="finder-visually-hidden">: {{ playgroup.events_last_90_days }} event{{ playgroup.events_last_90_days|pluralize }} in the last 90 days</span>
+		</span>
+	{% elif playgroup.last_event_date %}
+		<span class="finder-last-event">
+			Last event <time datetime="{{ playgroup.last_event_date|date:'Y-m-d' }}">{{ playgroup.last_event_date|date:'M j, Y' }}</time>
+		</span>
+	{% endif %}
+{% endpartialdef %}
+
+<div class="finder-card">
+	<div class="finder-card-header">
+		<img class="finder-card-logo" src="{{ playgroup.get_logo_src }}" alt="">
+		<div class="finder-card-title">
+			<a class="finder-card-name" href="{% url 'pmc-pg-detail' playgroup.slug %}">{{ playgroup.name }}</a>
+			<div class="finder-card-subtitle">
+				{% if playgroup.display_venue %}
+					{{ playgroup.display_venue.city|default:playgroup.display_venue.name }}{% if playgroup.display_venue.state_province %}, {{ playgroup.display_venue.state_province }}{% endif %}
+				{% elif playgroup.is_primarily_digital %}
+					Online
+				{% endif %}
+				{% if playgroup.type %}<span class="finder-card-dot">&bull;</span>{{ playgroup.type }}{% endif %}
+			</div>
+		</div>
+	</div>
+
+	<div class="finder-card-badges">
+		{% if playgroup.is_primarily_digital %}
+			<span class="finder-mode-badge finder-mode-badge-digital">Digital</span>
+		{% else %}
+			<span class="finder-mode-badge">In person</span>
+		{% endif %}
+		{% partial activity-meter %}
+	</div>
+
+	<div class="finder-card-section">
+		<div class="finder-card-heading">Upcoming</div>
+		{% if upcoming_events %}
+			<ul class="finder-card-events">
+				{% for event in upcoming_events %}
+					<li>
+						<time class="finder-card-event-day" datetime="{{ event.start_date|date:'Y-m-d' }}" title="{{ event.start_date|date:'DATE_FORMAT' }}" data-relative-event-day>{{ event.start_date|relative_event_day }}</time>
+						<span class="finder-card-event-name">{{ event.name }}</span>
+						<span class="finder-card-event-tags">
+							{% if event.format %}<span class="finder-format-chip">{{ event.format.name }}</span>{% endif %}
+							{% if event.is_digital %}<span class="finder-format-chip finder-format-chip-digital">Online</span>{% endif %}
+						</span>
+					</li>
+				{% endfor %}
+			</ul>
+		{% else %}
+			<p class="finder-card-empty">Nothing scheduled yet.</p>
+		{% endif %}
+	</div>
+
+	<div class="finder-card-footer">
+		{% if member_avatar_srcs %}
+			<div class="finder-avatar-stack" role="group" aria-label="{{ visible_member_count }} member{{ visible_member_count|pluralize }}">
+				{% for avatar_src in member_avatar_srcs %}
+					<img src="{{ avatar_src }}" alt="">
+				{% endfor %}
+				{% if hidden_member_avatar_count %}
+					<span class="finder-avatar-more">+{{ hidden_member_avatar_count }}</span>
+				{% endif %}
+			</div>
+		{% else %}
+			<span></span>
+		{% endif %}
+
+		{% if is_member %}
+			<span class="finder-member-badge">Member</span>
+		{% else %}
+			<a class="btn btn-solid finder-card-cta" href="{% url 'pmc-pg-join' playgroup.slug %}">Request to join</a>
+		{% endif %}
+	</div>
+</div>
