@@ -48,7 +48,7 @@ def lineup_list(request):
     if format_filter:
         lineups = lineups.filter(format_id=format_filter)
 
-    paginator = Paginator(lineups, 10)
+    paginator = Paginator(lineups, 20)
     page = request.GET.get('page', 1)
     lineups_page = paginator.get_page(page)
 
@@ -108,14 +108,14 @@ def lineup_detail(request, lineup_code):
         return lineup_to_xml(lineup, request.user)
 
     versions = lineup.get_visible_versions(request.user)
-    version_paginator = Paginator(versions, 5)
+    version_paginator = Paginator(versions, 20)
     version_page = request.GET.get('vp', 1)
     versions_page = version_paginator.get_page(version_page)
 
     notes_page = None
     if is_owner:
         notes = lineup.notes.all()
-        note_paginator = Paginator(notes, 5)
+        note_paginator = Paginator(notes, 20)
         note_page = request.GET.get('np', 1)
         notes_page = note_paginator.get_page(note_page)
 
@@ -291,7 +291,7 @@ def version_detail(request, version_code):
     notes_page = None
     if is_owner:
         notes = version.notes.all()
-        note_paginator = Paginator(notes, 5)
+        note_paginator = Paginator(notes, 20)
         note_page = request.GET.get('np', 1)
         notes_page = note_paginator.get_page(note_page)
 
