@@ -1500,9 +1500,7 @@ def playgroup_finder_data(request):
 
     event_format = parse_event_format_filter(request.GET.get('event_format'))
 
-    playgroups = Playgroup.objects.discoverable().with_mappable_venues().annotate(
-        member_count=Count('members', distinct=True)
-    ).annotate_next_upcoming_event(
+    playgroups = Playgroup.objects.discoverable().with_mappable_venues().annotate_member_count().annotate_next_upcoming_event(
         is_digital=False, event_format=event_format
     ).annotate_recent_activity().select_related('type').prefetch_related(
         Prefetch('playgroup_venues', queryset=mappable_venue_links,
@@ -1642,9 +1640,7 @@ def playgroup_finder_table(request):
     if region not in regions:
         region = ''
 
-    playgroups = Playgroup.objects.discoverable().annotate_is_primarily_digital().annotate(
-        member_count=Count('members', distinct=True)
-    ).annotate_recent_activity().select_related('type', 'primary_venue').prefetch_related('venues').order_by('name')
+    playgroups = Playgroup.objects.discoverable().annotate_is_primarily_digital().annotate_member_count().annotate_recent_activity().select_related('type', 'primary_venue').prefetch_related('venues').order_by('name')
 
     if search:
         playgroups = playgroups.matching_search(search)

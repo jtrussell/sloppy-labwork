@@ -9,8 +9,9 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.dispatch import receiver
 from django.db.models.signals import post_save
-from django.db.models import Sum, F, Count, Window, Case, When, Value, Func
-from django.db.models.functions import Coalesce, Rank
+from django.db.models import Sum, F, Count, Window, Value, Func
+from django.db.models.functions import Cast, Coalesce, Rank
+from django.db.models.lookups import GreaterThan
 from django.conf import settings
 from io import BytesIO
 from collections import namedtuple
@@ -44,6 +45,13 @@ def filter_upcoming_events(qs):
         )
     )
     return qs.filter(start_date__gte=cutoff).exclude(has_finished_result)
+
+
+def count_subquery(qs):
+    counted = qs.order_by().annotate(
+        row_count=Func(F('pk'), function='COUNT')
+    ).values('row_count')
+    return Coalesce(Subquery(counted), Value(0))
 
 
 ActivityLevel = namedtuple(
@@ -123,26 +131,26 @@ class PlaygroupQuerySet(models.QuerySet):
             matching_venues = matching_venues.filter(state_province=region)
         return self.filter(Exists(matching_venues))
 
+    def annotate_member_count(self):
+        return self.annotate(member_count=count_subquery(
+            PlaygroupMember.objects.filter(playgroup=OuterRef('pk'))
+        ))
+
     def annotate_is_primarily_digital(self):
-        is_recent_event = Q(
-            events__start_date__gte=date.today() - self.RECENT_ACTIVITY_WINDOW)
-        return self.annotate(
-            recent_event_count=Count(
-                'events', filter=is_recent_event, distinct=True),
-            recent_digital_event_count=Count(
-                'events', filter=is_recent_event & Q(events__is_digital=True), distinct=True),
-        ).annotate(
-            is_primarily_digital=Case(
-                When(recent_event_count=0, then=F('event_default_is_digital')),
-                When(
-                    recent_digital_event_count__gt=F(
-                        'recent_event_count') - F('recent_digital_event_count'),
-                    then=Value(True),
-                ),
-                default=Value(False),
+        share_of_recent_events_digital = Func(
+            Cast('is_digital', models.IntegerField()), function='AVG')
+        digital_majority_or_default = Event.objects.filter(
+            playgroups=OuterRef('pk'),
+            start_date__gte=date.today() - self.RECENT_ACTIVITY_WINDOW,
+        ).order_by().annotate(
+            is_digital_majority=Coalesce(
+                GreaterThan(share_of_recent_events_digital, Value(0.5)),
+                OuterRef('event_default_is_digital'),
                 output_field=models.BooleanField(),
             )
-        )
+        ).values('is_digital_majority')
+        return self.annotate(is_primarily_digital=Subquery(
+            digital_majority_or_default, output_field=models.BooleanField()))
 
     def annotate_next_upcoming_event(self, is_digital=None, event_format=None):
         upcoming_events = filter_upcoming_events(
@@ -164,15 +172,13 @@ class PlaygroupQuerySet(models.QuerySet):
             playgroups=OuterRef('pk'),
             start_date__gte=date.today() - self.ACTIVITY_WINDOW,
             start_date__lte=date.today(),
-        ).order_by().annotate(
-            event_count=Func(F('pk'), function='COUNT')
-        ).values('event_count')
+        )
         held_events = Event.objects.filter(
             playgroups=OuterRef('pk'),
             start_date__lte=date.today(),
         ).order_by('-start_date')
         return self.annotate(
-            events_last_90_days=Coalesce(Subquery(recent_events), Value(0)),
+            events_last_90_days=count_subquery(recent_events),
             last_event_date=Subquery(held_events.values('start_date')[:1]),
         )
 
