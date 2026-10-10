@@ -108,9 +108,10 @@
 	}
 
 	function buildPopupShell(playgroup, venue) {
-		var primaryLabel = venue.is_primary ? ' (Primary)' : ''
+		var groupHasPrimaryVenue = playgroup.venues.some(function (candidate) { return candidate.is_primary })
+		var secondaryLabel = groupHasPrimaryVenue && !venue.is_primary ? ' (Secondary)' : ''
 		return '<div class="finder-popup">' +
-			'<div class="finder-popup-venue">' + escapeHtml(venue.name) + primaryLabel + '</div>' +
+			'<div class="finder-popup-venue">' + escapeHtml(venue.name) + secondaryLabel + '</div>' +
 			'<div class="finder-popup-card" aria-live="polite" data-card-url="' + escapeHtml(playgroup.card_url) + '">' +
 				(cardHtmlByUrl[playgroup.card_url] || '<div class="finder-popup-loading">Loading ' + escapeHtml(playgroup.name) + '…</div>') +
 			'</div>' +
