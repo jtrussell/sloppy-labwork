@@ -1,0 +1,47 @@
+name: Register Discord Commands
+
+on:
+  workflow_dispatch:
+    inputs:
+      guild_id:
+        description: Register for a single guild (instant) instead of globally. Leave blank for global.
+        required: false
+        type: string
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - run: uv sync --frozen --no-dev
+
+      - name: Register commands
+        env:
+          DISCORD_APP_ID: ${{ secrets.DISCORD_APP_ID }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          SECRET_KEY: ci-only-not-a-real-secret
+          SITE_ID: "1"
+          MAX_UPLOADS_PER_DAY: "0"
+          AWS_S3_BUCKET_VERIFICATION_PHOTOS_BUCKET: unused
+          AWS_S3_BUCKET_MV_QRCODE: unused
+          ACCOUNT_DEFAULT_HTTP_PROTOCOL: https
+          FT_USE_REGISTER: "False"
+          FT_USE_RATINGS: "False"
+          FT_USE_POSTS: "False"
+          FT_USE_EVENTS: "False"
+          FT_USE_TOURNEYS: "False"
+        run: |
+          if [ -n "${{ inputs.guild_id }}" ]; then
+            uv run python manage.py register_discord_commands --guild "${{ inputs.guild_id }}"
+          else
+            uv run python manage.py register_discord_commands
+          fi

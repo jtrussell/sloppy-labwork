@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import include, path
 from . import views
+from discord_bot import views as discord_bot_views
 from common.urls import urlpatterns as common_urlpatterns
 
 urlpatterns = [
@@ -14,6 +15,8 @@ urlpatterns = [
     path('@me/', include('user_profile.urls')),
     path('decks/', include('decks.urls')),
     path('redacted/', include('redacted.urls')),
+    path('redacted/discord-webhook/', discord_bot_views.interactions),
+    path('discord/', include('discord_bot.urls')),
     path('kagi-live/', include('transporter_platform.urls')),
     path('pmc/', include('pmc.urls')),
     path('tourney/', include('tourney.urls')),

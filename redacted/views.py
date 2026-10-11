@@ -1,15 +1,8 @@
 from random import randrange
 from django.shortcuts import render
-from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
 from requests import post
-from nacl.signing import VerifyKey
-from nacl.exceptions import BadSignatureError
 from .forms import RandomDecksFromDokForm
-from allauth.socialaccount.models import SocialAccount
 from decks.models import Set
-import json
-import os
 
 DOK_PAGE_SIZE = 20
 
@@ -41,9 +34,6 @@ EMPTY_FILTERS_PAYLOAD = {
     'withOwners': False,
 }
 
-public_key = os.environ.get('DISCORD_BOT_PUBLIC_KEY')
-verify_key = VerifyKey(bytes.fromhex(public_key))
-
 
 def get_random_deck_from_dok(filters={}):
     filter_payload = EMPTY_FILTERS_PAYLOAD | filters
@@ -66,66 +56,6 @@ def get_random_deck_from_dok(filters={}):
         'sasRating': json_the_deck['sasRating'],
     }
     return deck_info
-
-
-@csrf_exempt
-def discord_webhook_ingress(request):
-    if request.method == 'POST':
-        signature = request.META['HTTP_X_SIGNATURE_ED25519']
-        timestamp = request.META['HTTP_X_SIGNATURE_TIMESTAMP']
-        raw_body = request.body
-        body = raw_body.decode('utf-8')
-
-        try:
-            verify_key.verify(f'{timestamp}{body}'.encode(),
-                              bytes.fromhex(signature))
-        except BadSignatureError:
-            return HttpResponse('Unauthorized', 401)
-
-        body_json = json.loads(body)
-
-        if body_json['type'] == 1:
-            return JsonResponse({'type': 1, })
-        else:
-            try:
-                if 'options' in body_json['data']:
-                    options = body_json['data'].get('options')
-                else:
-                    options = []
-                owner = from_options('dok', options)
-                min_sas = from_options('min', options)
-                max_sas = from_options('max', options)
-                expansion = from_options('set', options)
-                if not owner:
-                    sa_id = int(body_json['member']['user']['id'])
-                    sa = SocialAccount.objects.get(uid=sa_id)
-                    owner = sa.user.profile.dok_handle
-                expansions = get_expansions_from_form(expansion)
-                filters = get_filters(owner, min_sas, max_sas, expansions)
-                deck_info = get_random_deck_from_dok(filters)
-                content = deck_info['url']
-                # TODO = put filters in content
-                return JsonResponse({
-                    'type': 4,
-                    'data': {
-                        'content': content
-                    }
-                })
-            except:
-                return JsonResponse({
-                    'type': 4,
-                    'data': {
-                        'flags': 1 << 6,
-                        'content': 'Oops! That didn\'t work. Are there decks matching your filter?',
-                    }
-                })
-
-
-def from_options(opt_name, options=[]):
-    for opt in options:
-        if opt['name'] == opt_name:
-            return opt['value']
-    return None
 
 
 def get_filters(owner, min_sas=None, max_sas=None, expansions=None):
@@ -154,11 +84,11 @@ def get_filters(owner, min_sas=None, max_sas=None, expansions=None):
 def get_expansions_from_form(expansion_value):
     if not expansion_value:
         return []
-    if expansion_value in ('modern', 1):
+    if expansion_value == 'modern':
         return [*Set.objects.filter(is_legacy=False, is_tournament_legal=True).values_list('id', flat=True)]
-    if expansion_value in ('legacy', 2):
+    if expansion_value == 'legacy':
         return [*Set.objects.filter(is_legacy=True, is_tournament_legal=True).values_list('id', flat=True)]
-    if expansion_value in ('tournament', 3):
+    if expansion_value == 'tournament':
         return [*Set.objects.filter(is_tournament_legal=True).values_list('id', flat=True)]
     return [int(expansion_value)]
 

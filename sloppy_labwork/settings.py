@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'timekeeper',
     'lineups',
     'shortlinks',
+    'discord_bot',
     'common',
     'django_hosts',
     'django_htmx',
