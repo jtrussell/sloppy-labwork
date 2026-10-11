@@ -30,18 +30,27 @@ class SingleEliminationPairingStrategy(PairingStrategy):
         return True
 
     def make_pairings_for_round(self, round_obj):
-        from tourney.models import Player, Match, MatchResult
-        import math
+        if round_obj.order == 1:
+            super().make_pairings_for_round(round_obj)
+            return
 
         stage = round_obj.stage
+        previous_round = stage.rounds.filter(order=round_obj.order - 1).first()
+        winners = self._get_round_winners(previous_round)
+        for pod_winners in self._group_by_pod(winners, stage):
+            self.make_pairings_for_players(round_obj, pod_winners)
+
+    def make_pairings_for_players(self, round_obj, stage_players):
+        from tourney.models import Match, MatchResult
+        import math
 
         if round_obj.order == 1:
-            # First round: pair players by seed using bracket-style pairing
-            stage_players = list(stage.stage_players.filter(
-                player__status=Player.PlayerStatus.ACTIVE).order_by('seed'))
+            stage_players = sorted(stage_players, key=lambda sp: sp.seed)
         else:
-            # Later rounds: only winners from previous round
-            stage_players = self._get_winners_from_previous_round(stage, round_obj)
+            stage_players = list(stage_players)
+
+        if not stage_players:
+            return
 
         matches = []
         num_players = len(stage_players)
@@ -89,27 +98,25 @@ class SingleEliminationPairingStrategy(PairingStrategy):
                     winner=match.player_one
                 )
 
-    def _get_winners_from_previous_round(self, stage, current_round):
-        """
-        Get the winners from the previous round to advance to the current round.
-
-        Args:
-            stage: The tournament stage
-            current_round: The current round
-
-        Returns:
-            List of stage_players who won in the previous round
-        """
-        previous_round = stage.rounds.filter(order=current_round.order - 1).first()
-        if not previous_round:
+    def _get_round_winners(self, round_obj):
+        if not round_obj:
             return []
 
         winners = []
-        for match in previous_round.matches.all():
+        for match in round_obj.matches.all():
             if match.has_result() and match.result.winner:
                 winners.append(match.result.winner)
 
         return winners
+
+    def _group_by_pod(self, stage_players, stage):
+        if not stage.has_pods():
+            return [stage_players]
+
+        groups = {}
+        for stage_player in stage_players:
+            groups.setdefault(stage_player.pod_id, []).append(stage_player)
+        return list(groups.values())
 
     def can_create_new_round(self, stage):
         """
@@ -127,11 +134,9 @@ class SingleEliminationPairingStrategy(PairingStrategy):
 
         current_round = stage.get_current_round()
         if current_round:
-            # Check if we have more than one completed match
-            # (if only 1 or 0 matches completed, tournament should end)
-            completed_matches = current_round.matches.filter(
-                result__isnull=False).count()
-            if completed_matches <= 1:
-                return False
+            winners = self._get_round_winners(current_round)
+            return any(
+                len(pod_winners) > 1
+                for pod_winners in self._group_by_pod(winners, stage))
 
         return True

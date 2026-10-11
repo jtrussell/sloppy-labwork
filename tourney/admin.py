@@ -1,6 +1,6 @@
 from django.contrib import admin
 from .models import (
-    Tournament, Player, TournamentAdmin, Stage, StageRankingCriteria, Group, StagePlayer,
+    Tournament, Player, TournamentAdmin, Stage, StageRankingCriteria, Pod, StagePlayer,
     Round, Match, MatchResult, TournamentActionLog
 )
 
@@ -49,8 +49,8 @@ class StageRankingCriteriaAdmin(admin.ModelAdmin):
 
 @admin.register(StagePlayer)
 class StagePlayerAdmin(admin.ModelAdmin):
-    list_display = ['player', 'stage', 'seed', 'group']
-    list_filter = ['stage', 'group']
+    list_display = ['player', 'stage', 'seed', 'pod']
+    list_filter = ['stage', 'pod']
     search_fields = ['player__user__username', 'player__nickname', 'stage__name']
 
 

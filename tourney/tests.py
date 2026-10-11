@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import date, timedelta
 from django.test import TestCase, override_settings
@@ -6,7 +7,9 @@ from django.db import models
 from django.urls import reverse
 from .models import (
     Tournament, Player, Stage, StagePlayer, Round, Match, MatchResult,
-    StandingCalculator, get_pairing_strategy, GamesPlayedRankingCriterion
+    StandingCalculator, get_pairing_strategy, GamesPlayedRankingCriterion,
+    Pod, TournamentActionLog, MAXIMUM_PODS_PER_STAGE, get_snake_pod_index,
+    build_unique_pod_slugs
 )
 from pmc.models import Event, EventResult, Playgroup, PlaygroupEvent, PlaygroupMember
 
@@ -2719,3 +2722,1154 @@ class SwissFoldInterlaceTestCase(TestCase):
 
         self.assertEqual(
             sorted(paired), sorted(sp.id for sp in stage_players))
+
+
+FAST_PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
+SIMPLE_STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+}
+
+
+class PodTestMixin:
+    def _create_stage_with_guest_players(self, player_count, pod_names=('Pod A', 'Pod B'),
+                                         pairing_strategy='swiss', criteria=None, owner=None):
+        tournament = Tournament.objects.create(
+            name='Pod Tournament', owner=owner, is_accepting_registrations=True)
+        stage = Stage.objects.create(
+            tournament=tournament, name='Main Stage', order=1,
+            pairing_strategy=pairing_strategy)
+        stage.set_ranking_criteria(criteria or [
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+        stage.sync_pods([{'id': None, 'name': name} for name in pod_names])
+
+        stage_players = []
+        for i in range(player_count):
+            player = Player.objects.create(
+                tournament=tournament, nickname=f'Guest {i + 1}')
+            stage_players.append(StagePlayer.objects.create(
+                player=player, stage=stage, seed=i + 1))
+
+        stage.snake_stage_players_into_pods()
+        for stage_player in stage_players:
+            stage_player.refresh_from_db()
+
+        return tournament, stage, stage_players
+
+    def _assign_pod(self, stage_players, pod):
+        StagePlayer.objects.filter(
+            id__in=[sp.id for sp in stage_players]).update(pod=pod)
+        for stage_player in stage_players:
+            stage_player.refresh_from_db()
+
+    def _play(self, stage, winner, loser):
+        round_obj = Round.objects.create(
+            stage=stage, order=stage.rounds.count() + 1)
+        match = Match.objects.create(
+            round=round_obj, player_one=winner, player_two=loser)
+        MatchResult.objects.create(match=match, winner=winner)
+        return match
+
+    def _pair_round(self, stage, order):
+        round_obj = Round.objects.create(stage=stage, order=order)
+        stage.get_pairing_strategy().make_pairings_for_round(round_obj)
+        return round_obj
+
+    def _resolve_round_with_player_one_wins(self, round_obj):
+        for match in round_obj.matches.all():
+            if not match.has_result():
+                MatchResult.objects.create(match=match, winner=match.player_one)
+
+    def _assert_no_cross_pod_matches(self, stage):
+        for match in Match.objects.filter(round__stage=stage, player_two__isnull=False):
+            self.assertEqual(
+                match.player_one.pod_id, match.player_two.pod_id,
+                f'{match} pairs players from different pods')
+
+
+class PodModelTestCase(PodTestMixin, TestCase):
+    def test_has_pods_requires_at_least_two_pods(self):
+        _tournament, stage, _stage_players = self._create_stage_with_guest_players(
+            2, pod_names=())
+        self.assertFalse(stage.has_pods())
+
+        stage.sync_pods([{'id': None, 'name': 'Solo'}])
+        self.assertFalse(stage.has_pods())
+
+        stage.sync_pods([{'id': None, 'name': 'One'}, {'id': None, 'name': 'Two'}])
+        self.assertTrue(stage.has_pods())
+
+    def test_pod_slugs_are_unique_and_never_all(self):
+        slugs = build_unique_pod_slugs(['Red Pod', 'red-pod', 'All', '!!!', 'Pod 4'])
+
+        self.assertEqual(slugs, ['red-pod', 'red-pod-2', 'all-2', 'pod-4', 'pod-4-2'])
+
+    def test_pod_created_directly_gets_a_unique_slug(self):
+        _tournament, stage, _stage_players = self._create_stage_with_guest_players(0)
+
+        pod = Pod.objects.create(stage=stage, name='Pod A', order=3)
+
+        self.assertEqual(pod.slug, 'pod-a-2')
+
+    def test_sync_pods_sets_slugs_and_updates_them_on_rename(self):
+        _tournament, stage, _stage_players = self._create_stage_with_guest_players(0)
+        pod_a, pod_b = stage.get_pods()
+        self.assertEqual([pod_a.slug, pod_b.slug], ['pod-a', 'pod-b'])
+
+        stage.sync_pods([
+            {'id': pod_a.id, 'name': 'Pod B'},
+            {'id': pod_b.id, 'name': 'Pod A'},
+        ])
+
+        pod_a.refresh_from_db()
+        pod_b.refresh_from_db()
+        self.assertEqual([pod_a.slug, pod_b.slug], ['pod-b', 'pod-a'])
+
+    def test_snake_pod_index(self):
+        positions = [get_snake_pod_index(position, 3) for position in range(8)]
+        self.assertEqual(positions, [0, 1, 2, 2, 1, 0, 0, 1])
+
+    def test_snake_into_two_pods_by_seed(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(6)
+        pod_a, pod_b = stage.get_pods()
+
+        seeds_by_pod = {
+            pod.id: sorted(sp.seed for sp in stage_players if sp.pod_id == pod.id)
+            for pod in (pod_a, pod_b)
+        }
+        self.assertEqual(seeds_by_pod[pod_a.id], [1, 4, 5])
+        self.assertEqual(seeds_by_pod[pod_b.id], [2, 3, 6])
+
+    def test_snake_into_three_uneven_pods(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(
+            7, pod_names=('A', 'B', 'C'))
+        pod_a, pod_b, pod_c = stage.get_pods()
+
+        def seeds_in(pod):
+            return sorted(sp.seed for sp in stage_players if sp.pod_id == pod.id)
+
+        self.assertEqual(seeds_in(pod_a), [1, 6, 7])
+        self.assertEqual(seeds_in(pod_b), [2, 5])
+        self.assertEqual(seeds_in(pod_c), [3, 4])
+
+    def test_snake_leaves_dropped_players_without_a_pod(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(5)
+        dropped = stage_players[0].player
+        dropped.status = Player.PlayerStatus.DROPPED
+        dropped.save()
+
+        stage.snake_stage_players_into_pods()
+
+        self.assertIsNone(StagePlayer.objects.get(id=stage_players[0].id).pod)
+        pod_a, pod_b = stage.get_pods()
+        self.assertEqual(pod_a.stage_players.count(), 2)
+        self.assertEqual(pod_b.stage_players.count(), 2)
+
+    def test_add_stage_player_joins_pod_with_fewest_active_players(self):
+        tournament, stage, stage_players = self._create_stage_with_guest_players(4)
+        pod_a, pod_b = stage.get_pods()
+        self._assign_pod([stage_players[1]], pod_a)
+        Round.objects.create(stage=stage, order=1)
+
+        late_player = Player.objects.create(tournament=tournament, nickname='Late')
+        late_stage_player = stage.add_stage_player(late_player)
+
+        self.assertEqual(late_stage_player.pod, pod_b)
+        self.assertEqual(late_stage_player.seed, 5)
+
+    def test_add_stage_player_before_start_waits_for_the_snake(self):
+        tournament, stage, _stage_players = self._create_stage_with_guest_players(4)
+        late_player = Player.objects.create(tournament=tournament, nickname='Late')
+
+        self.assertIsNone(stage.add_stage_player(late_player).pod)
+
+    def test_late_player_skips_empty_pod_added_after_start(self):
+        tournament, stage, _stage_players = self._create_stage_with_guest_players(4)
+        self._pair_round(stage, 1)
+        pod_a, pod_b = stage.get_pods()
+        stage.sync_pods([
+            {'id': pod_a.id, 'name': pod_a.name},
+            {'id': pod_b.id, 'name': pod_b.name},
+            {'id': None, 'name': 'Empty'},
+        ])
+
+        late_player = Player.objects.create(tournament=tournament, nickname='Late')
+        late_stage_player = stage.add_stage_player(late_player)
+
+        self.assertIn(late_stage_player.pod, [pod_a, pod_b])
+
+    def test_assign_pods_before_start_keeps_manual_assignments(self):
+        tournament, stage, stage_players = self._create_stage_with_guest_players(4)
+        pod_a, _pod_b = stage.get_pods()
+        self._assign_pod([stage_players[1]], pod_a)
+        late_player = Player.objects.create(tournament=tournament, nickname='Late')
+        late_stage_player = stage.add_stage_player(late_player)
+
+        stage.assign_pods_before_start()
+
+        stage_players[1].refresh_from_db()
+        late_stage_player.refresh_from_db()
+        self.assertEqual(stage_players[1].pod, pod_a)
+        self.assertIsNotNone(late_stage_player.pod)
+
+    def test_assign_pods_before_start_snakes_when_nobody_has_a_pod(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(4)
+        stage.stage_players.update(pod=None)
+
+        stage.assign_pods_before_start()
+
+        pod_a, _pod_b = stage.get_pods()
+        self.assertEqual(
+            sorted(pod_a.stage_players.values_list('seed', flat=True)), [1, 4])
+
+    def test_add_stage_player_without_pods_has_no_pod(self):
+        tournament, stage, _stage_players = self._create_stage_with_guest_players(
+            2, pod_names=())
+        late_player = Player.objects.create(tournament=tournament, nickname='Late')
+
+        self.assertIsNone(stage.add_stage_player(late_player).pod)
+
+    def test_assign_podless_active_players_fills_smallest_pods(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(4)
+        self._assign_pod(stage_players[2:], None)
+
+        stage.assign_podless_active_players()
+
+        pod_a, pod_b = stage.get_pods()
+        self.assertEqual(pod_a.stage_players.count(), 2)
+        self.assertEqual(pod_b.stage_players.count(), 2)
+        self.assertFalse(stage.stage_players.filter(pod__isnull=True).exists())
+
+    def test_sync_pods_creates_renames_reorders_and_deletes(self):
+        _tournament, stage, _stage_players = self._create_stage_with_guest_players(
+            0, pod_names=('A', 'B', 'C'))
+        pod_a, pod_b, pod_c = stage.get_pods()
+
+        stage.sync_pods([
+            {'id': pod_c.id, 'name': 'C renamed'},
+            {'id': None, 'name': 'D'},
+            {'id': pod_a.id, 'name': 'A'},
+        ])
+
+        pods = list(stage.get_pods())
+        self.assertEqual([pod.name for pod in pods], ['C renamed', 'D', 'A'])
+        self.assertEqual(pods[0].id, pod_c.id)
+        self.assertEqual(pods[2].id, pod_a.id)
+        self.assertFalse(Pod.objects.filter(id=pod_b.id).exists())
+
+    def test_sync_pods_treats_foreign_pod_ids_as_new_pods(self):
+        _tournament, stage, _stage_players = self._create_stage_with_guest_players(0)
+        _other_tournament, other_stage, _other_players = self._create_stage_with_guest_players(0)
+        foreign_pod = other_stage.get_pods().first()
+
+        stage.sync_pods([{'id': foreign_pod.id, 'name': 'Mine'}])
+
+        foreign_pod.refresh_from_db()
+        self.assertEqual(foreign_pod.stage, other_stage)
+        self.assertEqual([pod.name for pod in stage.get_pods()], ['Mine'])
+
+    def test_sync_pods_below_two_clears_pod_assignments(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(4)
+        pod_a = stage.get_pods().first()
+
+        stage.sync_pods([{'id': pod_a.id, 'name': pod_a.name}])
+
+        self.assertFalse(stage.stage_players.filter(pod__isnull=False).exists())
+
+    def test_pod_changes_unrestricted_before_stage_starts(self):
+        _tournament, stage, _stage_players = self._create_stage_with_guest_players(4)
+
+        self.assertEqual(stage.get_pod_change_errors([]), [])
+
+    def test_pods_cannot_be_turned_on_after_stage_starts(self):
+        _tournament, stage, _stage_players = self._create_stage_with_guest_players(
+            4, pod_names=())
+        Round.objects.create(stage=stage, order=1)
+
+        errors = stage.get_pod_change_errors(
+            [{'id': None, 'name': 'A'}, {'id': None, 'name': 'B'}])
+
+        self.assertTrue(any('turned on or off' in error for error in errors))
+
+    def test_pods_cannot_be_turned_off_after_stage_starts(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(4)
+        self._pair_round(stage, 1)
+        pod_a = stage.get_pods().first()
+        self._assign_pod(stage_players, pod_a)
+
+        errors = stage.get_pod_change_errors([{'id': pod_a.id, 'name': pod_a.name}])
+
+        self.assertTrue(any('turned on or off' in error for error in errors))
+
+    def test_occupied_pod_cannot_be_removed_after_stage_starts(self):
+        _tournament, stage, _stage_players = self._create_stage_with_guest_players(
+            6, pod_names=('A', 'B', 'C'))
+        self._pair_round(stage, 1)
+        pod_a, pod_b, _pod_c = stage.get_pods()
+
+        errors = stage.get_pod_change_errors([
+            {'id': pod_a.id, 'name': 'A'},
+            {'id': pod_b.id, 'name': 'B'},
+        ])
+
+        self.assertTrue(any('still has players' in error for error in errors))
+
+    def test_pods_can_be_added_and_renamed_after_stage_starts(self):
+        _tournament, stage, _stage_players = self._create_stage_with_guest_players(4)
+        self._pair_round(stage, 1)
+        pod_a, pod_b = stage.get_pods()
+
+        errors = stage.get_pod_change_errors([
+            {'id': pod_a.id, 'name': 'Renamed'},
+            {'id': pod_b.id, 'name': 'B'},
+            {'id': None, 'name': 'C'},
+        ])
+
+        self.assertEqual(errors, [])
+
+    def test_is_in_same_pod_as(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(4)
+        seed_one, seed_two, _seed_three, seed_four = stage_players
+
+        self.assertTrue(seed_one.is_in_same_pod_as(seed_four))
+        self.assertFalse(seed_one.is_in_same_pod_as(seed_two))
+        self.assertTrue(seed_one.is_in_same_pod_as(None))
+
+    def test_is_in_same_pod_as_without_pods(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(
+            2, pod_names=())
+
+        self.assertTrue(stage_players[0].is_in_same_pod_as(stage_players[1]))
+
+    def test_stage_without_pods_has_single_partition(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(
+            3, pod_names=())
+
+        partitions = stage.get_player_partitions()
+
+        self.assertEqual(len(partitions), 1)
+        self.assertIsNone(partitions[0][0])
+        self.assertEqual([sp.id for sp in partitions[0][1]],
+                         [sp.id for sp in stage_players])
+
+
+class PodPairingTestCase(PodTestMixin, TestCase):
+    def test_swiss_pairs_within_pods_over_several_rounds(self):
+        _tournament, stage, _stage_players = self._create_stage_with_guest_players(9)
+        pod_a, pod_b = stage.get_pods()
+
+        for order in range(1, 4):
+            round_obj = self._pair_round(stage, order)
+            byes = list(round_obj.matches.filter(player_two__isnull=True))
+            self.assertEqual(len(byes), 1)
+            self.assertEqual(byes[0].player_one.pod, pod_a)
+            self.assertEqual(round_obj.matches.count(), 5)
+            self._resolve_round_with_player_one_wins(round_obj)
+
+        self._assert_no_cross_pod_matches(stage)
+        self.assertFalse(Match.objects.filter(
+            round__stage=stage, player_one__pod=pod_b, player_two__isnull=True).exists())
+
+    def test_swiss_large_pods_use_greedy_pairing_within_pods(self):
+        _tournament, stage, _stage_players = self._create_stage_with_guest_players(30)
+
+        for order in range(1, 3):
+            round_obj = self._pair_round(stage, order)
+            self.assertEqual(round_obj.matches.count(), 16)
+            self._resolve_round_with_player_one_wins(round_obj)
+
+        self._assert_no_cross_pod_matches(stage)
+
+    def test_swiss_with_single_pod_pairs_everyone(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(
+            4, pod_names=('Only',))
+
+        round_obj = self._pair_round(stage, 1)
+
+        paired_ids = set()
+        for match in round_obj.matches.all():
+            paired_ids.update([match.player_one_id, match.player_two_id])
+        self.assertEqual(paired_ids, {sp.id for sp in stage_players})
+
+    def test_podless_active_player_is_assigned_before_pairing(self):
+        tournament, stage, _stage_players = self._create_stage_with_guest_players(4)
+        late_player = Player.objects.create(tournament=tournament, nickname='Late')
+        late_stage_player = StagePlayer.objects.create(
+            player=late_player, stage=stage, seed=5)
+
+        round_obj = self._pair_round(stage, 1)
+
+        late_stage_player.refresh_from_db()
+        self.assertIsNotNone(late_stage_player.pod)
+        self.assertTrue(round_obj.matches.filter(
+            models.Q(player_one=late_stage_player) | models.Q(player_two=late_stage_player)).exists())
+
+    def test_round_robin_completes_each_pod_in_shared_rounds(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(
+            7, pairing_strategy='round_robin_scheduled')
+        pod_a, pod_b = stage.get_pods()
+        self._assign_pod(stage_players[:5], pod_a)
+        self._assign_pod(stage_players[5:], pod_b)
+
+        self._pair_round(stage, 1)
+
+        self.assertEqual(stage.rounds.count(), 5)
+        self._assert_no_cross_pod_matches(stage)
+
+        played_pairs = {
+            frozenset([match.player_one_id, match.player_two_id])
+            for match in Match.objects.filter(round__stage=stage, player_two__isnull=False)
+        }
+        expected_pairs = set()
+        for pod_players in (stage_players[:5], stage_players[5:]):
+            for i, first in enumerate(pod_players):
+                for second in pod_players[i + 1:]:
+                    expected_pairs.add(frozenset([first.id, second.id]))
+        self.assertEqual(played_pairs, expected_pairs)
+
+    def test_round_robin_new_round_only_when_a_pod_has_unplayed_pairs(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(
+            6, pairing_strategy='round_robin_scheduled')
+        strategy = stage.get_pairing_strategy()
+
+        self._pair_round(stage, 1)
+        self.assertFalse(strategy.can_create_new_round(stage))
+
+        pod_b = stage.get_pods().last()
+        Match.objects.filter(
+            round__stage=stage, player_one__pod=pod_b, player_two__isnull=False).first().delete()
+        for round_obj in stage.rounds.all():
+            self._resolve_round_with_player_one_wins(round_obj)
+
+        self.assertTrue(strategy.can_create_new_round(stage))
+
+    def test_single_elimination_runs_a_bracket_per_pod(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(
+            11, pairing_strategy='single_elimination')
+        strategy = stage.get_pairing_strategy()
+        pod_a, pod_b = stage.get_pods()
+        self._assign_pod(stage_players[:8], pod_a)
+        self._assign_pod(stage_players[8:], pod_b)
+
+        expected_match_counts = [6, 3, 1]
+        for order, expected_match_count in enumerate(expected_match_counts, start=1):
+            round_obj = self._pair_round(stage, order)
+            self.assertEqual(round_obj.matches.count(), expected_match_count)
+            self._resolve_round_with_player_one_wins(round_obj)
+            self._assert_no_cross_pod_matches(stage)
+            if order < len(expected_match_counts):
+                self.assertTrue(strategy.can_create_new_round(stage))
+
+        self.assertFalse(strategy.can_create_new_round(stage))
+
+    def test_single_elimination_without_pods_stops_at_one_winner(self):
+        _tournament, stage, _stage_players = self._create_stage_with_guest_players(
+            4, pod_names=(), pairing_strategy='single_elimination')
+        strategy = stage.get_pairing_strategy()
+
+        for order in (1, 2):
+            round_obj = self._pair_round(stage, order)
+            self._resolve_round_with_player_one_wins(round_obj)
+
+        self.assertEqual(stage.rounds.get(order=2).matches.count(), 1)
+        self.assertFalse(strategy.can_create_new_round(stage))
+
+    def test_free_for_all_creates_no_pairings(self):
+        _tournament, stage, _stage_players = self._create_stage_with_guest_players(
+            4, pairing_strategy='round_robin')
+
+        round_obj = self._pair_round(stage, 1)
+
+        self.assertEqual(round_obj.matches.count(), 0)
+
+
+class PodStandingsTestCase(PodTestMixin, TestCase):
+    def setUp(self):
+        self.tournament, self.stage, self.stage_players = self._create_stage_with_guest_players(6)
+        self.pod_a, self.pod_b = self.stage.get_pods()
+        (self.seed_1, self.seed_2, self.seed_3,
+         self.seed_4, self.seed_5, self.seed_6) = self.stage_players
+
+    def _ordered_ids(self, standings):
+        return [standing['stage_player'].id for standing in standings]
+
+    def _play_strong_pod_a(self):
+        self._play(self.stage, self.seed_1, self.seed_5)
+        self._play(self.stage, self.seed_4, self.seed_5)
+        self._play(self.stage, self.seed_1, self.seed_4)
+        self._play(self.stage, self.seed_4, self.seed_5)
+        self._play(self.stage, self.seed_3, self.seed_2)
+
+    def test_pod_standings_rank_within_the_pod(self):
+        self._play_strong_pod_a()
+
+        standings = StandingCalculator.get_stage_standings(self.stage, self.pod_b)
+
+        self.assertEqual(self._ordered_ids(standings),
+                         [self.seed_3.id, self.seed_2.id, self.seed_6.id])
+        self.assertEqual([s['rank'] for s in standings], [1, 2, 3])
+
+    def test_unified_standings_interleave_pod_ranks(self):
+        self._play_strong_pod_a()
+
+        unified = StandingCalculator.get_unified_stage_standings(self.stage)
+
+        self.assertEqual(self._ordered_ids(unified), [
+            self.seed_1.id, self.seed_3.id,
+            self.seed_4.id, self.seed_2.id,
+            self.seed_5.id, self.seed_6.id,
+        ])
+        self.assertEqual([s['rank'] for s in unified], [1, 2, 3, 4, 5, 6])
+        self.assertEqual([s['pod_rank'] for s in unified], [1, 1, 2, 2, 3, 3])
+
+    def test_unified_standings_without_pods_match_stage_standings(self):
+        _tournament, stage, stage_players = self._create_stage_with_guest_players(
+            3, pod_names=())
+        self._play(stage, stage_players[2], stage_players[0])
+
+        self.assertEqual(
+            self._ordered_ids(StandingCalculator.get_unified_stage_standings(stage)),
+            self._ordered_ids(StandingCalculator.get_stage_standings(stage)))
+
+    def test_head_to_head_does_not_order_players_across_pods(self):
+        self.stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'head_to_head', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+        self._play(self.stage, self.seed_4, self.seed_1)
+        self._play(self.stage, self.seed_1, self.seed_5)
+        self._play(self.stage, self.seed_2, self.seed_6)
+
+        pod_a_standings = StandingCalculator.get_stage_standings(self.stage, self.pod_a)
+        self.assertEqual(pod_a_standings[0]['stage_player'].id, self.seed_4.id)
+
+        unified = StandingCalculator.get_unified_stage_standings(self.stage)
+        self.assertEqual(self._ordered_ids(unified)[:2],
+                         [self.seed_2.id, self.seed_4.id])
+
+    def test_dropped_pod_leader_does_not_push_pod_down_a_tier(self):
+        self._play(self.stage, self.seed_1, self.seed_4)
+        self._play(self.stage, self.seed_1, self.seed_5)
+        self._play(self.stage, self.seed_4, self.seed_5)
+        self._play(self.stage, self.seed_2, self.seed_3)
+        self.seed_1.player.status = Player.PlayerStatus.DROPPED
+        self.seed_1.player.save()
+
+        unified = StandingCalculator.get_unified_stage_standings(self.stage)
+
+        self.assertEqual(self._ordered_ids(unified), [
+            self.seed_2.id, self.seed_4.id,
+            self.seed_3.id, self.seed_5.id,
+            self.seed_6.id,
+            self.seed_1.id,
+        ])
+
+    def test_moved_player_strength_of_schedule_counts_old_pod_opponents(self):
+        self._play(self.stage, self.seed_1, self.seed_4)
+        self._play(self.stage, self.seed_4, self.seed_5)
+        self._assign_pod([self.seed_4], self.pod_b)
+
+        pod_b_standings = StandingCalculator.get_stage_standings(self.stage, self.pod_b)
+
+        moved_standing = next(
+            s for s in pod_b_standings if s['stage_player'].id == self.seed_4.id)
+        self.assertEqual(moved_standing['strength_of_schedule'], 1.0)
+
+    def test_tournament_standings_filtered_to_a_pod(self):
+        self._play_strong_pod_a()
+
+        standings = StandingCalculator.get_tournament_standings(
+            self.tournament, pod=self.pod_a)
+
+        self.assertEqual([s['stage_player'].id for s in standings],
+                         [self.seed_1.id, self.seed_4.id, self.seed_5.id])
+        self.assertEqual([s['tournament_rank'] for s in standings], [1, 2, 3])
+
+    def test_tournament_standings_use_unified_order_and_include_pod(self):
+        self._play_strong_pod_a()
+
+        standings = StandingCalculator.get_tournament_standings(self.tournament)
+
+        self.assertEqual([s['stage_player'].id for s in standings][:4], [
+            self.seed_1.id, self.seed_3.id, self.seed_4.id, self.seed_2.id])
+        self.assertEqual(standings[0]['pod'], self.pod_a)
+        self.assertEqual(standings[1]['pod'], self.pod_b)
+
+    def test_playoff_seeding_follows_unified_order(self):
+        self.tournament.create_playoff_stage(max_players=4)
+        self._play_strong_pod_a()
+
+        playoff_stage = self.tournament.prepare_next_stage_seeding()
+        playoff_player_ids = list(
+            playoff_stage.stage_players.order_by('seed').values_list('player_id', flat=True))
+
+        self.assertEqual(playoff_player_ids, [
+            self.seed_1.player_id, self.seed_3.player_id,
+            self.seed_4.player_id, self.seed_2.player_id,
+            self.seed_5.player_id, self.seed_6.player_id,
+        ])
+
+        self.tournament.advance_to_next_stage()
+
+        self.assertEqual(playoff_stage.stage_players.count(), 4)
+        self.assertFalse(playoff_stage.stage_players.filter(pod__isnull=False).exists())
+        self.seed_4.refresh_from_db()
+        self.assertEqual(self.seed_4.rank, 3)
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class PodTournamentFormTestCase(PodTestMixin, TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        self.client.login(username='owner', password='password')
+
+    def _get_post_data(self, pod_names, pod_ids=None, **overrides):
+        data = {
+            'name': 'Podded Tournament',
+            'is_accepting_registrations': True,
+            'is_public': False,
+            'main_pairing_strategy': 'swiss',
+            'main_score_reporting': '0',
+            'main_allow_ties': 'False',
+            'playoff_score_reporting': '0',
+            'criterion_wins_enabled': 'on',
+            'criterion_wins_order': '1',
+            'pods_submitted': '1',
+            'pod_id': pod_ids if pod_ids is not None else [''] * len(pod_names),
+            'pod_name': pod_names,
+        }
+        data.update(overrides)
+        return data
+
+    def test_create_tournament_with_pods(self):
+        self.client.post(reverse('tourney:tourney-create-tournament'),
+                         self._get_post_data(['Red', 'Blue', 'Green']))
+
+        main_stage = Tournament.objects.get(name='Podded Tournament').stages.get(order=1)
+        self.assertEqual([pod.name for pod in main_stage.get_pods()],
+                         ['Red', 'Blue', 'Green'])
+
+    def test_create_tournament_without_pods(self):
+        self.client.post(reverse('tourney:tourney-create-tournament'),
+                         self._get_post_data([]))
+
+        main_stage = Tournament.objects.get(name='Podded Tournament').stages.get(order=1)
+        self.assertFalse(main_stage.pods.exists())
+
+    def test_create_rejects_more_than_maximum_pods(self):
+        pod_names = [f'Pod {i}' for i in range(MAXIMUM_PODS_PER_STAGE + 1)]
+
+        response = self.client.post(reverse('tourney:tourney-create-tournament'),
+                                    self._get_post_data(pod_names))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'at most {MAXIMUM_PODS_PER_STAGE} pods')
+        self.assertFalse(Tournament.objects.filter(name='Podded Tournament').exists())
+
+    def test_create_accepts_maximum_pods(self):
+        pod_names = [f'Pod {i}' for i in range(MAXIMUM_PODS_PER_STAGE)]
+
+        self.client.post(reverse('tourney:tourney-create-tournament'),
+                         self._get_post_data(pod_names))
+
+        main_stage = Tournament.objects.get(name='Podded Tournament').stages.get(order=1)
+        self.assertEqual(main_stage.pods.count(), MAXIMUM_PODS_PER_STAGE)
+
+    def test_create_rejects_blank_and_duplicate_pod_names(self):
+        blank_response = self.client.post(reverse('tourney:tourney-create-tournament'),
+                                          self._get_post_data(['Red', '  ']))
+        duplicate_response = self.client.post(reverse('tourney:tourney-create-tournament'),
+                                              self._get_post_data(['Red', 'red']))
+
+        self.assertContains(blank_response, 'Pod names cannot be blank.')
+        self.assertContains(duplicate_response, 'Pod names must be unique.')
+        self.assertFalse(Tournament.objects.filter(name='Podded Tournament').exists())
+
+    def test_post_without_pod_fields_leaves_pods_unchanged(self):
+        tournament, stage, _stage_players = self._create_stage_with_guest_players(
+            4, owner=self.owner)
+        post_data = self._get_post_data([])
+        for key in ('pods_submitted', 'pod_id', 'pod_name'):
+            post_data.pop(key)
+
+        self.client.post(
+            reverse('tourney:tourney-edit-tournament', args=[tournament.code]), post_data)
+
+        self.assertEqual(stage.pods.count(), 2)
+
+    def test_invalid_post_keeps_entered_pod_names(self):
+        response = self.client.post(reverse('tourney:tourney-create-tournament'),
+                                    self._get_post_data(['Keep Me', 'keep me']))
+
+        self.assertContains(response, 'Keep Me')
+
+    def test_edit_renames_pods_and_keeps_assignments(self):
+        tournament, stage, stage_players = self._create_stage_with_guest_players(
+            4, owner=self.owner)
+        pod_a, pod_b = stage.get_pods()
+
+        self.client.post(
+            reverse('tourney:tourney-edit-tournament', args=[tournament.code]),
+            self._get_post_data(['Alpha', 'Bravo'], pod_ids=[pod_a.id, pod_b.id]))
+
+        pod_a.refresh_from_db()
+        self.assertEqual(pod_a.name, 'Alpha')
+        stage_players[0].refresh_from_db()
+        self.assertEqual(stage_players[0].pod, pod_a)
+
+    def test_edit_rejects_turning_on_pods_after_stage_starts(self):
+        tournament, stage, _stage_players = self._create_stage_with_guest_players(
+            4, pod_names=(), owner=self.owner)
+        Round.objects.create(stage=stage, order=1)
+
+        response = self.client.post(
+            reverse('tourney:tourney-edit-tournament', args=[tournament.code]),
+            self._get_post_data(['Alpha', 'Bravo']))
+
+        self.assertContains(response, 'turned on or off')
+        self.assertFalse(stage.pods.exists())
+
+    def test_edit_rejects_removing_occupied_pod_after_stage_starts(self):
+        tournament, stage, _stage_players = self._create_stage_with_guest_players(
+            6, pod_names=('A', 'B', 'C'), owner=self.owner)
+        self._pair_round(stage, 1)
+        pod_a, pod_b, _pod_c = stage.get_pods()
+
+        response = self.client.post(
+            reverse('tourney:tourney-edit-tournament', args=[tournament.code]),
+            self._get_post_data(['A', 'B'], pod_ids=[pod_a.id, pod_b.id]))
+
+        self.assertContains(response, 'still has players')
+        self.assertEqual(stage.pods.count(), 3)
+        redisplayed_pods = json.loads(response.context['pod_entries_json'])
+        self.assertEqual([pod['name'] for pod in redisplayed_pods], ['A', 'B', 'C'])
+
+    def test_copy_tournament_copies_pod_names(self):
+        tournament, _stage, _stage_players = self._create_stage_with_guest_players(
+            0, pod_names=('North', 'South'), owner=self.owner)
+        copy_url = reverse('tourney:tourney-copy-tournament', args=[tournament.code])
+
+        get_response = self.client.get(copy_url)
+        self.assertContains(get_response, 'North')
+        self.assertContains(get_response, 'South')
+
+        self.client.post(copy_url, self._get_post_data(
+            ['North', 'South'], name='Copied Tournament'))
+
+        copied_stage = Tournament.objects.get(name='Copied Tournament').stages.get(order=1)
+        self.assertEqual([pod.name for pod in copied_stage.get_pods()], ['North', 'South'])
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class PodStageFlowTestCase(PodTestMixin, TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        self.client.login(username='owner', password='password')
+        self.tournament, self.stage, self.stage_players = self._create_stage_with_guest_players(
+            6, owner=self.owner)
+        self.stage.stage_players.update(pod=None)
+        self.pod_a, self.pod_b = self.stage.get_pods()
+
+    def _url(self, name):
+        return reverse(f'tourney:{name}', args=[self.tournament.code])
+
+    def test_starting_podded_stage_snakes_and_asks_for_confirmation(self):
+        response = self.client.post(self._url('tourney-prepare-current-stage-seeding'))
+
+        self.assertRedirects(response, self._url('tourney-confirm-seeding'),
+                             fetch_redirect_response=False)
+        self.assertFalse(self.stage.rounds.exists())
+        self.assertEqual(self.pod_a.stage_players.count(), 3)
+        self.assertEqual(self.pod_b.stage_players.count(), 3)
+
+    def test_confirm_page_shows_pod_columns(self):
+        self.client.post(self._url('tourney-prepare-current-stage-seeding'))
+
+        response = self.client.get(self._url('tourney-confirm-seeding'))
+
+        self.assertContains(response, 'Confirm Pods')
+        self.assertContains(response, 'Re-snake by Seed')
+        self.assertContains(response, 'data-pod-id="%s"' % self.pod_a.id)
+
+    def test_move_single_player_between_pods_on_confirm_page(self):
+        self.client.post(self._url('tourney-prepare-current-stage-seeding'))
+        seed_one = self.stage_players[0]
+
+        response = self.client.post(self._url('tourney-update-pod-assignments'), {
+            'stage_player_id': seed_one.id, 'pod_id': self.pod_b.id})
+
+        self.assertEqual(response.status_code, 200)
+        seed_one.refresh_from_db()
+        self.assertEqual(seed_one.pod, self.pod_b)
+
+    def test_drag_assignments_update_pods(self):
+        self.client.post(self._url('tourney-prepare-current-stage-seeding'))
+        ids = [sp.id for sp in self.stage_players]
+
+        self.client.post(self._url('tourney-update-pod-assignments'), {
+            'pod_assignments': json.dumps({
+                str(self.pod_a.id): [str(i) for i in ids[:2]],
+                str(self.pod_b.id): [str(i) for i in ids[2:]],
+            })})
+
+        self.assertEqual(set(self.pod_a.stage_players.values_list('id', flat=True)), set(ids[:2]))
+        self.assertEqual(set(self.pod_b.stage_players.values_list('id', flat=True)), set(ids[2:]))
+
+    def test_pod_assignments_reject_bad_input_and_ignore_foreign_pods(self):
+        self.client.post(self._url('tourney-prepare-current-stage-seeding'))
+        _other_tournament, other_stage, _other_players = self._create_stage_with_guest_players(0)
+        foreign_pod = other_stage.get_pods().first()
+
+        bad_response = self.client.post(self._url('tourney-update-pod-assignments'), {
+            'pod_assignments': 'not json'})
+        self.client.post(self._url('tourney-update-pod-assignments'), {
+            'stage_player_id': self.stage_players[0].id, 'pod_id': foreign_pod.id})
+
+        self.assertEqual(bad_response.status_code, 400)
+        self.stage_players[0].refresh_from_db()
+        self.assertEqual(self.stage_players[0].pod, self.pod_a)
+
+    def test_starting_again_keeps_manual_pod_moves(self):
+        self.client.post(self._url('tourney-prepare-current-stage-seeding'))
+        seed_one = self.stage_players[0]
+        self.client.post(self._url('tourney-update-pod-assignments'), {
+            'stage_player_id': seed_one.id, 'pod_id': self.pod_b.id})
+
+        self.client.post(self._url('tourney-prepare-current-stage-seeding'))
+
+        seed_one.refresh_from_db()
+        self.assertEqual(seed_one.pod, self.pod_b)
+
+    def test_malformed_pod_assignment_posts_are_rejected(self):
+        self.client.post(self._url('tourney-prepare-current-stage-seeding'))
+        url = self._url('tourney-update-pod-assignments')
+
+        responses = [
+            self.client.post(url, {}),
+            self.client.post(url, {'pod_assignments': '[1, 2]'}),
+            self.client.post(url, {'pod_id': 'x', 'stage_player_id': '1'}),
+        ]
+
+        self.assertEqual([response.status_code for response in responses], [400, 400, 400])
+
+    def test_resnake_restores_seed_distribution(self):
+        self.client.post(self._url('tourney-prepare-current-stage-seeding'))
+        self._assign_pod(self.stage_players, self.pod_a)
+
+        self.client.post(self._url('tourney-snake-pods-by-seed'))
+
+        self.assertEqual(self.pod_a.stage_players.count(), 3)
+        self.assertEqual(self.pod_b.stage_players.count(), 3)
+
+    def test_randomize_seeding_keeps_pods_balanced(self):
+        self.client.post(self._url('tourney-prepare-current-stage-seeding'))
+
+        response = self.client.post(self._url('tourney-randomize-seeding'))
+
+        self.assertContains(response, 'data-pod-id')
+        self.assertEqual(self.pod_a.stage_players.count(), 3)
+        self.assertEqual(self.pod_b.stage_players.count(), 3)
+
+    def test_starting_after_confirmation_pairs_within_pods(self):
+        self.client.post(self._url('tourney-prepare-current-stage-seeding'))
+
+        self.client.post(self._url('tourney-start-next-stage'))
+
+        self.assertEqual(self.stage.rounds.count(), 1)
+        self.assertEqual(Match.objects.filter(round__stage=self.stage).count(), 4)
+        self._assert_no_cross_pod_matches(self.stage)
+
+    def test_stage_without_pods_still_starts_immediately(self):
+        self.stage.sync_pods([])
+
+        self.client.post(self._url('tourney-prepare-current-stage-seeding'))
+
+        self.assertEqual(self.stage.rounds.count(), 1)
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class PodMatchViewsTestCase(PodTestMixin, TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        self.tournament = Tournament.objects.create(
+            name='FFA Pods', owner=self.owner, is_accepting_registrations=True)
+        self.stage = Stage.objects.create(
+            tournament=self.tournament, name='Main Stage', order=1,
+            pairing_strategy='round_robin')
+        self.stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+        self.stage.sync_pods([{'id': None, 'name': 'Pod A'}, {'id': None, 'name': 'Pod B'}])
+        self.pod_a, self.pod_b = self.stage.get_pods()
+
+        self.stage_players = []
+        for i, nickname in enumerate(['Anvil', 'Beacon', 'Comet', 'Dynamo'], start=1):
+            user = User.objects.create_user(f'user{i}', f'user{i}@test.com', 'password')
+            player = Player.objects.create(
+                user=user, tournament=self.tournament, nickname=nickname)
+            self.stage_players.append(StagePlayer.objects.create(
+                player=player, stage=self.stage, seed=i))
+        self.stage.snake_stage_players_into_pods()
+        self.round = self._pair_round(self.stage, 1)
+        for stage_player in self.stage_players:
+            stage_player.refresh_from_db()
+        self.anvil, self.beacon, self.comet, self.dynamo = self.stage_players
+
+    def _url(self, name, query=''):
+        return reverse(f'tourney:{name}', args=[self.tournament.code]) + query
+
+    def test_snake_puts_anvil_and_dynamo_together(self):
+        self.assertEqual(self.anvil.pod, self.pod_a)
+        self.assertEqual(self.dynamo.pod, self.pod_a)
+        self.assertEqual(self.beacon.pod, self.pod_b)
+
+    def test_admin_cannot_add_cross_pod_match(self):
+        self.client.login(username='owner', password='password')
+
+        self.client.post(self._url('tourney-add-match'), {
+            'player_one': self.anvil.id, 'player_two': self.beacon.id})
+
+        self.assertFalse(self.round.matches.exists())
+
+    def test_admin_can_add_same_pod_match(self):
+        self.client.login(username='owner', password='password')
+
+        self.client.post(self._url('tourney-add-match'), {
+            'player_one': self.anvil.id, 'player_two': self.dynamo.id})
+
+        self.assertEqual(self.round.matches.count(), 1)
+
+    def test_admin_can_award_bye_with_pods(self):
+        self.client.login(username='owner', password='password')
+
+        self.client.post(self._url('tourney-add-match'), {'player_one': self.anvil.id})
+
+        self.assertTrue(self.round.matches.filter(player_two__isnull=True).exists())
+
+    def test_player_cannot_report_cross_pod_result(self):
+        self.client.login(username='user1', password='password')
+
+        self.client.post(self._url('tourney-player-add-match-result'), {
+            'opponent': self.beacon.id, 'winner': 'me'})
+
+        self.assertFalse(self.round.matches.exists())
+
+    def test_player_can_report_same_pod_result(self):
+        self.client.login(username='user1', password='password')
+
+        self.client.post(self._url('tourney-player-add-match-result'), {
+            'opponent': self.dynamo.id, 'winner': 'me'})
+
+        match = self.round.matches.get()
+        self.assertEqual(match.result.winner, self.anvil)
+
+    def test_player_report_opponents_are_limited_to_own_pod(self):
+        self.client.login(username='user1', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        opponents = json.loads(response.context['player_report_opponents_json'])
+        self.assertEqual([opponent['id'] for opponent in opponents], [self.dynamo.id])
+
+    def test_unmatched_players_json_includes_pod(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        unmatched = json.loads(response.context['unmatched_players_json'])
+        pod_ids = {entry['id']: entry['podId'] for entry in unmatched}
+        self.assertEqual(pod_ids[self.anvil.id], self.pod_a.id)
+        self.assertEqual(pod_ids[self.beacon.id], self.pod_b.id)
+
+    def test_redirect_after_htmx_action_keeps_selected_pod(self):
+        self.client.login(username='owner', password='password')
+        current_url = 'http://testserver' + self._url(
+            'tourney-detail-matches', f'?pod={self.pod_a.slug}')
+
+        response = self.client.post(
+            self._url('tourney-add-match'),
+            {'player_one': self.anvil.id, 'player_two': self.dynamo.id},
+            HTTP_HX_REQUEST='true', HTTP_HX_CURRENT_URL=current_url)
+
+        self.assertTrue(response['HX-Redirect'].endswith(f'?pod={self.pod_a.slug}'))
+
+    def test_matches_pod_filter_shows_only_that_pods_matches(self):
+        self._play_in_round(self.anvil, self.dynamo)
+        self._play_in_round(self.beacon, self.comet)
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches', f'?pod={self.pod_b.slug}'))
+
+        round_group = response.context['grouped_matches'][0]['rounds'][0]
+        self.assertEqual([match.player_one_id for match in round_group['matches']],
+                         [self.beacon.id])
+
+    def test_matches_all_view_numbers_matches_across_pods(self):
+        self._play_in_round(self.beacon, self.comet)
+        self._play_in_round(self.anvil, self.dynamo)
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        pod_groups = response.context['grouped_matches'][0]['rounds'][0]['pod_groups']
+        numbers = [numbered['number'] for group in pod_groups
+                   for numbered in group['numbered_matches']]
+        self.assertEqual(numbers, [1, 2])
+
+    def test_move_player_message_escapes_names(self):
+        self.pod_b.name = '<b>Bold</b>'
+        self.pod_b.save()
+        self.client.login(username='owner', password='password')
+
+        response = self.client.post(self._url('tourney-manage-players'), {
+            'action': 'move_player', 'player_id': self.dynamo.player_id,
+            'pod_id': self.pod_b.id}, HTTP_HX_REQUEST='true')
+
+        self.assertIn('&lt;b&gt;Bold&lt;/b&gt;', response['HX-Trigger'])
+        self.assertNotIn('<b>Bold</b>', response['HX-Trigger'])
+
+    def test_matches_all_view_groups_rounds_by_pod(self):
+        self._play_in_round(self.beacon, self.comet)
+        self._play_in_round(self.anvil, self.dynamo)
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        pod_groups = response.context['grouped_matches'][0]['rounds'][0]['pod_groups']
+        self.assertEqual([group['pod'] for group in pod_groups], [self.pod_a, self.pod_b])
+        self.assertContains(response, 'data-pod-switcher')
+
+    def test_standings_pod_filter(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(self._url('tourney-detail-standings', f'?pod={self.pod_b.slug}'))
+
+        self.assertEqual({s['player'].nickname for s in response.context['standings']},
+                         {'Beacon', 'Comet'})
+        self.assertFalse(response.context['show_pod_column'])
+
+    def test_standings_all_view_shows_pod_column(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(self._url('tourney-detail-standings'))
+
+        self.assertTrue(response.context['show_pod_column'])
+        self.assertEqual(len(response.context['standings']), 4)
+
+    def test_invalid_pod_filter_falls_back_to_all(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(self._url('tourney-detail-standings', '?pod=nope'))
+
+        self.assertIsNone(response.context['selected_pod'])
+        self.assertEqual(len(response.context['standings']), 4)
+
+    def test_unknown_pod_filter_falls_back_to_players_own_pod(self):
+        self.client.login(username='user2', password='password')
+
+        response = self.client.get(self._url('tourney-detail-standings', '?pod=renamed-pod'))
+
+        self.assertEqual(response.context['selected_pod'], self.pod_b)
+
+    def test_player_defaults_to_own_pod(self):
+        self.client.login(username='user2', password='password')
+
+        standings_response = self.client.get(self._url('tourney-detail-standings'))
+        matches_response = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertEqual(standings_response.context['selected_pod'], self.pod_b)
+        self.assertEqual(matches_response.context['selected_pod'], self.pod_b)
+        self.assertContains(standings_response, '(your pod)')
+
+    def test_player_can_choose_all_pods(self):
+        self.client.login(username='user2', password='password')
+
+        response = self.client.get(self._url('tourney-detail-standings', '?pod=all'))
+
+        self.assertIsNone(response.context['selected_pod'])
+        self.assertEqual(len(response.context['standings']), 4)
+
+    def test_admin_who_plays_defaults_to_all_pods(self):
+        self.tournament.owner = self.anvil.player.user
+        self.tournament.save()
+        self.client.login(username='user1', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertIsNone(response.context['selected_pod'])
+        self.assertContains(response, '(your pod)')
+
+    def test_tab_links_keep_the_chosen_pod(self):
+        self.client.login(username='user2', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches', '?pod=all'))
+
+        self.assertContains(response, self._url('tourney-detail-standings', '?pod=all'))
+
+    def test_admin_defaults_to_all_pods(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(self._url('tourney-detail-standings'))
+
+        self.assertIsNone(response.context['selected_pod'])
+
+    def test_pod_toggle_hidden_without_pods(self):
+        self.stage.stage_players.update(pod=None)
+        self.stage.pods.all().delete()
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(self._url('tourney-detail-standings'))
+
+        self.assertNotContains(response, 'data-pod-switcher')
+
+    def test_admin_moves_player_between_pods(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.post(self._url('tourney-manage-players'), {
+            'action': 'move_player', 'player_id': self.dynamo.player_id,
+            'pod_id': self.pod_b.id}, HTTP_HX_REQUEST='true')
+
+        self.assertEqual(response.status_code, 200)
+        self.dynamo.refresh_from_db()
+        self.assertEqual(self.dynamo.pod, self.pod_b)
+        self.assertTrue(TournamentActionLog.objects.filter(
+            tournament=self.tournament,
+            action_type=TournamentActionLog.ActionType.MOVE_PLAYER).exists())
+
+    def test_manage_players_shows_pod_menu(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(self._url('tourney-manage-players'))
+
+        self.assertContains(response, 'name="pod_id"')
+        self.assertContains(response, 'Pod B')
+
+    def test_late_registration_joins_smallest_pod(self):
+        self.dynamo.pod = self.pod_b
+        self.dynamo.save()
+        User.objects.create_user('latecomer', 'late@test.com', 'password')
+        self.client.login(username='latecomer', password='password')
+
+        self.client.post(self._url('tourney-register'), {'nickname': 'Eclipse'})
+
+        late_stage_player = self.stage.stage_players.get(player__nickname='Eclipse')
+        self.assertEqual(late_stage_player.pod, self.pod_a)
+
+    def test_admin_added_player_joins_smallest_pod(self):
+        self.anvil.pod = self.pod_b
+        self.anvil.save()
+        self.client.login(username='owner', password='password')
+
+        self.client.post(self._url('tourney-manage-players'), {
+            'action': 'add_player', 'nickname': 'Flare', 'username': ''})
+
+        late_stage_player = self.stage.stage_players.get(player__nickname='Flare')
+        self.assertEqual(late_stage_player.pod, self.pod_a)
+
+    def _play_in_round(self, winner, loser):
+        match = Match.objects.create(round=self.round, player_one=winner, player_two=loser)
+        MatchResult.objects.create(match=match, winner=winner)

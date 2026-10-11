@@ -5,13 +5,41 @@ from django.db.models import UniqueConstraint
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Q
 from django.utils.crypto import get_random_string
+from django.utils.text import slugify
 import random
 from abc import ABC, abstractmethod
 from .pairing_strategies import get_pairing_strategy
 
 
+MAXIMUM_PODS_PER_STAGE = 24
+MINIMUM_PODS_FOR_POD_PLAY = 2
+ALL_PODS_FILTER = 'all'
+
+
 def generate_tiebreaker_value():
     return random.random()
+
+
+def build_unique_pod_slugs(pod_names, taken_slugs=()):
+    used_slugs = {ALL_PODS_FILTER, *taken_slugs}
+    unique_slugs = []
+    for position, pod_name in enumerate(pod_names, start=1):
+        base_slug = slugify(pod_name)[:200] or f'pod-{position}'
+        slug = base_slug
+        suffix = 2
+        while slug in used_slugs:
+            slug = f'{base_slug}-{suffix}'
+            suffix += 1
+        used_slugs.add(slug)
+        unique_slugs.append(slug)
+    return unique_slugs
+
+
+def get_snake_pod_index(position, pod_count):
+    lap, position_in_lap = divmod(position, pod_count)
+    if lap % 2 == 1:
+        return pod_count - 1 - position_in_lap
+    return position_in_lap
 
 
 def generate_tournament_code():
@@ -177,7 +205,8 @@ class Tournament(models.Model):
             next_stage.stage_players.all().delete()
 
         # Get current standings from the current stage
-        standings = StandingCalculator.get_stage_standings(current_stage)
+        standings = StandingCalculator.get_unified_stage_standings(
+            current_stage)
 
         # Set ranks on current stage players before advancement
         for i, standing in enumerate(standings):
@@ -862,6 +891,118 @@ class Stage(models.Model):
 
         return criteria_objects
 
+    def has_started(self):
+        return self.rounds.exists()
+
+    def get_pods(self):
+        return self.pods.all()
+
+    def has_pods(self):
+        return self.pods.count() >= MINIMUM_PODS_FOR_POD_PLAY
+
+    def get_player_partitions(self):
+        active_stage_players = list(self.stage_players.filter(
+            player__status=Player.PlayerStatus.ACTIVE).select_related('player'))
+
+        if not self.has_pods():
+            return [(None, active_stage_players)]
+
+        return [
+            (pod, [sp for sp in active_stage_players if sp.pod_id == pod.id])
+            for pod in self.get_pods()
+        ]
+
+    def get_pod_with_fewest_active_players(self):
+        pods_by_size = self.pods.annotate(
+            active_player_count=models.Count(
+                'stage_players',
+                filter=Q(stage_players__player__status=Player.PlayerStatus.ACTIVE))
+        ).order_by('active_player_count', 'order', 'id')
+
+        if self.has_started():
+            occupied_pod = pods_by_size.filter(active_player_count__gt=0).first()
+            if occupied_pod:
+                return occupied_pod
+        return pods_by_size.first()
+
+    def assign_pods_before_start(self):
+        if not self.stage_players.filter(pod__isnull=False).exists():
+            self.snake_stage_players_into_pods()
+        else:
+            self.assign_podless_active_players()
+
+    def snake_stage_players_into_pods(self):
+        pods = list(self.get_pods())
+        if len(pods) < MINIMUM_PODS_FOR_POD_PLAY:
+            return
+
+        self.stage_players.update(pod=None)
+        active_stage_players = self.stage_players.filter(
+            player__status=Player.PlayerStatus.ACTIVE).order_by('seed')
+        for position, stage_player in enumerate(active_stage_players):
+            stage_player.pod = pods[get_snake_pod_index(position, len(pods))]
+            stage_player.save(update_fields=['pod'])
+
+    def assign_podless_active_players(self):
+        if not self.has_pods():
+            return
+
+        podless_stage_players = self.stage_players.filter(
+            pod__isnull=True,
+            player__status=Player.PlayerStatus.ACTIVE).order_by('seed')
+        for stage_player in podless_stage_players:
+            stage_player.pod = self.get_pod_with_fewest_active_players()
+            stage_player.save(update_fields=['pod'])
+
+    def add_stage_player(self, player):
+        max_seed = self.stage_players.aggregate(
+            models.Max('seed'))['seed__max'] or 0
+        joins_pod_now = self.has_pods() and self.has_started()
+        pod = self.get_pod_with_fewest_active_players() if joins_pod_now else None
+        return StagePlayer.objects.create(
+            player=player,
+            stage=self,
+            seed=max_seed + 1,
+            pod=pod
+        )
+
+    def get_pod_change_errors(self, pod_entries):
+        if not self.has_started():
+            return []
+
+        errors = []
+        had_pods = self.has_pods()
+        will_have_pods = len(pod_entries) >= MINIMUM_PODS_FOR_POD_PLAY
+        if had_pods != will_have_pods:
+            errors.append(
+                'Pods cannot be turned on or off after the main stage has started.')
+
+        kept_pod_ids = {entry['id'] for entry in pod_entries if entry['id']}
+        for pod in self.pods.exclude(id__in=kept_pod_ids):
+            if pod.stage_players.exists():
+                errors.append(
+                    f'Pod "{pod.name}" still has players. Move them to another pod before removing it.')
+
+        return errors
+
+    def sync_pods(self, pod_entries):
+        existing_pod_ids = set(self.pods.values_list('id', flat=True))
+        kept_pod_ids = {
+            entry['id'] for entry in pod_entries if entry['id'] in existing_pod_ids}
+        self.pods.exclude(id__in=kept_pod_ids).delete()
+
+        pod_slugs = build_unique_pod_slugs(entry['name'] for entry in pod_entries)
+        for order, (entry, slug) in enumerate(zip(pod_entries, pod_slugs), start=1):
+            if entry['id'] in kept_pod_ids:
+                self.pods.filter(id=entry['id']).update(
+                    name=entry['name'], slug=slug, order=order)
+            else:
+                Pod.objects.create(
+                    stage=self, name=entry['name'], slug=slug, order=order)
+
+        if not self.has_pods():
+            self.stage_players.update(pod=None)
+
 
 class StageRankingCriteria(models.Model):
     stage = models.ForeignKey(
@@ -887,13 +1028,25 @@ class StageRankingCriteria(models.Model):
         return get_ranking_criterion_by_key(self.criterion_key)
 
 
-class Group(models.Model):
+class Pod(models.Model):
     name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=210, default='', blank=True)
     stage = models.ForeignKey(
-        Stage, on_delete=models.CASCADE, related_name='groups')
+        Stage, on_delete=models.CASCADE, related_name='pods')
+    order = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ['order', 'id']
 
     def __str__(self):
         return f'{self.stage.tournament.name} - {self.stage.name} - {self.name}'
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            taken_slugs = Pod.objects.filter(stage_id=self.stage_id).exclude(
+                pk=self.pk).values_list('slug', flat=True)
+            self.slug = build_unique_pod_slugs([self.name], taken_slugs)[0]
+        super().save(*args, **kwargs)
 
 
 class StagePlayer(models.Model):
@@ -905,8 +1058,8 @@ class StagePlayer(models.Model):
     seed = models.PositiveIntegerField()
     rank = models.PositiveIntegerField(default=None, null=True, blank=True)
     tiebreaker_value = models.FloatField(default=generate_tiebreaker_value)
-    group = models.ForeignKey(
-        Group, on_delete=models.SET_NULL, related_name='players',
+    pod = models.ForeignKey(
+        Pod, on_delete=models.SET_NULL, related_name='stage_players',
         default=None, null=True, blank=True)
 
     class Meta:
@@ -920,6 +1073,11 @@ class StagePlayer(models.Model):
 
     def __str__(self):
         return f'{self.player.get_display_name()} (Seed {self.seed}) - {self.stage}'
+
+    def is_in_same_pod_as(self, other_stage_player):
+        if other_stage_player is None or not self.stage.has_pods():
+            return True
+        return self.pod_id == other_stage_player.pod_id
 
 
 class Round(models.Model):
@@ -1010,31 +1168,65 @@ class MatchResult(models.Model):
 class StandingCalculator:
 
     @staticmethod
-    def get_stage_standings(stage):
-        from django.db.models import Count, Q
-
-        stage_players = stage.stage_players.all()
+    def get_stage_standings(stage, pod=None):
+        stage_players = list(stage.stage_players.select_related('player'))
         if not stage_players:
             return []
 
         standings_cache = StandingCalculator._build_standings_cache(
             stage_players, stage)
+        criteria_objects = StandingCalculator._get_criteria_objects(stage)
 
-        standings = []
+        ranked_stage_players = [
+            sp for sp in stage_players if pod is None or sp.pod_id == pod.id]
+        return StandingCalculator._rank_stage_players(
+            ranked_stage_players, stage, standings_cache, criteria_objects)
+
+    @staticmethod
+    def get_unified_stage_standings(stage):
+        if not stage.has_pods():
+            return StandingCalculator.get_stage_standings(stage)
+
+        stage_players = list(stage.stage_players.select_related('player'))
+        standings_cache = StandingCalculator._build_standings_cache(
+            stage_players, stage)
+        criteria_objects = StandingCalculator._get_criteria_objects(stage)
+
+        active_stage_players_by_pod_id = {}
+        dropped_stage_players = []
         for stage_player in stage_players:
-            standing_data = {
-                'stage_player': stage_player,
-                'wins': standings_cache[stage_player.id]['wins'],
-                'losses': standings_cache[stage_player.id]['losses'],
-                'byes': standings_cache[stage_player.id]['byes'],
-                'ties': standings_cache[stage_player.id]['ties'],
-                'points': standings_cache[stage_player.id]['points'],
-                'total_matches': standings_cache[stage_player.id]['total_matches'],
-                'strength_of_schedule': standings_cache[stage_player.id]['strength_of_schedule'],
-                'seed': standings_cache[stage_player.id]['seed'],
-            }
-            standings.append(standing_data)
+            if stage_player.player.status == Player.PlayerStatus.ACTIVE:
+                active_stage_players_by_pod_id.setdefault(
+                    stage_player.pod_id, []).append(stage_player)
+            else:
+                dropped_stage_players.append(stage_player)
 
+        standings_by_pod_rank = {}
+        for pod_stage_players in active_stage_players_by_pod_id.values():
+            pod_standings = StandingCalculator._rank_stage_players(
+                pod_stage_players, stage, standings_cache, criteria_objects)
+            for standing in pod_standings:
+                standing['pod_rank'] = standing['rank']
+                standings_by_pod_rank.setdefault(
+                    standing['rank'], []).append(standing)
+
+        cross_pod_sort_key = StandingCalculator._criteria_sort_key(
+            criteria_objects, skip_head_to_head=True)
+        unified_standings = []
+        for pod_rank in sorted(standings_by_pod_rank):
+            unified_standings.extend(
+                sorted(standings_by_pod_rank[pod_rank], key=cross_pod_sort_key))
+
+        unified_standings.extend(StandingCalculator._rank_stage_players(
+            dropped_stage_players, stage, standings_cache, criteria_objects))
+
+        for i, standing in enumerate(unified_standings):
+            standing['rank'] = i + 1
+
+        return unified_standings
+
+    @staticmethod
+    def _get_criteria_objects(stage):
         criteria_objects = stage.get_enabled_ranking_criteria_objects()
         if not criteria_objects:
             criteria_objects = [
@@ -1043,17 +1235,17 @@ class StandingCalculator:
                 StrengthOfScheduleRankingCriterion(),
                 SeedRankingCriterion(),
             ]
+        return criteria_objects
 
-        for criterion in criteria_objects:
-            for standing in standings:
-                key = criterion.get_key()
-                standing[f'{key}_value'] = criterion.calculate_value(
-                    standing['stage_player'], stage, standings_cache
-                )
+    @staticmethod
+    def _criteria_sort_key(criteria_objects, skip_head_to_head=False):
+        sorting_criteria = [
+            c for c in criteria_objects
+            if not (skip_head_to_head and c.get_key() == 'head_to_head')]
 
         def sort_key(standing):
             sort_values = []
-            for criterion in criteria_objects:
+            for criterion in sorting_criteria:
                 key = criterion.get_key()
                 value = standing.get(f'{key}_value', 0)
                 if criterion.is_descending():
@@ -1063,7 +1255,33 @@ class StandingCalculator:
                     sort_values.append(value)
             return tuple(sort_values)
 
-        standings.sort(key=sort_key)
+        return sort_key
+
+    @staticmethod
+    def _rank_stage_players(stage_players, stage, standings_cache, criteria_objects):
+        standings = []
+        for stage_player in stage_players:
+            cached = standings_cache[stage_player.id]
+            standings.append({
+                'stage_player': stage_player,
+                'wins': cached['wins'],
+                'losses': cached['losses'],
+                'byes': cached['byes'],
+                'ties': cached['ties'],
+                'points': cached['points'],
+                'total_matches': cached['total_matches'],
+                'strength_of_schedule': cached['strength_of_schedule'],
+                'seed': cached['seed'],
+            })
+
+        for criterion in criteria_objects:
+            for standing in standings:
+                key = criterion.get_key()
+                standing[f'{key}_value'] = criterion.calculate_value(
+                    standing['stage_player'], stage, standings_cache
+                )
+
+        standings.sort(key=StandingCalculator._criteria_sort_key(criteria_objects))
 
         StandingCalculator._resolve_head_to_head_ties(
             standings, stage, criteria_objects)
@@ -1284,7 +1502,7 @@ class StandingCalculator:
         }
 
     @staticmethod
-    def get_tournament_standings(tournament):
+    def get_tournament_standings(tournament, pod=None):
         """
         Get comprehensive tournament standings for all players registered.
 
@@ -1305,8 +1523,12 @@ class StandingCalculator:
             return []
 
         # Get current stage standings first (properly sorted)
-        current_standings = StandingCalculator.get_stage_standings(
-            current_stage)
+        if pod is None:
+            current_standings = StandingCalculator.get_unified_stage_standings(
+                current_stage)
+        else:
+            current_standings = StandingCalculator.get_stage_standings(
+                current_stage, pod)
 
         # Build final standings starting with current stage players
         final_standings = []
@@ -1329,6 +1551,7 @@ class StandingCalculator:
                 'is_active': player.status == Player.PlayerStatus.ACTIVE,
                 'is_dropped': player.status == Player.PlayerStatus.DROPPED,
                 'is_in_current_stage': True,
+                'pod': current_standing['stage_player'].pod,
                 'rank': current_standing['rank'],
                 'wins': total_stats['wins'],
                 'losses': total_stats['losses'],
@@ -1354,6 +1577,11 @@ class StandingCalculator:
         # Add active players first, then dropped players
         final_standings.extend(current_stage_active_players)
         final_standings.extend(current_stage_dropped_players)
+
+        if pod is not None:
+            for i, standing in enumerate(final_standings):
+                standing['tournament_rank'] = i + 1
+            return final_standings
 
         # Then add players from other stages/not in current stage
         other_players = []
@@ -1383,6 +1611,7 @@ class StandingCalculator:
                 'is_active': player.status == Player.PlayerStatus.ACTIVE,
                 'is_dropped': player.status == Player.PlayerStatus.DROPPED,
                 'is_in_current_stage': False,
+                'pod': None,
                 'rank': highest_stage_player.rank or 999,
                 'wins': total_stats['wins'],
                 'losses': total_stats['losses'],
@@ -1425,6 +1654,7 @@ class TournamentActionLog(models.Model):
         DELETE_ROUND = 'delete_round', _('Delete Round')
         REGISTER_PLAYER = 'register_player', _('Register Player')
         UNREGISTER_PLAYER = 'unregister_player', _('Unregister Player')
+        MOVE_PLAYER = 'move_player', _('Move Player')
 
     tournament = models.ForeignKey(
         Tournament, on_delete=models.CASCADE, related_name='action_logs')

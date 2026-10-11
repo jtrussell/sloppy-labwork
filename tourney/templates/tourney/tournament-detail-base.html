@@ -40,13 +40,13 @@
     <nav>
         <ul class="nav short">
             <li class="nav__item">
-                <a href="{% url 'tourney:tourney-detail-matches' tournament.code %}"
+                <a href="{% url 'tourney:tourney-detail-matches' tournament.code %}{{ pod_query_string }}"
                 class="nav__link {% if current_tab == 'matches' %}nav__link--active{% endif %}">
                     Matches
                 </a>
             </li>
             <li class="nav__item">
-                <a href="{% url 'tourney:tourney-detail-standings' tournament.code %}"
+                <a href="{% url 'tourney:tourney-detail-standings' tournament.code %}{{ pod_query_string }}"
                 class="nav__link {% if current_tab == 'standings' %}nav__link--active{% endif %}">
                     Standings
                 </a>
@@ -116,7 +116,7 @@
     <!-- Add Match Modal -->
     <div id="addMatchModal" class="modal"
          data-add-match-url="{% url 'tourney:tourney-add-match' tournament.code %}"
-         data-unmatched-players='{{ unmatched_players_json|default:"[]"|safe }}'
+         data-unmatched-players="{{ unmatched_players_json|default:"[]" }}"
          data-is-admin="{{ is_admin|yesno:"true,false" }}"
          data-current-user-id="{{ user.id|default:"null" }}">
         <div class="modal-content">
@@ -125,7 +125,7 @@
                 <button class="modal-close" onclick="closeAddMatchModal()"></button>
             </div>
 
-            <p class="text-muted">You may only create matches for players not currently matched in the current round.</p>
+            <p class="text-muted">You may only create matches for players not currently matched in the current round.{% if current_stage_has_pods %} Players can only be matched within their pod.{% endif %}</p>
 
             <form id="addMatchForm" class="form-wide">
                 {% csrf_token %}
@@ -154,8 +154,7 @@
     <!-- Player Match Report Modal -->
     <div id="playerMatchReportModal" class="modal"
          data-report-url="{% url 'tourney:tourney-player-add-match-result' tournament.code %}"
-         data-unmatched-players='{{ unmatched_players_json|default:"[]"|safe }}'
-         data-current-user-id="{{ user.id|default:"null" }}"
+         data-opponents="{{ player_report_opponents_json|default:"[]" }}"
          data-stage-allow-ties="{{ selected_stage.are_ties_allowed|yesno:"true,false"|default:"false" }}"
          data-stage-score-reporting="{{ selected_stage.report_full_scores|default:"0" }}">
         <div class="modal-content">
@@ -247,6 +246,7 @@
     {% endif %}
 
     <script src="{% static 'tourney/tournament-modals.js' %}"></script>
+    <script src="{% static 'tourney/pod-switcher.js' %}"></script>
     <script src="{% static 'tourney/round-countdown.js' %}"></script>
     {% if active_timer %}
     <script src="{% static 'timekeeper/timer.js' %}"></script>

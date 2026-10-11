@@ -23,7 +23,7 @@ class RoundRobinSelfScheduledPairingStrategy(PairingStrategy):
     display_name = "Free-For-All"
     description = "Players create matches against each other manually"
 
-    def make_pairings_for_round(self, round_obj):
+    def make_pairings_for_players(self, round_obj, stage_players):
         """
         No automatic pairings are created in self-scheduled tournaments.
         Players create matches manually through the UI.

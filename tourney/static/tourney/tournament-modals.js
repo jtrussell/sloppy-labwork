@@ -220,23 +220,18 @@ function openAddMatchModal() {
   htmx.process(form)
 
   playerOneSelect.innerHTML = '<option value="">Select Player One</option>'
-  playerTwoSelect.innerHTML =
-    '<option value="">Select Player Two (Bye)</option>'
 
   let currentUserStagePlayerId = null
 
   unmatchedPlayers.forEach((player) => {
-    const option1 = new Option(truncateName(player.name), player.id)
-    const option2 = new Option(truncateName(player.name), player.id)
-    option1.title = player.name
-    option2.title = player.name
+    const option = new Option(truncateName(player.name), player.id)
+    option.title = player.name
 
     if (player.userId === currentUserId) {
       currentUserStagePlayerId = player.id
     }
 
-    playerOneSelect.appendChild(option1)
-    playerTwoSelect.appendChild(option2)
+    playerOneSelect.appendChild(option)
   })
 
   if (!isAdmin && currentUserStagePlayerId) {
@@ -244,7 +239,30 @@ function openAddMatchModal() {
     playerOneSelect.disabled = true
   }
 
+  populatePlayerTwoOptions(unmatchedPlayers, playerOneSelect.value)
+  playerOneSelect.onchange = () =>
+    populatePlayerTwoOptions(unmatchedPlayers, playerOneSelect.value)
+
   modal.classList.add('modal--active')
+}
+
+function populatePlayerTwoOptions(unmatchedPlayers, playerOneId) {
+  const playerTwoSelect = document.getElementById('addMatchPlayerTwo')
+  const playerOne = unmatchedPlayers.find(
+    (player) => String(player.id) === String(playerOneId),
+  )
+
+  playerTwoSelect.innerHTML =
+    '<option value="">Select Player Two (Bye)</option>'
+
+  unmatchedPlayers
+    .filter((player) => !playerOne || player.podId === playerOne.podId)
+    .filter((player) => !playerOne || player.id !== playerOne.id)
+    .forEach((player) => {
+      const option = new Option(truncateName(player.name), player.id)
+      option.title = player.name
+      playerTwoSelect.appendChild(option)
+    })
 }
 
 function closeAddMatchModal() {
@@ -266,8 +284,7 @@ function openPlayerMatchReportModal() {
   const scoreInputsSection = document.getElementById('playerScoreInputs')
 
   const reportUrl = modal.dataset.reportUrl
-  const unmatchedPlayers = JSON.parse(modal.dataset.unmatchedPlayers || '[]')
-  const currentUserId = parseInt(modal.dataset.currentUserId)
+  const opponents = JSON.parse(modal.dataset.opponents || '[]')
   const stageAllowTies = modal.dataset.stageAllowTies === 'true'
   const stageScoreReporting = parseInt(modal.dataset.stageScoreReporting || '0')
 
@@ -276,12 +293,10 @@ function openPlayerMatchReportModal() {
 
   opponentSelect.innerHTML = '<option value="">Select your opponent</option>'
 
-  unmatchedPlayers.forEach((player) => {
-    if (player.userId !== currentUserId) {
-      const option = new Option(truncateName(player.name), player.id)
-      option.title = player.name
-      opponentSelect.appendChild(option)
-    }
+  opponents.forEach((opponent) => {
+    const option = new Option(truncateName(opponent.name), opponent.id)
+    option.title = opponent.name
+    opponentSelect.appendChild(option)
   })
 
   winnerSelect.innerHTML = '<option value="">Select winner</option>'

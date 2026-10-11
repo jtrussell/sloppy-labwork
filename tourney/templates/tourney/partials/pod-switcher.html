@@ -1,0 +1,14 @@
+{% if current_stage_has_pods %}
+<form method="get" action="{{ pod_switcher_url }}" class="pod-switcher" data-pod-switcher>
+    <label for="pod-switcher-select" class="pod-switcher__label">Pod</label>
+    <select id="pod-switcher-select" name="pod" class="pod-switcher__select">
+        <option value="{{ all_pods_filter }}"{% if not selected_pod %} selected{% endif %}>All pods</option>
+        {% for pod in current_stage_pods %}
+            <option value="{{ pod.slug }}"{% if selected_pod.id == pod.id %} selected{% endif %}>
+                {{ pod.name }}{% if viewer_pod.id == pod.id %} (your pod){% endif %}
+            </option>
+        {% endfor %}
+    </select>
+    <noscript><button type="submit" class="button">Show</button></noscript>
+</form>
+{% endif %}

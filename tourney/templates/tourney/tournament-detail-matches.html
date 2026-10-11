@@ -9,6 +9,8 @@
             </p>
         </section>
     {% else %}
+        {% include 'tourney/partials/pod-switcher.html' %}
+
         <!-- All Tournament Matches -->
         {% if grouped_matches %}
             {% for stage_group in grouped_matches %}
@@ -34,7 +36,16 @@
                                     </form>
                                 {% endif %}
                             </div>
-                            {% if round_group.matches %}
+                            {% if round_group.pod_groups %}
+                                {% for pod_group in round_group.pod_groups %}
+                                    <h4 class="pod-group-heading">{{ pod_group.pod.name|default:"No Pod" }}</h4>
+                                    <div class="match-grid">
+                                        {% for numbered_match in pod_group.numbered_matches %}
+                                            {% include 'tourney/partials/match-card.html' with match=numbered_match.match is_admin=is_admin show_match_number=True match_number=numbered_match.number %}
+                                        {% endfor %}
+                                    </div>
+                                {% endfor %}
+                            {% elif round_group.matches %}
                                 <div class="match-grid">
                                     {% for match in round_group.matches %}
                                         {% include 'tourney/partials/match-card.html' with match=match is_admin=is_admin show_match_number=True match_number=forloop.counter %}
@@ -58,7 +69,7 @@
                                     {% if stage_player.player.is_guest %}
                                         <span class="player-guest-badge"></span>
                                     {% endif %}
-                                    <span class="player-seed">Seed {{ stage_player.seed }}</span>
+                                    <span class="player-seed">{% if current_stage_has_pods and not selected_pod and stage_player.pod %}{{ stage_player.pod.name }} • {% endif %}Seed {{ stage_player.seed }}</span>
                                 </div>
                             {% endfor %}
                         </div>
@@ -67,7 +78,7 @@
             {% endif %}
         {% else %}
             <section>
-                <p class="text-muted" style="text-align: center;">No matches have been created yet.</p>
+                <p class="text-muted" style="text-align: center;">{% if selected_pod %}No matches have been created in {{ selected_pod.name }} yet.{% else %}No matches have been created yet.{% endif %}</p>
             </section>
         {% endif %}
     {% endif %}

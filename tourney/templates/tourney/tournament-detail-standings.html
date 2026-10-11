@@ -9,15 +9,18 @@
             </p>
         </section>
     {% else %}
+        {% include 'tourney/partials/pod-switcher.html' %}
+
         <section>
             {% if standings %}
-                <h2>Tournament Standings</h2>
+                <h2>{% if selected_pod %}{{ selected_pod.name }} Standings{% else %}Tournament Standings{% endif %}</h2>
                 <div style="overflow-x: auto">
                     <table class="standings-table">
                         <thead>
                             <tr>
                                 <th style="max-width: 35px; text-align: center;">#</th>
                                 <th>Player</th>
+                                {% if show_pod_column %}<th>Pod</th>{% endif %}
                                 <th>W-L (B)</th>
                                 {% for criterion in enabled_criteria %}
                                     <th>
@@ -37,6 +40,9 @@
                                         <span class="text-muted">(Dropped)</span>
                                     {% endif %}
                                 </td>
+                                {% if show_pod_column %}
+                                    <td>{% if standing.pod %}{{ standing.pod.name }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                                {% endif %}
                                 <td{% if not standing.is_in_current_stage %} class="text-muted"{% endif %}>
                                     {% if standing.wins or standing.losses or standing.ties or standing.byes %}
                                         {{ standing.wins | default:0 }} - {{ standing.losses | default:0 }}

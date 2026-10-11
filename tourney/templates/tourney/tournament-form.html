@@ -141,6 +141,41 @@
         </div>
     </section>
 
+    <section x-data="podList({{ pod_entries_json }}, {{ maximum_pods }})">
+        <h2>Main Stage Pods</h2>
+        <p>
+            Optionally split the main stage into pods. Players only play against others in their pod,
+            and each pod gets its own standings. Leave empty (or use a single pod) to play without pods.
+        </p>
+
+        <template x-if="true">
+            <input type="hidden" name="pods_submitted" value="1">
+        </template>
+
+        {% if form.non_field_errors %}
+            <div class="form-error">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="pod-name-list">
+            <template x-for="pod in pods" :key="pod.key">
+                <div class="pod-name-row">
+                    <input type="hidden" name="pod_id" :value="pod.id">
+                    <input type="text"
+                           name="pod_name"
+                           class="pod-name-input"
+                           maxlength="200"
+                           required
+                           aria-label="Pod name"
+                           x-model="pod.name">
+                    <button type="button" class="button" :aria-label="'Remove ' + pod.name" @click="removePod(pod.key)">Remove</button>
+                </div>
+            </template>
+        </div>
+
+        <button type="button" class="button" @click="addPod()" :disabled="!canAddPod()">Add Pod</button>
+        <span class="helptext" x-show="!canAddPod()">A stage can have at most {{ maximum_pods }} pods.</span>
+    </section>
+
     <section x-data="rankingCriteria({{ ordered_criteria_json }})">
         <h2>Main Stage Ranking Criteria</h2>
         <p>Drag to reorder the criteria by importance. Toggle criteria on/off with the switches.</p>
@@ -279,6 +314,7 @@
 {% block extra_body %}
 {{ block.super }}
 <script src="{% static 'tourney/ranking-criteria.js' %}"></script>
+<script src="{% static 'tourney/pods-form.js' %}"></script>
 <script src="{% static 'tourney/tournament-form.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {

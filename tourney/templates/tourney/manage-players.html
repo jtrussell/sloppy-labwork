@@ -17,6 +17,27 @@
             {{ player.get_status_display }}
         </span>
         <div class="player-actions">
+            {% if pods %}
+                <form
+                    method="post"
+                    class="player-pod-form"
+                    hx-post="{% url 'tourney:tourney-manage-players' tournament.code %}"
+                    hx-trigger="change"
+                    hx-target="closest .player-item"
+                    hx-swap="outerHTML"
+                >
+                    <input type="hidden" name="action" value="move_player">
+                    <input type="hidden" name="player_id" value="{{ player.id }}">
+                    <select name="pod_id" id="player-pod-{{ player.id }}" aria-label="Pod for {{ player.get_display_name }}">
+                        {% if not player.current_pod_id %}
+                            <option value="" selected disabled>Choose pod</option>
+                        {% endif %}
+                        {% for pod in pods %}
+                            <option value="{{ pod.id }}"{% if pod.id == player.current_pod_id %} selected{% endif %}>{{ pod.name }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            {% endif %}
             <a href="{% url 'tourney:tourney-edit-player' tournament.code player.id %}" class="button button-small">Edit</a>
             {% if player.status == 'active' %}
                 <form
@@ -117,6 +138,9 @@
 
 <section>
     <h2>Registered Players ({{ players | length }})</h2>
+    {% if pods %}
+        <p class="text-muted">Use the pod menu to move a player between pods. Their existing matches stay as they are.</p>
+    {% endif %}
     {% if players %}
         {% partial players-list %}
     {% else %}

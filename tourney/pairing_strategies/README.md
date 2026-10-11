@@ -32,9 +32,9 @@ class MyCustomPairingStrategy(PairingStrategy):
     display_name = "My Custom Strategy"  # Human-readable name (shown in UI)
     description = "Brief description for forms and documentation"
 
-    def make_pairings_for_round(self, round_obj):
+    def make_pairings_for_players(self, round_obj, stage_players):
         """
-        Create match pairings for the given round.
+        Create match pairings for one pod of the given round.
 
         This is the main method you must implement. It should create
         Match objects and save them to the database.
@@ -76,7 +76,11 @@ Every strategy must define these class attributes:
 
 ### Core Method (Required)
 
-- `make_pairings_for_round(round_obj)`: Create matches for the given round
+- `make_pairings_for_players(round_obj, stage_players)`: Create matches for one
+  partition of the round. The base class's `make_pairings_for_round(round_obj)` calls it
+  once per pod (or once with every active player when the stage has no pods), so players
+  are never paired across pods. Override `make_pairings_for_round` only when a strategy
+  needs to see the whole round at once.
 
 ### Optional Methods
 
@@ -92,14 +96,10 @@ Every strategy must define these class attributes:
 Use Django's bulk operations for efficiency:
 
 ```python
-def make_pairings_for_round(self, round_obj):
+def make_pairings_for_players(self, round_obj, stage_players):
     from tourney.models import Match, MatchResult
 
-    # Get active players
-    stage = round_obj.stage
-    players = list(stage.stage_players.filter(
-        player__status=Player.PlayerStatus.ACTIVE
-    ))
+    players = list(stage_players)
 
     # Create your pairing logic
     matches = []
@@ -168,11 +168,8 @@ player_matches = Match.objects.filter(
 Strategies should handle edge cases gracefully:
 
 ```python
-def make_pairings_for_round(self, round_obj):
-    stage = round_obj.stage
-    players = list(stage.stage_players.filter(
-        player__status=Player.PlayerStatus.ACTIVE
-    ))
+def make_pairings_for_players(self, round_obj, stage_players):
+    players = list(stage_players)
 
     # Handle edge cases
     if len(players) == 0:
@@ -251,12 +248,10 @@ For tournaments that need player seeding:
 def is_seeding_required(self):
     return True
 
-def make_pairings_for_round(self, round_obj):
+def make_pairings_for_players(self, round_obj, stage_players):
     if round_obj.order == 1:
         # First round - use seeds
-        players = list(stage.stage_players.filter(
-            player__status=Player.PlayerStatus.ACTIVE
-        ).order_by('seed'))
+        players = sorted(stage_players, key=lambda sp: sp.seed)
 ```
 
 ### Swiss-Style Pairing
@@ -309,7 +304,7 @@ The system automatically validates strategies on startup. Check the console for:
 ```
 Warning: Strategy MyStrategy has validation errors:
   - MyStrategy must define a 'name' class attribute
-  - MyStrategy must implement make_pairings_for_round method
+  - MyStrategy must implement make_pairings_for_players method
 ```
 
 ### Import Errors

@@ -10,15 +10,17 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views.decorators.http import require_POST, require_GET
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 import json
 import re
+from urllib.parse import urlparse, parse_qs, urlencode
 
 from .models import (
     Tournament, Player, TournamentAdmin, Stage, StagePlayer, Round,
     Match, MatchResult, TournamentActionLog, StandingCalculator,
     get_pairing_strategy, get_available_ranking_criteria,
-    get_ordered_criteria_display
+    get_ordered_criteria_display, MAXIMUM_PODS_PER_STAGE, ALL_PODS_FILTER
 )
 from .forms import (
     TournamentForm, PlayerForm, EditPlayerForm, StageForm, MatchResultForm,
@@ -70,6 +72,163 @@ def redirect_to(request, url):
         resp['HX-Redirect'] = url
         return resp
     return HttpResponseRedirect(url)
+
+
+def get_matches_url(request, tournament):
+    matches_url = reverse('tourney:tourney-detail-matches',
+                          kwargs={'tournament_code': tournament.code})
+    current_url = request.htmx.current_url if request.htmx else None
+    if not current_url:
+        return matches_url
+
+    requested_pods = parse_qs(urlparse(current_url).query).get('pod', [])
+    if requested_pods:
+        return f'{matches_url}?{urlencode({"pod": requested_pods[0]})}'
+    return matches_url
+
+
+def get_selected_pod(request, stage, default_pod=None):
+    if not stage or not stage.has_pods():
+        return None
+
+    requested_pod_slug = request.GET.get('pod')
+    if requested_pod_slug == ALL_PODS_FILTER:
+        return None
+    if not requested_pod_slug:
+        return default_pod
+    return stage.pods.filter(slug=requested_pod_slug).first() or default_pod
+
+
+def get_viewer_pod(stage, player):
+    if not stage or not player or not stage.has_pods():
+        return None
+
+    viewer_stage_player = stage.stage_players.filter(
+        player=player).select_related('pod').first()
+    return viewer_stage_player.pod if viewer_stage_player else None
+
+
+def get_stage_pod_entries(stage, include_ids=True):
+    if not stage:
+        return []
+    return [
+        {'id': pod.id if include_ids else None, 'name': pod.name}
+        for pod in stage.get_pods()
+    ]
+
+
+def get_pod_form_context(form, initial_pod_entries):
+    shows_submitted_pods = (
+        form.is_bound and form.pod_entries is not None and not form.has_rejected_pod_changes)
+    pod_entries = form.pod_entries if shows_submitted_pods else initial_pod_entries
+    return {
+        'pod_entries_json': json.dumps(pod_entries),
+        'maximum_pods': MAXIMUM_PODS_PER_STAGE,
+    }
+
+
+def sync_submitted_pods(stage, form):
+    if form.pod_entries is not None:
+        stage.sync_pods(form.pod_entries)
+
+
+def get_seeding_target_stage(tournament):
+    current_stage = tournament.get_current_stage()
+    if current_stage and not current_stage.rounds.exists():
+        return current_stage
+
+    next_stage = tournament.get_next_stage()
+    if next_stage and tournament.can_modify_next_stage_seeding():
+        return next_stage
+
+    return None
+
+
+def get_pod_assignment_context(stage):
+    active_stage_players = list(stage.stage_players.filter(
+        player__status=Player.PlayerStatus.ACTIVE
+    ).select_related('player').order_by('seed'))
+    pods = list(stage.get_pods())
+
+    pod_columns = [
+        {
+            'pod': pod,
+            'stage_players': [sp for sp in active_stage_players if sp.pod_id == pod.id],
+        }
+        for pod in pods
+    ]
+    unassigned_stage_players = [
+        sp for sp in active_stage_players if sp.pod_id is None]
+
+    return {
+        'pods': pods,
+        'pod_columns': pod_columns,
+        'unassigned_stage_players': unassigned_stage_players,
+    }
+
+
+def render_seeding_list(request, tournament, target_stage):
+    context = {
+        'tournament': tournament,
+        'next_stage': target_stage,
+    }
+    if target_stage.has_pods():
+        context.update(get_pod_assignment_context(target_stage))
+        return render(request, 'tourney/partials/pod-assignment-list.html', context)
+
+    context['stage_players'] = target_stage.stage_players.order_by('seed')
+    return render(request, 'tourney/partials/seeding-list.html', context)
+
+
+def get_manage_players_pod_context(tournament):
+    current_stage = tournament.get_current_stage()
+    if not current_stage or not current_stage.has_pods():
+        return [], {}
+
+    pod_id_by_player_id = dict(
+        current_stage.stage_players.values_list('player_id', 'pod_id'))
+    return list(current_stage.get_pods()), pod_id_by_player_id
+
+
+def render_player_item(request, tournament, player):
+    pods, pod_id_by_player_id = get_manage_players_pod_context(tournament)
+    player.current_pod_id = pod_id_by_player_id.get(player.id)
+    context = {
+        'tournament': tournament,
+        'player': player,
+        'pods': pods,
+    }
+    return render(request, 'tourney/manage-players.html#player-item', context)
+
+
+def is_match_in_pod(match, pod):
+    return (match.player_one.pod_id == pod.id or
+            (match.player_two is not None and match.player_two.pod_id == pod.id))
+
+
+def group_matches_by_pod(matches, pods):
+    pod_positions = {pod.id: position for position, pod in enumerate(pods)}
+    pods_by_id = {pod.id: pod for pod in pods}
+
+    matches_by_pod_id = {}
+    for match in matches:
+        matches_by_pod_id.setdefault(match.player_one.pod_id, []).append(match)
+
+    ordered_pod_ids = sorted(
+        matches_by_pod_id, key=lambda pod_id: pod_positions.get(pod_id, len(pods)))
+
+    pod_groups = []
+    match_number = 0
+    for pod_id in ordered_pod_ids:
+        numbered_matches = []
+        for match in matches_by_pod_id[pod_id]:
+            match_number += 1
+            numbered_matches.append({'match': match, 'number': match_number})
+        pod_groups.append({
+            'pod': pods_by_id.get(pod_id),
+            'numbered_matches': numbered_matches,
+        })
+    return pod_groups
 
 
 @login_required
@@ -131,6 +290,7 @@ def create_tournament(request):
                 ranking_criteria = form.get_ranking_criteria_from_post(
                     request.POST)
                 main_stage.set_ranking_criteria(ranking_criteria)
+                sync_submitted_pods(main_stage, form)
 
                 if form.cleaned_data['enable_playoffs']:
                     tournament.create_playoff_stage(
@@ -159,6 +319,7 @@ def create_tournament(request):
         'ordered_criteria_json': json.dumps([
             {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
         ]),
+        **get_pod_form_context(form, []),
     })
 
 
@@ -187,6 +348,7 @@ def edit_tournament(request, tournament_code):
                     main_stage.set_ranking_criteria(ranking_criteria)
 
                     main_stage.save()
+                    sync_submitted_pods(main_stage, form)
                 else:
                     main_stage = tournament.create_initial_stage(
                         main_pairing_strategy=form.cleaned_data['main_pairing_strategy'],
@@ -199,6 +361,7 @@ def edit_tournament(request, tournament_code):
                         request.POST)
 
                     main_stage.set_ranking_criteria(ranking_criteria)
+                    sync_submitted_pods(main_stage, form)
 
                 playoff_stage = tournament.stages.filter(order=2).first()
                 if form.cleaned_data['enable_playoffs']:
@@ -234,6 +397,7 @@ def edit_tournament(request, tournament_code):
         'ordered_criteria_json': json.dumps([
             {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
         ]),
+        **get_pod_form_context(form, get_stage_pod_entries(main_stage)),
     }
     return render(request, 'tourney/tournament-form.html', context)
 
@@ -291,6 +455,7 @@ def get_tournament_base_context(request, tournament):
             ).select_related(
                 'round__stage',
                 'player_one__player',
+                'player_one__pod',
                 'player_two__player'
             ).order_by('round__stage__order', 'round__order')
 
@@ -307,6 +472,14 @@ def get_tournament_base_context(request, tournament):
 
     default_timer_name = f'{tournament.name} - Round {current_round.order}' if current_round else f'{tournament.name} - Timer'
     default_timer_minutes = current_stage.round_length_in_minutes if current_stage and current_stage.round_length_in_minutes else 50
+
+    current_stage_has_pods = bool(current_stage and current_stage.has_pods())
+    current_stage_pods = list(
+        current_stage.get_pods()) if current_stage_has_pods else []
+    viewer_pod = get_viewer_pod(current_stage, player)
+    default_pod = None if is_admin else viewer_pod
+    requested_pod = request.GET.get('pod')
+    pod_query_string = f'?{urlencode({"pod": requested_pod})}' if requested_pod else ''
 
     return {
         'tournament': tournament,
@@ -328,6 +501,12 @@ def get_tournament_base_context(request, tournament):
         'timer_context': timer_context,
         'default_timer_name': default_timer_name,
         'default_timer_minutes': default_timer_minutes,
+        'current_stage_has_pods': current_stage_has_pods,
+        'current_stage_pods': current_stage_pods,
+        'viewer_pod': viewer_pod,
+        'default_pod': default_pod,
+        'pod_query_string': pod_query_string,
+        'all_pods_filter': ALL_PODS_FILTER,
     }
 
 
@@ -336,27 +515,42 @@ def tournament_detail_matches(request, tournament_code):
     context = get_tournament_base_context(request, tournament)
     context['current_tab'] = 'matches'
 
-    stages = tournament.stages.prefetch_related(
-        'rounds__matches__result',
-        'rounds__matches__player_one__player',
-        'rounds__matches__player_two__player'
-    ).order_by('-created_on')
+    current_stage = context['current_stage']
+    selected_pod = get_selected_pod(request, current_stage, context['default_pod'])
+
+    stages = tournament.stages.order_by('-created_on')
 
     grouped_matches = []
-    current_stage = context['current_stage']
     latest_round = None
     unmatched_players = []
 
     for stage in stages:
+        stage_pods = list(stage.get_pods()) if stage.has_pods() else []
+        is_filtered_stage = stage == current_stage and selected_pod is not None
         stage_rounds = []
         for round_obj in stage.rounds.order_by('-order'):
-            if round_obj.matches.exists():
-                stage_rounds.append({
-                    'round': round_obj,
-                    'matches': round_obj.matches.all()
-                })
-                if not latest_round and stage == current_stage:
-                    latest_round = round_obj
+            round_matches = list(round_obj.matches.select_related(
+                'result', 'player_one__player', 'player_two__player'))
+            if not round_matches:
+                continue
+
+            if not latest_round and stage == current_stage:
+                latest_round = round_obj
+
+            if is_filtered_stage:
+                round_matches = [
+                    match for match in round_matches
+                    if is_match_in_pod(match, selected_pod)]
+                if not round_matches:
+                    continue
+
+            stage_rounds.append({
+                'round': round_obj,
+                'matches': round_matches,
+                'pod_groups': (
+                    group_matches_by_pod(round_matches, stage_pods)
+                    if stage_pods and not is_filtered_stage else []),
+            })
 
         if stage_rounds:
             grouped_matches.append({
@@ -366,7 +560,7 @@ def tournament_detail_matches(request, tournament_code):
 
     if current_stage:
         stage_players = current_stage.stage_players.filter(
-            player__status=Player.PlayerStatus.ACTIVE)
+            player__status=Player.PlayerStatus.ACTIVE).select_related('player__user', 'pod')
 
         pairing_strategy = current_stage.get_pairing_strategy()
         if pairing_strategy.is_self_scheduled():
@@ -383,9 +577,13 @@ def tournament_detail_matches(request, tournament_code):
         else:
             unmatched_players = stage_players
 
+        if selected_pod:
+            unmatched_players = unmatched_players.filter(pod=selected_pod)
+
     can_add_match = False
     can_report_result = False
     show_unmatched_players = True
+    player_report_opponents = []
     if current_stage:
         pairing_strategy = current_stage.get_pairing_strategy()
         is_self_scheduled = pairing_strategy.is_self_scheduled()
@@ -398,29 +596,55 @@ def tournament_detail_matches(request, tournament_code):
             can_report_result = is_self_scheduled and user_is_player
             can_add_match = user_is_admin or can_report_result
 
+        if can_report_result:
+            player_report_opponents = get_player_report_opponents(
+                current_stage, request.user)
+
         show_unmatched_players = not (
             is_elimination_style or is_self_scheduled)
 
     unmatched_players_json = json.dumps([{
         'id': sp.id,
         'name': sp.player.get_display_name(),
-        'userId': sp.player.user.id if sp.player.user else None
+        'userId': sp.player.user.id if sp.player.user else None,
+        'podId': sp.pod_id,
     } for sp in unmatched_players])
+
+    player_report_opponents_json = json.dumps([{
+        'id': sp.id,
+        'name': sp.player.get_display_name(),
+    } for sp in player_report_opponents])
 
     context.update({
         'grouped_matches': grouped_matches,
         'latest_round': latest_round,
         'unmatched_players': unmatched_players,
         'unmatched_players_json': unmatched_players_json,
+        'player_report_opponents_json': player_report_opponents_json,
         'can_add_match': can_add_match,
         'can_report_result': can_report_result,
         'show_unmatched_players': show_unmatched_players,
         'selected_stage': current_stage,
+        'selected_pod': selected_pod,
+        'pod_switcher_url': reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}),
     })
 
     if request.htmx:
         return render(request, 'tourney/partials/tournament-detail-matches-content.html', context)
     return render(request, 'tourney/tournament-detail-matches.html', context)
+
+
+def get_player_report_opponents(stage, user):
+    user_stage_player = stage.stage_players.filter(player__user=user).first()
+    if not user_stage_player:
+        return []
+
+    opponents = stage.stage_players.filter(
+        player__status=Player.PlayerStatus.ACTIVE
+    ).exclude(id=user_stage_player.id).select_related('player__user')
+    if stage.has_pods():
+        opponents = opponents.filter(pod_id=user_stage_player.pod_id)
+    return list(opponents)
 
 
 def tournament_detail_standings(request, tournament_code):
@@ -430,13 +654,20 @@ def tournament_detail_standings(request, tournament_code):
 
     standings = []
     enabled_criteria = []
+    selected_pod = get_selected_pod(
+        request, context['current_stage'], context['default_pod'])
     if context['current_stage']:
-        standings = StandingCalculator.get_tournament_standings(tournament)
+        standings = StandingCalculator.get_tournament_standings(
+            tournament, pod=selected_pod)
         enabled_criteria = context['current_stage'].get_enabled_ranking_criteria_objects(
         )
 
     context['standings'] = standings
     context['enabled_criteria'] = enabled_criteria
+    context['selected_pod'] = selected_pod
+    context['show_pod_column'] = context['current_stage_has_pods'] and not selected_pod
+    context['pod_switcher_url'] = reverse(
+        'tourney:tourney-detail-standings', kwargs={'tournament_code': tournament.code})
 
     if request.htmx:
         return render(request, 'tourney/partials/tournament-detail-standings-content.html', context)
@@ -559,13 +790,7 @@ def manage_players(request, tournament_code):
 
                     current_stage = tournament.get_current_stage()
                     if current_stage:
-                        max_seed = current_stage.stage_players.aggregate(
-                            models.Max('seed'))['seed__max'] or 0
-                        StagePlayer.objects.create(
-                            player=player,
-                            stage=current_stage,
-                            seed=max_seed + 1
-                        )
+                        current_stage.add_stage_player(player)
 
                     TournamentActionLog.objects.create(
                         tournament=tournament,
@@ -618,11 +843,7 @@ def manage_players(request, tournament_code):
                 request, f'Player {player.get_display_name()} dropped from tournament.')
 
             if request.htmx:
-                context = {
-                    'tournament': tournament,
-                    'player': player,
-                }
-                return render(request, 'tourney/manage-players.html#player-item', context)
+                return render_player_item(request, tournament, player)
 
         elif action == 'undrop_player':
             player_id = request.POST.get('player_id')
@@ -642,11 +863,7 @@ def manage_players(request, tournament_code):
                 request, f'Player {player.get_display_name()} re-added to tournament.')
 
             if request.htmx:
-                context = {
-                    'tournament': tournament,
-                    'player': player,
-                }
-                return render(request, 'tourney/manage-players.html#player-item', context)
+                return render_player_item(request, tournament, player)
 
         elif action == 'remove_player':
             player_id = request.POST.get('player_id')
@@ -665,11 +882,7 @@ def manage_players(request, tournament_code):
                     request, f'Cannot remove {player.get_display_name()} - player has recorded match results.')
 
                 if request.htmx:
-                    context = {
-                        'tournament': tournament,
-                        'player': player,
-                    }
-                    return render(request, 'tourney/manage-players.html#player-item', context)
+                    return render_player_item(request, tournament, player)
             else:
                 player_name = player.get_display_name()
                 player.delete()
@@ -687,9 +900,21 @@ def manage_players(request, tournament_code):
                 if request.htmx:
                     return HttpResponse('')
 
+        elif action == 'move_player':
+            player = get_object_or_404(
+                Player, id=request.POST.get('player_id'), tournament=tournament)
+            move_player_to_pod(request, tournament, player,
+                               request.POST.get('pod_id', ''))
+
+            if request.htmx:
+                return render_player_item(request, tournament, player)
+
         return redirect_to(request, reverse('tourney:tourney-manage-players', kwargs={'tournament_code': tournament.code}))
 
-    players = tournament.players.all().order_by('status', 'created_on')
+    players = list(tournament.players.all().order_by('status', 'created_on'))
+    pods, pod_id_by_player_id = get_manage_players_pod_context(tournament)
+    for player in players:
+        player.current_pod_id = pod_id_by_player_id.get(player.id)
     form = PlayerForm()
 
     staff_playgroups = Playgroup.objects.filter(
@@ -703,11 +928,39 @@ def manage_players(request, tournament_code):
     context = {
         'tournament': tournament,
         'players': players,
+        'pods': pods,
         'form': form,
         'playgroup_usernames': playgroup_usernames,
     }
 
     return render(request, 'tourney/manage-players.html', context)
+
+
+def move_player_to_pod(request, tournament, player, pod_id):
+    current_stage = tournament.get_current_stage()
+    stage_player = None
+    pod = None
+    if current_stage and current_stage.has_pods() and pod_id.isdigit():
+        stage_player = current_stage.stage_players.filter(player=player).first()
+        pod = current_stage.pods.filter(id=pod_id).first()
+
+    if not stage_player or not pod:
+        messages.error(request, format_html(
+            'Could not move {} to that pod.', player.get_display_name()))
+        return
+
+    stage_player.pod = pod
+    stage_player.save(update_fields=['pod'])
+
+    TournamentActionLog.objects.create(
+        tournament=tournament,
+        user=request.user,
+        action_type=TournamentActionLog.ActionType.MOVE_PLAYER,
+        description=f'Moved player {player.get_display_name()} to pod {pod.name}'
+    )
+
+    messages.success(request, format_html(
+        '{} moved to {}.', player.get_display_name(), pod.name))
 
 
 @login_required
@@ -814,7 +1067,7 @@ def report_match_result(request, tournament_code, match_id):
         messages.error(
             request, 'Error reporting match result. Please check the form.')
 
-    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, get_matches_url(request, tournament))
 
 
 @login_required
@@ -825,7 +1078,7 @@ def create_round(request, tournament_code):
 
     if not tournament.can_create_round_in_current_stage():
         messages.error(request, 'Cannot create new round at this time.')
-        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, get_matches_url(request, tournament))
 
     current_stage = tournament.get_current_stage()
     pairing_strategy = get_pairing_strategy(current_stage.pairing_strategy)
@@ -855,7 +1108,7 @@ def create_round(request, tournament_code):
     messages.success(
         request, f'Round {next_order} created successfully in {current_stage.name}!')
 
-    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, get_matches_url(request, tournament))
 
 
 @login_required
@@ -932,7 +1185,10 @@ def prepare_current_stage_seeding(request, tournament_code):
                 seed=i + 1
             )
 
-    if not pairing_strategy.is_seeding_required():
+    if current_stage.has_pods():
+        current_stage.assign_pods_before_start()
+
+    if not pairing_strategy.is_seeding_required() and not current_stage.has_pods():
         try:
             closed_registrations = False
             with transaction.atomic():
@@ -1011,6 +1267,7 @@ def confirm_seeding(request, tournament_code):
         max_players, total_players) if max_players else total_players
     all_players_advance = not max_players or max_players >= total_players
 
+    has_pods = target_stage.has_pods()
     context = {
         'tournament': tournament,
         'next_stage': target_stage,
@@ -1019,7 +1276,10 @@ def confirm_seeding(request, tournament_code):
         'total_players': total_players,
         'players_advancing': players_advancing,
         'all_players_advance': all_players_advance,
+        'has_pods': has_pods,
     }
+    if has_pods:
+        context.update(get_pod_assignment_context(target_stage))
 
     return render(request, 'tourney/confirm-seeding.html', context)
 
@@ -1073,14 +1333,8 @@ def update_seeding_order(request, tournament_code):
 @is_tournament_admin
 def randomize_seeding(request, tournament_code):
     tournament = get_object_or_404(Tournament, code=tournament_code)
-    current_stage = tournament.get_current_stage()
-    next_stage = tournament.get_next_stage()
-
-    if current_stage and not current_stage.rounds.exists():
-        target_stage = current_stage
-    elif next_stage and tournament.can_modify_next_stage_seeding():
-        target_stage = next_stage
-    else:
+    target_stage = get_seeding_target_stage(tournament)
+    if not target_stage:
         return HttpResponse(status=400)
 
     import random
@@ -1099,14 +1353,59 @@ def randomize_seeding(request, tournament_code):
             stage_player.seed = i + 1
             stage_player.save()
 
-    stage_players = target_stage.stage_players.order_by('seed')
-    context = {
-        'tournament': tournament,
-        'next_stage': target_stage,
-        'stage_players': stage_players,
-    }
+        if target_stage.has_pods():
+            target_stage.snake_stage_players_into_pods()
 
-    return render(request, 'tourney/partials/seeding-list.html', context)
+    return render_seeding_list(request, tournament, target_stage)
+
+
+@login_required
+@require_POST
+@is_tournament_admin
+def snake_pods_by_seed(request, tournament_code):
+    tournament = get_object_or_404(Tournament, code=tournament_code)
+    target_stage = get_seeding_target_stage(tournament)
+    if not target_stage or not target_stage.has_pods():
+        return HttpResponse(status=400)
+
+    target_stage.snake_stage_players_into_pods()
+    return render_seeding_list(request, tournament, target_stage)
+
+
+@login_required
+@require_POST
+@is_tournament_admin
+def update_pod_assignments(request, tournament_code):
+    tournament = get_object_or_404(Tournament, code=tournament_code)
+    target_stage = get_seeding_target_stage(tournament)
+    if not target_stage or not target_stage.has_pods():
+        return HttpResponse(status=400)
+
+    try:
+        stage_player_ids_by_pod_id = get_requested_pod_assignments(request.POST)
+    except (ValueError, TypeError, KeyError, AttributeError):
+        return HttpResponse(status=400)
+
+    valid_pod_ids = set(target_stage.pods.values_list('id', flat=True))
+    with transaction.atomic():
+        for pod_id, stage_player_ids in stage_player_ids_by_pod_id.items():
+            if pod_id not in valid_pod_ids:
+                continue
+            target_stage.stage_players.filter(
+                id__in=stage_player_ids).update(pod_id=pod_id)
+
+    return render_seeding_list(request, tournament, target_stage)
+
+
+def get_requested_pod_assignments(post_data):
+    if 'pod_assignments' in post_data:
+        requested_assignments = json.loads(post_data['pod_assignments'])
+        return {
+            int(pod_id): [int(stage_player_id) for stage_player_id in stage_player_ids]
+            for pod_id, stage_player_ids in requested_assignments.items()
+        }
+
+    return {int(post_data['pod_id']): [int(post_data['stage_player_id'])]}
 
 
 @login_required
@@ -1217,13 +1516,7 @@ def register_for_tournament(request, tournament_code):
 
             current_stage = tournament.get_current_stage()
             if current_stage:
-                max_seed = current_stage.stage_players.aggregate(
-                    models.Max('seed'))['seed__max'] or 0
-                StagePlayer.objects.create(
-                    player=player,
-                    stage=current_stage,
-                    seed=max_seed + 1
-                )
+                current_stage.add_stage_player(player)
 
             TournamentActionLog.objects.create(
                 tournament=tournament,
@@ -1407,7 +1700,7 @@ def delete_round(request, tournament_code, round_id):
     messages.success(
         request, f'Round {round_number} deleted successfully from {stage_name}!')
 
-    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, get_matches_url(request, tournament))
 
 
 @login_required
@@ -1437,7 +1730,7 @@ def delete_match(request, tournament_code, match_id):
     messages.success(
         request, f'Match between {player_one_name} and {player_two_name} deleted successfully!')
 
-    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, get_matches_url(request, tournament))
 
 
 @login_required
@@ -1471,7 +1764,7 @@ def reset_match(request, tournament_code, match_id):
     messages.success(
         request, f'Match result between {player_one_name} and {player_two_name} has been reset successfully!')
 
-    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, get_matches_url(request, tournament))
 
 
 @login_required
@@ -1483,13 +1776,13 @@ def add_match(request, tournament_code):
 
     if not current_stage:
         messages.error(request, 'No active stage found.')
-        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, get_matches_url(request, tournament))
 
     current_round = current_stage.get_current_round()
     if not current_round:
         messages.error(
             request, 'No active round found. Please create a round first.')
-        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, get_matches_url(request, tournament))
 
     stage_players = current_stage.stage_players.filter(
         player__status=Player.PlayerStatus.ACTIVE)
@@ -1513,17 +1806,22 @@ def add_match(request, tournament_code):
         if not user_stage_player:
             messages.error(
                 request, 'You are not available to create a match in this round.')
-            return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+            return redirect_to(request, get_matches_url(request, tournament))
 
     if available_players.count() < 1:
         error_message = ('No active players available to create a match.' if pairing_strategy.is_self_scheduled()
                          else 'No unmatched players available to create a match.')
         messages.error(request, error_message)
-        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, get_matches_url(request, tournament))
 
     form = AddMatchForm(request.POST, available_players=available_players)
     if form.is_valid():
         player_one, player_two = form.get_selected_players()
+
+        if not player_one.is_in_same_pod_as(player_two):
+            messages.error(
+                request, 'Players can only be matched against others in their pod.')
+            return redirect_to(request, get_matches_url(request, tournament))
 
         if not is_admin:
             user_stage_player = current_stage.stage_players.filter(
@@ -1534,12 +1832,12 @@ def add_match(request, tournament_code):
             if user_stage_player not in participants:
                 messages.error(
                     request, 'You can only create matches where you are a participant.')
-                return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+                return redirect_to(request, get_matches_url(request, tournament))
 
             if player_two is None and player_one == user_stage_player:
                 messages.error(
                     request, 'You cannot award yourself a bye. Only admins can create bye matches.')
-                return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+                return redirect_to(request, get_matches_url(request, tournament))
 
         with transaction.atomic():
             match = Match.objects.create(
@@ -1583,7 +1881,7 @@ def add_match(request, tournament_code):
             messages.error(
                 request, 'Error creating match. Please check your selections.')
 
-    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, get_matches_url(request, tournament))
 
 
 @login_required
@@ -1595,36 +1893,41 @@ def player_add_match_result(request, tournament_code):
     if tournament.is_closed:
         messages.error(
             request, 'This tournament is closed. Match results can no longer be submitted by players.')
-        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, get_matches_url(request, tournament))
 
     current_stage = tournament.get_current_stage()
 
     if not current_stage:
         messages.error(request, 'No active stage found.')
-        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, get_matches_url(request, tournament))
 
     current_round = current_stage.get_current_round()
     if not current_round:
         messages.error(
             request, 'No active round found. Please create a round first.')
-        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, get_matches_url(request, tournament))
 
     user_stage_player = current_stage.stage_players.filter(
         player__user=request.user).first()
     if not user_stage_player:
         messages.error(request, 'You are not a participant in this stage.')
-        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, get_matches_url(request, tournament))
 
     opponent_id = request.POST.get('opponent')
     if not opponent_id:
         messages.error(request, 'Please select an opponent.')
-        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, get_matches_url(request, tournament))
 
     try:
         opponent_stage_player = current_stage.stage_players.get(id=opponent_id)
     except StagePlayer.DoesNotExist:
         messages.error(request, 'Invalid opponent selected.')
-        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, get_matches_url(request, tournament))
+
+    if not user_stage_player.is_in_same_pod_as(opponent_stage_player):
+        messages.error(
+            request, 'You can only report matches against players in your pod.')
+        return redirect_to(request, get_matches_url(request, tournament))
 
     existing_match = current_round.matches.filter(
         Q(player_one=user_stage_player, player_two=opponent_stage_player) |
@@ -1634,12 +1937,12 @@ def player_add_match_result(request, tournament_code):
     if existing_match:
         messages.error(
             request, 'You already have a match against this opponent in this round.')
-        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, get_matches_url(request, tournament))
 
     winner_choice = request.POST.get('winner')
     if not winner_choice:
         messages.error(request, 'Please select a winner.')
-        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, get_matches_url(request, tournament))
 
     if winner_choice == 'me':
         winner = user_stage_player
@@ -1648,11 +1951,11 @@ def player_add_match_result(request, tournament_code):
     elif winner_choice == 'tie':
         if not current_stage.are_ties_allowed:
             messages.error(request, 'Ties are not allowed in this stage.')
-            return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+            return redirect_to(request, get_matches_url(request, tournament))
         winner = None
     else:
         messages.error(request, 'Invalid winner selection.')
-        return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+        return redirect_to(request, get_matches_url(request, tournament))
 
     my_score = request.POST.get('my_score', '').strip()
     their_score = request.POST.get('their_score', '').strip()
@@ -1664,7 +1967,7 @@ def player_add_match_result(request, tournament_code):
         if current_stage.report_full_scores == 2:
             if my_score is None or their_score is None:
                 messages.error(request, 'Scores are required for this stage.')
-                return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+                return redirect_to(request, get_matches_url(request, tournament))
 
         if my_score:
             try:
@@ -1673,7 +1976,7 @@ def player_add_match_result(request, tournament_code):
                     raise ValueError()
             except (ValueError, TypeError):
                 messages.error(request, 'Invalid score entered.')
-                return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+                return redirect_to(request, get_matches_url(request, tournament))
         else:
             my_score = None
 
@@ -1684,7 +1987,7 @@ def player_add_match_result(request, tournament_code):
                     raise ValueError()
             except (ValueError, TypeError):
                 messages.error(request, 'Invalid score entered.')
-                return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+                return redirect_to(request, get_matches_url(request, tournament))
         else:
             their_score = None
 
@@ -1716,7 +2019,7 @@ def player_add_match_result(request, tournament_code):
     messages.success(
         request, f'Match result submitted successfully! Winner: {winner_name}')
 
-    return redirect_to(request, reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}))
+    return redirect_to(request, get_matches_url(request, tournament))
 
 
 @login_required
@@ -1750,6 +2053,8 @@ def copy_tournament(request, tournament_code):
                         for c in criteria_qs
                     ]
                     main_stage.set_ranking_criteria(source_criteria)
+
+                sync_submitted_pods(main_stage, form)
 
                 if form.cleaned_data['enable_playoffs']:
                     playoff_stage = tournament.create_playoff_stage(
@@ -1850,6 +2155,7 @@ def copy_tournament(request, tournament_code):
         'ordered_criteria_json': json.dumps([
             {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
         ]),
+        **get_pod_form_context(form, get_stage_pod_entries(source_main_stage, include_ids=False)),
     }
 
     return render(request, 'tourney/tournament-form.html', context)
@@ -2012,6 +2318,7 @@ def create_tournament_from_event(request, event_id):
                 ranking_criteria = form.get_ranking_criteria_from_post(
                     request.POST)
                 main_stage.set_ranking_criteria(ranking_criteria)
+                sync_submitted_pods(main_stage, form)
 
                 if form.cleaned_data['enable_playoffs']:
                     tournament.create_playoff_stage(
@@ -2051,6 +2358,7 @@ def create_tournament_from_event(request, event_id):
         'ordered_criteria_json': json.dumps([
             {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
         ]),
+        **get_pod_form_context(form, []),
     })
 
 

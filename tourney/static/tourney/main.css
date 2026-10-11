@@ -303,6 +303,11 @@
     font-size: 0.75rem;
     padding: 0.3125rem 0.625rem;
   }
+
+  .player-actions {
+    flex-shrink: 1;
+    text-align: right;
+  }
 }
 
 /* Unmatched Players Section */
@@ -553,4 +558,125 @@ tr.with-actions td {
 .admin-add-row input {
   flex: 1;
   margin-bottom: 0;
+}
+
+/* Pods */
+.pod-switcher {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0 0 0.9375rem 0;
+}
+
+.pod-switcher__label {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.1rem;
+  text-transform: uppercase;
+}
+
+.pod-switcher__select {
+  width: auto;
+  max-width: 16rem;
+  margin: 0;
+}
+
+.pod-group-heading {
+  margin: 1.25rem 0 0 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+}
+
+.pod-group-heading + .match-grid {
+  margin-top: 0.625rem;
+}
+
+.seeding-confirmation--pods {
+  max-width: none;
+}
+
+.pod-assignment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: 1rem;
+}
+
+.pod-assignment-title {
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+}
+
+.pod-assignment-list {
+  min-height: 64px;
+}
+
+.pod-assignment-list .drag-drop-item {
+  touch-action: auto;
+}
+
+.pod-assignment-list .drag-handle {
+  touch-action: none;
+}
+
+.pod-assignment-list .seeding-item {
+  padding: 6px 8px;
+}
+
+.pod-assignment-list .seed-number {
+  min-width: 28px;
+  padding: 4px 6px;
+  margin-right: 8px;
+}
+
+.pod-assignment-list .player-info {
+  min-width: 0;
+}
+
+.pod-assignment-list .player-info > div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pod-assignment-list .drag-drop-actions {
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.pod-assignment-list .pod-select {
+  margin-bottom: 0;
+  width: 6.5rem;
+  height: auto;
+  padding: 0.25rem 0.375rem;
+  font-size: 0.75rem;
+}
+
+.pod-name-row {
+  display: flex;
+  gap: 0.625rem;
+  align-items: flex-start;
+}
+
+.pod-name-row .pod-name-input {
+  flex: 1;
+}
+
+.pod-name-row .button {
+  margin-bottom: 1.5rem;
+}
+
+.player-pod-form {
+  display: inline-block;
+}
+
+.player-pod-form select {
+  max-width: 8rem;
+  margin-bottom: 0;
+  height: auto;
+  padding: 0.3125rem 0.625rem;
+  font-size: 0.75rem;
 }

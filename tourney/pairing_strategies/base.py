@@ -20,7 +20,6 @@ class PairingStrategy(ABC):
     display_name = None  # Human-readable name (e.g., 'Swiss')
     description = None  # Brief description of the strategy
 
-    @abstractmethod
     def make_pairings_for_round(self, round_obj):
         """
         Create match pairings for the given round.
@@ -30,11 +29,15 @@ class PairingStrategy(ABC):
 
         Returns:
             None (matches are created directly on the round)
-
-        Raises:
-            Any exception if pairings cannot be created
         """
-        raise NotImplementedError("Subclasses must implement make_pairings_for_round")
+        stage = round_obj.stage
+        stage.assign_podless_active_players()
+        for _pod, stage_players in stage.get_player_partitions():
+            self.make_pairings_for_players(round_obj, stage_players)
+
+    @abstractmethod
+    def make_pairings_for_players(self, round_obj, stage_players):
+        raise NotImplementedError("Subclasses must implement make_pairings_for_players")
 
     def can_create_new_round(self, stage):
         """
@@ -104,9 +107,9 @@ class PairingStrategy(ABC):
         if not cls.description:
             errors.append(f"{cls.__name__} must define a 'description' class attribute")
 
-        # Check that make_pairings_for_round is implemented
-        if cls.make_pairings_for_round is PairingStrategy.make_pairings_for_round:
-            errors.append(f"{cls.__name__} must implement make_pairings_for_round method")
+        # Check that make_pairings_for_players is implemented
+        if cls.make_pairings_for_players is PairingStrategy.make_pairings_for_players:
+            errors.append(f"{cls.__name__} must implement make_pairings_for_players method")
 
         return errors
 

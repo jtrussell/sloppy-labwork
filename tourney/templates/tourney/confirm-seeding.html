@@ -11,15 +11,29 @@
 {% block content %}
 <div class="container">
     <div class="page-header">
-        <h1>Confirm Seeding</h1>
+        <h1>{% if has_pods %}Confirm Pods{% else %}Confirm Seeding{% endif %}</h1>
         <div class="subheading">{{ next_stage.name }}</div>
         <p class="text-muted">
-            Drag and drop players to adjust seeding.
+            {% if has_pods %}
+                Players have been snaked into pods by seed. Move players between pods with the pod menu or by dragging. Players only play against others in their pod.
+            {% else %}
+                Drag and drop players to adjust seeding.
+            {% endif %}
         </p>
     </div>
 
-    <div class="seeding-confirmation">
+    <div class="seeding-confirmation{% if has_pods %} seeding-confirmation--pods{% endif %}">
         <div class="seeding-controls">
+            {% if has_pods %}
+            <button
+                type="button"
+                class="button button-secondary"
+                hx-post="{% url 'tourney:tourney-snake-pods-by-seed' tournament.code %}"
+                hx-target="#seeding-list"
+                hx-swap="innerHTML">
+                Re-snake by Seed
+            </button>
+            {% endif %}
             <button
                 type="button"
                 class="button button-secondary"
@@ -31,7 +45,11 @@
         </div>
 
         <div id="seeding-list">
-            {% include 'tourney/partials/seeding-list.html' %}
+            {% if has_pods %}
+                {% include 'tourney/partials/pod-assignment-list.html' %}
+            {% else %}
+                {% include 'tourney/partials/seeding-list.html' %}
+            {% endif %}
         </div>
 
         {% if all_players_advance %}

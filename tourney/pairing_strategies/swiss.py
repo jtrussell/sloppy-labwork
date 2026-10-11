@@ -30,12 +30,10 @@ class SwissPairingStrategy(PairingStrategy):
     def is_elimination_style(self):
         return False
 
-    def make_pairings_for_round(self, round_obj):
-        from tourney.models import Player, Match, MatchResult
+    def make_pairings_for_players(self, round_obj, stage_players):
+        from tourney.models import Match, MatchResult
 
-        stage = round_obj.stage
-        stage_players = list(stage.stage_players.filter(
-            player__status=Player.PlayerStatus.ACTIVE))
+        stage_players = list(stage_players)
 
         if len(stage_players) == 0:
             return
@@ -72,6 +70,33 @@ class SwissPairingStrategy(PairingStrategy):
                     match=match,
                     winner=match.player_one
                 )
+
+    def __init__(self):
+        self._round_context = None
+
+    def make_pairings_for_round(self, round_obj):
+        self._round_context = None
+        super().make_pairings_for_round(round_obj)
+        self._round_context = None
+
+    def _get_round_context(self, round_obj):
+        if self._round_context:
+            return self._round_context
+
+        stage = round_obj.stage
+        self._round_context = {
+            'sorted_players': self._get_sorted_players_by_standings(stage),
+            'previous_opponents': self._get_previous_opponents(stage),
+            'undefeated_player_ids': self._get_undefeated_player_ids(stage),
+        }
+        return self._round_context
+
+    def _get_sorted_partition_players(self, round_context, stage_players):
+        partition_player_ids = {sp.id for sp in stage_players}
+        return [
+            sp for sp in round_context['sorted_players']
+            if sp.id in partition_player_ids
+        ]
 
     def _get_sorted_players_by_standings(self, stage):
         """
@@ -170,9 +195,11 @@ class SwissPairingStrategy(PairingStrategy):
         Returns:
             List of (player_one, player_two) tuples with optimal pairings
         """
-        sorted_players = self._get_sorted_players_by_standings(round_obj.stage)
-        previous_opponents = self._get_previous_opponents(round_obj.stage)
-        undefeated_player_ids = self._get_undefeated_player_ids(round_obj.stage)
+        round_context = self._get_round_context(round_obj)
+        sorted_players = self._get_sorted_partition_players(
+            round_context, stage_players)
+        previous_opponents = round_context['previous_opponents']
+        undefeated_player_ids = round_context['undefeated_player_ids']
 
         if len(sorted_players) <= 8:
             return self._exhaustive_search_pairing(
@@ -193,9 +220,11 @@ class SwissPairingStrategy(PairingStrategy):
         Returns:
             List of (player_one, player_two) tuples with good pairings
         """
-        sorted_players = self._get_sorted_players_by_standings(round_obj.stage)
-        previous_opponents = self._get_previous_opponents(round_obj.stage)
-        undefeated_player_ids = self._get_undefeated_player_ids(round_obj.stage)
+        round_context = self._get_round_context(round_obj)
+        sorted_players = self._get_sorted_partition_players(
+            round_context, stage_players)
+        previous_opponents = round_context['previous_opponents']
+        undefeated_player_ids = round_context['undefeated_player_ids']
         fold_players = self._fold_interlace(sorted_players)
 
         if len(sorted_players) % 2 == 1:

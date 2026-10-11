@@ -1,6 +1,9 @@
 from django import forms
 from django.contrib.auth.models import User
-from .models import Tournament, Player, Stage, MatchResult, get_available_ranking_criteria
+from .models import (
+    Tournament, Player, Stage, MatchResult, get_available_ranking_criteria,
+    MAXIMUM_PODS_PER_STAGE
+)
 from pmc.models import Playgroup, EventFormat
 from django.utils.translation import gettext_lazy as _
 
@@ -56,10 +59,18 @@ class TournamentForm(forms.ModelForm):
         help_text='Default length for playoff rounds in minutes (leave empty for no time limit)'
     )
 
+    POD_NAME_MAX_LENGTH = 200
+
     def __init__(self, *args, **kwargs):
         instance = kwargs.get('instance')
         is_edit_mode = kwargs.pop('is_edit_mode', False)
         super().__init__(*args, **kwargs)
+
+        self.main_stage = None
+        if instance and instance.pk:
+            self.main_stage = instance.stages.filter(order=1).first()
+        self.pod_entries = []
+        self.has_rejected_pod_changes = False
 
         from .pairing_strategies import get_strategy_choices
         self.fields['main_pairing_strategy'].choices = get_strategy_choices()
@@ -91,6 +102,56 @@ class TournamentForm(forms.ModelForm):
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4, 'style': 'text-wrap: auto'})
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        self.pod_entries = self._get_pod_entries_from_data()
+        if self.pod_entries is not None:
+            for error in self._get_pod_entry_errors(self.pod_entries):
+                self.add_error(None, error)
+        return cleaned_data
+
+    def _get_pod_entries_from_data(self):
+        if not hasattr(self.data, 'getlist') or 'pods_submitted' not in self.data:
+            return None
+
+        pod_ids = self.data.getlist('pod_id')
+        pod_names = self.data.getlist('pod_name')
+        return [
+            {'id': self._parse_pod_id(pod_id), 'name': (pod_name or '').strip()}
+            for pod_id, pod_name in zip(pod_ids, pod_names)
+        ]
+
+    @staticmethod
+    def _parse_pod_id(pod_id):
+        try:
+            return int(pod_id)
+        except (TypeError, ValueError):
+            return None
+
+    def _get_pod_entry_errors(self, pod_entries):
+        errors = []
+        if len(pod_entries) > MAXIMUM_PODS_PER_STAGE:
+            errors.append(
+                f'A stage can have at most {MAXIMUM_PODS_PER_STAGE} pods.')
+
+        pod_names = [entry['name'] for entry in pod_entries]
+        if any(not name for name in pod_names):
+            errors.append('Pod names cannot be blank.')
+        if any(len(name) > self.POD_NAME_MAX_LENGTH for name in pod_names):
+            errors.append(
+                f'Pod names must be {self.POD_NAME_MAX_LENGTH} characters or fewer.')
+
+        folded_pod_names = [name.casefold() for name in pod_names if name]
+        if len(folded_pod_names) != len(set(folded_pod_names)):
+            errors.append('Pod names must be unique.')
+
+        if self.main_stage:
+            pod_change_errors = self.main_stage.get_pod_change_errors(pod_entries)
+            self.has_rejected_pod_changes = bool(pod_change_errors)
+            errors.extend(pod_change_errors)
+
+        return errors
 
     def get_ranking_criteria_from_post(self, post_data):
         """Extract and validate ranking criteria from POST data"""

@@ -23,20 +23,19 @@ class RoundRobinScheduledPairingStrategy(PairingStrategy):
     display_name = "Round Robin"
     description = "Round robin tournament where each player plays every other player once"
 
-    def make_pairings_for_round(self, round_obj):
+    def make_pairings_for_players(self, round_obj, stage_players):
         """
-        Generate matches for the round robin tournament.
+        Generate matches for the round robin tournament within one pod.
 
         For the first round, all rounds and matches are created upfront.
         For subsequent rounds (when new rounds are added dynamically),
         generates the minimum number of rounds needed to complete the
         round robin with all remaining unmatched pairs.
         """
-        from tourney.models import Player, Match, Round
+        from tourney.models import Match, Round
 
         stage = round_obj.stage
-        stage_players = list(stage.stage_players.filter(
-            player__status=Player.PlayerStatus.ACTIVE))
+        stage_players = list(stage_players)
 
         if len(stage_players) < 2:
             return
@@ -57,7 +56,7 @@ class RoundRobinScheduledPairingStrategy(PairingStrategy):
             if round_number == round_obj.order:
                 target_round = round_obj
             else:
-                target_round = Round.objects.create(
+                target_round, _created = Round.objects.get_or_create(
                     stage=stage,
                     order=round_number
                 )
@@ -215,26 +214,23 @@ class RoundRobinScheduledPairingStrategy(PairingStrategy):
         Returns:
             bool: True if at least two players haven't been matched together
         """
-        from tourney.models import Player
-
         current_round = stage.get_current_round()
         if current_round is None:
             return False
 
-        stage_players = list(stage.stage_players.filter(
-            player__status=Player.PlayerStatus.ACTIVE))
-
-        if len(stage_players) < 2:
-            return False
-
         existing_pairings = self._get_existing_pairings(stage)
 
+        return any(
+            self._has_unmatched_pair(stage_players, existing_pairings)
+            for _pod, stage_players in stage.get_player_partitions()
+        )
+
+    def _has_unmatched_pair(self, stage_players, existing_pairings):
         for i, player1 in enumerate(stage_players):
             for player2 in stage_players[i+1:]:
                 pairing_key = tuple(sorted([player1.id, player2.id]))
                 if pairing_key not in existing_pairings:
                     return True
-
         return False
 
     def is_self_scheduled(self):
