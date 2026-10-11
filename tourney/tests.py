@@ -1,3 +1,4 @@
+import importlib
 import json
 import logging
 from datetime import date, timedelta
@@ -3873,3 +3874,212 @@ class PodMatchViewsTestCase(PodTestMixin, TestCase):
     def _play_in_round(self, winner, loser):
         match = Match.objects.create(round=self.round, player_one=winner, player_two=loser)
         MatchResult.objects.create(match=match, winner=winner)
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class TournamentCopyTestCase(PodTestMixin, TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        self.client.login(username='owner', password='password')
+
+    def _copy_url(self, tournament):
+        return reverse('tourney:tourney-copy-tournament', args=[tournament.code])
+
+    def _get_copy_post_data(self, pod_names=None, **overrides):
+        data = {
+            'name': 'Copied Tournament',
+            'is_accepting_registrations': True,
+            'is_public': False,
+            'main_pairing_strategy': 'swiss',
+            'main_score_reporting': '0',
+            'main_allow_ties': 'False',
+            'enable_playoffs': True,
+            'playoff_max_players': '4',
+            'playoff_score_reporting': '0',
+        }
+        if pod_names is not None:
+            data.update({
+                'pods_submitted': '1',
+                'pod_id': [''] * len(pod_names),
+                'pod_name': pod_names,
+            })
+        data.update(overrides)
+        return data
+
+    def _create_legacy_tournament(self):
+        tournament = Tournament.objects.create(
+            name='Legacy Night', owner=self.owner, description='Before pods existed')
+        main_stage = tournament.create_initial_stage(main_pairing_strategy='swiss')
+        main_stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True, 'order': 1},
+            {'key': 'points', 'enabled': True, 'order': 2},
+        ])
+        playoff_stage = tournament.create_playoff_stage(max_players=4)
+
+        stage_players = []
+        for i in range(4):
+            player = Player.objects.create(tournament=tournament, nickname=f'Legacy {i + 1}')
+            stage_players.append(StagePlayer.objects.create(
+                player=player, stage=main_stage, seed=i + 1))
+        self._play(main_stage, stage_players[0], stage_players[1])
+        self._play(main_stage, stage_players[2], stage_players[3])
+
+        return tournament, main_stage, playoff_stage
+
+    def _get_copied_tournament(self):
+        return Tournament.objects.get(name='Copied Tournament')
+
+    def test_copy_page_for_legacy_tournament_renders_without_pods(self):
+        tournament, _main_stage, _playoff_stage = self._create_legacy_tournament()
+
+        response = self.client.get(self._copy_url(tournament))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(json.loads(response.context['pod_entries_json']), [])
+        self.assertContains(response, 'Legacy Night #2')
+
+    def test_copy_legacy_tournament_creates_copy_without_pods(self):
+        tournament, _main_stage, _playoff_stage = self._create_legacy_tournament()
+
+        response = self.client.post(self._copy_url(tournament), self._get_copy_post_data([]))
+
+        copy = self._get_copied_tournament()
+        self.assertRedirects(
+            response, reverse('tourney:tourney-detail-home', args=[copy.code]),
+            fetch_redirect_response=False)
+        copied_main_stage = copy.stages.get(order=1)
+        self.assertFalse(copied_main_stage.pods.exists())
+        self.assertEqual(
+            list(copied_main_stage.stage_ranking_criteria.values_list('criterion_key', flat=True)),
+            ['wins', 'points'])
+        self.assertTrue(copy.stages.filter(order=2).exists())
+
+    def test_copy_legacy_tournament_from_form_without_pod_fields(self):
+        tournament, _main_stage, _playoff_stage = self._create_legacy_tournament()
+
+        self.client.post(self._copy_url(tournament), self._get_copy_post_data())
+
+        self.assertFalse(self._get_copied_tournament().stages.get(order=1).pods.exists())
+
+    def test_copy_legacy_tournament_leaves_source_untouched(self):
+        tournament, main_stage, _playoff_stage = self._create_legacy_tournament()
+
+        self.client.post(self._copy_url(tournament), self._get_copy_post_data([]))
+
+        self.assertEqual(main_stage.stage_players.count(), 4)
+        self.assertEqual(main_stage.rounds.count(), 2)
+        self.assertFalse(main_stage.pods.exists())
+
+    def test_copy_tournament_without_stages(self):
+        tournament = Tournament.objects.create(name='Bare Tournament', owner=self.owner)
+
+        get_response = self.client.get(self._copy_url(tournament))
+        self.client.post(self._copy_url(tournament), self._get_copy_post_data([]))
+
+        self.assertEqual(get_response.status_code, 200)
+        self.assertTrue(self._get_copied_tournament().stages.filter(order=1).exists())
+
+    def test_copy_page_prefills_source_pods_without_ids(self):
+        tournament, _stage, _stage_players = self._create_stage_with_guest_players(
+            0, pod_names=('North', 'South', 'East'), owner=self.owner)
+
+        response = self.client.get(self._copy_url(tournament))
+
+        self.assertEqual(json.loads(response.context['pod_entries_json']), [
+            {'id': None, 'name': 'North'},
+            {'id': None, 'name': 'South'},
+            {'id': None, 'name': 'East'},
+        ])
+
+    def test_copy_creates_fresh_pods_in_source_order(self):
+        tournament, source_stage, _stage_players = self._create_stage_with_guest_players(
+            0, pod_names=('North', 'South', 'East'), owner=self.owner)
+
+        self.client.post(self._copy_url(tournament),
+                         self._get_copy_post_data(['North', 'South', 'East']))
+
+        copied_pods = list(self._get_copied_tournament().stages.get(order=1).get_pods())
+        self.assertEqual([pod.name for pod in copied_pods], ['North', 'South', 'East'])
+        self.assertEqual([pod.slug for pod in copied_pods], ['north', 'south', 'east'])
+        self.assertEqual([pod.order for pod in copied_pods], [1, 2, 3])
+        self.assertTrue(set(pod.id for pod in copied_pods).isdisjoint(
+            source_stage.pods.values_list('id', flat=True)))
+        self.assertEqual(source_stage.pods.count(), 3)
+
+    def test_copy_falls_back_to_source_pods_when_pod_fields_are_missing(self):
+        tournament, _stage, _stage_players = self._create_stage_with_guest_players(
+            0, pod_names=('North', 'South'), owner=self.owner)
+
+        self.client.post(self._copy_url(tournament), self._get_copy_post_data())
+
+        copied_pods = self._get_copied_tournament().stages.get(order=1).get_pods()
+        self.assertEqual([pod.name for pod in copied_pods], ['North', 'South'])
+
+    def test_copy_honours_pod_edits_made_on_the_copy_form(self):
+        tournament, _stage, _stage_players = self._create_stage_with_guest_players(
+            0, pod_names=('North', 'South'), owner=self.owner)
+
+        self.client.post(self._copy_url(tournament),
+                         self._get_copy_post_data(['North', 'West', 'Central']))
+
+        copied_pods = self._get_copied_tournament().stages.get(order=1).get_pods()
+        self.assertEqual([pod.name for pod in copied_pods], ['North', 'West', 'Central'])
+
+    def test_copy_can_remove_all_pods(self):
+        tournament, _stage, _stage_players = self._create_stage_with_guest_players(
+            0, pod_names=('North', 'South'), owner=self.owner)
+
+        self.client.post(self._copy_url(tournament), self._get_copy_post_data([]))
+
+        self.assertFalse(self._get_copied_tournament().stages.get(order=1).pods.exists())
+
+    def test_copy_of_completed_podded_tournament_starts_fresh(self):
+        tournament, source_stage, _stage_players = self._create_stage_with_guest_players(
+            6, pod_names=('North', 'South'), owner=self.owner)
+        round_obj = self._pair_round(source_stage, 1)
+        self._resolve_round_with_player_one_wins(round_obj)
+
+        self.client.post(self._copy_url(tournament),
+                         self._get_copy_post_data(['North', 'South']))
+
+        copied_stage = self._get_copied_tournament().stages.get(order=1)
+        self.assertEqual([pod.name for pod in copied_stage.get_pods()], ['North', 'South'])
+        self.assertFalse(copied_stage.stage_players.exists())
+        self.assertFalse(copied_stage.rounds.exists())
+        self.assertEqual(source_stage.stage_players.filter(pod__isnull=False).count(), 6)
+
+    def test_copied_podded_tournament_runs_with_pods(self):
+        tournament, _stage, _stage_players = self._create_stage_with_guest_players(
+            0, pod_names=('North', 'South'), owner=self.owner)
+        self.client.post(self._copy_url(tournament),
+                         self._get_copy_post_data(['North', 'South']))
+        copy = self._get_copied_tournament()
+        copied_stage = copy.stages.get(order=1)
+        for i in range(4):
+            player = Player.objects.create(tournament=copy, nickname=f'Copy {i + 1}')
+            copied_stage.add_stage_player(player)
+
+        self.client.post(reverse('tourney:tourney-prepare-current-stage-seeding', args=[copy.code]))
+        self.client.post(reverse('tourney:tourney-start-next-stage', args=[copy.code]))
+
+        self.assertEqual(Match.objects.filter(round__stage=copied_stage).count(), 2)
+        self._assert_no_cross_pod_matches(copied_stage)
+
+    def test_copy_of_tournament_with_pre_update_group_rows(self):
+        tournament, source_stage, _stage_players = self._create_stage_with_guest_players(
+            0, pod_names=('Legacy Group', 'Other Group'), owner=self.owner)
+        source_stage.pods.update(slug='')
+        from django.apps import apps as django_apps
+        populate_pod_slugs = importlib.import_module(
+            'tourney.migrations.0022_populate_pod_slugs').populate_pod_slugs
+        populate_pod_slugs(django_apps, None)
+
+        get_response = self.client.get(self._copy_url(tournament))
+        self.client.post(self._copy_url(tournament), self._get_copy_post_data())
+
+        self.assertEqual(
+            list(source_stage.pods.values_list('slug', flat=True)),
+            ['legacy-group', 'other-group'])
+        self.assertEqual(get_response.status_code, 200)
+        copied_pods = self._get_copied_tournament().stages.get(order=1).get_pods()
+        self.assertEqual([pod.slug for pod in copied_pods], ['legacy-group', 'other-group'])

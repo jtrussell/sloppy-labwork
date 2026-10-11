@@ -2054,7 +2054,11 @@ def copy_tournament(request, tournament_code):
                     ]
                     main_stage.set_ranking_criteria(source_criteria)
 
-                sync_submitted_pods(main_stage, form)
+                if form.pod_entries is None:
+                    main_stage.sync_pods(get_stage_pod_entries(
+                        source_main_stage, include_ids=False))
+                else:
+                    main_stage.sync_pods(form.pod_entries)
 
                 if form.cleaned_data['enable_playoffs']:
                     playoff_stage = tournament.create_playoff_stage(
