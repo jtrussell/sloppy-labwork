@@ -1,0 +1,16 @@
+{% for field in response_form %}
+<div class="ghostform-field{% if field.widget_type == 'checkbox' %} ghostform-field--checkbox{% endif %}">
+    {% if field.widget_type == 'checkbox' %}
+    <label for="{{ field.id_for_label }}">{{ field }} <span>{{ field.label }}</span></label>
+    {% else %}
+    <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="ghostform-required" aria-hidden="true">*</span>{% endif %}</label>
+    {{ field }}
+    {% endif %}
+    {% if field.help_text %}
+    <span class="ghostform-help">{{ field.help_text }}</span>
+    {% endif %}
+    {% if field.errors %}
+    <div class="ghostform-errors">{{ field.errors|join:" " }}</div>
+    {% endif %}
+</div>
+{% endfor %}

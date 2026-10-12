@@ -1,0 +1,40 @@
+{% extends 'page.html' %}
+{% load static %}
+
+{% block head_title %}{{ ghostform.title }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'ghostform/main.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ghostform-fill">
+  <h1>{{ ghostform.title }}</h1>
+  {% if can_edit %}
+  <div class="subheading"><a href="{% url 'ghostform:ghostform-detail' ghostform.code %}">&larr; Back to form details</a></div>
+  {% endif %}
+
+  {% if ghostform.description %}
+  <div class="ghostform-description">{{ ghostform.description|linebreaks }}</div>
+  {% endif %}
+
+  {% if is_preview %}
+  <div class="note"><p>Preview. Publish this form to start accepting responses.</p></div>
+  {% elif not ghostform.is_accepting_responses %}
+  <div class="note"><p>This form is no longer accepting responses.</p></div>
+  {% endif %}
+
+  {% if ghostform.is_accepting_responses or is_preview %}
+  <form method="post" class="ghostform-response-form">
+    {% csrf_token %}
+    {% if response_form.non_field_errors %}
+    <div class="ghostform-errors">{{ response_form.non_field_errors|join:" " }}</div>
+    {% endif %}
+    {% include 'ghostform/partials/response-fields.html' %}
+    <div class="ghostform-actions">
+      <button type="submit" class="button button-primary"{% if is_preview %} disabled{% endif %}>Submit</button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

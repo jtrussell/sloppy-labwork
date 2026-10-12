@@ -1,0 +1,81 @@
+<div id="matchModal" class="modal"
+     data-player-report-url="{% url 'tourney:tourney-player-add-match-result' tournament.code %}"
+     data-opponents="{{ player_report_opponents_json|default:"[]" }}"
+     data-viewer-name="{% if player %}{{ player.get_display_name }}{% endif %}"
+     data-current-round-label="{% if current_round %}{{ current_round.stage.name }} · Round {{ current_round.order }}{% endif %}"
+     data-stage-allow-ties="{{ selected_stage.are_ties_allowed|yesno:"true,false"|default:"false" }}"
+     data-stage-score-reporting="{{ selected_stage.report_full_scores|default:"0" }}">
+    <div class="modal-content report-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle" tabindex="-1">
+        <div class="report-dialog__header">
+            <div class="report-dialog__heading">
+                <h3 id="modalTitle">Report Match Result</h3>
+                <div id="reportRoundLabel" class="report-dialog__round"></div>
+            </div>
+            <button type="button" class="modal-close" aria-label="Close" onclick="closeMatchModal()"></button>
+        </div>
+
+        <form id="matchForm" class="report-dialog__form" hx-disabled-elt="#reportSubmitButton">
+            <div class="report-dialog__body scroll-area">
+                <div id="reportFeedback" aria-live="polite"></div>
+
+                <div id="reportOpponentField" class="report-dialog__opponent" hidden>
+                    <label for="reportOpponent">Opponent</label>
+                    <select id="reportOpponent" name="opponent" disabled>
+                        <option value="">Select your opponent</option>
+                    </select>
+                </div>
+
+                <fieldset id="reportOutcome" class="report-outcome">
+                    <legend class="report-outcome__legend">Who won? <span class="report-outcome__hint">Tap the winner</span></legend>
+                    <div class="report-outcome__players">
+                        <div class="report-player" data-player-slot="one">
+                            <label class="report-player__pick">
+                                <input type="radio" name="winner" id="reportWinnerPlayerOne" class="report-player__radio" required>
+                                <span class="report-player__name" id="reportPlayerOneName"></span>
+                                <span class="report-player__winner" aria-hidden="true">Winner</span>
+                            </label>
+                            <div class="report-player__score" data-score-field>
+                                <input type="number" id="reportPlayerOneScore" min="0" step="1" inputmode="numeric" placeholder="Score">
+                            </div>
+                        </div>
+                        <span class="report-outcome__versus" aria-hidden="true">vs</span>
+                        <div class="report-player" data-player-slot="two">
+                            <label class="report-player__pick">
+                                <input type="radio" name="winner" id="reportWinnerPlayerTwo" class="report-player__radio" required>
+                                <span class="report-player__name" id="reportPlayerTwoName"></span>
+                                <span class="report-player__winner" aria-hidden="true">Winner</span>
+                            </label>
+                            <div class="report-player__score" data-score-field>
+                                <input type="number" id="reportPlayerTwoScore" min="0" step="1" inputmode="numeric" placeholder="Score">
+                            </div>
+                        </div>
+                    </div>
+                    <label id="reportTieOption" class="report-outcome__tie" hidden>
+                        <input type="radio" name="winner" id="reportWinnerTie" class="report-player__radio" required>
+                        <span>It was a tie</span>
+                    </label>
+                </fieldset>
+
+                <p id="reportByeNotice" class="report-dialog__bye-notice" hidden>This player has a bye this round.</p>
+
+                {% if report_response_form %}
+                {% include 'tourney/partials/result-form-fields.html' with response_form=report_response_form %}
+                {% endif %}
+            </div>
+
+            <div class="report-dialog__footer">
+                <button type="submit" id="reportSubmitButton" class="button button-primary">Submit result</button>
+                <button type="button" class="button-link report-dialog__cancel" onclick="closeMatchModal()">Cancel</button>
+                {% if is_admin %}
+                <details id="reportAdminMenu" class="report-dialog__admin-menu" hidden>
+                    <summary class="button-link">More</summary>
+                    <div class="report-dialog__admin-actions">
+                        <button type="button" id="resetMatchBtn" class="button" onclick="resetMatch()">Reset match</button>
+                        <button type="button" id="deleteMatchBtn" class="button button-danger" onclick="deleteMatch()">Delete match</button>
+                    </div>
+                </details>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>

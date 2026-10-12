@@ -569,6 +569,43 @@ body:has(.mobile-nav-toggle:checked) {
 }
 
 
+/* Scroll Areas */
+.scroll-area {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .scroll-area {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
+}
+
+.scroll-area::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-area::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.scroll-area::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-muted);
+}
+
+body.has-open-dialog {
+  overflow: hidden;
+}
+
 /* Match Result Modal */
 .modal {
   display: none;

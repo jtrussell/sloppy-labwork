@@ -50,6 +50,26 @@
         </div>
     </section>
 
+    <section>
+        <h2>Result Form</h2>
+        {% if tournament.result_form %}
+        <p class="text-muted">
+            Players answer <strong>{{ tournament.result_form.title }}</strong> whenever they report a match result.
+            Its status ({{ tournament.result_form.get_status_display|lower }}) only controls the form's share link.
+        </p>
+        <div class="hstack gap-1">
+            <a href="{% url 'ghostform:ghostform-detail' tournament.result_form.code %}" class="button button-primary">View Form</a>
+            <a href="{% url 'ghostform:ghostform-responses-csv' tournament.result_form.code %}" class="button">Download Responses (CSV)</a>
+        </div>
+        {% else %}
+        <p class="text-muted">
+            No result form is linked. Link one from
+            <a href="{% url 'tourney:tourney-edit-tournament' tournament.code %}">Edit Tournament</a>
+            to collect extra details when players report results.
+        </p>
+        {% endif %}
+    </section>
+
     {% if tournament.pmc_event %}
     <section>
         <h2>Sync to KeyChain</h2>

@@ -1,0 +1,44 @@
+<div class="form-picker" x-data="formPicker"
+     data-selected-value="{{ picker.selected_value }}"
+     data-selected-title="{{ picker.selected_option.title|default:'No form' }}"
+     data-selected-meta="{{ picker.selected_option.meta|default:'' }}"
+     data-selected-preview-code="{{ picker.selected_option.preview_code|default:'' }}"
+     data-preview-url-template="{{ picker.preview_url_template }}">
+    <input type="hidden" name="{{ picker.field_name }}" value="{{ picker.selected_value }}" :value="selectedValue">
+
+    <div class="form-picker__selected">
+        <div class="form-picker__selected-text">
+            <div class="form-picker__selected-title" x-text="selectedTitle">{{ picker.selected_option.title|default:'No form' }}</div>
+            <div class="form-picker__selected-meta" x-text="selectedMeta">{{ picker.selected_option.meta|default:'' }}</div>
+        </div>
+        <button type="button" class="button button-small" @click="toggleOpen()"
+                :aria-expanded="isOpen.toString()" aria-controls="{{ picker.field_name }}-picker-panel"
+                x-text="isOpen ? 'Done' : 'Change'">Change</button>
+    </div>
+
+    <div class="form-picker__preview" x-show="selectedPreviewCode">
+        <button type="button" class="form-picker__preview-toggle" @click="togglePreview()" :aria-expanded="isPreviewOpen.toString()">
+            <span x-text="isPreviewOpen ? '▾ Hide questions' : '▸ Preview questions'">▸ Preview questions</span>
+        </button>
+        <div class="form-picker__preview-body" x-show="isPreviewOpen" x-ref="preview"></div>
+    </div>
+
+    <div class="form-picker__panel" id="{{ picker.field_name }}-picker-panel" x-show="isOpen" x-cloak>
+        <input type="search" class="form-picker__search" name="q" form="{{ picker.field_name }}-picker-search" x-ref="search"
+               placeholder="Search your forms…" aria-label="Search your forms" autocomplete="off"
+               hx-get="{{ picker.results_url }}"
+               hx-trigger="input changed delay:250ms, search"
+               hx-target="next .form-picker__results"
+               hx-swap="innerHTML"
+               @keydown.enter.prevent>
+        <div class="form-picker__options">
+            {% for option in picker.special_options %}
+            {% include 'ghostform/partials/form-picker-option.html' %}
+            {% endfor %}
+        </div>
+        <div class="form-picker__results scroll-area" aria-label="Your forms" aria-live="polite">
+            {% include 'ghostform/partials/form-picker-results.html' with results=picker.results query='' %}
+        </div>
+        <a href="{{ picker.create_url }}" target="_blank" rel="noopener" class="form-picker__create">Create a new form ↗</a>
+    </div>
+</div>

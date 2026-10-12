@@ -1,0 +1,12 @@
+<div class="report-dialog__errors">
+    <ul>
+        {% for error_message in error_messages %}
+        <li>{{ error_message }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% if response_form %}
+<div id="reportResultFormFields" hx-swap-oob="innerHTML">
+    {% include 'ghostform/partials/response-fields.html' %}
+</div>
+{% endif %}

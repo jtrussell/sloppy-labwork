@@ -1,11 +1,25 @@
 from django import forms
 from django.contrib.auth.models import User
+from django.db.models import Q
+from ghostform.models import Form as GhostformForm
 from .models import (
     Tournament, Player, Stage, MatchResult, get_available_ranking_criteria,
     MAXIMUM_PODS_PER_STAGE
 )
 from pmc.models import Playgroup, EventFormat
 from django.utils.translation import gettext_lazy as _
+
+
+COPY_SOURCE_RESULT_FORM = 'copy'
+
+
+def get_result_form_choice_label(ghostform):
+    return f'{ghostform.title} ({ghostform.get_status_display()})'
+
+
+class ResultFormChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, ghostform):
+        return get_result_form_choice_label(ghostform)
 
 
 class TournamentForm(forms.ModelForm):
@@ -64,7 +78,17 @@ class TournamentForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         instance = kwargs.get('instance')
         is_edit_mode = kwargs.pop('is_edit_mode', False)
+        user = kwargs.pop('user', None)
+        copy_source_result_form = kwargs.pop('copy_source_result_form', None)
         super().__init__(*args, **kwargs)
+        self.fields['result_form'].queryset = self._get_result_form_choices(
+            user, getattr(instance, 'result_form', None))
+        self.fields['result_form'].empty_label = 'No form'
+        self.result_form_queryset = self.fields['result_form'].queryset
+        self.copy_source_result_form = copy_source_result_form
+        self.should_copy_result_form = False
+        if copy_source_result_form is not None:
+            self._offer_result_form_copy(copy_source_result_form)
 
         self.main_stage = None
         if instance and instance.pk:
@@ -98,10 +122,56 @@ class TournamentForm(forms.ModelForm):
     class Meta:
         model = Tournament
         fields = ['name', 'description',
-                  'is_accepting_registrations', 'is_closed', 'is_public']
+                  'is_accepting_registrations', 'is_closed', 'is_public', 'result_form']
+        field_classes = {
+            'result_form': ResultFormChoiceField,
+        }
+        labels = {
+            'result_form': 'Result Form',
+        }
+        help_texts = {
+            'result_form': "Players answer this form whenever they report a match result. The form's status only controls its share link.",
+        }
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4, 'style': 'text-wrap: auto'})
         }
+
+    def _offer_result_form_copy(self, source_result_form):
+        model_choice_field = self.fields['result_form']
+        self.fields['result_form'] = forms.ChoiceField(
+            required=False,
+            label=model_choice_field.label,
+            help_text=model_choice_field.help_text,
+            choices=[
+                ('', 'No form'),
+                (COPY_SOURCE_RESULT_FORM, f'Copy of {source_result_form.title} (new form)'),
+                *[(str(ghostform.pk), get_result_form_choice_label(ghostform))
+                  for ghostform in self.result_form_queryset],
+            ],
+        )
+
+    def clean_result_form(self):
+        selected_result_form = self.cleaned_data.get('result_form')
+        if not isinstance(selected_result_form, str):
+            return selected_result_form
+        if selected_result_form == COPY_SOURCE_RESULT_FORM:
+            self.should_copy_result_form = True
+            return None
+        if not selected_result_form:
+            return None
+        chosen_result_form = self.result_form_queryset.filter(pk=selected_result_form).first()
+        if chosen_result_form is None:
+            raise forms.ValidationError('That form is no longer available.')
+        return chosen_result_form
+
+    @staticmethod
+    def _get_result_form_choices(user, linked_result_form):
+        available_forms = Q(pk__in=[])
+        if user is not None and user.is_authenticated:
+            available_forms |= Q(owner=user)
+        if linked_result_form is not None:
+            available_forms |= Q(pk=linked_result_form.pk)
+        return GhostformForm.objects.filter(available_forms).order_by('title')
 
     def clean(self):
         cleaned_data = super().clean()

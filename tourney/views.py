@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import NON_FIELD_ERRORS, PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction, IntegrityError
 from django.db import models
@@ -23,8 +23,13 @@ from .models import (
     get_ordered_criteria_display, MAXIMUM_PODS_PER_STAGE, ALL_PODS_FILTER
 )
 from .forms import (
-    TournamentForm, PlayerForm, EditPlayerForm, StageForm, MatchResultForm,
+    COPY_SOURCE_RESULT_FORM, TournamentForm, PlayerForm, EditPlayerForm, StageForm, MatchResultForm,
     PlayerRegistrationForm, AddMatchForm, SelectPlaygroupForm, TournamentExportForm
+)
+from .result_forms import (
+    build_report_dialog_context, build_result_form_picker_context, build_result_response_form, copy_result_form_for_tournament,
+    RESULT_FORM_INLINE_ERROR_MESSAGE, get_result_report_error_message, is_result_response_form_valid,
+    record_result_response
 )
 from pmc.models import Playgroup, Event, EventResult, PlaygroupEvent, RankingPointsService
 
@@ -97,6 +102,37 @@ def get_selected_pod(request, stage, default_pod=None):
     if not requested_pod_slug:
         return default_pod
     return stage.pods.filter(slug=requested_pod_slug).first() or default_pod
+
+
+def render_report_error(request, tournament, error_messages, response_form=None, redirect_url=None):
+    has_response_form_errors = (
+        response_form is not None and response_form.is_bound and bool(response_form.errors))
+    if request.htmx:
+        if has_response_form_errors:
+            error_messages = [*error_messages, RESULT_FORM_INLINE_ERROR_MESSAGE]
+        response = render(request, 'tourney/partials/report-dialog-errors.html', {
+            'error_messages': error_messages,
+            'response_form': response_form,
+        })
+        response['HX-Retarget'] = '#reportFeedback'
+        response['HX-Reswap'] = 'innerHTML'
+        return response
+    if has_response_form_errors:
+        error_messages = [*error_messages, get_result_report_error_message(response_form)]
+    for error_message in error_messages:
+        messages.error(request, error_message)
+    return redirect_to(request, redirect_url or get_matches_url(request, tournament))
+
+
+def get_form_error_messages(form):
+    error_messages = []
+    for field_name, field_errors in form.errors.items():
+        field = form.fields.get(field_name)
+        field_label = (field.label if field and field.label else field_name.replace('_', ' ').capitalize())
+        for field_error in field_errors:
+            error_messages.append(
+                field_error if field_name == NON_FIELD_ERRORS else f'{field_label}: {field_error}')
+    return error_messages
 
 
 def get_viewer_pod(stage, player):
@@ -272,7 +308,7 @@ def my_tournaments(request):
 @login_required
 def create_tournament(request):
     if request.method == 'POST':
-        form = TournamentForm(request.POST)
+        form = TournamentForm(request.POST, user=request.user)
         if form.is_valid():
             with transaction.atomic():
                 tournament = form.save(commit=False)
@@ -310,7 +346,7 @@ def create_tournament(request):
                 request, f'Tournament "{tournament.name}" created successfully!')
             return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
     else:
-        form = TournamentForm(is_edit_mode=False)
+        form = TournamentForm(is_edit_mode=False, user=request.user)
 
     ordered_criteria_display = get_ordered_criteria_display()
     return render(request, 'tourney/tournament-form.html', {
@@ -320,6 +356,7 @@ def create_tournament(request):
             {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
         ]),
         **get_pod_form_context(form, []),
+        'result_form_picker': build_result_form_picker_context(form, request.user),
     })
 
 
@@ -330,7 +367,7 @@ def edit_tournament(request, tournament_code):
 
     if request.method == 'POST':
         form = TournamentForm(
-            request.POST, instance=tournament, is_edit_mode=True)
+            request.POST, instance=tournament, is_edit_mode=True, user=request.user)
         if form.is_valid():
             with transaction.atomic():
                 form.save()
@@ -382,7 +419,7 @@ def edit_tournament(request, tournament_code):
             messages.success(request, 'Tournament updated successfully!')
             return redirect_to(request, reverse('tourney:tourney-edit-tournament', kwargs={'tournament_code': tournament.code}))
     else:
-        form = TournamentForm(instance=tournament, is_edit_mode=True)
+        form = TournamentForm(instance=tournament, is_edit_mode=True, user=request.user)
 
     main_stage = tournament.stages.filter(order=1).first()
     current_criteria = []
@@ -398,6 +435,7 @@ def edit_tournament(request, tournament_code):
             {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
         ]),
         **get_pod_form_context(form, get_stage_pod_entries(main_stage)),
+        'result_form_picker': build_result_form_picker_context(form, request.user),
     }
     return render(request, 'tourney/tournament-form.html', context)
 
@@ -507,6 +545,8 @@ def get_tournament_base_context(request, tournament):
         'default_pod': default_pod,
         'pod_query_string': pod_query_string,
         'all_pods_filter': ALL_PODS_FILTER,
+        **build_report_dialog_context(
+            tournament, is_admin, can_report_results=is_admin or is_player),
     }
 
 
@@ -1026,48 +1066,60 @@ def report_match_result(request, tournament_code, match_id):
     if not (is_admin or is_player_in_match):
         raise PermissionDenied
 
+    tournament_home_url = reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code})
     if tournament.is_closed and not is_admin:
-        messages.error(
-            request, 'This tournament is closed. Match results can no longer be submitted by players.')
-        return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+        return render_report_error(request, tournament, [
+            'This tournament is closed. Match results can no longer be submitted by players.'
+        ], redirect_url=tournament_home_url)
 
     if match.has_result() and not is_admin:
-        messages.error(request, 'This match already has a result.')
-        return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+        return render_report_error(request, tournament, [
+            'This match already has a result.'
+        ], redirect_url=tournament_home_url)
+
+    if match.is_bye():
+        return render_report_error(request, tournament, [
+            'Bye results are recorded automatically and cannot be reported.'
+        ])
 
     form = MatchResultForm(request.POST, match=match)
-    if form.is_valid():
-        existing_result = getattr(match, 'result', None)
-        if existing_result:
-            result = form.save(commit=False)
-            existing_result.winner = result.winner
-            existing_result.player_one_score = result.player_one_score
-            existing_result.player_two_score = result.player_two_score
-            existing_result.save()
-            result = existing_result
-        else:
-            result = form.save(commit=False)
-            result.match = match
-            result.save()
+    response_form = build_result_response_form(tournament, is_admin, request.POST)
+    is_result_valid = form.is_valid()
+    is_response_valid = is_result_response_form_valid(response_form)
+    if is_result_valid and is_response_valid:
+        with transaction.atomic():
+            existing_result = getattr(match, 'result', None)
+            if existing_result:
+                result = form.save(commit=False)
+                existing_result.winner = result.winner
+                existing_result.player_one_score = result.player_one_score
+                existing_result.player_two_score = result.player_two_score
+                existing_result.save()
+                result = existing_result
+            else:
+                result = form.save(commit=False)
+                result.match = match
+                result.save()
 
-        action_type = (TournamentActionLog.ActionType.REPORT_RESULT if not existing_result
-                       else TournamentActionLog.ActionType.UPDATE_RESULT)
+            record_result_response(response_form, request.user, result, is_admin)
 
-        winner_name = result.winner.player.get_display_name() if result.winner else 'Tie'
-        TournamentActionLog.objects.create(
-            tournament=tournament,
-            user=request.user,
-            action_type=action_type,
-            description=f'Match result {"updated" if existing_result else "reported"}: {winner_name}'
-        )
+            action_type = (TournamentActionLog.ActionType.REPORT_RESULT if not existing_result
+                           else TournamentActionLog.ActionType.UPDATE_RESULT)
+
+            winner_name = result.winner.player.get_display_name() if result.winner else 'Tie'
+            TournamentActionLog.objects.create(
+                tournament=tournament,
+                user=request.user,
+                action_type=action_type,
+                description=f'Match result {"updated" if existing_result else "reported"}: {winner_name}'
+            )
 
         messages.success(
             request, f'Match result {"updated" if existing_result else "reported"} successfully!')
-    else:
-        messages.error(
-            request, 'Error reporting match result. Please check the form.')
+        return redirect_to(request, get_matches_url(request, tournament))
 
-    return redirect_to(request, get_matches_url(request, tournament))
+    return render_report_error(
+        request, tournament, get_form_error_messages(form), response_form)
 
 
 @login_required
@@ -1891,43 +1943,33 @@ def player_add_match_result(request, tournament_code):
     tournament = get_object_or_404(Tournament, code=tournament_code)
 
     if tournament.is_closed:
-        messages.error(
-            request, 'This tournament is closed. Match results can no longer be submitted by players.')
-        return redirect_to(request, get_matches_url(request, tournament))
+        return render_report_error(request, tournament, ['This tournament is closed. Match results can no longer be submitted by players.'])
 
     current_stage = tournament.get_current_stage()
 
     if not current_stage:
-        messages.error(request, 'No active stage found.')
-        return redirect_to(request, get_matches_url(request, tournament))
+        return render_report_error(request, tournament, ['No active stage found.'])
 
     current_round = current_stage.get_current_round()
     if not current_round:
-        messages.error(
-            request, 'No active round found. Please create a round first.')
-        return redirect_to(request, get_matches_url(request, tournament))
+        return render_report_error(request, tournament, ['No active round found. Please create a round first.'])
 
     user_stage_player = current_stage.stage_players.filter(
         player__user=request.user).first()
     if not user_stage_player:
-        messages.error(request, 'You are not a participant in this stage.')
-        return redirect_to(request, get_matches_url(request, tournament))
+        return render_report_error(request, tournament, ['You are not a participant in this stage.'])
 
     opponent_id = request.POST.get('opponent')
     if not opponent_id:
-        messages.error(request, 'Please select an opponent.')
-        return redirect_to(request, get_matches_url(request, tournament))
+        return render_report_error(request, tournament, ['Please select an opponent.'])
 
     try:
         opponent_stage_player = current_stage.stage_players.get(id=opponent_id)
     except StagePlayer.DoesNotExist:
-        messages.error(request, 'Invalid opponent selected.')
-        return redirect_to(request, get_matches_url(request, tournament))
+        return render_report_error(request, tournament, ['Invalid opponent selected.'])
 
     if not user_stage_player.is_in_same_pod_as(opponent_stage_player):
-        messages.error(
-            request, 'You can only report matches against players in your pod.')
-        return redirect_to(request, get_matches_url(request, tournament))
+        return render_report_error(request, tournament, ['You can only report matches against players in your pod.'])
 
     existing_match = current_round.matches.filter(
         Q(player_one=user_stage_player, player_two=opponent_stage_player) |
@@ -1935,14 +1977,11 @@ def player_add_match_result(request, tournament_code):
     ).first()
 
     if existing_match:
-        messages.error(
-            request, 'You already have a match against this opponent in this round.')
-        return redirect_to(request, get_matches_url(request, tournament))
+        return render_report_error(request, tournament, ['You already have a match against this opponent in this round.'])
 
     winner_choice = request.POST.get('winner')
     if not winner_choice:
-        messages.error(request, 'Please select a winner.')
-        return redirect_to(request, get_matches_url(request, tournament))
+        return render_report_error(request, tournament, ['Please select a winner.'])
 
     if winner_choice == 'me':
         winner = user_stage_player
@@ -1950,12 +1989,10 @@ def player_add_match_result(request, tournament_code):
         winner = opponent_stage_player
     elif winner_choice == 'tie':
         if not current_stage.are_ties_allowed:
-            messages.error(request, 'Ties are not allowed in this stage.')
-            return redirect_to(request, get_matches_url(request, tournament))
+            return render_report_error(request, tournament, ['Ties are not allowed in this stage.'])
         winner = None
     else:
-        messages.error(request, 'Invalid winner selection.')
-        return redirect_to(request, get_matches_url(request, tournament))
+        return render_report_error(request, tournament, ['Invalid winner selection.'])
 
     my_score = request.POST.get('my_score', '').strip()
     their_score = request.POST.get('their_score', '').strip()
@@ -1966,8 +2003,7 @@ def player_add_match_result(request, tournament_code):
     if current_stage.report_full_scores > 0:
         if current_stage.report_full_scores == 2:
             if my_score is None or their_score is None:
-                messages.error(request, 'Scores are required for this stage.')
-                return redirect_to(request, get_matches_url(request, tournament))
+                return render_report_error(request, tournament, ['Scores are required for this stage.'])
 
         if my_score:
             try:
@@ -1975,8 +2011,7 @@ def player_add_match_result(request, tournament_code):
                 if my_score < 0:
                     raise ValueError()
             except (ValueError, TypeError):
-                messages.error(request, 'Invalid score entered.')
-                return redirect_to(request, get_matches_url(request, tournament))
+                return render_report_error(request, tournament, ['Invalid score entered.'])
         else:
             my_score = None
 
@@ -1986,13 +2021,19 @@ def player_add_match_result(request, tournament_code):
                 if their_score < 0:
                     raise ValueError()
             except (ValueError, TypeError):
-                messages.error(request, 'Invalid score entered.')
-                return redirect_to(request, get_matches_url(request, tournament))
+                return render_report_error(request, tournament, ['Invalid score entered.'])
         else:
             their_score = None
 
         player_one_score = my_score
         player_two_score = their_score
+
+    is_reporter_admin = tournament.is_user_admin(request.user)
+    response_form = build_result_response_form(
+        tournament, is_reporter_admin, request.POST)
+    if not is_result_response_form_valid(response_form):
+        return render_report_error(
+            request, tournament, [], response_form)
 
     with transaction.atomic():
         match = Match.objects.create(
@@ -2001,12 +2042,15 @@ def player_add_match_result(request, tournament_code):
             player_two=opponent_stage_player
         )
 
-        MatchResult.objects.create(
+        result = MatchResult.objects.create(
             match=match,
             winner=winner,
             player_one_score=player_one_score,
             player_two_score=player_two_score
         )
+
+        record_result_response(
+            response_form, request.user, result, is_reporter_admin)
 
         TournamentActionLog.objects.create(
             tournament=tournament,
@@ -2029,12 +2073,17 @@ def copy_tournament(request, tournament_code):
     source_tournament = get_object_or_404(Tournament, code=tournament_code)
 
     if request.method == 'POST':
-        form = TournamentForm(request.POST)
+        form = TournamentForm(
+            request.POST, user=request.user,
+            copy_source_result_form=source_tournament.result_form)
         if form.is_valid():
             with transaction.atomic():
                 tournament = form.save(commit=False)
                 tournament.owner = request.user
                 tournament.save()
+                if form.should_copy_result_form:
+                    copy_result_form_for_tournament(
+                        source_tournament, tournament, request.user)
 
                 main_stage = tournament.create_initial_stage(
                     main_pairing_strategy=form.cleaned_data['main_pairing_strategy'],
@@ -2102,6 +2151,7 @@ def copy_tournament(request, tournament_code):
             'description': source_tournament.description,
             'is_accepting_registrations': source_tournament.is_accepting_registrations,
             'is_public': source_tournament.is_public,
+            'result_form': COPY_SOURCE_RESULT_FORM if source_tournament.result_form else '',
         }
 
         source_main_stage = source_tournament.stages.filter(order=1).first()
@@ -2125,7 +2175,9 @@ def copy_tournament(request, tournament_code):
         else:
             initial_data['enable_playoffs'] = False
 
-        form = TournamentForm(initial=initial_data, is_edit_mode=False)
+        form = TournamentForm(
+            initial=initial_data, is_edit_mode=False, user=request.user,
+            copy_source_result_form=source_tournament.result_form)
 
     ranking_criteria_data = []
     source_main_stage = source_tournament.stages.filter(order=1).first()
@@ -2160,6 +2212,7 @@ def copy_tournament(request, tournament_code):
             {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
         ]),
         **get_pod_form_context(form, get_stage_pod_entries(source_main_stage, include_ids=False)),
+        'result_form_picker': build_result_form_picker_context(form, request.user),
     }
 
     return render(request, 'tourney/tournament-form.html', context)
@@ -2296,7 +2349,7 @@ def create_tournament_from_event(request, event_id):
     registered_players = event.results.select_related('user')
 
     if request.method == 'POST':
-        form = TournamentForm(request.POST)
+        form = TournamentForm(request.POST, user=request.user)
         if form.is_valid():
             with transaction.atomic():
                 tournament = form.save(commit=False)
@@ -2350,7 +2403,7 @@ def create_tournament_from_event(request, event_id):
             'name': event.name,
             'description': event.description,
             'is_accepting_registrations': False,
-        }, is_edit_mode=False)
+        }, is_edit_mode=False, user=request.user)
 
     ordered_criteria_display = get_ordered_criteria_display()
     return render(request, 'tourney/tournament-form.html', {
@@ -2363,6 +2416,7 @@ def create_tournament_from_event(request, event_id):
             {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
         ]),
         **get_pod_form_context(form, []),
+        'result_form_picker': build_result_form_picker_context(form, request.user),
     })
 
 

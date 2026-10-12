@@ -1,7 +1,10 @@
+import csv
 import importlib
+import io
 import json
 import logging
 from datetime import date, timedelta
+from unittest.mock import patch
 from django.test import TestCase, override_settings
 from django.contrib.auth.models import User
 from django.db import models
@@ -10,9 +13,12 @@ from .models import (
     Tournament, Player, Stage, StagePlayer, Round, Match, MatchResult,
     StandingCalculator, get_pairing_strategy, GamesPlayedRankingCriterion,
     Pod, TournamentActionLog, MAXIMUM_PODS_PER_STAGE, get_snake_pod_index,
-    build_unique_pod_slugs
+    build_unique_pod_slugs, TournamentAdmin
 )
 from pmc.models import Event, EventResult, Playgroup, PlaygroupEvent, PlaygroupMember
+from ghostform.models import (
+    Form as GhostformForm, Question as GhostformQuestion, Response as GhostformResponse
+)
 
 logger = logging.getLogger(__name__)
 
@@ -2726,6 +2732,7 @@ class SwissFoldInterlaceTestCase(TestCase):
 
 
 FAST_PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
+MASTER_VAULT_TEST_DECK_LINK = 'https://www.keyforgegame.com/deck-details/2dea0ea6-e371-4b9a-826c-28f6620ef550'
 SIMPLE_STORAGES = {
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
     'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
@@ -4083,3 +4090,677 @@ class TournamentCopyTestCase(PodTestMixin, TestCase):
         self.assertEqual(get_response.status_code, 200)
         copied_pods = self._get_copied_tournament().stages.get(order=1).get_pods()
         self.assertEqual([pod.slug for pod in copied_pods], ['legacy-group', 'other-group'])
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class TournamentResultFormTestCase(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        self.co_admin = User.objects.create_user('coadmin', 'coadmin@test.com', 'password')
+        self.form_owner = User.objects.create_user('formowner', 'formowner@test.com', 'password')
+
+        self.result_form = GhostformForm.objects.create(
+            owner=self.owner, title='Deck Check', status=GhostformForm.Status.PUBLISHED)
+        self.deck_question = GhostformQuestion.objects.create(
+            form=self.result_form, label='Your deck', order=1, is_required=True,
+            answer_type=GhostformQuestion.AnswerType.DECK_LINK)
+        self.notes_question = GhostformQuestion.objects.create(
+            form=self.result_form, label='Notes', order=2)
+
+        self.tournament = Tournament.objects.create(
+            name='Result Form Night', owner=self.owner, result_form=self.result_form)
+        TournamentAdmin.objects.create(tournament=self.tournament, user=self.co_admin)
+        self.stage = Stage.objects.create(
+            tournament=self.tournament, name='Main Stage', order=1, pairing_strategy='swiss',
+            report_full_scores=Stage.SCORE_REPORTING_OPTIONAL)
+
+        self.stage_players = []
+        for i, nickname in enumerate(['Anvil', 'Beacon', 'Comet'], start=1):
+            user = User.objects.create_user(f'user{i}', f'user{i}@test.com', 'password')
+            player = Player.objects.create(user=user, tournament=self.tournament, nickname=nickname)
+            self.stage_players.append(StagePlayer.objects.create(
+                player=player, stage=self.stage, seed=i))
+        self.anvil, self.beacon, self.comet = self.stage_players
+
+        self.round = Round.objects.create(stage=self.stage, order=1)
+        self.match = Match.objects.create(
+            round=self.round, player_one=self.anvil, player_two=self.beacon)
+
+    def _url(self, name, *args):
+        return reverse(f'tourney:{name}', args=[self.tournament.code, *args])
+
+    def _answers(self, deck_link=MASTER_VAULT_TEST_DECK_LINK, notes=''):
+        return {
+            f'ghostform-{self.deck_question.get_field_name()}': deck_link,
+            f'ghostform-{self.notes_question.get_field_name()}': notes,
+        }
+
+    def _report(self, username, data):
+        self.client.login(username=username, password='password')
+        return self.client.post(self._url('tourney-report-result', self.match.id), data)
+
+    def _context_values(self, response):
+        return {item['label']: item['value'] for item in response.context}
+
+    def _tournament_post_data(self, **overrides):
+        data = {
+            'name': 'Linked Tournament',
+            'is_accepting_registrations': True,
+            'is_public': False,
+            'main_pairing_strategy': 'swiss',
+            'main_score_reporting': '0',
+            'main_allow_ties': 'False',
+            'playoff_score_reporting': '0',
+        }
+        data.update(overrides)
+        return data
+
+    def test_player_report_requires_result_form_answers(self):
+        response = self._report('user1', {'winner': self.anvil.id})
+
+        self.assertFalse(MatchResult.objects.filter(match=self.match).exists())
+        self.assertFalse(GhostformResponse.objects.exists())
+        error_messages = [str(message) for message in response.wsgi_request._messages]
+        self.assertTrue(any('Your deck' in message for message in error_messages))
+
+    def _report_with_htmx(self, username, data):
+        self.client.login(username=username, password='password')
+        return self.client.post(
+            self._url('tourney-report-result', self.match.id), data,
+            HTTP_HX_REQUEST='true', HTTP_HX_CURRENT_URL=self._url('tourney-detail-matches'))
+
+    def test_htmx_report_with_invalid_answers_rerenders_errors_in_dialog(self):
+        response = self._report_with_htmx('user1', {
+            'winner': self.anvil.id, **self._answers('https://example.com', notes='Keep me')})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['HX-Retarget'], '#reportFeedback')
+        self.assertEqual(response['HX-Reswap'], 'innerHTML')
+        self.assertNotIn('HX-Redirect', response)
+        self.assertContains(response, 'Please fix the highlighted answers below.')
+        self.assertNotContains(response, 'Please complete the result form.')
+        self.assertContains(response, 'id="reportResultFormFields" hx-swap-oob="innerHTML"')
+        self.assertContains(response, 'Enter a Master Vault or Decks of KeyForge deck link.')
+        self.assertContains(response, 'value="Keep me"')
+        self.assertContains(response, 'id="report-form-ghostform-')
+        self.assertFalse(MatchResult.objects.filter(match=self.match).exists())
+
+    def test_htmx_report_with_result_errors_lists_them_in_dialog(self):
+        self.stage.report_full_scores = Stage.SCORE_REPORTING_REQUIRED
+        self.stage.save()
+
+        response = self._report_with_htmx('user1', {'winner': self.anvil.id, **self._answers()})
+
+        self.assertEqual(response['HX-Retarget'], '#reportFeedback')
+        self.assertContains(response, 'report-dialog__errors')
+        self.assertFalse(MatchResult.objects.filter(match=self.match).exists())
+        self.assertFalse(GhostformResponse.objects.exists())
+
+    def test_htmx_report_success_redirects(self):
+        response = self._report_with_htmx('user1', {'winner': self.anvil.id, **self._answers()})
+
+        self.assertIn('HX-Redirect', response)
+        self.assertTrue(MatchResult.objects.filter(match=self.match).exists())
+
+    def test_htmx_player_added_result_errors_stay_in_dialog(self):
+        self._use_self_scheduled_pairing()
+        Round.objects.create(stage=self.stage, order=2)
+        self.client.login(username='user1', password='password')
+
+        response = self.client.post(
+            self._url('tourney-player-add-match-result'), {'opponent': self.comet.id},
+            HTTP_HX_REQUEST='true', HTTP_HX_CURRENT_URL=self._url('tourney-detail-matches'))
+
+        self.assertEqual(response['HX-Retarget'], '#reportFeedback')
+        self.assertContains(response, 'Please select a winner.')
+
+    def test_player_report_rejects_invalid_deck_link(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers('https://example.com')})
+
+        self.assertFalse(MatchResult.objects.filter(match=self.match).exists())
+        self.assertFalse(GhostformResponse.objects.exists())
+
+    def test_player_report_records_result_and_response_together(self):
+        self._report('user1', {
+            'winner': self.anvil.id, 'player_one_score': '3', 'player_two_score': '1',
+            **self._answers(notes='Close game'),
+        })
+
+        result = MatchResult.objects.get(match=self.match)
+        response = GhostformResponse.objects.get()
+        self.assertEqual(result.winner, self.anvil)
+        self.assertEqual(response.form, self.result_form)
+        self.assertEqual(response.user.username, 'user1')
+        self.assertEqual(response.context_key, f'tourney-match:{self.match.id}')
+        self.assertEqual(
+            list(response.answers.order_by('question__order').values_list('value', flat=True)),
+            [MASTER_VAULT_TEST_DECK_LINK, 'Close game'])
+
+    def test_response_captures_result_context(self):
+        self._report('user1', {
+            'winner': self.anvil.id, 'player_one_score': '3', 'player_two_score': '1',
+            **self._answers(),
+        })
+
+        response = GhostformResponse.objects.get()
+        context_values = self._context_values(response)
+        self.assertEqual([item['label'] for item in response.context], [
+            'Tournament', 'Tournament code', 'Stage', 'Round', 'Player one', 'Player two',
+            'Winner', 'Player one score', 'Player two score', 'Result recorded at'])
+        self.assertEqual(context_values['Tournament'], 'Result Form Night')
+        self.assertEqual(context_values['Tournament code'], self.tournament.code)
+        self.assertEqual(context_values['Stage'], 'Main Stage')
+        self.assertEqual(context_values['Round'], 1)
+        self.assertEqual(context_values['Player one'], 'Anvil')
+        self.assertEqual(context_values['Player two'], 'Beacon')
+        self.assertEqual(context_values['Winner'], 'Anvil')
+        self.assertEqual(context_values['Player one score'], 3)
+        self.assertEqual(context_values['Player two score'], 1)
+        self.assertTrue(context_values['Result recorded at'])
+
+    def test_failed_response_save_rolls_back_result(self):
+        with patch('tourney.views.record_result_response', side_effect=RuntimeError('boom')):
+            with self.assertRaises(RuntimeError):
+                self._report('user1', {'winner': self.anvil.id, **self._answers()})
+
+        self.assertFalse(MatchResult.objects.filter(match=self.match).exists())
+
+    def test_admin_report_does_not_require_answers(self):
+        self._report('owner', {'winner': self.beacon.id})
+
+        self.assertEqual(MatchResult.objects.get(match=self.match).winner, self.beacon)
+        self.assertFalse(GhostformResponse.objects.exists())
+
+    def test_admin_report_with_answers_records_response(self):
+        self._report('coadmin', {'winner': self.beacon.id, **self._answers(deck_link='', notes='Judge call')})
+
+        response = GhostformResponse.objects.get()
+        self.assertEqual(response.user, self.co_admin)
+        self.assertEqual(list(response.answers.values_list('value', flat=True)), ['Judge call'])
+
+    def test_admin_report_still_validates_answer_format(self):
+        self._report('owner', {'winner': self.beacon.id, **self._answers(deck_link='not a deck')})
+
+        self.assertFalse(MatchResult.objects.filter(match=self.match).exists())
+
+    def test_linked_form_is_required_whatever_its_status(self):
+        for status in [GhostformForm.Status.DRAFT, GhostformForm.Status.CLOSED]:
+            self.result_form.status = status
+            self.result_form.save()
+
+            self._report('user1', {'winner': self.anvil.id})
+
+            self.assertFalse(MatchResult.objects.filter(match=self.match).exists(), status)
+
+    def test_draft_linked_form_collects_responses(self):
+        self.result_form.status = GhostformForm.Status.DRAFT
+        self.result_form.save()
+
+        self._report('user1', {'winner': self.anvil.id, **self._answers()})
+
+        self.assertTrue(MatchResult.objects.filter(match=self.match).exists())
+        self.assertEqual(GhostformResponse.objects.get().form, self.result_form)
+
+    def test_linked_form_without_questions_is_skipped(self):
+        GhostformQuestion.objects.filter(form=self.result_form).delete()
+        self.client.login(username='user1', password='password')
+
+        matches_response = self.client.get(self._url('tourney-detail-matches'))
+        self._report('user1', {'winner': self.anvil.id})
+
+        self.assertNotContains(matches_response, 'data-result-form')
+        self.assertTrue(MatchResult.objects.filter(match=self.match).exists())
+        self.assertFalse(GhostformResponse.objects.exists())
+
+    def test_closed_tournament_blocks_player_reports_before_the_form(self):
+        self.tournament.is_closed = True
+        self.tournament.save()
+
+        self._report('user1', {'winner': self.anvil.id, **self._answers()})
+
+        self.assertFalse(MatchResult.objects.filter(match=self.match).exists())
+        self.assertFalse(GhostformResponse.objects.exists())
+
+    def test_tournament_without_result_form_reports_as_before(self):
+        self.tournament.result_form = None
+        self.tournament.save()
+
+        self._report('user1', {'winner': self.anvil.id})
+
+        self.assertTrue(MatchResult.objects.filter(match=self.match).exists())
+
+    def test_admin_edit_updates_response_snapshot(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers()})
+
+        self._report('owner', {'winner': self.beacon.id, 'player_one_score': '1', 'player_two_score': '3'})
+
+        response = GhostformResponse.objects.get()
+        context_values = self._context_values(response)
+        self.assertEqual(context_values['Winner'], 'Beacon')
+        self.assertEqual(context_values['Player two score'], 3)
+        self.assertFalse(response.is_context_removed)
+
+    def test_reset_match_marks_response_removed(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers()})
+
+        self.client.login(username='owner', password='password')
+        self.client.post(self._url('tourney-reset-match', self.match.id))
+
+        response = GhostformResponse.objects.get()
+        self.assertTrue(response.is_context_removed)
+        self.assertEqual(self._context_values(response)['Winner'], 'Anvil')
+
+    def test_rereport_after_reset_creates_new_active_response(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers()})
+        self.client.login(username='owner', password='password')
+        self.client.post(self._url('tourney-reset-match', self.match.id))
+
+        self._report('user2', {'winner': self.beacon.id, **self._answers()})
+
+        removed_response = GhostformResponse.objects.get(is_context_removed=True)
+        active_response = GhostformResponse.objects.get(is_context_removed=False)
+        self.assertEqual(self._context_values(removed_response)['Winner'], 'Anvil')
+        self.assertEqual(self._context_values(active_response)['Winner'], 'Beacon')
+
+    def test_delete_match_keeps_response_marked_removed(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers()})
+
+        self.client.login(username='owner', password='password')
+        self.client.post(self._url('tourney-delete-match', self.match.id))
+
+        self.assertFalse(Match.objects.filter(id=self.match.id).exists())
+        self.assertTrue(GhostformResponse.objects.get().is_context_removed)
+
+    def test_deleting_tournament_keeps_responses(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers()})
+
+        self.tournament.delete()
+
+        self.assertTrue(GhostformResponse.objects.get().is_context_removed)
+
+    def _use_self_scheduled_pairing(self):
+        self.stage.pairing_strategy = 'round_robin'
+        self.stage.save()
+
+    def test_player_added_result_requires_answers(self):
+        self._use_self_scheduled_pairing()
+        Round.objects.create(stage=self.stage, order=2)
+        self.client.login(username='user1', password='password')
+
+        self.client.post(self._url('tourney-player-add-match-result'), {
+            'opponent': self.comet.id, 'winner': 'me'})
+
+        self.assertFalse(Match.objects.filter(round__order=2).exists())
+        self.assertFalse(GhostformResponse.objects.exists())
+
+    def test_player_added_result_rolls_back_when_response_fails(self):
+        self._use_self_scheduled_pairing()
+        new_round = Round.objects.create(stage=self.stage, order=2)
+        self.client.login(username='user1', password='password')
+
+        with patch('tourney.views.record_result_response', side_effect=RuntimeError('boom')):
+            with self.assertRaises(RuntimeError):
+                self.client.post(self._url('tourney-player-add-match-result'), {
+                    'opponent': self.comet.id, 'winner': 'them', **self._answers()})
+
+        self.assertFalse(new_round.matches.exists())
+
+    def test_player_added_result_records_response(self):
+        self._use_self_scheduled_pairing()
+        new_round = Round.objects.create(stage=self.stage, order=2)
+        self.client.login(username='user1', password='password')
+
+        self.client.post(self._url('tourney-player-add-match-result'), {
+            'opponent': self.comet.id, 'winner': 'them', **self._answers()})
+
+        match = new_round.matches.get()
+        response = GhostformResponse.objects.get()
+        self.assertEqual(match.result.winner, self.comet)
+        self.assertEqual(response.context_key, f'tourney-match:{match.id}')
+        self.assertEqual(self._context_values(response)['Round'], 2)
+        self.assertEqual(self._context_values(response)['Winner'], 'Comet')
+
+    def test_matches_page_renders_result_form_for_player(self):
+        self.client.login(username='user1', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertContains(response, f'name="ghostform-{self.deck_question.get_field_name()}"', count=1)
+        self.assertContains(response, 'id="report-form-ghostform-')
+        self.assertContains(response, 'data-result-form', count=1)
+        self.assertContains(response, 'id="matchModal"', count=1)
+        self.assertNotContains(response, 'playerMatchReportModal')
+        self.assertNotContains(response, '(optional)</summary>')
+
+    def test_matches_page_renders_optional_result_form_for_admin(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertContains(response, 'Deck Check (optional)</summary>')
+
+    def test_matches_page_renders_draft_result_form(self):
+        self.result_form.status = GhostformForm.Status.DRAFT
+        self.result_form.save()
+        self.client.login(username='user1', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertContains(response, 'data-result-form')
+
+    def test_admin_tab_links_to_result_form(self):
+        self.client.login(username='coadmin', password='password')
+
+        response = self.client.get(self._url('tourney-tournament-detail-admin'))
+
+        self.assertContains(response, reverse('ghostform:ghostform-detail', args=[self.result_form.code]))
+        self.assertContains(response, reverse('ghostform:ghostform-responses-csv', args=[self.result_form.code]))
+
+    def test_co_admin_can_view_linked_form_and_download_csv(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers()})
+        self.client.login(username='coadmin', password='password')
+
+        detail_response = self.client.get(reverse('ghostform:ghostform-detail', args=[self.result_form.code]))
+        csv_response = self.client.get(reverse('ghostform:ghostform-responses-csv', args=[self.result_form.code]))
+        edit_response = self.client.get(reverse('ghostform:ghostform-edit', args=[self.result_form.code]))
+
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertEqual(csv_response.status_code, 200)
+        self.assertEqual(edit_response.status_code, 403)
+        csv_rows = list(csv.reader(io.StringIO(csv_response.content.decode())))
+        self.assertIn('Winner', csv_rows[0])
+        self.assertIn('Linked record removed', csv_rows[0])
+        self.assertEqual(csv_rows[1][csv_rows[0].index('Winner')], 'Anvil')
+
+    def test_players_cannot_view_linked_form_responses(self):
+        self.client.login(username='user1', password='password')
+
+        response = self.client.get(reverse('ghostform:ghostform-detail', args=[self.result_form.code]))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_create_tournament_links_own_form(self):
+        self.client.login(username='owner', password='password')
+
+        self.client.post(reverse('tourney:tourney-create-tournament'), self._tournament_post_data(
+            result_form=self.result_form.id))
+
+        self.assertEqual(Tournament.objects.get(name='Linked Tournament').result_form, self.result_form)
+
+    def test_create_tournament_cannot_link_someone_elses_form(self):
+        other_form = GhostformForm.objects.create(owner=self.form_owner, title='Private')
+        self.client.login(username='owner', password='password')
+
+        response = self.client.post(reverse('tourney:tourney-create-tournament'), self._tournament_post_data(
+            result_form=other_form.id))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Tournament.objects.filter(name='Linked Tournament').exists())
+        self.assertIn('result_form', response.context['form'].errors)
+
+    def test_result_form_choices_are_scoped_to_user(self):
+        GhostformForm.objects.create(owner=self.form_owner, title='Private')
+        own_draft = GhostformForm.objects.create(owner=self.owner, title='Another')
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(reverse('tourney:tourney-create-tournament'))
+
+        choices = list(response.context['form'].fields['result_form'].queryset)
+        picker_titles = [option['title'] for option in response.context['result_form_picker']['results']]
+        self.assertEqual(choices, [own_draft, self.result_form])
+        self.assertEqual(sorted(picker_titles), ['Another', 'Deck Check'])
+        self.assertNotIn('Private', picker_titles)
+
+    def test_picker_describes_forms_with_linked_tournaments(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(reverse('ghostform:ghostform-picker-results'), {'q': 'deck'})
+
+        self.assertContains(response, 'Deck Check')
+        self.assertContains(response, 'used by Result Form Night')
+        self.assertContains(response, '2 questions')
+
+    def test_edit_picker_shows_linked_form_for_co_admin(self):
+        self.client.login(username='coadmin', password='password')
+
+        response = self.client.get(self._url('tourney-edit-tournament'))
+
+        picker = response.context['result_form_picker']
+        self.assertEqual(picker['selected_value'], str(self.result_form.pk))
+        self.assertEqual(picker['selected_option']['title'], 'Deck Check')
+        self.assertEqual(picker['results'], [])
+        self.assertEqual(picker['special_options'][0]['value'], str(self.result_form.pk))
+        self.assertIn('Owned by another admin', picker['special_options'][0]['meta'])
+        self.assertContains(response, f'name="result_form" value="{self.result_form.pk}"')
+
+    def test_picker_usage_only_names_tournaments_the_viewer_administers(self):
+        Tournament.objects.create(name='Owner Secret Event', owner=self.owner, result_form=self.result_form)
+        self.client.login(username='coadmin', password='password')
+
+        response = self.client.get(self._url('tourney-edit-tournament'))
+
+        selected_meta = response.context['result_form_picker']['selected_option']['meta']
+        self.assertIn('used by Result Form Night', selected_meta)
+        self.assertNotIn('Owner Secret Event', selected_meta)
+
+    def test_picker_drops_stale_selected_value(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.post(reverse('tourney:tourney-create-tournament'), self._tournament_post_data(
+            name='', result_form='999999'))
+
+        picker = response.context['result_form_picker']
+        self.assertEqual(picker['selected_value'], '')
+        self.assertEqual(picker['selected_option']['title'], 'No form')
+
+    def test_create_picker_defaults_to_no_form(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(reverse('tourney:tourney-create-tournament'))
+
+        picker = response.context['result_form_picker']
+        self.assertEqual(picker['selected_value'], '')
+        self.assertEqual(picker['selected_option']['title'], 'No form')
+
+    def test_invalid_submission_keeps_picker_selection(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.post(reverse('tourney:tourney-create-tournament'), self._tournament_post_data(
+            name='', result_form=self.result_form.id))
+
+        self.assertEqual(
+            response.context['result_form_picker']['selected_option']['title'], 'Deck Check')
+
+    def test_co_admin_edit_keeps_owner_form_linked(self):
+        self.client.login(username='coadmin', password='password')
+        edit_url = self._url('tourney-edit-tournament')
+
+        get_response = self.client.get(edit_url)
+        self.client.post(edit_url, self._tournament_post_data(
+            name='Result Form Night', result_form=self.result_form.id))
+
+        self.assertIn(self.result_form, get_response.context['form'].fields['result_form'].queryset)
+        self.tournament.refresh_from_db()
+        self.assertEqual(self.tournament.result_form, self.result_form)
+
+    def test_edit_can_unlink_result_form(self):
+        self.client.login(username='owner', password='password')
+
+        self.client.post(self._url('tourney-edit-tournament'), self._tournament_post_data(
+            name='Result Form Night', result_form=''))
+
+        self.tournament.refresh_from_db()
+        self.assertIsNone(self.tournament.result_form)
+
+    def _copy_with_result_form_choice(self, username, result_form_choice, name='Linked Tournament'):
+        self.client.login(username=username, password='password')
+        return self.client.post(self._url('tourney-copy-tournament'), self._tournament_post_data(
+            name=name, result_form=result_form_choice))
+
+    def test_copy_page_defaults_to_copying_the_result_form(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(self._url('tourney-copy-tournament'))
+
+        picker = response.context['result_form_picker']
+        self.assertEqual(response.context['form'].initial['result_form'], 'copy')
+        self.assertEqual(picker['selected_value'], 'copy')
+        self.assertEqual(picker['selected_option']['title'], 'Copy of Deck Check')
+        self.assertEqual(
+            [option['value'] for option in picker['special_options']], ['copy', ''])
+        self.assertContains(response, 'data-value="copy"')
+
+    def test_copy_clones_result_form_for_the_copier(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers()})
+        archived_question = GhostformQuestion.objects.create(
+            form=self.result_form, label='Retired', order=3, is_archived=True)
+
+        self._copy_with_result_form_choice('owner', 'copy')
+
+        copied_form = Tournament.objects.get(name='Linked Tournament').result_form
+        self.assertNotEqual(copied_form, self.result_form)
+        self.assertEqual(copied_form.owner, self.owner)
+        self.assertEqual(copied_form.title, 'Linked Tournament - Deck Check')
+        self.assertEqual(copied_form.status, GhostformForm.Status.PUBLISHED)
+        self.assertFalse(copied_form.responses.exists())
+        self.assertEqual(
+            list(copied_form.questions.values_list('label', 'answer_type', 'is_required', 'order')),
+            [('Your deck', 'deck_link', True, 1), ('Notes', 'text', False, 2)])
+        self.assertNotIn(archived_question.label, copied_form.questions.values_list('label', flat=True))
+        self.assertEqual(self.result_form.responses.count(), 1)
+
+    def test_co_admin_copy_clones_form_into_their_own_form(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers()})
+
+        self._copy_with_result_form_choice('coadmin', 'copy')
+
+        copied_form = Tournament.objects.get(name='Linked Tournament').result_form
+        self.assertEqual(copied_form.owner, self.co_admin)
+        self.assertFalse(copied_form.responses.exists())
+        self.assertTrue(copied_form.can_edit(self.co_admin))
+
+    def test_co_admin_copy_cannot_link_owner_form_directly(self):
+        response = self._copy_with_result_form_choice('coadmin', self.result_form.id)
+
+        self.assertIn('result_form', response.context['form'].errors)
+        self.assertFalse(Tournament.objects.filter(name='Linked Tournament').exists())
+
+    def test_copy_can_link_an_existing_own_form_instead(self):
+        self._copy_with_result_form_choice('owner', self.result_form.id)
+
+        self.assertEqual(Tournament.objects.get(name='Linked Tournament').result_form, self.result_form)
+        self.assertEqual(GhostformForm.objects.count(), 1)
+
+    def test_copy_can_choose_no_form(self):
+        self._copy_with_result_form_choice('owner', '')
+
+        self.assertIsNone(Tournament.objects.get(name='Linked Tournament').result_form)
+        self.assertEqual(GhostformForm.objects.count(), 1)
+
+    def test_copy_chain_does_not_stack_tournament_prefixes(self):
+        self._copy_with_result_form_choice('owner', 'copy', name='Result Form Night #2')
+        second_tournament = Tournament.objects.get(name='Result Form Night #2')
+
+        self.client.post(
+            reverse('tourney:tourney-copy-tournament', args=[second_tournament.code]),
+            self._tournament_post_data(name='Result Form Night #3', result_form='copy'))
+
+        self.assertEqual(second_tournament.result_form.title, 'Result Form Night #2 - Deck Check')
+        self.assertEqual(
+            Tournament.objects.get(name='Result Form Night #3').result_form.title,
+            'Result Form Night #3 - Deck Check')
+
+    def test_copied_form_keeps_draft_status(self):
+        self.result_form.status = GhostformForm.Status.DRAFT
+        self.result_form.save()
+
+        self._copy_with_result_form_choice('owner', 'copy')
+
+        copied_form = Tournament.objects.get(name='Linked Tournament').result_form
+        self.assertEqual(copied_form.status, GhostformForm.Status.DRAFT)
+
+    def test_co_admin_edit_cannot_link_other_owner_forms(self):
+        other_owner_form = GhostformForm.objects.create(owner=self.owner, title='Owner Private')
+        self.client.login(username='coadmin', password='password')
+
+        response = self.client.post(self._url('tourney-edit-tournament'), self._tournament_post_data(
+            name='Result Form Night', result_form=other_owner_form.id))
+
+        self.assertIn('result_form', response.context['form'].errors)
+        self.tournament.refresh_from_db()
+        self.assertEqual(self.tournament.result_form, self.result_form)
+
+    def test_dropped_player_with_unreported_match_still_gets_result_form(self):
+        Player.objects.filter(user__username='user1').update(status=Player.PlayerStatus.DROPPED)
+        self.client.login(username='user1', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+        self._report('user1', {'winner': self.anvil.id, **self._answers()})
+
+        self.assertContains(response, 'data-result-form')
+        self.assertTrue(GhostformResponse.objects.exists())
+
+    def test_spectator_does_not_get_result_form(self):
+        User.objects.create_user('spectator', 'spectator@test.com', 'password')
+        self.tournament.is_public = True
+        self.tournament.save()
+        self.client.login(username='spectator', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertNotContains(response, 'data-result-form')
+
+    def test_bye_results_cannot_be_reported(self):
+        bye_match = Match.objects.create(round=self.round, player_one=self.comet)
+        MatchResult.objects.create(match=bye_match, winner=self.comet)
+        self.stage.are_ties_allowed = True
+        self.stage.save()
+        self.client.login(username='owner', password='password')
+
+        self.client.post(self._url('tourney-report-result', bye_match.id), {'winner': ''})
+
+        bye_match.result.refresh_from_db()
+        self.assertEqual(bye_match.result.winner, self.comet)
+
+    def test_htmx_errors_rerender_answers_even_when_only_result_is_invalid(self):
+        self.stage.report_full_scores = Stage.SCORE_REPORTING_REQUIRED
+        self.stage.save()
+
+        response = self._report_with_htmx('user1', {
+            'winner': self.anvil.id, **self._answers(notes='Keep me')})
+
+        self.assertContains(response, 'id="reportResultFormFields" hx-swap-oob="innerHTML"')
+        self.assertContains(response, 'value="Keep me"')
+        self.assertNotContains(response, 'Please fix the highlighted answers below.')
+
+    def test_player_added_result_reports_score_errors_before_answers(self):
+        self._use_self_scheduled_pairing()
+        self.stage.report_full_scores = Stage.SCORE_REPORTING_OPTIONAL
+        self.stage.save()
+        Round.objects.create(stage=self.stage, order=2)
+        self.client.login(username='user1', password='password')
+
+        response = self.client.post(
+            self._url('tourney-player-add-match-result'),
+            {'opponent': self.comet.id, 'winner': 'me', 'my_score': '-4'},
+            HTTP_HX_REQUEST='true', HTTP_HX_CURRENT_URL=self._url('tourney-detail-matches'))
+
+        self.assertContains(response, 'Invalid score entered.')
+
+    def test_copy_of_tournament_without_form_has_no_form(self):
+        self.tournament.result_form = None
+        self.tournament.save()
+        self.client.login(username='owner', password='password')
+
+        get_response = self.client.get(self._url('tourney-copy-tournament'))
+        self.client.post(self._url('tourney-copy-tournament'), self._tournament_post_data())
+
+        self.assertEqual(get_response.context['form'].initial['result_form'], '')
+        self.assertNotContains(get_response, '(new form)')
+        self.assertIsNone(Tournament.objects.get(name='Linked Tournament').result_form)
+
+    def test_deleting_form_unlinks_tournament(self):
+        self.result_form.delete()
+
+        self.tournament.refresh_from_db()
+        self.assertIsNone(self.tournament.result_form)

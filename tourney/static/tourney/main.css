@@ -425,84 +425,11 @@ tr.with-actions td {
 }
 
 /* Modal Form Elements */
-.modal #scoreInputs {
-  margin-top: 0.625rem;
-}
-
-.modal #scoreInputs h4 {
-  margin-bottom: 0.625rem;
-  text-align: center;
-  color: var(--color-text-muted);
-}
-
-.modal #scoreInputs > div {
-  display: flex;
-  gap: 0.625rem;
-}
-
-.modal #scoreInputs > div > div {
-  flex: 1;
-  min-width: 0;
-}
-
-.modal #scoreInputs input {
-  width: 100%;
-}
-
-.modal #scoreInputs label {
-  width: 100%;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .modal .modal-actions {
   margin-top: 0.625rem;
   display: flex;
   gap: 0.625rem;
   justify-content: center;
-}
-
-.modal .modal-danger-zone {
-  margin-top: 1.25rem;
-}
-
-.modal .modal-danger-actions {
-  display: flex;
-  gap: 0.625rem;
-  justify-content: center;
-}
-
-.modal #addMatchForm .modal-actions {
-  margin-top: 0.625rem;
-  display: flex;
-  gap: 0.625rem;
-  justify-content: center;
-}
-
-.modal #playerScoreInputs {
-  margin-top: 0.625rem;
-  display: none;
-}
-
-.modal #playerScoreInputs h4 {
-  margin-bottom: 0.625rem;
-  text-align: center;
-  color: var(--color-text-muted);
-}
-
-.modal #playerScoreInputs > div {
-  display: flex;
-  gap: 0.625rem;
-}
-
-.modal #playerScoreInputs > div > div {
-  flex: 1;
-}
-
-.modal #playerScoreInputs input {
-  width: 100%;
 }
 
 /* Subheading Actions */

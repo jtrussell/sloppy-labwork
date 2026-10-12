@@ -1,0 +1,21 @@
+{% if is_admin %}
+<details class="ghostform-result-form" data-result-form>
+    <summary>{{ active_result_form.title }} (optional)</summary>
+    <div id="reportResultFormFields">
+        {% include 'ghostform/partials/response-fields.html' %}
+    </div>
+</details>
+{% else %}
+<section class="ghostform-result-form" data-result-form aria-labelledby="reportResultFormTitle">
+    <div class="ghostform-result-form__header">
+        <h4 id="reportResultFormTitle">{{ active_result_form.title }}</h4>
+        <span class="ghostform-result-form__legend"><span class="ghostform-required" aria-hidden="true">*</span> required</span>
+    </div>
+    {% if active_result_form.description %}
+    <p class="text-muted">{{ active_result_form.description|linebreaksbr }}</p>
+    {% endif %}
+    <div id="reportResultFormFields">
+        {% include 'ghostform/partials/response-fields.html' %}
+    </div>
+</section>
+{% endif %}

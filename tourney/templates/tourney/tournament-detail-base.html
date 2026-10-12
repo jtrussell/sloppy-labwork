@@ -5,8 +5,12 @@
 
 {% block content %}
     <link rel="stylesheet" href="{% static 'tourney/round-countdown.css' %}">
+    <link rel="stylesheet" href="{% static 'tourney/report-dialog.css' %}">
     {% if active_timer %}
     <link rel="stylesheet" href="{% static 'timekeeper/timer.css' %}">
+    {% endif %}
+    {% if active_result_form %}
+    <link rel="stylesheet" href="{% static 'ghostform/main.css' %}">
     {% endif %}
     <h1>{{ tournament.name }}</h1>
 
@@ -65,53 +69,7 @@
     {% block tab_content %}
     {% endblock %}
 
-    <!-- Match Result Modal -->
-    <div id="matchModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">Report Match Result</h3>
-                <button class="modal-close" onclick="closeMatchModal()"></button>
-            </div>
-            
-            <form id="matchForm" class="form-wide">
-                <div>
-                    <label for="matchWinner">Winner:</label>
-                    <select id="matchWinner" name="winner" required>
-                        <option value="">Select Winner</option>
-                    </select>
-                </div>
-
-                <div id="scoreInputs">
-                    <h4>Scores</h4>
-                    <div>
-                        <div>
-                            <label for="playerOneScore" id="playerOneScoreLabel">Player One Score:</label>
-                            <input type="number" id="playerOneScore" name="player_one_score" min="0" step="1">
-                        </div>
-                        <div>
-                            <label for="playerTwoScore" id="playerTwoScoreLabel">Player Two Score:</label>
-                            <input type="number" id="playerTwoScore" name="player_two_score" min="0" step="1">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-actions">
-                    <button type="submit" class="button button-primary">Submit</button>
-                    <button type="button" class="button" onclick="closeMatchModal()">Cancel</button>
-                </div>
-
-                {% if is_admin %}
-                <div class="modal-danger-zone">
-                    <h4>Danger Zone</h4>
-                    <div class="modal-danger-actions">
-                        <button type="button" id="resetMatchBtn" class="button button-secondary" onclick="resetMatch()" style="display: none;">Reset Match</button>
-                        <button type="button" id="deleteMatchBtn" class="button button-danger" onclick="deleteMatch()" style="display: none;">Delete Match</button>
-                    </div>
-                </div>
-                {% endif %}
-            </form>
-        </div>
-    </div>
+    {% include 'tourney/partials/report-dialog.html' %}
 
     <!-- Add Match Modal -->
     <div id="addMatchModal" class="modal"
@@ -146,58 +104,6 @@
                 <div class="modal-actions">
                     <button type="submit" class="button button-primary">Create Match</button>
                     <button type="button" class="button" onclick="closeAddMatchModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Player Match Report Modal -->
-    <div id="playerMatchReportModal" class="modal"
-         data-report-url="{% url 'tourney:tourney-player-add-match-result' tournament.code %}"
-         data-opponents="{{ player_report_opponents_json|default:"[]" }}"
-         data-stage-allow-ties="{{ selected_stage.are_ties_allowed|yesno:"true,false"|default:"false" }}"
-         data-stage-score-reporting="{{ selected_stage.report_full_scores|default:"0" }}">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="playerMatchReportModalTitle">Report Match Result</h3>
-                <button class="modal-close" onclick="closePlayerMatchReportModal()"></button>
-            </div>
-
-            <form id="playerMatchReportForm" class="form-wide">
-                {% csrf_token %}
-                <div>
-                    <label for="playerMatchOpponent">Opponent:</label>
-                    <select id="playerMatchOpponent" name="opponent" required>
-                        <option value="">Select your opponent</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label for="playerMatchWinner">Winner:</label>
-                    <select id="playerMatchWinner" name="winner" required>
-                        <option value="">Select winner</option>
-                        <option value="me">I won</option>
-                        <option value="them">They won</option>
-                    </select>
-                </div>
-
-                <div id="playerScoreInputs">
-                    <h4>Match Scores</h4>
-                    <div>
-                        <div>
-                            <label for="playerMyScore">My Score:</label>
-                            <input type="number" id="playerMyScore" name="my_score" min="0" step="1">
-                        </div>
-                        <div>
-                            <label for="playerTheirScore">Their Score:</label>
-                            <input type="number" id="playerTheirScore" name="their_score" min="0" step="1">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-actions">
-                    <button type="submit" class="button button-primary">Submit Result</button>
-                    <button type="button" class="button" onclick="closePlayerMatchReportModal()">Cancel</button>
                 </div>
             </form>
         </div>
@@ -246,6 +152,7 @@
     {% endif %}
 
     <script src="{% static 'tourney/tournament-modals.js' %}"></script>
+    <script src="{% static 'tourney/report-dialog.js' %}"></script>
     <script src="{% static 'tourney/pod-switcher.js' %}"></script>
     <script src="{% static 'tourney/round-countdown.js' %}"></script>
     {% if active_timer %}

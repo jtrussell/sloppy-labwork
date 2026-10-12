@@ -22,6 +22,7 @@ urlpatterns = [
     path('tourney/', include('tourney.urls')),
     path('timer/', include('timekeeper.urls')),
     path('lineups/', include('lineups.urls')),
+    path('ghostform/', include('ghostform.urls')),
 
     # Common to all hosts
     path('admin/', admin.site.urls),

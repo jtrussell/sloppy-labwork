@@ -1,0 +1,8 @@
+{% if results %}
+<div class="form-picker__group-label">{% if query %}Matching forms{% else %}Recently edited{% endif %}</div>
+{% for option in results %}
+{% include 'ghostform/partials/form-picker-option.html' %}
+{% endfor %}
+{% else %}
+<p class="form-picker__empty">{% if query %}No forms match “{{ query }}”.{% else %}You don't have any forms yet.{% endif %}</p>
+{% endif %}

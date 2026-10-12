@@ -73,6 +73,11 @@ class Tournament(models.Model):
         related_name='tournaments', default=None, null=True, blank=True,
         help_text="KeyChain event this tournament was exported to"
     )
+    result_form = models.ForeignKey(
+        'ghostform.Form', on_delete=models.SET_NULL,
+        related_name='tournaments', default=None, null=True, blank=True,
+        help_text="Form players fill out when reporting match results"
+    )
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
 

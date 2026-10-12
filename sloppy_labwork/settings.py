@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'tourney',
     'timekeeper',
     'lineups',
+    'ghostform',
     'shortlinks',
     'discord_bot',
     'common',

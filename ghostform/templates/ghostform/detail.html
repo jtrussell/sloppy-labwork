@@ -1,0 +1,92 @@
+{% extends 'page.html' %}
+{% load static humanize common_extras %}
+
+{% block head_title %}{{ ghostform.title }} - Ghostform{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'ghostform/main.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1>{{ ghostform.title }}</h1>
+<div class="subheading">
+  {% if can_edit %}<a href="{% url 'ghostform:ghostform-list' %}">&larr; My Forms</a> • {% endif %}
+  <span class="ghostform-status ghostform-status--{{ ghostform.status }}">{{ ghostform.get_status_display }}</span>
+</div>
+
+{% if ghostform.description %}
+<div class="ghostform-description">{{ ghostform.description|linebreaks }}</div>
+{% endif %}
+
+<section>
+  <h2>Responses</h2>
+  <ul class="inline-list">
+    <li>{{ response_count }} response{{ response_count|pluralize }}</li>
+    {% if latest_response_on %}
+    <li>Latest response {{ latest_response_on|naturaltime }}</li>
+    {% endif %}
+  </ul>
+  <div class="ghostform-actions">
+    <a href="{% url 'ghostform:ghostform-responses-csv' ghostform.code %}" class="button button-primary">Download CSV</a>
+  </div>
+</section>
+
+<section>
+  <h2>Share</h2>
+  {% if ghostform.status == 'published' %}
+  <p class="text-muted">Anyone with this link can fill out the form after signing in.</p>
+  {% elif ghostform.status == 'closed' %}
+  <p class="text-muted">This form is closed and is not accepting responses.</p>
+  {% else %}
+  <p class="text-muted">Publish this form to start accepting responses.</p>
+  {% endif %}
+  <div class="ghostform-share">
+    <label for="ghostform-share-link">Link</label>
+    <input type="text" id="ghostform-share-link" readonly value="{% abs_url 'ghostform:ghostform-fill' ghostform.code %}">
+    {% if ghostform.status != 'draft' %}
+    <a href="{% url 'ghostform:ghostform-fill' ghostform.code %}" class="button">Open</a>
+    {% elif can_edit %}
+    <a href="{% url 'ghostform:ghostform-fill' ghostform.code %}" class="button">Preview</a>
+    {% endif %}
+  </div>
+</section>
+
+{% if can_edit %}
+<section>
+  <h2>Manage</h2>
+  <div class="ghostform-actions">
+    <a href="{% url 'ghostform:ghostform-edit' ghostform.code %}" class="button">Edit Form</a>
+    <form method="post" action="{% url 'ghostform:ghostform-update-status' ghostform.code %}">
+      {% csrf_token %}
+      {% if ghostform.status == 'published' %}
+      <input type="hidden" name="status" value="closed">
+      <button type="submit" class="button">Close Form</button>
+      {% elif ghostform.status == 'closed' %}
+      <input type="hidden" name="status" value="published">
+      <button type="submit" class="button button-primary">Reopen Form</button>
+      {% else %}
+      <input type="hidden" name="status" value="published">
+      <button type="submit" class="button button-primary">Publish Form</button>
+      {% endif %}
+    </form>
+  </div>
+</section>
+{% endif %}
+
+<section>
+  <h2>Questions</h2>
+  {% if questions %}
+  <ol class="ghostform-question-summary">
+    {% for question in questions %}
+    <li>
+      <strong>{{ question.label }}</strong>{% if question.is_required %} <span class="ghostform-required">*</span>{% endif %}
+      <span class="text-muted">· {{ question.get_answer_type_display }}{% if question.answer_type == 'multiple_choice' %} ({{ question.choices|length }} option{{ question.choices|length|pluralize }}){% endif %}</span>
+      {% if question.description %}<div class="ghostform-help">{{ question.description }}</div>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="ghostform-empty-message">No questions yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

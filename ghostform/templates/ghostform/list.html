@@ -1,0 +1,53 @@
+{% extends 'page.html' %}
+{% load static humanize %}
+
+{% block head_title %}My Forms - Ghostform{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'ghostform/main.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1>My Forms</h1>
+<ul class="subheading inline-list">
+  <li><a href="{% url 'ghostform:ghostform-create' %}" class="button button-link button-link-bordered">New Form</a></li>
+</ul>
+
+{% if forms_page %}
+<div class="ghostform-list">
+  {% for ghostform in forms_page %}
+  <div class="ghostform-card surface surface--flat">
+    <h3 class="ghostform-card__title">
+      <a href="{% url 'ghostform:ghostform-detail' ghostform.code %}">{{ ghostform.title }}</a>
+      <span class="ghostform-status ghostform-status--{{ ghostform.status }}">{{ ghostform.get_status_display }}</span>
+    </h3>
+    <ul class="ghostform-card__meta inline-list">
+      <li>{{ ghostform.question_count }} question{{ ghostform.question_count|pluralize }}</li>
+      <li>{{ ghostform.response_count }} response{{ ghostform.response_count|pluralize }}</li>
+      {% if ghostform.latest_response_on %}
+      <li>Latest response {{ ghostform.latest_response_on|naturaltime }}</li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endfor %}
+</div>
+
+{% if forms_page.paginator.num_pages > 1 %}
+<div class="ghostform-pagination">
+  {% if forms_page.has_previous %}
+  <a href="?page={{ forms_page.previous_page_number }}" class="button">&laquo; Prev</a>
+  {% endif %}
+  <span class="ghostform-pagination__info">Page {{ forms_page.number }} of {{ forms_page.paginator.num_pages }}</span>
+  {% if forms_page.has_next %}
+  <a href="?page={{ forms_page.next_page_number }}" class="button">Next &raquo;</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="ghostform-empty surface surface--flat">
+  <p>You don't have any forms yet.</p>
+  <a href="{% url 'ghostform:ghostform-create' %}" class="button button-primary">Create Your First Form</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,11 @@
+<button type="button" class="form-picker__option"
+        data-value="{{ option.value }}"
+        data-title="{{ option.title }}"
+        data-meta="{{ option.meta }}"
+        data-preview-code="{{ option.preview_code|default:'' }}"
+        :class="{ 'is-selected': isSelected($el.dataset.value) }"
+        :aria-pressed="isSelected($el.dataset.value).toString()"
+        @click="select($el)">
+    <span class="form-picker__option-title">{{ option.title }}</span>
+    <span class="form-picker__option-meta">{{ option.meta }}</span>
+</button>

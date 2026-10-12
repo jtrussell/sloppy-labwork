@@ -1,0 +1,12 @@
+{% if questions %}
+<ol class="form-picker__question-list">
+    {% for question in questions %}
+    <li>
+        <strong>{{ question.label }}</strong>{% if question.is_required %} <span class="ghostform-required">*</span>{% endif %}
+        <span class="text-muted">· {{ question.get_answer_type_display }}{% if question.answer_type == 'multiple_choice' %} ({{ question.choices|length }} option{{ question.choices|length|pluralize }}){% endif %}</span>
+    </li>
+    {% endfor %}
+</ol>
+{% else %}
+<p class="form-picker__empty">This form has no questions yet.</p>
+{% endif %}

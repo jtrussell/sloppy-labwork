@@ -3,6 +3,7 @@
 
 {% block extra_head %}
     <link rel="stylesheet" href="{% static 'css/drag-drop.css' %}">
+    <link rel="stylesheet" href="{% static 'ghostform/main.css' %}">
     {{ block.super }}
 {% endblock %}
 
@@ -266,6 +267,24 @@
         </div>
     </section>
 
+    <section>
+        <h2>Result Form</h2>
+        <p>
+            Optionally collect extra details from players when they report a match result.
+            Manage your forms in <a href="{% url 'ghostform:ghostform-list' %}" target="_blank" rel="noopener">Ghostform</a>.
+        </p>
+
+        <div class="row">
+            <div class="twelve columns">
+                {% include 'ghostform/partials/form-picker.html' with picker=result_form_picker %}
+                <span class="helptext">{{ form.result_form.help_text }}</span>
+                {% if form.result_form.errors %}
+                    <div class="form-error">{{ form.result_form.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
     {% if source_event %}
     <section>
         <h2>Players ({{ registered_players.count }})</h2>
@@ -315,6 +334,7 @@
 {{ block.super }}
 <script src="{% static 'tourney/ranking-criteria.js' %}"></script>
 <script src="{% static 'tourney/pods-form.js' %}"></script>
+<script src="{% static 'ghostform/form-picker.js' %}"></script>
 <script src="{% static 'tourney/tournament-form.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
