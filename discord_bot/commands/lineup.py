@@ -258,4 +258,16 @@ def handle_version_select(interaction):
     return update_message([build_version_embed(version)], components=components)
 
 
-command = Command(definition, handle, autocomplete=autocomplete, component=handle_version_select)
+HELP_TEXT = (
+    'Your Discord account must be linked to your Sloppy Labwork account to see your own lineups. '
+    'Paste a lineup code (e.g. `lnp_ABC123`) to view someone else\'s public or unlisted lineup. '
+    '`post-in-channel` only works for public or unlisted lineups.'
+)
+
+command = Command(
+    definition,
+    handle,
+    autocomplete=autocomplete,
+    component=handle_version_select,
+    help_text=HELP_TEXT,
+)

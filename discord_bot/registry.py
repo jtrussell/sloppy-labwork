@@ -13,22 +13,28 @@ def choice(name, value):
 
 
 class Command:
-    def __init__(self, definition, handler, autocomplete=None, component=None):
+    def __init__(self, definition, handler, autocomplete=None, component=None, help_text=None):
         self.definition = definition
         self.handler = handler
         self.autocomplete = autocomplete
         self.component = component
+        self.help_text = help_text
 
     @property
     def name(self):
         return self.definition['name']
 
+    @property
+    def description(self):
+        return self.definition['description']
+
 
 def get_commands():
-    from .commands import lineup, random_access_archives
+    from .commands import help as help_command, lineup, random_access_archives
     return [
-        random_access_archives.command,
+        help_command.command,
         lineup.command,
+        random_access_archives.command,
     ]
 
 

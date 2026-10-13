@@ -18,7 +18,7 @@ from .responses import (
     RESPONSE_TYPE_AUTOCOMPLETE_RESULT,
 )
 from .views import dispatch, UNKNOWN_COMMAND_MESSAGE, UNSUPPORTED_INTERACTION_MESSAGE, COMMAND_FAILED_MESSAGE
-from .commands import lineup, random_access_archives
+from .commands import help as help_command, lineup, random_access_archives
 
 DECK_URL = 'https://decksofkeyforge.com/decks/abc'
 
@@ -260,6 +260,45 @@ class LineupCommandTest(TestCase):
         response = dispatch(Interaction(component_payload(
             lineup.VERSION_SELECT_CUSTOM_ID, [self.older_version.code], user_id='99')))
         self.assertEqual(response['data']['content'], lineup.VERSION_NOT_FOUND_MESSAGE)
+
+
+class HelpCommandTest(SimpleTestCase):
+    def help(self, options=None):
+        return dispatch(Interaction(command_payload('help', options)))
+
+    def test_overview_lists_every_command_privately(self):
+        response = self.help()
+        description = response['data']['embeds'][0]['description']
+        for name in ['help', 'lineup', 'random-access-archives']:
+            self.assertIn(f'`/{name}`', description)
+        self.assertEqual(response['data']['flags'], MESSAGE_FLAG_EPHEMERAL)
+
+    def test_usage_for_command_with_subcommands(self):
+        response = self.help([{'name': 'command', 'value': 'lineup'}])
+        embed = response['data']['embeds'][0]
+        self.assertEqual(embed['title'], '/lineup')
+        self.assertIn('`/lineup list`', embed['description'])
+        self.assertIn(
+            '`/lineup show lineup:<text> [version:<text>] [post-in-channel:<true/false>]`',
+            embed['description'])
+        self.assertIn(lineup.HELP_TEXT, embed['description'])
+
+    def test_usage_for_command_without_subcommands_lists_choices(self):
+        response = self.help([{'name': 'command', 'value': '/Random-Access-Archives'}])
+        description = response['data']['embeds'][0]['description']
+        self.assertIn('`/random-access-archives [dok:<text>] [min:<number>]', description)
+        self.assertIn('One of: Modern, Legacy', description)
+        self.assertEqual(description.count(random_access_archives.definition['description']), 1)
+
+    def test_unknown_command(self):
+        response = self.help([{'name': 'command', 'value': 'nope'}])
+        self.assertEqual(response['data']['content'], help_command.unknown_command_message('nope'))
+
+    def test_autocomplete_filters_command_names(self):
+        response = dispatch(Interaction(autocomplete_payload('help', [
+            {'name': 'command', 'type': 3, 'value': 'line', 'focused': True},
+        ])))
+        self.assertEqual(response['data']['choices'], [{'name': 'lineup', 'value': 'lineup'}])
 
 
 class InteractionsEndpointTest(SimpleTestCase):

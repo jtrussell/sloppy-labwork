@@ -132,4 +132,6 @@ def handle(interaction):
     return message(deck_info['url'])
 
 
-command = Command(definition, handle)
+HELP_TEXT = 'Leave out `dok` to use the DoK username on your Sloppy Labwork profile.'
+
+command = Command(definition, handle, help_text=HELP_TEXT)
