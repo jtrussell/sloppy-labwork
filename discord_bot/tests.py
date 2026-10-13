@@ -8,7 +8,7 @@ from nacl.signing import SigningKey
 from .interactions import Interaction
 from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth.models import User
-from decks.models import Deck
+from decks.models import Deck, Set
 from lineups.models import Lineup, LineupVersion, LineupVersionDeck
 from .responses import (
     MESSAGE_FLAG_EPHEMERAL,
@@ -83,20 +83,24 @@ class DispatchTest(SimpleTestCase):
         self.assertEqual(dispatch(Interaction({'type': 1})), {'type': RESPONSE_TYPE_PONG})
 
     def test_unknown_command_is_an_ephemeral_message(self):
-        response = dispatch(Interaction(command_payload('nope')))
+        with self.assertLogs('discord_bot.views', level='WARNING'):
+            response = dispatch(Interaction(command_payload('nope')))
         self.assertEqual(response['data']['content'], UNKNOWN_COMMAND_MESSAGE)
         self.assertEqual(response['data']['flags'], MESSAGE_FLAG_EPHEMERAL)
 
     def test_unsupported_interaction_type_is_an_ephemeral_message(self):
-        response = dispatch(Interaction({'type': 5, 'data': {}}))
+        with self.assertLogs('discord_bot.views', level='WARNING'):
+            response = dispatch(Interaction({'type': 5, 'data': {}}))
         self.assertEqual(response['data']['content'], UNSUPPORTED_INTERACTION_MESSAGE)
 
     def test_autocomplete_for_unknown_command_returns_no_choices(self):
-        response = dispatch(Interaction(autocomplete_payload('nope')))
+        with self.assertLogs('discord_bot.views', level='WARNING'):
+            response = dispatch(Interaction(autocomplete_payload('nope')))
         self.assertEqual(response, {'type': RESPONSE_TYPE_AUTOCOMPLETE_RESULT, 'data': {'choices': []}})
 
     def test_component_for_command_without_components_is_unknown(self):
-        response = dispatch(Interaction(component_payload('random-access-archives:x', [])))
+        with self.assertLogs('discord_bot.views', level='WARNING'):
+            response = dispatch(Interaction(component_payload('random-access-archives:x', [])))
         self.assertEqual(response['data']['content'], UNKNOWN_COMMAND_MESSAGE)
 
     @mock.patch.object(random_access_archives, 'handle', side_effect=RuntimeError('boom'))
@@ -158,7 +162,10 @@ class LineupCommandTest(TestCase):
             lineup=self.private_lineup, name='v1', sort_order=1)
         self.latest_version = LineupVersion.objects.create(
             lineup=self.private_lineup, name='v2', sort_order=2)
-        deck = Deck.objects.create(id='00000000-0000-0000-0000-000000000001', name='The Deck')
+        deck_set = Set.objects.create(
+            id=341, name='Call of the Archons', short_name='CotA', src='https://example.com/cota.png')
+        deck = Deck.objects.create(
+            id='00000000-0000-0000-0000-000000000001', name='The Deck', set=deck_set)
         LineupVersionDeck.objects.create(version=self.latest_version, deck=deck)
 
         self.public_lineup = Lineup.objects.create(
@@ -194,7 +201,11 @@ class LineupCommandTest(TestCase):
         response = self.show([{'name': 'lineup', 'value': self.private_lineup.code}])
         embed = response['data']['embeds'][0]
         self.assertEqual(embed['title'], 'Vault Tour — v2')
-        self.assertIn('The Deck', embed['description'])
+        self.assertIn(
+            '1. **The Deck** · CotA · '
+            '[DoK](https://decksofkeyforge.com/decks/00000000-0000-0000-0000-000000000001) · '
+            '[MV](https://www.keyforgegame.com/deck-details/00000000-0000-0000-0000-000000000001)',
+            embed['description'])
         self.assertEqual(response['data']['flags'], MESSAGE_FLAG_EPHEMERAL)
         select = response['data']['components'][0]['components'][0]
         self.assertEqual(select['custom_id'], lineup.VERSION_SELECT_CUSTOM_ID)

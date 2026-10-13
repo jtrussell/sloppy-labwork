@@ -8,8 +8,8 @@ class DeckAdmin(admin.ModelAdmin):
 
 
 class SetAdmin(admin.ModelAdmin):
-    list_display = ('name',)
-    search_fields = ['id', 'name']
+    list_display = ('name', 'short_name')
+    search_fields = ['id', 'name', 'short_name']
 
 
 class HouseAdmin(admin.ModelAdmin):

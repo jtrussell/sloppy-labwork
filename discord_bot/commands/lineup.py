@@ -134,13 +134,13 @@ def describe_lineup_in_list(lineup):
 
 
 def describe_deck_in_version(position, deck):
-    deck_url = Deck.get_master_vault_ui_url_from_id(deck.id)
     houses = [house.name for house in (deck.house_1, deck.house_2, deck.house_3) if house]
-    details = ([deck.set.name] if deck.set else []) + ([' / '.join(houses)] if houses else [])
-    line = f'{position}. [{deck.name or UNNAMED_DECK}]({deck_url})'
-    if details:
-        line += ' · ' + ' · '.join(details)
-    return line
+    details = ([deck.set.short_name] if deck.set else []) + ([' / '.join(houses)] if houses else [])
+    deck_links = [
+        f'[DoK]({Deck.get_dok_url_from_id(deck.id)})',
+        f'[MV]({Deck.get_master_vault_ui_url_from_id(deck.id)})',
+    ]
+    return f'{position}. **{deck.name or UNNAMED_DECK}** · ' + ' · '.join(details + deck_links)
 
 
 def build_version_embed(version):

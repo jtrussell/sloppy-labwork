@@ -8,6 +8,7 @@ from unittest.mock import patch
 from django.test import TestCase, override_settings
 from django.contrib.auth.models import User
 from django.db import models
+from django.core.exceptions import PermissionDenied
 from django.urls import reverse
 from .models import (
     Tournament, Player, Stage, StagePlayer, Round, Match, MatchResult,
@@ -16,6 +17,10 @@ from .models import (
     build_unique_pod_slugs, TournamentAdmin
 )
 from pmc.models import Event, EventResult, Playgroup, PlaygroupEvent, PlaygroupMember
+from .reporting import (
+    ReportError, describe_winner, report_paired_match_result, report_self_scheduled_match_result,
+    MATCH_ALREADY_REPORTED_MESSAGE, INVALID_WINNER_MESSAGE
+)
 from ghostform.models import (
     Form as GhostformForm, Question as GhostformQuestion, Response as GhostformResponse
 )
@@ -4259,7 +4264,7 @@ class TournamentResultFormTestCase(TestCase):
         self.assertTrue(context_values['Result recorded at'])
 
     def test_failed_response_save_rolls_back_result(self):
-        with patch('tourney.views.record_result_response', side_effect=RuntimeError('boom')):
+        with patch('tourney.reporting.record_result_response', side_effect=RuntimeError('boom')):
             with self.assertRaises(RuntimeError):
                 self._report('user1', {'winner': self.anvil.id, **self._answers()})
 
@@ -4398,7 +4403,7 @@ class TournamentResultFormTestCase(TestCase):
         new_round = Round.objects.create(stage=self.stage, order=2)
         self.client.login(username='user1', password='password')
 
-        with patch('tourney.views.record_result_response', side_effect=RuntimeError('boom')):
+        with patch('tourney.reporting.record_result_response', side_effect=RuntimeError('boom')):
             with self.assertRaises(RuntimeError):
                 self.client.post(self._url('tourney-player-add-match-result'), {
                     'opponent': self.comet.id, 'winner': 'them', **self._answers()})
@@ -4764,3 +4769,78 @@ class TournamentResultFormTestCase(TestCase):
 
         self.tournament.refresh_from_db()
         self.assertIsNone(self.tournament.result_form)
+
+
+class ReportingServiceTest(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user('reportowner')
+        self.tournament = Tournament.objects.create(name='Service Night', owner=self.owner)
+        self.stage = Stage.objects.create(
+            tournament=self.tournament, name='Main Stage', order=1, pairing_strategy='swiss',
+            report_full_scores=Stage.SCORE_REPORTING_OPTIONAL)
+        self.users = []
+        self.stage_players = []
+        for i, nickname in enumerate(['Anvil', 'Beacon', 'Comet'], start=1):
+            user = User.objects.create_user(f'reporter{i}')
+            player = Player.objects.create(user=user, tournament=self.tournament, nickname=nickname)
+            self.users.append(user)
+            self.stage_players.append(StagePlayer.objects.create(player=player, stage=self.stage, seed=i))
+        self.anvil, self.beacon, self.comet = self.stage_players
+        self.round = Round.objects.create(stage=self.stage, order=1)
+        self.match = Match.objects.create(round=self.round, player_one=self.anvil, player_two=self.beacon)
+
+    def test_paired_report_records_result(self):
+        outcome = report_paired_match_result(self.match, self.users[0], {
+            'winner': self.anvil.id, 'player_one_score': '3', 'player_two_score': '1'})
+
+        self.assertFalse(outcome.was_update)
+        self.assertEqual(outcome.result.winner, self.anvil)
+        self.assertEqual(describe_winner(outcome.result), 'Anvil')
+
+    def test_paired_report_by_outsider_is_denied(self):
+        with self.assertRaises(PermissionDenied):
+            report_paired_match_result(self.match, self.users[2], {'winner': self.anvil.id})
+
+    def test_paired_report_on_reported_match_is_final(self):
+        MatchResult.objects.create(match=self.match, winner=self.beacon)
+
+        with self.assertRaises(ReportError) as raised:
+            report_paired_match_result(self.match, self.users[0], {'winner': self.anvil.id})
+
+        self.assertTrue(raised.exception.is_final)
+        self.assertEqual(raised.exception.error_messages, [MATCH_ALREADY_REPORTED_MESSAGE])
+
+    def test_paired_report_with_invalid_result_lists_form_errors(self):
+        with self.assertRaises(ReportError) as raised:
+            report_paired_match_result(self.match, self.users[0], {'winner': ''})
+
+        self.assertFalse(raised.exception.is_final)
+        self.assertTrue(raised.exception.error_messages)
+        self.assertFalse(MatchResult.objects.exists())
+
+    def test_self_scheduled_report_creates_match_and_result(self):
+        self.stage.pairing_strategy = 'round_robin'
+        self.stage.save()
+        current_round = Round.objects.create(stage=self.stage, order=2)
+
+        outcome = report_self_scheduled_match_result(self.tournament, self.users[0], {
+            'opponent': str(self.comet.id), 'winner': 'them', 'my_score': '1', 'their_score': '3'})
+
+        self.assertEqual(outcome.result.match.round, current_round)
+        self.assertEqual(outcome.result.winner, self.comet)
+        self.assertEqual((outcome.result.player_one_score, outcome.result.player_two_score), (1, 3))
+
+    def test_self_scheduled_report_rejects_unknown_winner_choice(self):
+        self.stage.pairing_strategy = 'round_robin'
+        self.stage.save()
+        Round.objects.create(stage=self.stage, order=2)
+
+        with self.assertRaises(ReportError) as raised:
+            report_self_scheduled_match_result(self.tournament, self.users[0], {
+                'opponent': str(self.comet.id), 'winner': 'nobody'})
+
+        self.assertEqual(raised.exception.error_messages, [INVALID_WINNER_MESSAGE])
+
+    def test_self_scheduled_report_is_denied_in_paired_stage(self):
+        with self.assertRaises(PermissionDenied):
+            report_self_scheduled_match_result(self.tournament, self.users[0], {})

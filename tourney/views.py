@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.core.exceptions import NON_FIELD_ERRORS, PermissionDenied
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction, IntegrityError
 from django.db import models
@@ -23,13 +23,16 @@ from .models import (
     get_ordered_criteria_display, MAXIMUM_PODS_PER_STAGE, ALL_PODS_FILTER
 )
 from .forms import (
-    COPY_SOURCE_RESULT_FORM, TournamentForm, PlayerForm, EditPlayerForm, StageForm, MatchResultForm,
+    COPY_SOURCE_RESULT_FORM, TournamentForm, PlayerForm, EditPlayerForm, StageForm,
     PlayerRegistrationForm, AddMatchForm, SelectPlaygroupForm, TournamentExportForm
 )
 from .result_forms import (
-    build_report_dialog_context, build_result_form_picker_context, build_result_response_form, copy_result_form_for_tournament,
-    RESULT_FORM_INLINE_ERROR_MESSAGE, get_result_report_error_message, is_result_response_form_valid,
-    record_result_response
+    build_report_dialog_context, build_result_form_picker_context, copy_result_form_for_tournament,
+    RESULT_FORM_INLINE_ERROR_MESSAGE, get_result_report_error_message
+)
+from .reporting import (
+    ReportError, can_user_add_match, describe_winner, report_paired_match_result,
+    report_self_scheduled_match_result
 )
 from pmc.models import Playgroup, Event, EventResult, PlaygroupEvent, RankingPointsService
 
@@ -56,16 +59,8 @@ def is_tournament_admin_or_player(view_func):
 def can_add_match(view_func):
     def wrapper(request, tournament_code, *args, **kwargs):
         tournament = get_object_or_404(Tournament, code=tournament_code)
-        current_stage = tournament.get_current_stage()
-
-        if tournament.is_user_admin(request.user):
+        if can_user_add_match(tournament, request.user):
             return view_func(request, tournament_code, *args, **kwargs)
-
-        if (current_stage and
-            current_stage.get_pairing_strategy().is_self_scheduled() and
-                tournament.players.filter(user=request.user).exists()):
-            return view_func(request, tournament_code, *args, **kwargs)
-
         raise PermissionDenied
     return wrapper
 
@@ -124,15 +119,11 @@ def render_report_error(request, tournament, error_messages, response_form=None,
     return redirect_to(request, redirect_url or get_matches_url(request, tournament))
 
 
-def get_form_error_messages(form):
-    error_messages = []
-    for field_name, field_errors in form.errors.items():
-        field = form.fields.get(field_name)
-        field_label = (field.label if field and field.label else field_name.replace('_', ' ').capitalize())
-        for field_error in field_errors:
-            error_messages.append(
-                field_error if field_name == NON_FIELD_ERRORS else f'{field_label}: {field_error}')
-    return error_messages
+def render_rejected_report(request, tournament, report_error):
+    tournament_home_url = reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code})
+    return render_report_error(
+        request, tournament, report_error.error_messages, report_error.response_form,
+        redirect_url=tournament_home_url if report_error.is_final else None)
 
 
 def get_viewer_pod(stage, player):
@@ -1057,69 +1048,14 @@ def report_match_result(request, tournament_code, match_id):
     match = get_object_or_404(
         Match, id=match_id, round__stage__tournament=tournament)
 
-    is_admin = tournament.is_user_admin(request.user)
-    is_player_in_match = (
-        (match.player_one and match.player_one.player.user == request.user) or
-        (match.player_two and match.player_two.player.user == request.user)
-    )
+    try:
+        outcome = report_paired_match_result(match, request.user, request.POST)
+    except ReportError as report_error:
+        return render_rejected_report(request, tournament, report_error)
 
-    if not (is_admin or is_player_in_match):
-        raise PermissionDenied
-
-    tournament_home_url = reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code})
-    if tournament.is_closed and not is_admin:
-        return render_report_error(request, tournament, [
-            'This tournament is closed. Match results can no longer be submitted by players.'
-        ], redirect_url=tournament_home_url)
-
-    if match.has_result() and not is_admin:
-        return render_report_error(request, tournament, [
-            'This match already has a result.'
-        ], redirect_url=tournament_home_url)
-
-    if match.is_bye():
-        return render_report_error(request, tournament, [
-            'Bye results are recorded automatically and cannot be reported.'
-        ])
-
-    form = MatchResultForm(request.POST, match=match)
-    response_form = build_result_response_form(tournament, is_admin, request.POST)
-    is_result_valid = form.is_valid()
-    is_response_valid = is_result_response_form_valid(response_form)
-    if is_result_valid and is_response_valid:
-        with transaction.atomic():
-            existing_result = getattr(match, 'result', None)
-            if existing_result:
-                result = form.save(commit=False)
-                existing_result.winner = result.winner
-                existing_result.player_one_score = result.player_one_score
-                existing_result.player_two_score = result.player_two_score
-                existing_result.save()
-                result = existing_result
-            else:
-                result = form.save(commit=False)
-                result.match = match
-                result.save()
-
-            record_result_response(response_form, request.user, result, is_admin)
-
-            action_type = (TournamentActionLog.ActionType.REPORT_RESULT if not existing_result
-                           else TournamentActionLog.ActionType.UPDATE_RESULT)
-
-            winner_name = result.winner.player.get_display_name() if result.winner else 'Tie'
-            TournamentActionLog.objects.create(
-                tournament=tournament,
-                user=request.user,
-                action_type=action_type,
-                description=f'Match result {"updated" if existing_result else "reported"}: {winner_name}'
-            )
-
-        messages.success(
-            request, f'Match result {"updated" if existing_result else "reported"} successfully!')
-        return redirect_to(request, get_matches_url(request, tournament))
-
-    return render_report_error(
-        request, tournament, get_form_error_messages(form), response_form)
+    messages.success(
+        request, f'Match result {"updated" if outcome.was_update else "reported"} successfully!')
+    return redirect_to(request, get_matches_url(request, tournament))
 
 
 @login_required
@@ -1942,126 +1878,13 @@ def add_match(request, tournament_code):
 def player_add_match_result(request, tournament_code):
     tournament = get_object_or_404(Tournament, code=tournament_code)
 
-    if tournament.is_closed:
-        return render_report_error(request, tournament, ['This tournament is closed. Match results can no longer be submitted by players.'])
-
-    current_stage = tournament.get_current_stage()
-
-    if not current_stage:
-        return render_report_error(request, tournament, ['No active stage found.'])
-
-    current_round = current_stage.get_current_round()
-    if not current_round:
-        return render_report_error(request, tournament, ['No active round found. Please create a round first.'])
-
-    user_stage_player = current_stage.stage_players.filter(
-        player__user=request.user).first()
-    if not user_stage_player:
-        return render_report_error(request, tournament, ['You are not a participant in this stage.'])
-
-    opponent_id = request.POST.get('opponent')
-    if not opponent_id:
-        return render_report_error(request, tournament, ['Please select an opponent.'])
-
     try:
-        opponent_stage_player = current_stage.stage_players.get(id=opponent_id)
-    except StagePlayer.DoesNotExist:
-        return render_report_error(request, tournament, ['Invalid opponent selected.'])
+        outcome = report_self_scheduled_match_result(tournament, request.user, request.POST)
+    except ReportError as report_error:
+        return render_rejected_report(request, tournament, report_error)
 
-    if not user_stage_player.is_in_same_pod_as(opponent_stage_player):
-        return render_report_error(request, tournament, ['You can only report matches against players in your pod.'])
-
-    existing_match = current_round.matches.filter(
-        Q(player_one=user_stage_player, player_two=opponent_stage_player) |
-        Q(player_one=opponent_stage_player, player_two=user_stage_player)
-    ).first()
-
-    if existing_match:
-        return render_report_error(request, tournament, ['You already have a match against this opponent in this round.'])
-
-    winner_choice = request.POST.get('winner')
-    if not winner_choice:
-        return render_report_error(request, tournament, ['Please select a winner.'])
-
-    if winner_choice == 'me':
-        winner = user_stage_player
-    elif winner_choice == 'them':
-        winner = opponent_stage_player
-    elif winner_choice == 'tie':
-        if not current_stage.are_ties_allowed:
-            return render_report_error(request, tournament, ['Ties are not allowed in this stage.'])
-        winner = None
-    else:
-        return render_report_error(request, tournament, ['Invalid winner selection.'])
-
-    my_score = request.POST.get('my_score', '').strip()
-    their_score = request.POST.get('their_score', '').strip()
-
-    player_one_score = None
-    player_two_score = None
-
-    if current_stage.report_full_scores > 0:
-        if current_stage.report_full_scores == 2:
-            if my_score is None or their_score is None:
-                return render_report_error(request, tournament, ['Scores are required for this stage.'])
-
-        if my_score:
-            try:
-                my_score = int(my_score)
-                if my_score < 0:
-                    raise ValueError()
-            except (ValueError, TypeError):
-                return render_report_error(request, tournament, ['Invalid score entered.'])
-        else:
-            my_score = None
-
-        if their_score:
-            try:
-                their_score = int(their_score)
-                if their_score < 0:
-                    raise ValueError()
-            except (ValueError, TypeError):
-                return render_report_error(request, tournament, ['Invalid score entered.'])
-        else:
-            their_score = None
-
-        player_one_score = my_score
-        player_two_score = their_score
-
-    is_reporter_admin = tournament.is_user_admin(request.user)
-    response_form = build_result_response_form(
-        tournament, is_reporter_admin, request.POST)
-    if not is_result_response_form_valid(response_form):
-        return render_report_error(
-            request, tournament, [], response_form)
-
-    with transaction.atomic():
-        match = Match.objects.create(
-            round=current_round,
-            player_one=user_stage_player,
-            player_two=opponent_stage_player
-        )
-
-        result = MatchResult.objects.create(
-            match=match,
-            winner=winner,
-            player_one_score=player_one_score,
-            player_two_score=player_two_score
-        )
-
-        record_result_response(
-            response_form, request.user, result, is_reporter_admin)
-
-        TournamentActionLog.objects.create(
-            tournament=tournament,
-            user=request.user,
-            action_type=TournamentActionLog.ActionType.CREATE_ROUND,
-            description=f'Player reported match result: {user_stage_player.player.get_display_name()} vs {opponent_stage_player.player.get_display_name()} in {current_round.stage.name} Round {current_round.order}'
-        )
-
-    winner_name = winner.player.get_display_name() if winner else "Tie"
     messages.success(
-        request, f'Match result submitted successfully! Winner: {winner_name}')
+        request, f'Match result submitted successfully! Winner: {describe_winner(outcome.result)}')
 
     return redirect_to(request, get_matches_url(request, tournament))
 

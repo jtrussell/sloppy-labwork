@@ -8,6 +8,8 @@ from django.utils.translation import gettext_lazy as _
 class Set(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     name = models.CharField(max_length=200, unique=True)
+    short_name = models.CharField(
+        max_length=50, blank=True, help_text='Defaults to the full name when left blank')
     src = models.URLField()
     is_legacy = models.BooleanField(default=False)
     is_tournament_legal = models.BooleanField(default=True)
@@ -17,6 +19,11 @@ class Set(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.short_name:
+            self.short_name = self.name
+        super().save(*args, **kwargs)
 
 
 class House(models.Model):
