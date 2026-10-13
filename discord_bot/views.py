@@ -12,6 +12,7 @@ from .interactions import (
     INTERACTION_TYPE_APPLICATION_COMMAND,
     INTERACTION_TYPE_AUTOCOMPLETE,
     INTERACTION_TYPE_MESSAGE_COMPONENT,
+    INTERACTION_TYPE_MODAL_SUBMIT,
 )
 from .registry import get_command
 from .responses import pong, ephemeral_message, autocomplete_choices
@@ -40,6 +41,7 @@ HANDLER_ATTRIBUTE_BY_INTERACTION_TYPE = {
     INTERACTION_TYPE_APPLICATION_COMMAND: 'handler',
     INTERACTION_TYPE_AUTOCOMPLETE: 'autocomplete',
     INTERACTION_TYPE_MESSAGE_COMPONENT: 'component',
+    INTERACTION_TYPE_MODAL_SUBMIT: 'modal',
 }
 
 

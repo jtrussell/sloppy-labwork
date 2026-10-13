@@ -94,9 +94,10 @@ interactions-endpoint bot: Discord POSTs slash command invocations to
 `discord/interactions/`, where `discord_bot/views.py` verifies the signature
 and dispatches to the command's handler. Each command is one module under
 `discord_bot/commands/` exposing its Discord definition and a handler, and is
-listed in `discord_bot/registry.py`. Commands may also provide an autocomplete
-handler and a component handler; component `custom_id`s are prefixed with the
-command name (e.g. `lineup:version`) so clicks route back to their command. Commands must be (re)registered with
+listed in `discord_bot/registry.py`. Commands may also provide autocomplete,
+component, and modal submit handlers; component and modal `custom_id`s are
+prefixed with the command name (e.g. `lineup:version`) so they route back to
+their command. Commands must be (re)registered with
 Discord any time a definition changes.
 
 Registration is done with a management command. It needs `DISCORD_APP_ID` and

@@ -9,16 +9,19 @@ from .interactions import Interaction
 from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth.models import User
 from decks.models import Deck, Set
+from ghostform.models import Answer, Form as GhostformForm, Question as GhostformQuestion
 from lineups.models import Lineup, LineupVersion, LineupVersionDeck
+from tourney.models import Match, MatchResult, Player, Pod, Round, Stage, StagePlayer, Tournament
 from .responses import (
     MESSAGE_FLAG_EPHEMERAL,
     RESPONSE_TYPE_PONG,
     RESPONSE_TYPE_CHANNEL_MESSAGE,
     RESPONSE_TYPE_UPDATE_MESSAGE,
     RESPONSE_TYPE_AUTOCOMPLETE_RESULT,
+    RESPONSE_TYPE_MODAL,
 )
 from .views import dispatch, UNKNOWN_COMMAND_MESSAGE, UNSUPPORTED_INTERACTION_MESSAGE, COMMAND_FAILED_MESSAGE
-from .commands import help as help_command, lineup, random_access_archives
+from .commands import help as help_command, lineup, random_access_archives, tourney
 
 DECK_URL = 'https://decksofkeyforge.com/decks/abc'
 
@@ -33,6 +36,18 @@ def command_payload(name, options=None, user_id='42'):
 
 def autocomplete_payload(name, options=None, user_id='42'):
     return {**command_payload(name, options, user_id), 'type': 4}
+
+
+def modal_submit_payload(custom_id, components, user_id='42'):
+    return {
+        'type': 5,
+        'data': {'custom_id': custom_id, 'components': components},
+        'member': {'user': {'id': user_id}},
+    }
+
+
+def labelled(custom_id, **submitted):
+    return {'type': 18, 'component': {'custom_id': custom_id, **submitted}}
 
 
 def component_payload(custom_id, values, user_id='42'):
@@ -72,6 +87,18 @@ class InteractionTest(SimpleTestCase):
         interaction = Interaction(autocomplete_payload('lineup', options))
         self.assertEqual(interaction.focused_option['name'], 'version')
 
+    def test_submitted_values_are_read_from_labels_and_action_rows(self):
+        interaction = Interaction(modal_submit_payload('tourney:report-match:1', [
+            labelled('winner', value='7'),
+            labelled('opponent', values=['3']),
+            labelled('agreed', value=True),
+            {'type': 1, 'components': [{'type': 4, 'custom_id': 'legacy', 'value': 'old'}]},
+            {'type': 10, 'id': 9},
+        ]))
+        self.assertEqual(interaction.command_name, 'tourney')
+        self.assertEqual(interaction.submitted_values, {
+            'winner': '7', 'opponent': ['3'], 'agreed': True, 'legacy': 'old'})
+
     def test_component_command_name_comes_from_custom_id(self):
         interaction = Interaction(component_payload('lineup:version', ['lnpv_1']))
         self.assertEqual(interaction.command_name, 'lineup')
@@ -90,7 +117,7 @@ class DispatchTest(SimpleTestCase):
 
     def test_unsupported_interaction_type_is_an_ephemeral_message(self):
         with self.assertLogs('discord_bot.views', level='WARNING'):
-            response = dispatch(Interaction({'type': 5, 'data': {}}))
+            response = dispatch(Interaction({'type': 99, 'data': {}}))
         self.assertEqual(response['data']['content'], UNSUPPORTED_INTERACTION_MESSAGE)
 
     def test_autocomplete_for_unknown_command_returns_no_choices(self):
@@ -310,6 +337,181 @@ class HelpCommandTest(SimpleTestCase):
             {'name': 'command', 'type': 3, 'value': 'line', 'focused': True},
         ])))
         self.assertEqual(response['data']['choices'], [{'name': 'lineup', 'value': 'lineup'}])
+
+
+class TourneyReportCommandTest(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user('tourney-owner')
+        self.tournament = Tournament.objects.create(name='Spring Open', owner=self.owner)
+        self.stage = Stage.objects.create(
+            tournament=self.tournament, name='Swiss', order=1, pairing_strategy='swiss',
+            report_full_scores=Stage.SCORE_REPORTING_OPTIONAL)
+        self.stage_players = []
+        for seed, nickname in enumerate(['Anvil', 'Beacon', 'Comet'], start=1):
+            user = User.objects.create_user(nickname.lower())
+            SocialAccount.objects.create(user=user, provider='discord', uid=str(seed))
+            player = Player.objects.create(user=user, tournament=self.tournament, nickname=nickname)
+            self.stage_players.append(StagePlayer.objects.create(player=player, stage=self.stage, seed=seed))
+        self.anvil, self.beacon, self.comet = self.stage_players
+        self.round = Round.objects.create(stage=self.stage, order=1)
+        self.match = Match.objects.create(round=self.round, player_one=self.anvil, player_two=self.beacon)
+
+    def report(self, options=None, user_id='1'):
+        return dispatch(Interaction(command_payload(
+            'tourney', [{'name': 'report', 'type': 1, 'options': options or []}], user_id)))
+
+    def submit(self, custom_id, components, user_id='1'):
+        return dispatch(Interaction(modal_submit_payload(custom_id, components, user_id)))
+
+    def paired_custom_id(self):
+        return f'tourney:report-match:{self.match.id}'
+
+    def modal_custom_ids(self, response):
+        return [component['component']['custom_id'] for component in response['data']['components']]
+
+    def add_result_form(self, *questions):
+        result_form = GhostformForm.objects.create(
+            owner=self.owner, title='Deck Check', status=GhostformForm.Status.PUBLISHED)
+        for order, (question_label, answer_type, extra) in enumerate(questions, start=1):
+            GhostformQuestion.objects.create(
+                form=result_form, label=question_label, order=order, answer_type=answer_type, **extra)
+        self.tournament.result_form = result_form
+        self.tournament.save()
+        return result_form
+
+    def test_unlinked_user_is_asked_to_link(self):
+        response = self.report(user_id='404')
+        self.assertIn('Link your Discord account', response['data']['content'])
+
+    def test_user_without_open_tournaments_is_told_so(self):
+        self.tournament.is_closed = True
+        self.tournament.save()
+        response = self.report()
+        self.assertEqual(response['data']['content'], tourney.NO_OPEN_TOURNAMENTS_MESSAGE)
+
+    def test_user_in_two_tournaments_must_choose_and_can_autocomplete(self):
+        other = Tournament.objects.create(name='Spring Side Event', owner=self.owner)
+        Player.objects.create(user=self.anvil.player.user, tournament=other)
+
+        response = self.report()
+        self.assertEqual(response['data']['content'], tourney.CHOOSE_TOURNAMENT_MESSAGE)
+
+        suggestions = dispatch(Interaction(autocomplete_payload('tourney', [{'name': 'report', 'type': 1, 'options': [
+            {'name': 'tournament', 'type': 3, 'value': 'spring', 'focused': True}]}], user_id='1')))
+        self.assertEqual({c['value'] for c in suggestions['data']['choices']}, {self.tournament.code, other.code})
+
+    def test_paired_report_opens_modal_with_winner_and_scores(self):
+        response = self.report()
+        self.assertEqual(response['type'], RESPONSE_TYPE_MODAL)
+        self.assertEqual(response['data']['custom_id'], self.paired_custom_id())
+        self.assertEqual(self.modal_custom_ids(response), ['winner', 'player_one_score', 'player_two_score'])
+        winner_values = [option['value'] for option in response['data']['components'][0]['component']['options']]
+        self.assertEqual(winner_values, [str(self.anvil.id), str(self.beacon.id)])
+
+    def test_paired_report_with_result_already_recorded_is_refused(self):
+        MatchResult.objects.create(match=self.match, winner=self.beacon)
+        response = self.report()
+        self.assertEqual(response['data']['content'], tourney.MATCH_ALREADY_REPORTED_MESSAGE)
+
+    def test_paired_submission_saves_result_and_posts_publicly(self):
+        response = self.submit(self.paired_custom_id(), [
+            labelled('winner', value=str(self.anvil.id)),
+            labelled('player_one_score', value='3'),
+            labelled('player_two_score', value='1'),
+        ])
+        self.assertEqual(MatchResult.objects.get(match=self.match).winner, self.anvil)
+        self.assertNotIn('flags', response['data'])
+        self.assertEqual(response['data']['content'], '**Spring Open** · Swiss · Round 1 — Anvil beat Beacon 3–1')
+
+    def test_tie_is_described(self):
+        self.stage.are_ties_allowed = True
+        self.stage.save()
+        response = self.submit(self.paired_custom_id(), [labelled('winner', value='tie')])
+        self.assertTrue(MatchResult.objects.get(match=self.match).is_tie())
+        self.assertTrue(response['data']['content'].endswith('Anvil and Beacon tied'))
+
+    def test_invalid_submission_offers_retry(self):
+        response = self.submit(self.paired_custom_id(), [
+            labelled('winner', value=str(self.anvil.id)),
+            labelled('player_one_score', value='three'),
+            labelled('player_two_score', value='1'),
+        ])
+        self.assertFalse(MatchResult.objects.exists())
+        self.assertTrue(response['data']['content'].startswith(tourney.REPORT_FAILED_INTRO))
+        retry_button = response['data']['components'][0]['components'][0]
+        self.assertEqual(retry_button['custom_id'], f'tourney:retry:{self.tournament.code}')
+
+        retry = dispatch(Interaction(component_payload(retry_button['custom_id'], [], user_id='1')))
+        self.assertEqual(retry['type'], RESPONSE_TYPE_MODAL)
+
+    def test_outsider_submission_is_not_allowed(self):
+        response = self.submit(
+            self.paired_custom_id(), [labelled('winner', value=str(self.anvil.id))], user_id='3')
+        self.assertEqual(response['data']['content'], tourney.NOT_ALLOWED_MESSAGE)
+
+    def test_result_form_questions_are_asked_and_recorded(self):
+        result_form = self.add_result_form(
+            ('Your deck', GhostformQuestion.AnswerType.DECK_LINK, {'is_required': True}),
+            ('First player?', GhostformQuestion.AnswerType.MULTIPLE_CHOICE, {'choices': ['Me', 'Them']}),
+        )
+        deck_question, choice_question = result_form.get_active_questions()
+        self.stage.report_full_scores = Stage.SCORE_REPORTING_DISABLED
+        self.stage.save()
+        deck_field = f'ghostform-{deck_question.get_field_name()}'
+        choice_field = f'ghostform-{choice_question.get_field_name()}'
+
+        response = self.report()
+        self.assertEqual(self.modal_custom_ids(response), ['winner', deck_field, choice_field])
+
+        deck_link = 'https://decksofkeyforge.com/decks/00000000-0000-0000-0000-000000000001'
+        self.submit(self.paired_custom_id(), [
+            labelled('winner', value=str(self.beacon.id)),
+            labelled(deck_field, value=deck_link),
+            labelled(choice_field, values=['1']),
+        ])
+        self.assertEqual(MatchResult.objects.get(match=self.match).winner, self.beacon)
+        self.assertEqual(
+            sorted(Answer.objects.values_list('value', flat=True)), sorted([deck_link, 'Them']))
+
+    def test_missing_required_answer_is_reported(self):
+        self.add_result_form(('Your deck', GhostformQuestion.AnswerType.DECK_LINK, {'is_required': True}))
+        response = self.submit(self.paired_custom_id(), [labelled('winner', value=str(self.anvil.id))])
+        self.assertFalse(MatchResult.objects.exists())
+        self.assertIn('Your deck', response['data']['content'])
+
+    def test_form_too_big_for_a_modal_links_to_the_site(self):
+        self.add_result_form(
+            ('Your deck', GhostformQuestion.AnswerType.DECK_LINK, {}),
+            ('Notes', GhostformQuestion.AnswerType.TEXT, {}),
+            ('Turns', GhostformQuestion.AnswerType.NUMBER, {}),
+        )
+        response = self.report()
+        self.assertEqual(response['data']['content'], tourney.TOO_BIG_FOR_DISCORD_MESSAGE)
+        link_button = response['data']['components'][0]['components'][0]
+        self.assertIn(self.tournament.code, link_button['url'])
+
+    def test_self_scheduled_report_lists_pod_mates_and_posts_pod(self):
+        self.stage.pairing_strategy = 'round_robin'
+        self.stage.save()
+        north = Pod.objects.create(stage=self.stage, name='North', order=1)
+        south = Pod.objects.create(stage=self.stage, name='South', order=2)
+        StagePlayer.objects.filter(id__in=[self.anvil.id, self.comet.id]).update(pod=north)
+        StagePlayer.objects.filter(id=self.beacon.id).update(pod=south)
+        Round.objects.create(stage=self.stage, order=2)
+
+        response = self.report()
+        self.assertEqual(response['data']['custom_id'], f'tourney:report-add:{self.tournament.code}')
+        opponent_select = response['data']['components'][0]['component']
+        self.assertEqual([option['value'] for option in opponent_select['options']], [str(self.comet.id)])
+
+        posted = self.submit(response['data']['custom_id'], [
+            labelled('opponent', values=[str(self.comet.id)]),
+            labelled('winner', value='them'),
+            labelled('my_score', value='1'),
+            labelled('their_score', value='3'),
+        ])
+        self.assertEqual(
+            posted['data']['content'], '**Spring Open** · Swiss · Round 2 · North — Comet beat Anvil 3–1')
 
 
 class InteractionsEndpointTest(SimpleTestCase):

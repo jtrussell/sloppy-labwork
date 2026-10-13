@@ -9,6 +9,7 @@ INTERACTION_TYPE_MODAL_SUBMIT = 5
 CUSTOM_ID_SEPARATOR = ':'
 
 SUBCOMMAND_OPTION_TYPES = (OPTION_TYPE_SUB_COMMAND, OPTION_TYPE_SUB_COMMAND_GROUP)
+CUSTOM_ID_ROUTED_INTERACTION_TYPES = (INTERACTION_TYPE_MESSAGE_COMPONENT, INTERACTION_TYPE_MODAL_SUBMIT)
 
 
 class Interaction:
@@ -25,7 +26,7 @@ class Interaction:
 
     @property
     def command_name(self):
-        if self.type == INTERACTION_TYPE_MESSAGE_COMPONENT:
+        if self.type in CUSTOM_ID_ROUTED_INTERACTION_TYPES:
             return self.custom_id.split(CUSTOM_ID_SEPARATOR)[0]
         return self.data.get('name')
 
@@ -67,6 +68,21 @@ class Interaction:
     @property
     def selected_values(self):
         return self.data.get('values', [])
+
+    @property
+    def submitted_values(self):
+        submitted_values = {}
+        for top_level_component in self.data.get('components', []):
+            if 'component' in top_level_component:
+                children = [top_level_component['component']]
+            else:
+                children = top_level_component.get('components', [])
+            for child in children:
+                if 'custom_id' not in child:
+                    continue
+                submitted_values[child['custom_id']] = (
+                    child['values'] if 'values' in child else child.get('value'))
+        return submitted_values
 
     @property
     def user(self):

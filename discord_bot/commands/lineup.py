@@ -1,9 +1,10 @@
 from django.db.models import Count
 from decks.models import Deck
 from lineups.models import Lineup, LineupVersion
-from ..accounts import get_site_user_for_discord_id
+from ..accounts import account_not_linked_message, get_site_user_for_discord_id
 from ..interactions import CUSTOM_ID_SEPARATOR
 from ..links import absolute_url
+from ..text import truncate
 from ..registry import (
     Command,
     COMMAND_TYPE_CHAT_INPUT,
@@ -83,17 +84,6 @@ definition = {
         },
     ],
 }
-
-
-def truncate(text, max_length):
-    if len(text) <= max_length:
-        return text
-    return text[:max_length - 1] + '…'
-
-
-def account_not_linked_message():
-    connections_url = absolute_url('socialaccount_connections')
-    return f'I don\'t know which Sloppy Labwork account is yours. Link your Discord account at {connections_url} and try again.'
 
 
 def no_lineups_message():

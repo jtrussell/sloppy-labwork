@@ -13,11 +13,12 @@ def choice(name, value):
 
 
 class Command:
-    def __init__(self, definition, handler, autocomplete=None, component=None, help_text=None):
+    def __init__(self, definition, handler, autocomplete=None, component=None, modal=None, help_text=None):
         self.definition = definition
         self.handler = handler
         self.autocomplete = autocomplete
         self.component = component
+        self.modal = modal
         self.help_text = help_text
 
     @property
@@ -30,11 +31,12 @@ class Command:
 
 
 def get_commands():
-    from .commands import help as help_command, lineup, random_access_archives
+    from .commands import help as help_command, lineup, random_access_archives, tourney
     return [
         help_command.command,
         lineup.command,
         random_access_archives.command,
+        tourney.command,
     ]
 
 

@@ -12,6 +12,7 @@ from ..registry import (
     get_commands,
 )
 from ..responses import embed_message, ephemeral_message, autocomplete_choices
+from ..text import truncate
 
 COMMAND_NAME = 'help'
 OPTION_COMMAND = 'command'
@@ -45,12 +46,6 @@ definition = {
         },
     ],
 }
-
-
-def truncate(text, max_length):
-    if len(text) <= max_length:
-        return text
-    return text[:max_length - 1] + '…'
 
 
 def unknown_command_message(command_name):
