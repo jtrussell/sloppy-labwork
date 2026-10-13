@@ -6,9 +6,19 @@ from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 from nacl.signing import SigningKey
 from .interactions import Interaction
-from .responses import MESSAGE_FLAG_EPHEMERAL, RESPONSE_TYPE_PONG, RESPONSE_TYPE_CHANNEL_MESSAGE
+from allauth.socialaccount.models import SocialAccount
+from django.contrib.auth.models import User
+from decks.models import Deck
+from lineups.models import Lineup, LineupVersion, LineupVersionDeck
+from .responses import (
+    MESSAGE_FLAG_EPHEMERAL,
+    RESPONSE_TYPE_PONG,
+    RESPONSE_TYPE_CHANNEL_MESSAGE,
+    RESPONSE_TYPE_UPDATE_MESSAGE,
+    RESPONSE_TYPE_AUTOCOMPLETE_RESULT,
+)
 from .views import dispatch, UNKNOWN_COMMAND_MESSAGE, UNSUPPORTED_INTERACTION_MESSAGE, COMMAND_FAILED_MESSAGE
-from .commands import random_access_archives
+from .commands import lineup, random_access_archives
 
 DECK_URL = 'https://decksofkeyforge.com/decks/abc'
 
@@ -17,6 +27,18 @@ def command_payload(name, options=None, user_id='42'):
     return {
         'type': 2,
         'data': {'name': name, 'options': options or []},
+        'member': {'user': {'id': user_id}},
+    }
+
+
+def autocomplete_payload(name, options=None, user_id='42'):
+    return {**command_payload(name, options, user_id), 'type': 4}
+
+
+def component_payload(custom_id, values, user_id='42'):
+    return {
+        'type': 3,
+        'data': {'custom_id': custom_id, 'values': values},
         'member': {'user': {'id': user_id}},
     }
 
@@ -36,6 +58,25 @@ class InteractionTest(SimpleTestCase):
         self.assertIsNone(interaction.option('max'))
         self.assertEqual(interaction.option('max', 90), 90)
 
+    def test_subcommand_options_are_unwrapped(self):
+        options = [{'name': 'show', 'type': 1, 'options': [{'name': 'lineup', 'type': 3, 'value': 'lnp_A'}]}]
+        interaction = Interaction(command_payload('lineup', options))
+        self.assertEqual(interaction.subcommand_name, 'show')
+        self.assertEqual(interaction.option('lineup'), 'lnp_A')
+
+    def test_focused_option_is_found_for_autocomplete(self):
+        options = [{'name': 'show', 'type': 1, 'options': [
+            {'name': 'lineup', 'type': 3, 'value': 'lnp_A'},
+            {'name': 'version', 'type': 3, 'value': 'v', 'focused': True},
+        ]}]
+        interaction = Interaction(autocomplete_payload('lineup', options))
+        self.assertEqual(interaction.focused_option['name'], 'version')
+
+    def test_component_command_name_comes_from_custom_id(self):
+        interaction = Interaction(component_payload('lineup:version', ['lnpv_1']))
+        self.assertEqual(interaction.command_name, 'lineup')
+        self.assertEqual(interaction.selected_values, ['lnpv_1'])
+
 
 class DispatchTest(SimpleTestCase):
     def test_ping_is_answered_with_pong(self):
@@ -47,8 +88,16 @@ class DispatchTest(SimpleTestCase):
         self.assertEqual(response['data']['flags'], MESSAGE_FLAG_EPHEMERAL)
 
     def test_unsupported_interaction_type_is_an_ephemeral_message(self):
-        response = dispatch(Interaction({'type': 3, 'data': {}}))
+        response = dispatch(Interaction({'type': 5, 'data': {}}))
         self.assertEqual(response['data']['content'], UNSUPPORTED_INTERACTION_MESSAGE)
+
+    def test_autocomplete_for_unknown_command_returns_no_choices(self):
+        response = dispatch(Interaction(autocomplete_payload('nope')))
+        self.assertEqual(response, {'type': RESPONSE_TYPE_AUTOCOMPLETE_RESULT, 'data': {'choices': []}})
+
+    def test_component_for_command_without_components_is_unknown(self):
+        response = dispatch(Interaction(component_payload('random-access-archives:x', [])))
+        self.assertEqual(response['data']['content'], UNKNOWN_COMMAND_MESSAGE)
 
     @mock.patch.object(random_access_archives, 'handle', side_effect=RuntimeError('boom'))
     def test_handler_exceptions_become_an_ephemeral_message(self, _):
@@ -87,6 +136,130 @@ class RandomAccessArchivesAccountLookupTest(TestCase):
         response = dispatch(Interaction(command_payload('random-access-archives')))
         self.assertEqual(response['data']['content'], random_access_archives.NO_DOK_HANDLE_MESSAGE)
         self.assertEqual(response['data']['flags'], MESSAGE_FLAG_EPHEMERAL)
+
+
+def lineup_payload(subcommand, options=None, user_id='42'):
+    return command_payload('lineup', [{'name': subcommand, 'type': 1, 'options': options or []}], user_id)
+
+
+def lineup_autocomplete_payload(options, user_id='42'):
+    return autocomplete_payload('lineup', [{'name': 'show', 'type': 1, 'options': options}], user_id)
+
+
+class LineupCommandTest(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user('owner')
+        SocialAccount.objects.create(user=self.owner, provider='discord', uid='42')
+        self.stranger = User.objects.create_user('stranger')
+        SocialAccount.objects.create(user=self.stranger, provider='discord', uid='99')
+
+        self.private_lineup = Lineup.objects.create(owner=self.owner, name='Vault Tour')
+        self.older_version = LineupVersion.objects.create(
+            lineup=self.private_lineup, name='v1', sort_order=1)
+        self.latest_version = LineupVersion.objects.create(
+            lineup=self.private_lineup, name='v2', sort_order=2)
+        deck = Deck.objects.create(id='00000000-0000-0000-0000-000000000001', name='The Deck')
+        LineupVersionDeck.objects.create(version=self.latest_version, deck=deck)
+
+        self.public_lineup = Lineup.objects.create(
+            owner=self.owner, name='Open Lineup', visibility=Lineup.Visibility.PUBLIC)
+        self.public_version = LineupVersion.objects.create(
+            lineup=self.public_lineup, name='Only', sort_order=1)
+        self.hidden_public_version = LineupVersion.objects.create(
+            lineup=self.public_lineup, name='Secret', sort_order=2,
+            visibility_override=LineupVersion.Visibility.UNLISTED)
+
+    def show(self, options, user_id='42'):
+        return dispatch(Interaction(lineup_payload('show', options, user_id)))
+
+    def test_list_for_unlinked_user_asks_them_to_link(self):
+        response = dispatch(Interaction(lineup_payload('list', user_id='7')))
+        self.assertIn('Link your Discord account', response['data']['content'])
+        self.assertEqual(response['data']['flags'], MESSAGE_FLAG_EPHEMERAL)
+
+    def test_list_shows_only_own_lineups_privately(self):
+        Lineup.objects.create(owner=self.stranger, name='Not Mine')
+        response = dispatch(Interaction(lineup_payload('list')))
+        description = response['data']['embeds'][0]['description']
+        self.assertIn('Vault Tour', description)
+        self.assertIn('Open Lineup', description)
+        self.assertNotIn('Not Mine', description)
+        self.assertEqual(response['data']['flags'], MESSAGE_FLAG_EPHEMERAL)
+
+    def test_list_with_no_lineups_points_to_create(self):
+        response = dispatch(Interaction(lineup_payload('list', user_id='99')))
+        self.assertIn('/lineups/new/', response['data']['content'])
+
+    def test_show_defaults_to_latest_version_with_version_select(self):
+        response = self.show([{'name': 'lineup', 'value': self.private_lineup.code}])
+        embed = response['data']['embeds'][0]
+        self.assertEqual(embed['title'], 'Vault Tour — v2')
+        self.assertIn('The Deck', embed['description'])
+        self.assertEqual(response['data']['flags'], MESSAGE_FLAG_EPHEMERAL)
+        select = response['data']['components'][0]['components'][0]
+        self.assertEqual(select['custom_id'], lineup.VERSION_SELECT_CUSTOM_ID)
+        self.assertEqual([option['value'] for option in select['options']],
+                         [self.latest_version.code, self.older_version.code])
+
+    def test_show_accepts_own_lineup_and_version_by_name(self):
+        response = self.show([
+            {'name': 'lineup', 'value': 'vault tour'},
+            {'name': 'version', 'value': 'V1'},
+        ])
+        self.assertEqual(response['data']['embeds'][0]['title'], 'Vault Tour — v1')
+
+    def test_show_hides_private_lineup_from_others(self):
+        response = self.show([{'name': 'lineup', 'value': self.private_lineup.code}], user_id='99')
+        self.assertEqual(response['data']['content'], lineup.LINEUP_NOT_FOUND_MESSAGE)
+
+    def test_show_finds_public_lineup_by_code_for_unlinked_user(self):
+        response = self.show([{'name': 'lineup', 'value': self.public_lineup.code}], user_id='7')
+        embed = response['data']['embeds'][0]
+        self.assertEqual(embed['title'], 'Open Lineup — Only')
+        self.assertEqual(response['data']['components'], [])
+
+    def test_post_in_channel_refuses_private_lineup(self):
+        response = self.show([
+            {'name': 'lineup', 'value': self.private_lineup.code},
+            {'name': 'post-in-channel', 'value': True},
+        ])
+        self.assertEqual(response['data']['content'], lineup.PRIVATE_LINEUP_MESSAGE)
+
+    def test_post_in_channel_posts_public_lineup_without_components(self):
+        response = self.show([
+            {'name': 'lineup', 'value': self.public_lineup.code},
+            {'name': 'version', 'value': self.public_version.code},
+            {'name': 'post-in-channel', 'value': True},
+        ])
+        self.assertNotIn('flags', response['data'])
+        self.assertEqual(response['data']['components'], [])
+
+    def test_lineup_autocomplete_suggests_only_own_lineups(self):
+        Lineup.objects.create(owner=self.stranger, name='Vault Rival')
+        response = dispatch(Interaction(lineup_autocomplete_payload([
+            {'name': 'lineup', 'type': 3, 'value': 'vault', 'focused': True},
+        ])))
+        self.assertEqual(response['type'], RESPONSE_TYPE_AUTOCOMPLETE_RESULT)
+        self.assertEqual(response['data']['choices'],
+                         [{'name': 'Vault Tour', 'value': self.private_lineup.code}])
+
+    def test_version_autocomplete_uses_selected_lineup_and_visibility(self):
+        response = dispatch(Interaction(lineup_autocomplete_payload([
+            {'name': 'lineup', 'type': 3, 'value': self.public_lineup.code},
+            {'name': 'version', 'type': 3, 'value': '', 'focused': True},
+        ], user_id='99')))
+        self.assertEqual([c['value'] for c in response['data']['choices']], [self.public_version.code])
+
+    def test_version_select_updates_message(self):
+        response = dispatch(Interaction(component_payload(
+            lineup.VERSION_SELECT_CUSTOM_ID, [self.older_version.code])))
+        self.assertEqual(response['type'], RESPONSE_TYPE_UPDATE_MESSAGE)
+        self.assertEqual(response['data']['embeds'][0]['title'], 'Vault Tour — v1')
+
+    def test_version_select_rejects_versions_the_user_cannot_view(self):
+        response = dispatch(Interaction(component_payload(
+            lineup.VERSION_SELECT_CUSTOM_ID, [self.older_version.code], user_id='99')))
+        self.assertEqual(response['data']['content'], lineup.VERSION_NOT_FOUND_MESSAGE)
 
 
 class InteractionsEndpointTest(SimpleTestCase):
