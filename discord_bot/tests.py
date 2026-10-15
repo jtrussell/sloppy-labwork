@@ -473,6 +473,37 @@ class TourneyReportCommandTest(TestCase):
         self.assertEqual(
             sorted(Answer.objects.values_list('value', flat=True)), sorted([deck_link, 'Them']))
 
+    def test_multiple_answer_question_allows_several_selections(self):
+        result_form = self.add_result_form(
+            ('Houses faced', GhostformQuestion.AnswerType.MULTIPLE_CHOICE,
+             {'choices': ['Brobnar', 'Dis', 'Mars'], 'allows_multiple_answers': True}),
+        )
+        choice_question = result_form.get_active_questions().get()
+        choice_field = f'ghostform-{choice_question.get_field_name()}'
+
+        response = self.report()
+        choice_select = response['data']['components'][-1]['component']
+        self.assertEqual(choice_select['max_values'], 3)
+
+        self.submit(self.paired_custom_id(), [
+            labelled('winner', value=str(self.anvil.id)),
+            labelled('player_one_score', value='3'),
+            labelled('player_two_score', value='1'),
+            labelled(choice_field, values=['0', '2']),
+        ])
+        self.assertEqual(Answer.objects.get().value, 'Brobnar\nMars')
+
+    def test_selection_limits_are_applied_to_the_select_menu(self):
+        self.add_result_form(
+            ('Houses faced', GhostformQuestion.AnswerType.MULTIPLE_CHOICE, {
+                'choices': ['Brobnar', 'Dis', 'Logos', 'Mars'], 'allows_multiple_answers': True,
+                'is_required': True, 'minimum_selections': 3, 'maximum_selections': 3}),
+        )
+
+        choice_select = self.report()['data']['components'][-1]['component']
+
+        self.assertEqual((choice_select['min_values'], choice_select['max_values']), (3, 3))
+
     def test_missing_required_answer_is_reported(self):
         self.add_result_form(('Your deck', GhostformQuestion.AnswerType.DECK_LINK, {'is_required': True}))
         response = self.submit(self.paired_custom_id(), [labelled('winner', value=str(self.anvil.id))])

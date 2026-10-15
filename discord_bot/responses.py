@@ -78,7 +78,7 @@ def action_row(*components):
     return {'type': COMPONENT_TYPE_ACTION_ROW, 'components': list(components)}
 
 
-def string_select(custom_id, options, placeholder=None, required=None):
+def string_select(custom_id, options, placeholder=None, required=None, min_values=None, max_values=None):
     select = {
         'type': COMPONENT_TYPE_STRING_SELECT,
         'custom_id': custom_id,
@@ -89,6 +89,10 @@ def string_select(custom_id, options, placeholder=None, required=None):
     if required is not None:
         select['required'] = required
         select['min_values'] = 1 if required else 0
+    if min_values is not None:
+        select['min_values'] = min_values
+    if max_values is not None:
+        select['max_values'] = max_values
     return select
 
 

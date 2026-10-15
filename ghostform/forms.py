@@ -8,7 +8,8 @@ from decks.models import Deck
 from .models import (
     Form, Question, MAXIMUM_QUESTIONS_PER_FORM, MAXIMUM_CHOICES_PER_QUESTION,
     QUESTION_LABEL_MAX_LENGTH, QUESTION_DESCRIPTION_MAX_LENGTH, CHOICE_MAX_LENGTH,
-    TEXT_ANSWER_MAX_LENGTH
+    TEXT_ANSWER_MAX_LENGTH, ANSWER_SELECTION_SEPARATOR, CSV_SELECTION_DELIMITER,
+    describe_selection_limits
 )
 
 
@@ -20,6 +21,9 @@ DECK_LINK_PATTERN = (
 DECK_LINK_ERROR_MESSAGE = 'Enter a Master Vault or Decks of KeyForge deck link.'
 NUMBER_ANSWER_MAX_DIGITS = 20
 NUMBER_ANSWER_DECIMAL_PLACES = 6
+FILTERABLE_CHOICE_COUNT = 12
+INVALID_SELECTION_LIMIT = 0
+FORBIDDEN_CHOICE_CHARACTERS = (CSV_SELECTION_DELIMITER, ANSWER_SELECTION_SEPARATOR, '\r')
 
 
 class DeckLinkField(forms.CharField):
@@ -49,6 +53,33 @@ class DeckLinkField(forms.CharField):
         }
 
 
+class MultipleAnswerField(forms.MultipleChoiceField):
+    widget = forms.CheckboxSelectMultiple
+
+    def __init__(self, *, minimum_selections=None, maximum_selections=None, **kwargs):
+        super().__init__(**kwargs)
+        self.minimum_selections = minimum_selections
+        self.maximum_selections = maximum_selections
+
+    @property
+    def has_many_choices(self):
+        return len(self.choices) > FILTERABLE_CHOICE_COUNT
+
+    @property
+    def selection_limits_description(self):
+        return describe_selection_limits(self.minimum_selections, self.maximum_selections)
+
+    def validate(self, value):
+        super().validate(value)
+        if value and not self._is_within_selection_limits(len(value)):
+            raise ValidationError(self.selection_limits_description)
+
+    def _is_within_selection_limits(self, selection_count):
+        is_above_minimum = not self.minimum_selections or selection_count >= self.minimum_selections
+        is_below_maximum = not self.maximum_selections or selection_count <= self.maximum_selections
+        return is_above_minimum and is_below_maximum
+
+
 def build_question_field(question, is_required):
     common_options = {
         'label': question.label,
@@ -64,6 +95,12 @@ def build_question_field(question, is_required):
             **common_options)
     if answer_type == Question.AnswerType.DECK_LINK:
         return DeckLinkField(**common_options)
+    if answer_type == Question.AnswerType.MULTIPLE_CHOICE and question.allows_multiple_answers:
+        return MultipleAnswerField(
+            choices=[(choice, choice) for choice in question.choices],
+            minimum_selections=question.minimum_selections,
+            maximum_selections=question.maximum_selections,
+            **common_options)
     if answer_type == Question.AnswerType.MULTIPLE_CHOICE:
         choices = [('', 'Choose…')] + [(choice, choice)
                                        for choice in question.choices]
@@ -99,7 +136,7 @@ class ResponseForm(forms.Form):
     def has_any_answer(self):
         for question in self.questions:
             cleaned_value = self.cleaned_data.get(question.get_field_name())
-            if cleaned_value is None or cleaned_value == '' or cleaned_value is False:
+            if cleaned_value is None or cleaned_value == '' or cleaned_value is False or cleaned_value == []:
                 continue
             return True
         return False
@@ -163,6 +200,9 @@ class QuestionsPayloadForm(forms.Form):
             'answer_type': raw_entry.get('answer_type'),
             'is_required': bool(raw_entry.get('is_required')),
             'choices': self._parse_choices(raw_entry.get('choices')),
+            'allows_multiple_answers': bool(raw_entry.get('allows_multiple_answers')),
+            'minimum_selections': self._parse_selection_limit(raw_entry.get('minimum_selections')),
+            'maximum_selections': self._parse_selection_limit(raw_entry.get('maximum_selections')),
         }
 
         errors = []
@@ -178,6 +218,8 @@ class QuestionsPayloadForm(forms.Form):
             errors.append('choose an answer type.')
         if entry['answer_type'] == Question.AnswerType.MULTIPLE_CHOICE:
             errors.extend(self._get_choice_errors(entry['choices']))
+            if entry['allows_multiple_answers']:
+                errors.extend(self._get_selection_limit_errors(entry))
         return entry, errors
 
     @staticmethod
@@ -186,6 +228,28 @@ class QuestionsPayloadForm(forms.Form):
             return int(question_id)
         except (TypeError, ValueError):
             return None
+
+    @staticmethod
+    def _parse_selection_limit(raw_limit):
+        if raw_limit is None or str(raw_limit).strip() == '':
+            return None
+        try:
+            return int(str(raw_limit).strip())
+        except ValueError:
+            return INVALID_SELECTION_LIMIT
+
+    @staticmethod
+    def _get_selection_limit_errors(entry):
+        selection_limits = [
+            limit for limit in (entry['minimum_selections'], entry['maximum_selections']) if limit is not None]
+        if any(limit < 1 for limit in selection_limits):
+            return ['selection limits must be whole numbers of 1 or more.']
+        errors = []
+        if any(limit > len(entry['choices']) for limit in selection_limits):
+            errors.append("selection limits can't be more than the number of options.")
+        if len(selection_limits) == 2 and entry['minimum_selections'] > entry['maximum_selections']:
+            errors.append("the minimum can't be more than the maximum.")
+        return errors
 
     @staticmethod
     def _parse_choices(raw_choices):
@@ -205,6 +269,8 @@ class QuestionsPayloadForm(forms.Form):
         if any(len(choice) > CHOICE_MAX_LENGTH for choice in choices):
             errors.append(
                 f'options must be {CHOICE_MAX_LENGTH} characters or fewer.')
+        if any(character in choice for choice in choices for character in FORBIDDEN_CHOICE_CHARACTERS):
+            errors.append('options can\'t contain semicolons or line breaks.')
         folded_choices = [choice.casefold() for choice in choices]
         if len(folded_choices) != len(set(folded_choices)):
             errors.append('options must be unique.')

@@ -5,10 +5,11 @@ import uuid
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.template.loader import render_to_string
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .forms import QuestionsPayloadForm
+from .forms import FILTERABLE_CHOICE_COUNT, QuestionsPayloadForm
 from .hooks import (
     get_response_form, has_linked_responses, mark_responses_context_removed,
     register_response_access_check, update_response_context
@@ -34,18 +35,23 @@ class GhostformTestMixin:
         return Form.objects.create(owner=owner, title=title, status=status)
 
     def _add_question(self, ghostform, label, answer_type=Question.AnswerType.TEXT,
-                      is_required=False, choices=None, order=None):
+                      is_required=False, choices=None, order=None, allows_multiple_answers=False,
+                      minimum_selections=None, maximum_selections=None):
         return Question.objects.create(
             form=ghostform,
             label=label,
             answer_type=answer_type,
             is_required=is_required,
             choices=choices or [],
+            allows_multiple_answers=allows_multiple_answers,
+            minimum_selections=minimum_selections,
+            maximum_selections=maximum_selections,
             order=order or ghostform.questions.count() + 1,
         )
 
     def _builder_entry(self, label, answer_type=Question.AnswerType.TEXT, question_id=None,
-                       is_required=False, choices=None, description=''):
+                       is_required=False, choices=None, description='', allows_multiple_answers=False,
+                       minimum_selections=None, maximum_selections=None):
         return {
             'id': question_id,
             'label': label,
@@ -53,6 +59,9 @@ class GhostformTestMixin:
             'answer_type': answer_type,
             'is_required': is_required,
             'choices': choices or [],
+            'allows_multiple_answers': allows_multiple_answers,
+            'minimum_selections': minimum_selections,
+            'maximum_selections': maximum_selections,
         }
 
     def _submit_response(self, ghostform, user, data):
@@ -237,6 +246,112 @@ class ResponseFormTestCase(GhostformTestMixin, TestCase):
 
         self.assertFalse(response_form.is_valid())
 
+    def test_multiple_answer_question_renders_checkboxes(self):
+        question = self._add_question(
+            self.ghostform, 'Houses', answer_type=Question.AnswerType.MULTIPLE_CHOICE,
+            choices=['Brobnar', 'Dis'], allows_multiple_answers=True)
+
+        field = self._build_form().fields[question.get_field_name()]
+        rendered_field = str(self._build_form()[question.get_field_name()])
+
+        self.assertEqual(field.choices, [('Brobnar', 'Brobnar'), ('Dis', 'Dis')])
+        self.assertEqual(rendered_field.count('type="checkbox"'), 2)
+
+    def test_only_long_multiple_answer_lists_get_a_filter(self):
+        short_question = self._add_question(
+            self.ghostform, 'Houses', answer_type=Question.AnswerType.MULTIPLE_CHOICE,
+            choices=[f'House {number}' for number in range(FILTERABLE_CHOICE_COUNT)],
+            allows_multiple_answers=True)
+        long_question = self._add_question(
+            self.ghostform, 'Cards', answer_type=Question.AnswerType.MULTIPLE_CHOICE,
+            choices=[f'Card {number}' for number in range(FILTERABLE_CHOICE_COUNT + 1)],
+            allows_multiple_answers=True)
+        response_form = self._build_form()
+
+        short_field_html = render_to_string(
+            'ghostform/partials/response-fields.html',
+            {'response_form': [response_form[short_question.get_field_name()]]})
+        long_field_html = render_to_string(
+            'ghostform/partials/response-fields.html',
+            {'response_form': [response_form[long_question.get_field_name()]]})
+
+        self.assertNotIn('data-choice-filter', short_field_html)
+        self.assertIn('data-choice-filter', long_field_html)
+        self.assertIn('ghostform-choice-options--scrollable', long_field_html)
+        self.assertEqual(long_field_html.count('type="checkbox"'), FILTERABLE_CHOICE_COUNT + 1)
+
+    def test_multiple_answer_selection_limits_are_enforced(self):
+        question = self._add_question(
+            self.ghostform, 'Houses', answer_type=Question.AnswerType.MULTIPLE_CHOICE,
+            choices=['Brobnar', 'Dis', 'Logos', 'Mars'], allows_multiple_answers=True,
+            minimum_selections=3, maximum_selections=3)
+        cases = [
+            ([], True),
+            (['Brobnar', 'Dis'], False),
+            (['Brobnar', 'Dis', 'Mars'], True),
+            (['Brobnar', 'Dis', 'Logos', 'Mars'], False),
+        ]
+
+        for selections, expected in cases:
+            response_form = self._build_form(self._field_data(question, selections))
+            self.assertEqual(response_form.is_valid(), expected, selections)
+            if not expected:
+                self.assertEqual(
+                    response_form.errors[question.get_field_name()], ['Choose exactly 3 options.'])
+
+    def test_required_question_with_minimum_rejects_empty_selection(self):
+        question = self._add_question(
+            self.ghostform, 'Houses', answer_type=Question.AnswerType.MULTIPLE_CHOICE,
+            choices=['Brobnar', 'Dis'], is_required=True, allows_multiple_answers=True,
+            minimum_selections=2)
+
+        self.assertFalse(self._build_form({}).is_valid())
+        self.assertTrue(self._build_form(self._field_data(question, ['Brobnar', 'Dis'])).is_valid())
+
+    def test_selection_limits_and_count_are_rendered(self):
+        question = self._add_question(
+            self.ghostform, 'Houses', answer_type=Question.AnswerType.MULTIPLE_CHOICE,
+            choices=['Brobnar', 'Dis', 'Mars'], allows_multiple_answers=True,
+            minimum_selections=2, maximum_selections=3)
+        response_form = self._build_form(self._field_data(question, ['Dis']))
+
+        field_html = render_to_string(
+            'ghostform/partials/response-fields.html',
+            {'response_form': [response_form[question.get_field_name()]]})
+
+        self.assertIn('Choose between 2 and 3 options.', field_html)
+        self.assertIn('data-maximum-selections="3"', field_html)
+        self.assertIn('1 of 3 selected', field_html)
+
+    def test_multiple_answer_selections_are_stored_one_per_line(self):
+        question = self._add_question(
+            self.ghostform, 'Houses', answer_type=Question.AnswerType.MULTIPLE_CHOICE,
+            choices=['Brobnar', 'Dis', 'Mars'], allows_multiple_answers=True)
+
+        response = self._submit_response(
+            self.ghostform, self.owner, self._field_data(question, ['Brobnar', 'Mars']))
+
+        self.assertEqual(response.answers.get().value, 'Brobnar\nMars')
+
+    def test_required_multiple_answer_question_needs_a_selection(self):
+        question = self._add_question(
+            self.ghostform, 'Houses', answer_type=Question.AnswerType.MULTIPLE_CHOICE,
+            choices=['Brobnar'], is_required=True, allows_multiple_answers=True)
+
+        self.assertFalse(self._build_form({}).is_valid())
+        self.assertTrue(self._build_form(self._field_data(question, ['Brobnar'])).is_valid())
+
+    def test_empty_multiple_answer_selection_is_not_an_answer(self):
+        self._add_question(
+            self.ghostform, 'Houses', answer_type=Question.AnswerType.MULTIPLE_CHOICE,
+            choices=['Brobnar'], allows_multiple_answers=True)
+
+        response_form = self._build_form({}, all_optional=True)
+
+        self.assertTrue(response_form.is_valid())
+        self.assertFalse(response_form.has_any_answer())
+        self.assertEqual(response_form.get_answer_fields(), [])
+
     def test_blank_optional_answers_are_not_stored(self):
         text_question = self._add_question(self.ghostform, 'Notes')
         number_question = self._add_question(
@@ -389,6 +504,35 @@ class SyncQuestionsTestCase(GhostformTestMixin, TestCase):
 
         self.assertEqual(self.ghostform.get_active_questions().get().choices, [])
 
+    def test_answer_mode_change_with_answers_keeps_question(self):
+        question = self._add_question(
+            self.ghostform, 'Houses', Question.AnswerType.MULTIPLE_CHOICE, choices=['Dis', 'Mars'])
+        self._answer(question, 'Dis')
+
+        self.ghostform.sync_questions([self._builder_entry(
+            'Houses', Question.AnswerType.MULTIPLE_CHOICE, question_id=question.id,
+            choices=['Dis', 'Mars'], allows_multiple_answers=True)])
+
+        question.refresh_from_db()
+        self.assertFalse(question.is_archived)
+        self.assertTrue(question.allows_multiple_answers)
+
+    def test_selection_limits_are_cleared_for_single_answer_questions(self):
+        self.ghostform.sync_questions([self._builder_entry(
+            'Houses', Question.AnswerType.MULTIPLE_CHOICE, choices=['Dis', 'Mars'],
+            minimum_selections=1, maximum_selections=2)])
+
+        question = self.ghostform.questions.get()
+        self.assertIsNone(question.minimum_selections)
+        self.assertIsNone(question.maximum_selections)
+
+    def test_multiple_answers_are_cleared_for_non_choice_questions(self):
+        self.ghostform.sync_questions([
+            self._builder_entry('Notes', allows_multiple_answers=True),
+        ])
+
+        self.assertFalse(self.ghostform.questions.get().allows_multiple_answers)
+
     def test_ids_from_other_forms_create_new_questions(self):
         other_form = self._create_form(self.owner, title='Other')
         other_question = self._add_question(other_form, 'Not yours')
@@ -421,7 +565,8 @@ class SyncQuestionsTestCase(GhostformTestMixin, TestCase):
         self._answer(archived)
         archived.archive()
         self._add_question(
-            self.ghostform, 'House', Question.AnswerType.MULTIPLE_CHOICE, choices=['Dis', 'Logos'])
+            self.ghostform, 'House', Question.AnswerType.MULTIPLE_CHOICE, choices=['Dis', 'Logos'],
+            allows_multiple_answers=True, minimum_selections=1, maximum_selections=2)
         self._answer(first)
         copier = User.objects.create_user('copier', 'copier@test.com', 'password')
 
@@ -434,8 +579,11 @@ class SyncQuestionsTestCase(GhostformTestMixin, TestCase):
         self.assertEqual(duplicated_form.status, self.ghostform.status)
         self.assertFalse(duplicated_form.responses.exists())
         self.assertEqual(
-            list(duplicated_form.questions.values_list('label', 'answer_type', 'is_required', 'choices', 'order')),
-            [('Deck', 'deck_link', True, [], 1), ('House', 'multiple_choice', False, ['Dis', 'Logos'], 2)])
+            list(duplicated_form.questions.values_list(
+                'label', 'answer_type', 'is_required', 'choices', 'allows_multiple_answers',
+                'minimum_selections', 'maximum_selections', 'order')),
+            [('Deck', 'deck_link', True, [], False, None, None, 1),
+             ('House', 'multiple_choice', False, ['Dis', 'Logos'], True, 1, 2, 2)])
         self.assertEqual(self.ghostform.questions.count(), 3)
 
     def test_duplicate_truncates_long_titles(self):
@@ -464,14 +612,16 @@ class QuestionsPayloadFormTestCase(GhostformTestMixin, TestCase):
         form = self._clean([{
             'id': '7', 'label': '  Deck  ', 'description': ' Why ',
             'answer_type': 'multiple_choice', 'is_required': 1,
-            'choices': [' Brobnar ', '', 'Dis'],
+            'choices': [' Brobnar ', '', 'Dis'], 'allows_multiple_answers': 1,
+            'minimum_selections': '', 'maximum_selections': ' 2 ',
         }])
 
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data['questions_payload'], [{
             'id': 7, 'label': 'Deck', 'description': 'Why',
             'answer_type': 'multiple_choice', 'is_required': True,
-            'choices': ['Brobnar', 'Dis'],
+            'choices': ['Brobnar', 'Dis'], 'allows_multiple_answers': True,
+            'minimum_selections': None, 'maximum_selections': 2,
         }])
 
     def test_empty_question_list_is_valid(self):
@@ -499,6 +649,36 @@ class QuestionsPayloadFormTestCase(GhostformTestMixin, TestCase):
             'House', Question.AnswerType.MULTIPLE_CHOICE, choices=['Dis', 'dis'])])
 
         self.assertIn('Question 1: options must be unique.', form.errors['questions_payload'])
+
+    def test_rejects_options_with_semicolons_or_line_breaks(self):
+        for choice in ['Dis; Mars', 'Dis\nMars']:
+            form = self._clean([self._builder_entry(
+                'House', Question.AnswerType.MULTIPLE_CHOICE, choices=[choice])])
+
+            self.assertIn(
+                "Question 1: options can't contain semicolons or line breaks.",
+                form.errors['questions_payload'], choice)
+
+    def test_rejects_invalid_selection_limits(self):
+        cases = [
+            ({'minimum_selections': 0}, 'selection limits must be whole numbers of 1 or more.'),
+            ({'maximum_selections': 'three'}, 'selection limits must be whole numbers of 1 or more.'),
+            ({'maximum_selections': 4}, "selection limits can't be more than the number of options."),
+            ({'minimum_selections': 3, 'maximum_selections': 2}, "the minimum can't be more than the maximum."),
+        ]
+
+        for limits, expected_error in cases:
+            form = self._clean([self._builder_entry(
+                'House', Question.AnswerType.MULTIPLE_CHOICE, choices=['Dis', 'Logos', 'Mars'],
+                allows_multiple_answers=True, **limits)])
+
+            self.assertIn(f'Question 1: {expected_error}', form.errors['questions_payload'], limits)
+
+    def test_selection_limits_are_ignored_for_single_answer_questions(self):
+        form = self._clean([self._builder_entry(
+            'House', Question.AnswerType.MULTIPLE_CHOICE, choices=['Dis'], maximum_selections=9)])
+
+        self.assertTrue(form.is_valid(), form.errors)
 
     def test_rejects_too_many_questions(self):
         entries = [self._builder_entry(f'Q{i}') for i in range(MAXIMUM_QUESTIONS_PER_FORM + 1)]
@@ -1000,6 +1180,17 @@ class ResponsesCsvTestCase(GhostformTestMixin, TestCase):
 
         self.assertEqual(rows[1][4], '\'=HYPERLINK("http://evil")')
         self.assertEqual(rows[2][5], '-3')
+
+    def test_multiple_answer_selections_are_semicolon_delimited(self):
+        houses_question = self._add_question(
+            self.ghostform, 'Houses', answer_type=Question.AnswerType.MULTIPLE_CHOICE,
+            choices=['Brobnar', 'Dis', 'Mars'], allows_multiple_answers=True)
+        self._submit_response(
+            self.ghostform, self.player, self._field_data(houses_question, ['Brobnar', 'Mars']))
+
+        _response, rows = self._download_rows()
+
+        self.assertEqual(rows[1][-1], 'Brobnar;Mars')
 
     def test_csv_forbidden_for_stranger(self):
         self.client.login(username='player', password='password')

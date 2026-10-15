@@ -158,7 +158,12 @@ def build_question_input(question, custom_id, is_required):
             select_option(truncate(choice_text, MAX_SELECT_OPTION_LABEL_LENGTH), str(index))
             for index, choice_text in enumerate(question.choices)
         ]
-        return string_select(custom_id, options, required=is_required)
+        if not question.allows_multiple_answers:
+            return string_select(custom_id, options, required=is_required)
+        return string_select(
+            custom_id, options, required=is_required,
+            min_values=question.minimum_selections if is_required else None,
+            max_values=question.maximum_selections or len(options))
     if answer_type == Question.AnswerType.DECK_LINK:
         return text_input(custom_id, required=is_required, max_length=TEXT_ANSWER_MAX_LENGTH,
                           placeholder=DECK_LINK_PLACEHOLDER)
@@ -329,13 +334,17 @@ def handle_retry(interaction):
     return open_report(tournament, user)
 
 
+def find_choices_by_index(question, submitted_indexes):
+    return [
+        question.choices[int(index)]
+        for index in submitted_indexes or []
+        if index.isdigit() and int(index) < len(question.choices)
+    ]
+
+
 def find_choice_by_index(question, submitted_indexes):
-    if not submitted_indexes:
-        return ''
-    index = submitted_indexes[0]
-    if not index.isdigit() or int(index) >= len(question.choices):
-        return ''
-    return question.choices[int(index)]
+    selected_choices = find_choices_by_index(question, (submitted_indexes or [])[:1])
+    return selected_choices[0] if selected_choices else ''
 
 
 def build_question_answers(tournament, submitted_values):
@@ -346,7 +355,9 @@ def build_question_answers(tournament, submitted_values):
     for question in result_form.get_active_questions():
         field_key = GHOSTFORM_FIELD_PREFIX + question.get_field_name()
         submitted_value = submitted_values.get(field_key)
-        if question.answer_type == Question.AnswerType.MULTIPLE_CHOICE:
+        if question.answer_type == Question.AnswerType.MULTIPLE_CHOICE and question.allows_multiple_answers:
+            answers[field_key] = find_choices_by_index(question, submitted_value)
+        elif question.answer_type == Question.AnswerType.MULTIPLE_CHOICE:
             answers[field_key] = find_choice_by_index(question, submitted_value)
         elif question.answer_type == Question.AnswerType.CHECKBOX:
             if submitted_value:

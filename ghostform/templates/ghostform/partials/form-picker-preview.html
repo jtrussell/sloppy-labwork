@@ -3,7 +3,7 @@
     {% for question in questions %}
     <li>
         <strong>{{ question.label }}</strong>{% if question.is_required %} <span class="ghostform-required">*</span>{% endif %}
-        <span class="text-muted">· {{ question.get_answer_type_display }}{% if question.answer_type == 'multiple_choice' %} ({{ question.choices|length }} option{{ question.choices|length|pluralize }}){% endif %}</span>
+        <span class="text-muted">· {{ question.get_answer_type_display }}{% if question.answer_type == 'multiple_choice' %} ({{ question.choices|length }} option{{ question.choices|length|pluralize }}{% if question.allows_multiple_answers %}, one or more answers{% endif %}){% endif %}</span>
     </li>
     {% endfor %}
 </ol>

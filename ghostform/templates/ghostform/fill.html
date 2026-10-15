@@ -38,3 +38,8 @@
   {% endif %}
 </div>
 {% endblock %}
+
+{% block extra_body %}
+{{ block.super }}
+<script src="{% static 'ghostform/choice-group.js' %}"></script>
+{% endblock %}

@@ -12,6 +12,8 @@ QUESTION_LABEL_MAX_LENGTH = 200
 QUESTION_DESCRIPTION_MAX_LENGTH = 1000
 CHOICE_MAX_LENGTH = 200
 TEXT_ANSWER_MAX_LENGTH = 1000
+ANSWER_SELECTION_SEPARATOR = '\n'
+CSV_SELECTION_DELIMITER = ';'
 
 RESPONSE_ACCESS_CHECKS = []
 FORM_USAGE_DESCRIBERS = []
@@ -90,9 +92,13 @@ class Form(models.Model):
 
             question.label = entry['label']
             question.description = entry['description']
+            is_multiple_choice = entry['answer_type'] == Question.AnswerType.MULTIPLE_CHOICE
             question.answer_type = entry['answer_type']
             question.is_required = entry['is_required']
-            question.choices = entry['choices'] if entry['answer_type'] == Question.AnswerType.MULTIPLE_CHOICE else []
+            question.choices = entry['choices'] if is_multiple_choice else []
+            question.allows_multiple_answers = entry['allows_multiple_answers'] if is_multiple_choice else False
+            question.minimum_selections = entry['minimum_selections'] if question.allows_multiple_answers else None
+            question.maximum_selections = entry['maximum_selections'] if question.allows_multiple_answers else None
             question.order = order
             question.save()
 
@@ -115,6 +121,9 @@ class Form(models.Model):
                 answer_type=question.answer_type,
                 is_required=question.is_required,
                 choices=list(question.choices),
+                allows_multiple_answers=question.allows_multiple_answers,
+                minimum_selections=question.minimum_selections,
+                maximum_selections=question.maximum_selections,
                 order=order,
             )
             for order, question in enumerate(self.get_active_questions(), start=1)
@@ -154,6 +163,9 @@ class Question(models.Model):
         max_length=20, choices=AnswerType.choices, default=AnswerType.TEXT)
     is_required = models.BooleanField(default=False)
     choices = models.JSONField(default=list, blank=True)
+    allows_multiple_answers = models.BooleanField(default=False)
+    minimum_selections = models.PositiveSmallIntegerField(null=True, blank=True)
+    maximum_selections = models.PositiveSmallIntegerField(null=True, blank=True)
     order = models.PositiveIntegerField(default=1)
     is_archived = models.BooleanField(default=False)
 
@@ -179,8 +191,10 @@ class Question(models.Model):
     def get_answer_fields(self, cleaned_value):
         if self.answer_type == self.AnswerType.CHECKBOX:
             return {'value': 'Yes' if cleaned_value else 'No'}
-        if cleaned_value in (None, ''):
+        if cleaned_value in (None, '', []):
             return None
+        if self.allows_multiple_answers:
+            return {'value': ANSWER_SELECTION_SEPARATOR.join(cleaned_value)}
         if self.answer_type == self.AnswerType.NUMBER:
             return {'value': format_decimal_answer(cleaned_value)}
         if self.answer_type == self.AnswerType.DECK_LINK:
@@ -195,7 +209,26 @@ class Question(models.Model):
             'answer_type': self.answer_type,
             'is_required': self.is_required,
             'choices': list(self.choices),
+            'allows_multiple_answers': self.allows_multiple_answers,
+            'minimum_selections': self.minimum_selections,
+            'maximum_selections': self.maximum_selections,
         }
+
+
+def describe_selection_limits(minimum_selections, maximum_selections):
+    if minimum_selections and minimum_selections == maximum_selections:
+        return f'Choose exactly {pluralize_options(minimum_selections)}.'
+    if minimum_selections and maximum_selections:
+        return f'Choose between {minimum_selections} and {maximum_selections} options.'
+    if minimum_selections:
+        return f'Choose at least {pluralize_options(minimum_selections)}.'
+    if maximum_selections:
+        return f'Choose at most {pluralize_options(maximum_selections)}.'
+    return ''
+
+
+def pluralize_options(option_count):
+    return f'{option_count} option' if option_count == 1 else f'{option_count} options'
 
 
 def format_decimal_answer(value):

@@ -112,11 +112,41 @@
           </div>
         </div>
 
+        <fieldset class="ghostform-field ghostform-choice-group" x-show="isMultipleChoice(question)">
+          <legend>Answers allowed</legend>
+          <label>
+            <input type="radio" :name="'question-selection-mode-' + question.key"
+                   :checked="!question.allows_multiple_answers" @change="question.allows_multiple_answers = false">
+            <span>One answer</span>
+          </label>
+          <label>
+            <input type="radio" :name="'question-selection-mode-' + question.key"
+                   :checked="question.allows_multiple_answers" @change="question.allows_multiple_answers = true">
+            <span>One or more answers</span>
+          </label>
+        </fieldset>
+
+        <div class="ghostform-field" x-show="isMultipleChoice(question) && question.allows_multiple_answers">
+          <div class="ghostform-selection-limits">
+            <div>
+              <label :for="'question-minimum-selections-' + question.key">At least</label>
+              <input type="number" min="1" step="1" :id="'question-minimum-selections-' + question.key"
+                     x-model="question.minimum_selections">
+            </div>
+            <div>
+              <label :for="'question-maximum-selections-' + question.key">At most</label>
+              <input type="number" min="1" step="1" :id="'question-maximum-selections-' + question.key"
+                     x-model="question.maximum_selections">
+            </div>
+          </div>
+          <span class="ghostform-help">Leave blank for no limit. Use the same number in both for an exact count.</span>
+        </div>
+
         <div class="ghostform-field" x-show="isMultipleChoice(question)">
           <label :for="'question-choices-' + question.key">Options</label>
           <textarea rows="6" class="ghostform-choices-input" :id="'question-choices-' + question.key"
                     x-model="question.choicesText" placeholder="One option per line"></textarea>
-          <span class="ghostform-help">One option per line.</span>
+          <span class="ghostform-help">One option per line. Options can't contain semicolons.</span>
           <div class="ghostform-choice-presets">
             <button type="button" class="button button-small" @click="appendChoices(question, choicePresets.houses)">Add houses</button>
             <button type="button" class="button button-small" @click="appendChoices(question, choicePresets.sets)">Add sets</button>

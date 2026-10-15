@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.utils import timezone
 
-from .models import Question
+from .models import ANSWER_SELECTION_SEPARATOR, CSV_SELECTION_DELIMITER, Question
 
 
 SPREADSHEET_FORMULA_PREFIXES = ('=', '+', '-', '@', '\t', '\r')
@@ -45,6 +45,8 @@ def get_question_cells(question, answer):
     if question.answer_type == Question.AnswerType.DECK_LINK:
         deck_id = str(answer.deck_id) if answer and answer.deck_id else ''
         return [value, deck_id]
+    if question.answer_type == Question.AnswerType.MULTIPLE_CHOICE:
+        return [CSV_SELECTION_DELIMITER.join(value.split(ANSWER_SELECTION_SEPARATOR))]
     return [value]
 
 

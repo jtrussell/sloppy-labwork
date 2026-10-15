@@ -26,6 +26,9 @@ document.addEventListener('alpine:init', () => {
           answer_type: entry.answer_type || 'text',
           is_required: Boolean(entry.is_required),
           choicesText: (entry.choices || []).join('\n'),
+          allows_multiple_answers: Boolean(entry.allows_multiple_answers),
+          minimum_selections: entry.minimum_selections ?? '',
+          maximum_selections: entry.maximum_selections ?? '',
         }
       },
 
@@ -38,6 +41,9 @@ document.addEventListener('alpine:init', () => {
             answer_type: question.answer_type,
             is_required: question.is_required,
             choices: this.parseChoices(question.choicesText),
+            allows_multiple_answers: question.allows_multiple_answers,
+            minimum_selections: question.minimum_selections,
+            maximum_selections: question.maximum_selections,
           })),
         )
       },

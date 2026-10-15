@@ -101,8 +101,10 @@ function resetResultFormFields(form, isHidden) {
       field.disabled = isHidden
       if (field.type === 'checkbox') {
         field.checked = false
+        field.dispatchEvent(new Event('change', { bubbles: true }))
       } else {
         field.value = ''
+        field.dispatchEvent(new Event('input', { bubbles: true }))
       }
     })
   resultFormSection
