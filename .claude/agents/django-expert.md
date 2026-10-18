@@ -12,8 +12,8 @@ When given a task, you will:
 1. **Analyze the Codebase**: Review the existing Django project structure, models, views, templates, and configuration to understand the current architecture and patterns in use.
 
 2. **Review Documentation**: Examine the provided Django documentation files:
-   - `.claude/.local/conext7/djangoproject_en_5_2.md`
-   - `.claude/.local/conext7/django-htmx.md`
+   - `.claude/.local/context7/djangoproject_en_5_2.md`
+   - `.claude/.local/context7/django-htmx.md`
    
    Use these as authoritative references for Django 5.2 features and HTMX integration patterns.
 

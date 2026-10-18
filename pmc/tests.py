@@ -1,3 +1,6 @@
+from allauth.account.models import EmailAddress
+from django.core import mail
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.contrib.auth.models import User
 from datetime import date, timedelta
@@ -10,6 +13,7 @@ from .models import (
     PlaygroupQuerySet, PlaygroupVenue, Venue, PlaygroupMember, Avatar,
     get_activity_level
 )
+from .forms import PmcProfileForm, PmcProfilePrivacyForm
 from .templatetags.pmc_extras import relative_event_day
 from django.urls import reverse
 from decks.models import House, Set, Deck
@@ -1753,3 +1757,59 @@ class FinderTableNextEventTests(UpcomingEventsFilterTestBase):
         sealed = EventFormat.objects.get(name='Sealed')
         self.assertEqual(self.fetch_next_event_dates(event_format=sealed.id), [
                          self.today + timedelta(days=5)])
+
+
+@override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
+class CaseInsensitiveUsernameLookupTests(TestCase):
+    def setUp(self):
+        self.playgroup = Playgroup.objects.create(name='Lookup Group', slug='lookup-group')
+        self.staff_user = User.objects.create_user(username='Organizer')
+        PlaygroupMember.objects.create(
+            playgroup=self.playgroup, user=self.staff_user, is_staff=True)
+        self.player = User.objects.create_user(username='MixedCasePlayer')
+        self.client.force_login(self.staff_user)
+
+    def test_user_profile_resolves_username_in_any_case(self):
+        response = self.client.get(
+            reverse('pmc-user-profile', kwargs={'username': 'mixedcaseplayer'}))
+        self.assertEqual(response.status_code, 200)
+
+    def test_add_member_by_username_matches_any_case(self):
+        self.client.post(
+            reverse('pmc-pg-add-member-by-username', kwargs={'slug': self.playgroup.slug}),
+            {'username': 'MIXEDCASEPLAYER'})
+        self.assertTrue(PlaygroupMember.objects.filter(
+            playgroup=self.playgroup, user=self.player).exists())
+
+
+class ManageProfileEmailChangeTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='Player', email='player@example.com')
+        EmailAddress.objects.create(
+            user=self.user, email='player@example.com', verified=True, primary=True)
+        self.client.force_login(self.user)
+
+    def build_post_data(self, **overrides):
+        profile = self.user.pmc_profile
+        data = {
+            **PmcProfileForm(instance=profile).initial,
+            **PmcProfilePrivacyForm(instance=profile).initial,
+            'username': self.user.username,
+            'email': self.user.email,
+        }
+        data.update(overrides)
+        return {key: '' if value is None else value for key, value in data.items()}
+
+    def test_changing_email_sends_verification_without_switching_email(self):
+        response = self.client.post(
+            reverse('pmc-my-keychain-manage'),
+            self.build_post_data(email='new@example.com'))
+        self.assertEqual(response.status_code, 302)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'player@example.com')
+        self.assertEqual(EmailAddress.objects.get_new(self.user).email, 'new@example.com')
+        self.assertEqual(len(mail.outbox), 1)

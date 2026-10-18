@@ -284,7 +284,7 @@ class PlayerForm(forms.ModelForm):
 
         if username:
             try:
-                user = User.objects.get(username=username)
+                user = User.objects.get(username__iexact=username)
                 cleaned_data['user_obj'] = user
             except User.DoesNotExist:
                 raise forms.ValidationError(
@@ -343,7 +343,7 @@ class EditPlayerForm(forms.ModelForm):
 
         if username:
             try:
-                user = User.objects.get(username=username)
+                user = User.objects.get(username__iexact=username)
                 cleaned_data['user_obj'] = user
             except User.DoesNotExist:
                 raise forms.ValidationError(

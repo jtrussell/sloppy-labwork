@@ -17,6 +17,7 @@ def index(request):
             request.POST, instance=request.user.profile)
         if username_form.is_valid() and profile_form.is_valid():
             username_form.save()
+            username_form.request_email_change_if_changed(request)
             profile_form.save()
             messages.success(
                 request, _('Your profile has been updated.'))

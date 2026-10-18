@@ -37,7 +37,7 @@ class Command(BaseCommand):
         house_name = options.get('house')
 
         try:
-            user = User.objects.get(username=username)
+            user = User.objects.get(username__iexact=username)
         except User.DoesNotExist:
             self.stdout.write(
                 self.style.ERROR(f'User "{username}" does not exist')

@@ -360,7 +360,7 @@ def my_keychain(request):
 
 @login_required
 def user_profile(request, username):
-    user = get_object_or_404(get_user_model(), username=username)
+    user = get_object_or_404(get_user_model(), username__iexact=username)
     profile = user.pmc_profile
     current_level = profile.get_level()
     next_level = profile.get_next_level()
@@ -441,7 +441,7 @@ def playgroup_member_detail(request, slug, username):
 def playgroup_member_manage(request, slug, username):
     member = get_object_or_404(
         PlaygroupMember,
-        user__username=username,
+        user__username__iexact=username,
         playgroup__slug=slug
     )
 
@@ -823,7 +823,7 @@ def submit_event_results(request, slug):
                         row = {key: (None if value == '' else value)
                                for key, value in row.items()}
                         try:
-                            user = User.objects.get(username=username)
+                            user = User.objects.get(username__iexact=username)
                             event_results.append(EventResult(
                                 user=user,
                                 event=event,
@@ -998,7 +998,7 @@ def add_event_result(request, slug, pk):
         User = get_user_model()
         try:
             result = EventResult(
-                user=User.objects.get(username=username),
+                user=User.objects.get(username__iexact=username),
                 event=event,
                 **result_data
             )
@@ -1008,7 +1008,7 @@ def add_event_result(request, slug, pk):
             messages.success(request, _('Result added.'))
         except User.DoesNotExist:
             messages.error(request, _(
-                'Oops! We could not find a user named {}. Usernames are case sensitive.'.format(username)))
+                'Oops! We could not find a user named {}.'.format(username)))
             status = HTTPStatus.BAD_REQUEST
         except IntegrityError as e:
             messages.error(request, _(
@@ -1101,6 +1101,7 @@ def manage_my_pmc_profile(request):
         if form.is_valid() and username_form.is_valid() and privacy_form.is_valid():
             form.save()
             username_form.save()
+            username_form.request_email_change_if_changed(request)
             privacy_form.save()
             messages.success(request, _('Profile updated.'))
             return HttpResponseRedirect(reverse('pmc-my-keychain-manage'))
@@ -1214,7 +1215,7 @@ def add_pg_member_by_username(request, slug):
         User = get_user_model()
         member, created = PlaygroupMember.objects.get_or_create(
             playgroup=Playgroup.objects.get(slug=slug),
-            user=User.objects.get(username=username)
+            user=User.objects.get(username__iexact=username)
         )
         href_member_detail = reverse('pmc-pg-member-detail', kwargs={
             'slug': slug,
@@ -1236,7 +1237,7 @@ def add_pg_member_by_username(request, slug):
             messages.success(request, mark_safe(msg))
     except User.DoesNotExist:
         messages.error(request, _(
-            'Oops! We could not find a user with that username. Usernames are case sensitive.'))
+            'Oops! We could not find a user with that username.'))
     except Exception as e:
         print(e)
         messages.error(request, _('Oops! Something went wrong.'))

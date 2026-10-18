@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse
+from .forms import EditPlayerForm, PlayerForm
 from .models import (
     Tournament, Player, Stage, StagePlayer, Round, Match, MatchResult,
     StandingCalculator, get_pairing_strategy, GamesPlayedRankingCriterion,
@@ -4844,3 +4845,18 @@ class ReportingServiceTest(TestCase):
     def test_self_scheduled_report_is_denied_in_paired_stage(self):
         with self.assertRaises(PermissionDenied):
             report_self_scheduled_match_result(self.tournament, self.users[0], {})
+
+
+class PlayerFormUsernameLookupTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='MixedCasePlayer')
+
+    def test_player_form_matches_username_in_any_case(self):
+        form = PlayerForm(data={'username': 'mixedcaseplayer', 'nickname': ''})
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['user_obj'], self.user)
+
+    def test_edit_player_form_matches_username_in_any_case(self):
+        form = EditPlayerForm(data={'username': 'MIXEDCASEPLAYER', 'nickname': ''})
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['user_obj'], self.user)
