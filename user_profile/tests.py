@@ -8,6 +8,7 @@ from django.core import mail
 from django.core.cache import cache
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 
@@ -194,3 +195,20 @@ class NormalizeUserEmailsCommandTests(TestCase):
         EmailAddress.objects.create(user=user, email='pending@example.com', verified=False, primary=True)
         output = self.run_command()
         self.assertIn('unverified primary EmailAddress: pending@example.com', output)
+
+
+class CaseInsensitiveIdentityIndexTests(TestCase):
+    def test_rejects_username_differing_only_by_case(self):
+        User.objects.create_user(username='Player')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            User.objects.create_user(username='pLAYER')
+
+    def test_rejects_email_differing_only_by_case(self):
+        User.objects.create_user(username='first', email='player@example.com')
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            User.objects.create_user(username='second', email='PLAYER@example.com')
+
+    def test_allows_multiple_users_with_blank_email(self):
+        User.objects.create_user(username='first', email='')
+        User.objects.create_user(username='second', email='')
+        self.assertEqual(User.objects.filter(email='').count(), 2)
