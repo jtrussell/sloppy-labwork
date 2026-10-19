@@ -32,7 +32,7 @@ class RoundRobinScheduledPairingStrategy(PairingStrategy):
         generates the minimum number of rounds needed to complete the
         round robin with all remaining unmatched pairs.
         """
-        from tourney.models import Match, Round
+        from tourney.models import Match, MatchResult, Round
 
         stage = round_obj.stage
         stage_players = list(stage_players)
@@ -71,6 +71,13 @@ class RoundRobinScheduledPairingStrategy(PairingStrategy):
 
         if matches_to_create:
             Match.objects.bulk_create(matches_to_create)
+
+        for match in matches_to_create:
+            if match.is_bye():
+                MatchResult.objects.create(
+                    match=match,
+                    winner=match.player_one
+                )
 
     def _generate_round_robin_schedule(self, players):
         """

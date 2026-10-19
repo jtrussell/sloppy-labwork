@@ -1784,6 +1784,39 @@ class RoundRobinScheduledTestCase(TestCase):
         self.assertEqual(final_matches_count, initial_matches_count,
             "No additional matches should be created on subsequent calls")
 
+    def test_round_robin_odd_players_auto_resolves_byes(self):
+        tournament, stage, players, stage_players = self._create_tournament_with_players(3)
+        strategy = get_pairing_strategy('round_robin_scheduled')
+
+        round1 = Round.objects.create(stage=stage, order=1)
+        strategy.make_pairings_for_round(round1)
+
+        bye_matches = Match.objects.filter(round__stage=stage, player_two__isnull=True)
+        self.assertEqual(bye_matches.count(), 3)
+        for match in bye_matches:
+            self.assertTrue(match.has_result())
+            self.assertEqual(match.result.winner, match.player_one)
+
+    def test_round_robin_odd_players_allows_next_stage_once_played(self):
+        tournament, stage, players, stage_players = self._create_tournament_with_players(3)
+        Stage.objects.create(
+            tournament=tournament,
+            name='Playoffs',
+            order=2,
+            pairing_strategy='single_elimination'
+        )
+        strategy = get_pairing_strategy('round_robin_scheduled')
+
+        round1 = Round.objects.create(stage=stage, order=1)
+        strategy.make_pairings_for_round(round1)
+        self.assertFalse(tournament.can_start_next_stage())
+
+        for match in Match.objects.filter(round__stage=stage, player_two__isnull=False):
+            MatchResult.objects.create(match=match, winner=match.player_one)
+
+        self.assertTrue(stage.is_complete())
+        self.assertTrue(tournament.can_start_next_stage())
+
 
 class GamesPlayedRankingCriterionTestCase(TestCase):
     """Test the Games Played ranking criterion."""
