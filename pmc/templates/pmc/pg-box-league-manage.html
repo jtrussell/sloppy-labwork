@@ -1,0 +1,92 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+  <h1>{{ league.name }}</h1>
+  <div class="subheading">Manage</div>
+
+  <div class="card staff-only">
+    <h2>Settings</h2>
+    <ul class="inline-list">
+      <li>{{ league.get_layout_display }}</li>
+      <li>{{ league.target_box_size }} players per box</li>
+      <li>{{ league.promotion_count }} up per box</li>
+      <li>{{ league.relegation_count }} down per box</li>
+      <li>{{ league.session_length_months }} month session{{ league.session_length_months|pluralize }}</li>
+    </ul>
+    {% if tiers %}
+      <ul class="inline-list">
+        {% for tier in tiers %}
+          <li>{{ tier.level }}. {{ tier.name }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if league.has_unbalanced_movement %}
+      <p class="text-accent">
+        {% if league.promotion_count > league.relegation_count %}More players move up than down each session.{% else %}More players move down than up each session.{% endif %}
+        Boxes are evened out when the next session is planned, so some players may stay in their tier.
+      </p>
+    {% endif %}
+    <div class="card-actions">
+      <a class="btn" href="{% url 'pmc-pg-box-league-edit' playgroup.slug league.pk %}">Edit Settings</a>
+      <a class="btn btn-solid" href="{% url 'pmc-pg-box-league-detail' playgroup.slug league.pk %}">View League</a>
+    </div>
+  </div>
+
+  <div class="card staff-only">
+    <h2>Sessions</h2>
+    {% if proposal %}
+      <p>Session {{ proposal.number }} is proposed. Review it, then start it when players have confirmed.</p>
+      <div class="card-actions">
+        <a class="btn btn-solid" href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk proposal.number %}">Review Proposal</a>
+      </div>
+    {% else %}
+      <p>Plan the next session to propose boxes and ask players to confirm.</p>
+      <form method="POST" action="{% url 'pmc-pg-box-league-plan' playgroup.slug league.pk %}" class="card-actions">
+        {% csrf_token %}
+        <button class="btn btn-solid" type="submit">Plan Next Session</button>
+      </form>
+    {% endif %}
+  </div>
+
+  <div class="card staff-only">
+    <h2>Add Player</h2>
+    <p class="text-muted text-smaller">Added players join the next session. To place someone in a box now, use Place a Player on the session page.</p>
+    <form method="POST" action="{% url 'pmc-pg-box-league-member-add' playgroup.slug league.pk %}">
+      {% csrf_token %}
+      {{ add_member_form.as_p }}
+      <div class="card-actions">
+        <button class="btn btn-solid" type="submit">Add Player</button>
+      </div>
+    </form>
+  </div>
+
+  <h2>Roster</h2>
+  <table>
+    <thead>
+      <tr>
+        <th class="text-left">Player</th>
+        <th class="text-left">{% if current_session %}Session {{ current_session.number }}{% else %}Box{% endif %}</th>
+        <th class="col-md">&nbsp;</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for roster_entry, box_name in roster %}
+        <tr>
+          <td class="text-left">{{ roster_entry.member }}</td>
+          <td class="text-left">{{ box_name|default:"Waiting" }}</td>
+          <td class="col-md">
+            <button
+              class="btn btn-small"
+              hx-post="{% url 'pmc-pg-box-league-member-remove' playgroup.slug league.pk roster_entry.member_id %}"
+              hx-confirm="Remove {{ roster_entry.member }} from {{ league.name }}?"
+            >Remove</button>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="3" class="text-muted">No players yet.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

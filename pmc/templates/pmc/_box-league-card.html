@@ -1,0 +1,14 @@
+<li class="card">
+  <h2>{{ box_league.name }}</h2>
+  <ul class="subheading inline-list">
+    <li>{{ box_league.num_players }} Player{{ box_league.num_players|pluralize }}</li>
+    {% with active_session=box_league.get_active_session %}
+      {% if active_session %}
+        <li>Session {{ active_session.number }}: {{ active_session.starts_on|date:"SHORT_DATE_FORMAT" }} – {{ active_session.ends_on|date:"SHORT_DATE_FORMAT" }}</li>
+      {% endif %}
+    {% endwith %}
+  </ul>
+  <div class="card-actions">
+    <a class="btn btn-solid" href="{% url 'pmc-pg-box-league-detail' playgroup.slug box_league.pk %}">View League</a>
+  </div>
+</li>

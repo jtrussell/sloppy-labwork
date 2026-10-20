@@ -28,7 +28,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.context_processors import playgroup
 from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm, PmcProfilePrivacyForm, RankingPointsMapVersionForm, VenueForm
 from pmc.forms import PlaygroupMemberForm
-from pmc.forms import LadderForm, LadderAddMemberForm, LadderMoveMemberForm, LadderResultForm
+from pmc.forms import LadderForm, LadderAddMemberForm, LadderMoveMemberForm, MatchOutcomeForm
+from pmc.forms import BoxLeagueForm, BoxLeagueTierNameFormSet, BoxLeagueAddMemberForm
+from pmc.forms import BoxAssignmentForm, BoxSessionStartForm, BoxProposalResizeForm, BoxAddForm
 from user_profile.forms import EditUsernameForm
 from .models import AchievementTier, AwardBase, Badge, EventResult, EventResultDeck, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, PinnedAward, UserAchievementTier, UserBadge, Trophy, UserTrophy, Achievement
 from .models import PlayerRank
@@ -49,6 +51,7 @@ from .models import exclude_upcoming_event_results
 from .models import filter_upcoming_events, get_activity_level
 from .models import Ladder, LadderChallenge, LadderRuleViolation
 from .models import Feature
+from .models import Box, BoxLeague, BoxLeagueSession, BoxLeagueRuleViolation, BoxMatch
 
 
 def is_pg_member(view):
@@ -134,9 +137,13 @@ class PlaygroupDetail(generic.DetailView):
         context['upcoming_events'] = upcoming_events
         is_member = self.request.user.is_authenticated and self.object.members.filter(
             user=self.request.user).exists()
-        if is_member and not self.object.is_global and self.object.has_feature(Feature.Keys.LADDERS):
+        enabled_feature_keys = self.object.get_enabled_feature_keys()
+        if is_member and not self.object.is_global and Feature.Keys.LADDERS in enabled_feature_keys:
             context['ladders'] = self.object.ladders.annotate(
                 num_players=Count('entries'))
+        if is_member and not self.object.is_global and Feature.Keys.BOX_LEAGUES in enabled_feature_keys:
+            context['box_leagues'] = self.object.box_leagues.annotate(
+                num_players=Count('roster'))
         return context
 
 
@@ -371,10 +378,10 @@ def ladder_manage_url(ladder):
     return reverse('pmc-pg-ladder-manage', kwargs={'slug': ladder.playgroup.slug, 'ladder_id': ladder.pk})
 
 
-def run_ladder_action(request, action, success_message, redirect_url):
+def run_competition_action(request, action, success_message, redirect_url):
     try:
         action()
-    except LadderRuleViolation as violation:
+    except (LadderRuleViolation, BoxLeagueRuleViolation) as violation:
         messages.error(request, str(violation))
     else:
         messages.success(request, success_message)
@@ -475,7 +482,7 @@ def manage_playgroup_ladder(request, slug, ladder_id):
 def join_playgroup_ladder(request, slug, ladder_id):
     ladder = get_ladder_or_404(slug, ladder_id)
     viewer_member = get_viewer_member_or_403(request, ladder.playgroup)
-    return run_ladder_action(
+    return run_competition_action(
         request,
         lambda: ladder.add_member(viewer_member),
         _('Welcome to the ladder!'),
@@ -490,7 +497,7 @@ def join_playgroup_ladder(request, slug, ladder_id):
 def leave_playgroup_ladder(request, slug, ladder_id):
     ladder = get_ladder_or_404(slug, ladder_id)
     viewer_member = get_viewer_member_or_403(request, ladder.playgroup)
-    return run_ladder_action(
+    return run_competition_action(
         request,
         lambda: ladder.remove_member(viewer_member),
         _('You have left the ladder.'),
@@ -510,7 +517,7 @@ def issue_ladder_challenge(request, slug, ladder_id):
         raise Http404
     defender = get_object_or_404(
         PlaygroupMember, pk=defender_id, playgroup=ladder.playgroup)
-    return run_ladder_action(
+    return run_competition_action(
         request,
         lambda: ladder.issue_challenge(viewer_member, defender),
         _('Challenge issued to %(name)s.') % {'name': defender},
@@ -537,9 +544,13 @@ def record_ladder_challenge_result(request, slug, ladder_id, challenge_id):
         messages.error(request, _('This challenge has already been resolved.'))
         return HttpResponseRedirect(ladder_detail_url(ladder))
 
-    form = LadderResultForm(request.POST or None, challenge=challenge)
+    form = MatchOutcomeForm(
+        request.POST or None,
+        match=challenge.match,
+        player_one_won_label=_('%(name)s won and moves ahead'),
+    )
     if request.method == 'POST' and form.is_valid():
-        return run_ladder_action(
+        return run_competition_action(
             request,
             lambda: ladder.record_result(
                 challenge, form.get_winner(), request.user),
@@ -560,7 +571,7 @@ def record_ladder_challenge_result(request, slug, ladder_id, challenge_id):
 def withdraw_ladder_challenge(request, slug, ladder_id, challenge_id):
     ladder = get_ladder_or_404(slug, ladder_id)
     challenge = get_ladder_challenge_or_404(ladder, challenge_id)
-    return run_ladder_action(
+    return run_competition_action(
         request,
         lambda: ladder.withdraw_challenge(challenge, request.user),
         _('Challenge withdrawn.'),
@@ -575,7 +586,7 @@ def withdraw_ladder_challenge(request, slug, ladder_id, challenge_id):
 def void_ladder_challenge(request, slug, ladder_id, challenge_id):
     ladder = get_ladder_or_404(slug, ladder_id)
     challenge = get_ladder_challenge_or_404(ladder, challenge_id)
-    return run_ladder_action(
+    return run_competition_action(
         request,
         lambda: ladder.void_challenge(challenge, request.user),
         _('Challenge voided. Positions were not changed; use Move to correct them if needed.'),
@@ -594,7 +605,7 @@ def add_ladder_member(request, slug, ladder_id):
         report_invalid_form(request, form)
         return redirect_to(request, ladder_manage_url(ladder))
     member = form.cleaned_data['member']
-    return run_ladder_action(
+    return run_competition_action(
         request,
         lambda: ladder.add_member(member, form.cleaned_data['position']),
         _('%(name)s added to the ladder.') % {'name': member},
@@ -614,7 +625,7 @@ def move_ladder_member(request, slug, ladder_id, member_id):
     if not form.is_valid():
         report_invalid_form(request, form)
         return redirect_to(request, ladder_manage_url(ladder))
-    return run_ladder_action(
+    return run_competition_action(
         request,
         lambda: ladder.move_member(member, form.cleaned_data['position']),
         _('%(name)s moved.') % {'name': member},
@@ -630,11 +641,511 @@ def remove_ladder_member(request, slug, ladder_id, member_id):
     ladder = get_ladder_or_404(slug, ladder_id)
     member = get_object_or_404(
         PlaygroupMember, pk=member_id, playgroup=ladder.playgroup)
-    return run_ladder_action(
+    return run_competition_action(
         request,
         lambda: ladder.remove_member(member),
         _('%(name)s removed from the ladder.') % {'name': member},
         ladder_manage_url(ladder),
+    )
+
+
+@login_required
+@is_pg_member
+def playgroup_play(request, slug):
+    playgroup = get_object_or_404(Playgroup, slug=slug, is_global=False)
+    enabled_feature_keys = playgroup.get_enabled_feature_keys()
+    has_ladders = Feature.Keys.LADDERS in enabled_feature_keys
+    has_box_leagues = Feature.Keys.BOX_LEAGUES in enabled_feature_keys
+    if not has_ladders and not has_box_leagues:
+        return redirect_to(request, reverse('pmc-pg-detail', kwargs={'slug': slug}))
+    return render(request, 'pmc/pg-play.html', {
+        'ladders': playgroup.ladders.annotate(num_players=Count('entries')) if has_ladders else None,
+        'box_leagues': playgroup.box_leagues.annotate(num_players=Count('roster')) if has_box_leagues else None,
+    })
+
+
+def get_box_league_or_404(slug, league_id):
+    return get_object_or_404(
+        BoxLeague.objects.select_related('playgroup'),
+        pk=league_id, playgroup__slug=slug, playgroup__is_global=False)
+
+
+def get_box_league_session_or_404(league, number):
+    return get_object_or_404(BoxLeagueSession, league=league, number=number)
+
+
+def get_box_match_or_404(league, box_match_id):
+    return get_object_or_404(
+        BoxMatch.objects.select_related(
+            'box__session', 'match__player_one__user', 'match__player_two__user', 'match__result'),
+        pk=box_match_id, box__session__league=league)
+
+
+def box_league_url(league, name='pmc-pg-box-league-detail'):
+    return reverse(name, kwargs={'slug': league.playgroup.slug, 'league_id': league.pk})
+
+
+def box_league_session_url(session):
+    return reverse('pmc-pg-box-league-session', kwargs={
+        'slug': session.league.playgroup.slug,
+        'league_id': session.league_id,
+        'number': session.number,
+    })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@is_pg_member
+def playgroup_box_leagues(request, slug):
+    playgroup = get_object_or_404(Playgroup, slug=slug, is_global=False)
+    return render(request, 'pmc/pg-box-leagues.html', {
+        'box_leagues': playgroup.box_leagues.annotate(num_players=Count('roster')),
+    })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@is_pg_staff
+def create_playgroup_box_league(request, slug):
+    playgroup = get_object_or_404(Playgroup, slug=slug, is_global=False)
+    form = BoxLeagueForm(request.POST or None, playgroup=playgroup)
+    if request.method == 'POST' and form.is_valid():
+        league = form.save(commit=False)
+        league.playgroup = playgroup
+        league.created_by = request.user
+        league.save()
+        messages.success(request, _('Box league created.'))
+        return HttpResponseRedirect(box_league_url(league, 'pmc-pg-box-league-manage'))
+    return render(request, 'pmc/pg-box-league-form.html', {'form': form})
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@is_pg_staff
+def edit_playgroup_box_league(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    form = BoxLeagueForm(request.POST or None, instance=league,
+                         playgroup=league.playgroup)
+    tier_names_by_level = league.get_tier_names_by_level()
+    named_level_count = max(tier_names_by_level, default=0)
+    tier_formset = BoxLeagueTierNameFormSet(
+        request.POST or None,
+        prefix='tiers',
+        initial=[{'name': tier_names_by_level.get(level, '')}
+                 for level in range(1, named_level_count + 1)],
+    )
+    if request.method == 'POST' and form.is_valid() and tier_formset.is_valid():
+        form.save()
+        league.rename_tiers(tier_formset.get_tier_names())
+        messages.success(request, _('Box league settings saved.'))
+        return HttpResponseRedirect(box_league_url(league, 'pmc-pg-box-league-manage'))
+    return render(request, 'pmc/pg-box-league-form.html', {
+        'form': form,
+        'tier_formset': tier_formset,
+        'league': league,
+    })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@is_pg_member
+def playgroup_box_league_detail(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    session = league.get_current_session()
+    if session:
+        return HttpResponseRedirect(box_league_session_url(session))
+    return render_box_league_session(request, league, None)
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@is_pg_member
+def playgroup_box_league_session(request, slug, league_id, number):
+    league = get_box_league_or_404(slug, league_id)
+    return render_box_league_session(
+        request, league, get_box_league_session_or_404(league, number))
+
+
+def render_box_league_session(request, league, session):
+    viewer_member = PlaygroupMember.objects.filter(
+        playgroup=league.playgroup, user=request.user).first()
+    box_summaries = session.get_box_summaries(viewer_member) if session else []
+    assigned_member_ids = {
+        standing.member.pk for summary in box_summaries for standing in summary.standings}
+    confirmed_member_ids = session.get_confirmed_member_ids() if session and session.is_proposed() else set()
+    waiting_members = [
+        roster_entry.member
+        for roster_entry in league.roster.select_related('member__user')
+        if roster_entry.member_id not in assigned_member_ids
+    ]
+    is_session_open = session is not None and not session.is_completed()
+    placed_player_count = len(assigned_member_ids)
+    return render(request, 'pmc/pg-box-league-session.html', {
+        'placed_player_count': placed_player_count,
+        'suggested_box_count': league.suggested_box_count(placed_player_count),
+        'resize_form': BoxProposalResizeForm(
+            initial={'box_count': len(box_summaries)}) if session and session.is_proposed() else None,
+        'add_box_form': BoxAddForm(session=session) if is_session_open else None,
+        'league': league,
+        'session': session,
+        'box_summaries': box_summaries,
+        'viewer_summary': next((summary for summary in box_summaries if summary.is_viewer_box), None),
+        'previous_session': session.get_previous_session() if session else None,
+        'next_session': session.get_next_session() if session else None,
+        'is_on_roster': league.is_on_roster(viewer_member),
+        'confirmed_member_ids': confirmed_member_ids,
+        'viewer_has_confirmed': viewer_member is not None and viewer_member.pk in confirmed_member_ids,
+        'waiting_members': waiting_members,
+        'is_stale_proposal': session is not None and session.is_stale_proposal(),
+        'has_proposal': league.get_proposed_session() is not None,
+        'assignment_form': BoxAssignmentForm(session=session, box_summaries=box_summaries) if is_session_open else None,
+    })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@is_pg_staff
+def manage_playgroup_box_league(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    current_session = league.get_active_session() or league.get_proposed_session()
+    box_name_by_member_id = {}
+    if current_session:
+        for summary in current_session.get_box_summaries():
+            for standing in summary.standings:
+                box_name_by_member_id[standing.member.pk] = summary.name
+    return render(request, 'pmc/pg-box-league-manage.html', {
+        'league': league,
+        'tiers': league.get_tiers(),
+        'current_session': current_session,
+        'proposal': league.get_proposed_session(),
+        'roster': [
+            (roster_entry, box_name_by_member_id.get(roster_entry.member_id))
+            for roster_entry in league.roster.select_related('member__user')
+        ],
+        'add_member_form': BoxLeagueAddMemberForm(league=league),
+    })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_member
+def join_box_league(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    viewer_member = get_viewer_member_or_403(request, league.playgroup)
+    return run_competition_action(
+        request,
+        lambda: league.join(viewer_member),
+        _('You are in! You will be placed in a box when the next session starts.'),
+        box_league_url(league),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_member
+def leave_box_league(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    viewer_member = get_viewer_member_or_403(request, league.playgroup)
+    return run_competition_action(
+        request,
+        lambda: league.leave(viewer_member),
+        _('You have left the league.'),
+        box_league_url(league),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_member
+def confirm_box_league_session(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    viewer_member = get_viewer_member_or_403(request, league.playgroup)
+    return run_competition_action(
+        request,
+        lambda: league.confirm(viewer_member),
+        _('Thanks! You are confirmed for the next session.'),
+        box_league_url(league),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_member
+def sit_out_box_league_session(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    viewer_member = get_viewer_member_or_403(request, league.playgroup)
+    return run_competition_action(
+        request,
+        lambda: league.withdraw_confirmation(viewer_member),
+        _('You will sit out the next session.'),
+        box_league_url(league),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_staff
+def plan_box_league_session(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    return run_competition_action(
+        request,
+        league.plan_next_session,
+        _('Next session proposed. Players can now confirm they are in.'),
+        box_league_url(league, 'pmc-pg-box-league-proposal'),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@is_pg_member
+def box_league_proposal(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    proposal = league.get_proposed_session()
+    if proposal is None:
+        return HttpResponseRedirect(box_league_url(league))
+    return HttpResponseRedirect(box_league_session_url(proposal))
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_staff
+def rebalance_box_league_session(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    return run_competition_action(
+        request,
+        league.rebalance_proposal,
+        _('Proposal rebalanced using confirmed players.'),
+        box_league_url(league, 'pmc-pg-box-league-proposal'),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_staff
+def resize_box_league_session(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    form = BoxProposalResizeForm(request.POST)
+    if not form.is_valid():
+        report_invalid_form(request, form)
+        return redirect_to(request, box_league_url(league, 'pmc-pg-box-league-proposal'))
+    return run_competition_action(
+        request,
+        lambda: league.resize_proposal(form.cleaned_data['box_count']),
+        _('Boxes updated.'),
+        box_league_url(league, 'pmc-pg-box-league-proposal'),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_staff
+def add_box_league_box(request, slug, league_id, number):
+    league = get_box_league_or_404(slug, league_id)
+    session = get_box_league_session_or_404(league, number)
+    form = BoxAddForm(request.POST, session=session)
+    if not form.is_valid():
+        report_invalid_form(request, form)
+        return redirect_to(request, box_league_session_url(session))
+    return run_competition_action(
+        request,
+        lambda: league.add_box(session, form.cleaned_data['level']),
+        _('Box added. Place players into it to create their matches.'),
+        box_league_session_url(session),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_staff
+def remove_box_league_box(request, slug, league_id, number, box_id):
+    league = get_box_league_or_404(slug, league_id)
+    session = get_box_league_session_or_404(league, number)
+    box = get_object_or_404(Box, pk=box_id, session=session)
+    return run_competition_action(
+        request,
+        lambda: league.remove_box(box),
+        _('Box removed.'),
+        box_league_session_url(session),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_staff
+def discard_box_league_session(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    return run_competition_action(
+        request,
+        league.discard_proposal,
+        _('Proposal discarded.'),
+        box_league_url(league, 'pmc-pg-box-league-manage'),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@is_pg_staff
+def start_box_league_session(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    proposal = league.get_proposed_session()
+    if proposal is None:
+        messages.error(request, _('There is no proposed session.'))
+        return HttpResponseRedirect(box_league_url(league))
+    today = date.today()
+    form = BoxSessionStartForm(
+        request.POST or None,
+        initial={'starts_on': today, 'ends_on': league.suggested_end_date(today)},
+    )
+    if request.method == 'POST' and form.is_valid():
+        return run_competition_action(
+            request,
+            lambda: league.start_session(
+                form.cleaned_data['starts_on'], form.cleaned_data['ends_on']),
+            _('Session %(number)s has started. Good luck, everyone!') % {'number': proposal.number},
+            box_league_session_url(proposal),
+        )
+    return render(request, 'pmc/pg-box-league-start.html', {
+        'league': league,
+        'proposal': proposal,
+        'form': form,
+    })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_staff
+def assign_box_league_player(request, slug, league_id, number):
+    league = get_box_league_or_404(slug, league_id)
+    session = get_box_league_session_or_404(league, number)
+    form = BoxAssignmentForm(
+        request.POST, session=session, box_summaries=session.get_box_summaries())
+    if not form.is_valid():
+        report_invalid_form(request, form)
+        return redirect_to(request, box_league_session_url(session))
+    member = form.cleaned_data['member']
+    return run_competition_action(
+        request,
+        lambda: league.assign_to_box(member, form.get_box()),
+        _('%(name)s placed.') % {'name': member},
+        box_league_session_url(session),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_staff
+def remove_box_league_session_player(request, slug, league_id, number, member_id):
+    league = get_box_league_or_404(slug, league_id)
+    session = get_box_league_session_or_404(league, number)
+    member = get_object_or_404(
+        PlaygroupMember, pk=member_id, playgroup=league.playgroup)
+    return run_competition_action(
+        request,
+        lambda: league.remove_from_session(member, session),
+        _('%(name)s removed from this session.') % {'name': member},
+        box_league_session_url(session),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_staff
+def add_box_league_member(request, slug, league_id):
+    league = get_box_league_or_404(slug, league_id)
+    form = BoxLeagueAddMemberForm(request.POST, league=league)
+    if not form.is_valid():
+        report_invalid_form(request, form)
+        return redirect_to(request, box_league_url(league, 'pmc-pg-box-league-manage'))
+    member = form.cleaned_data['member']
+    return run_competition_action(
+        request,
+        lambda: league.join(member),
+        _('%(name)s added to the league.') % {'name': member},
+        box_league_url(league, 'pmc-pg-box-league-manage'),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_staff
+def remove_box_league_member(request, slug, league_id, member_id):
+    league = get_box_league_or_404(slug, league_id)
+    member = get_object_or_404(
+        PlaygroupMember, pk=member_id, playgroup=league.playgroup)
+    return run_competition_action(
+        request,
+        lambda: league.leave(member),
+        _('%(name)s removed from the league.') % {'name': member},
+        box_league_url(league, 'pmc-pg-box-league-manage'),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@is_pg_member
+def record_box_match_result(request, slug, league_id, box_match_id):
+    league = get_box_league_or_404(slug, league_id)
+    box_match = get_box_match_or_404(league, box_match_id)
+    match = box_match.match
+    is_participant = request.user.pk in (match.player_one.user_id, match.player_two.user_id)
+    is_organizer = league.is_organizer(request.user)
+    if not is_participant and not is_organizer:
+        raise PermissionDenied
+    session_url = box_league_session_url(box_match.box.session)
+    if not box_match.box.session.is_active():
+        messages.error(request, _('Results can only be recorded while the session is active.'))
+        return HttpResponseRedirect(session_url)
+    if match.has_result() and not is_organizer:
+        messages.error(request, _('This match already has a result. Ask an organizer to change it.'))
+        return HttpResponseRedirect(session_url)
+
+    form = MatchOutcomeForm(
+        request.POST or None,
+        match=match,
+        initial=MatchOutcomeForm.initial_for(match.result) if match.has_result() else None,
+    )
+    if request.method == 'POST' and form.is_valid():
+        save_result = league.change_result if match.has_result() else league.record_result
+        return run_competition_action(
+            request,
+            lambda: save_result(box_match, form.get_winner(), request.user),
+            _('Result recorded.'),
+            session_url,
+        )
+    return render(request, 'pmc/pg-box-match-result.html', {
+        'league': league,
+        'box_match': box_match,
+        'form': form,
+        'session_url': session_url,
+    })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.BOX_LEAGUES)
+@require_POST
+@is_pg_staff
+def clear_box_match_result(request, slug, league_id, box_match_id):
+    league = get_box_league_or_404(slug, league_id)
+    box_match = get_box_match_or_404(league, box_match_id)
+    return run_competition_action(
+        request,
+        lambda: league.clear_result(box_match, request.user),
+        _('Result cleared.'),
+        box_league_session_url(box_match.box.session),
     )
 
 

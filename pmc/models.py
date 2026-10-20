@@ -9,6 +9,12 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
 from contextlib import contextmanager
+from itertools import combinations
+import calendar
+from .box_league_placement import (
+    MINIMUM_PLAYERS_PER_BOX, CompletedBox, boxes_per_level_of, linear_tier_box_counts,
+    movement_for_box, next_session_order, place_into_boxes, pyramid_tier_box_counts, rank_box,
+)
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.db.models import Sum, F, Count, Window, Value, Func
@@ -2105,6 +2111,7 @@ class AwardAssignmentService():
 class Feature(models.Model):
     class Keys:
         LADDERS = 'ladders'
+        BOX_LEAGUES = 'box-leagues'
 
     key = models.SlugField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
@@ -2594,3 +2601,672 @@ class LadderChallenge(models.Model):
         self.status = status
         self.resolved_on = timezone.now()
         self.save(update_fields=['status', 'resolved_on'])
+
+
+class BoxLeagueRuleViolation(Exception):
+    pass
+
+
+BoxStanding = namedtuple('BoxStanding', [
+    'rank', 'member', 'played', 'wins', 'ties', 'losses', 'points', 'is_promoted', 'is_relegated'])
+BoxSummary = namedtuple('BoxSummary', [
+    'box', 'name', 'standings', 'box_matches', 'is_viewer_box'])
+
+
+def box_display_name(tier_name, position_in_level, boxes_on_level):
+    if boxes_on_level == 1:
+        return tier_name
+    return f'{tier_name} {chr(ord("A") + position_in_level - 1)}'
+
+
+class BoxLeague(models.Model):
+    class Layouts(models.TextChoices):
+        LINEAR = ('linear', _('Linear (one box per tier)'))
+        PYRAMID = ('pyramid', _('Pyramid (lower tiers have more boxes)'))
+
+    playgroup = models.ForeignKey(
+        Playgroup, on_delete=models.CASCADE, related_name='box_leagues')
+    name = models.CharField(max_length=100)
+    layout = models.CharField(
+        max_length=10, choices=Layouts.choices, default=Layouts.LINEAR)
+    target_box_size = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(MINIMUM_PLAYERS_PER_BOX)],
+        help_text=_('Used to suggest how many boxes each session needs. You can add or remove boxes when planning a session.'))
+    promotion_count = models.PositiveSmallIntegerField(
+        default=1,
+        help_text=_('How many players move up from each box.'))
+    relegation_count = models.PositiveSmallIntegerField(
+        default=1,
+        help_text=_('How many players move down from each box. Doubled where the tier below has twice as many boxes.'))
+    session_length_months = models.PositiveSmallIntegerField(
+        default=1, validators=[MinValueValidator(1)],
+        help_text=_('Used to suggest the end date of each session.'))
+    created_on = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, related_name='+',
+        default=None, null=True, blank=True)
+
+    class Meta:
+        ordering = ['name']
+        constraints = [
+            UniqueConstraint(fields=['playgroup', 'name'],
+                             name='unique_box_league_name_per_playgroup'),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    def is_organizer(self, user):
+        return self.playgroup.members.filter(user=user, is_staff=True).exists()
+
+    def get_tiers(self):
+        return list(self.tiers.order_by('level'))
+
+    def get_tier_names_by_level(self):
+        return {tier.level: tier.name for tier in self.get_tiers()}
+
+    def get_tier_name(self, level, tier_names_by_level=None):
+        if tier_names_by_level is None:
+            tier_names_by_level = self.get_tier_names_by_level()
+        return tier_names_by_level.get(level) or BoxLeagueTier.default_name(level)
+
+    def has_unbalanced_movement(self):
+        return self.promotion_count != self.relegation_count
+
+    def suggested_box_count(self, player_count):
+        return max(1, round(player_count / self.target_box_size))
+
+    def tier_box_counts_for(self, box_count):
+        if self.layout == self.Layouts.PYRAMID:
+            return pyramid_tier_box_counts(box_count)
+        return linear_tier_box_counts(box_count)
+
+    def get_active_session(self):
+        return self.sessions.filter(status=BoxLeagueSession.SessionStatuses.ACTIVE).first()
+
+    def get_proposed_session(self):
+        return self.sessions.filter(status=BoxLeagueSession.SessionStatuses.PROPOSED).first()
+
+    def get_current_session(self):
+        return self.get_active_session() or self.get_proposed_session() or self.sessions.order_by('-number').first()
+
+    def get_roster_member_ids(self):
+        return list(self.roster.order_by('joined_on', 'pk').values_list('member_id', flat=True))
+
+    def is_on_roster(self, member):
+        return member is not None and self.roster.filter(member=member).exists()
+
+    def suggested_end_date(self, starts_on):
+        month_index = starts_on.month - 1 + self.session_length_months
+        year = starts_on.year + month_index // 12
+        month = month_index % 12 + 1
+        last_day_of_month = calendar.monthrange(year, month)[1]
+        return starts_on.replace(year=year, month=month, day=min(starts_on.day, last_day_of_month))
+
+    def rename_tiers(self, tier_names):
+        with self._locked():
+            self.tiers.all().delete()
+            BoxLeagueTier.objects.bulk_create([
+                BoxLeagueTier(league=self, level=level, name=name)
+                for level, name in enumerate(tier_names, start=1)
+                if name
+            ])
+
+    def join(self, member):
+        self._ensure_playgroup_member(member)
+        with self._locked():
+            if self.roster.filter(member=member).exists():
+                raise BoxLeagueRuleViolation(
+                    _('%(name)s is already in this league.') % {'name': member})
+            BoxLeagueMember.objects.create(league=self, member=member)
+            proposal = self.get_proposed_session()
+            if proposal:
+                BoxSessionConfirmation.objects.get_or_create(session=proposal, member=member)
+                self._place_in_smallest_bottom_box(proposal, member)
+
+    def leave(self, member):
+        with self._locked():
+            roster_entry = self.roster.filter(member=member).first()
+            if roster_entry is None:
+                raise BoxLeagueRuleViolation(
+                    _('%(name)s is not in this league.') % {'name': member})
+            for session in self.sessions.exclude(status=BoxLeagueSession.SessionStatuses.COMPLETED):
+                self._remove_from_session(session, member)
+                session.confirmations.filter(member=member).delete()
+            roster_entry.delete()
+
+    def assign_to_box(self, member, box):
+        self._ensure_playgroup_member(member)
+        with self._locked():
+            session = self._require_open_session(box.session)
+            BoxLeagueMember.objects.get_or_create(league=self, member=member)
+            assignment = session.assignments.filter(
+                member=member).select_related('box').first()
+            if assignment and assignment.box_id == box.pk:
+                return
+            if assignment:
+                self._delete_unplayed_matches(assignment.box, member)
+                assignment.box = box
+                assignment.save(update_fields=['box'])
+            else:
+                BoxAssignment.objects.create(session=session, box=box, member=member)
+            if session.is_proposed():
+                BoxSessionConfirmation.objects.get_or_create(session=session, member=member)
+            if session.is_active():
+                self._create_missing_matches(session, box, member)
+
+    def remove_from_session(self, member, session):
+        with self._locked():
+            session = self._require_open_session(session)
+            if not session.assignments.filter(member=member).exists():
+                raise BoxLeagueRuleViolation(
+                    _('%(name)s is not in this session.') % {'name': member})
+            self._remove_from_session(session, member)
+            if session.is_proposed():
+                session.confirmations.filter(member=member).delete()
+
+    def plan_next_session(self):
+        with self._locked():
+            if self.get_proposed_session():
+                raise BoxLeagueRuleViolation(_('A session is already proposed.'))
+            active_session = self.get_active_session()
+            proposal = BoxLeagueSession.objects.create(
+                league=self,
+                number=self._next_session_number(),
+                status=BoxLeagueSession.SessionStatuses.PROPOSED,
+                result_fingerprint=active_session.get_result_fingerprint() if active_session else '',
+            )
+            self._fill_proposal(proposal, active_session, self.get_roster_member_ids())
+            return proposal
+
+    def rebalance_proposal(self):
+        with self._locked():
+            proposal = self._require_proposal()
+            active_session = self.get_active_session()
+            confirmed_member_ids = set(
+                proposal.confirmations.values_list('member_id', flat=True))
+            participating_member_ids = [
+                member_id for member_id in self.get_roster_member_ids()
+                if member_id in confirmed_member_ids
+            ]
+            proposal.boxes.all().delete()
+            proposal.result_fingerprint = active_session.get_result_fingerprint() if active_session else ''
+            proposal.save(update_fields=['result_fingerprint'])
+            self._fill_proposal(proposal, active_session, participating_member_ids)
+
+    def resize_proposal(self, box_count):
+        if box_count < 1:
+            raise BoxLeagueRuleViolation(_('A session needs at least one box.'))
+        with self._locked():
+            proposal = self._require_proposal()
+            assigned_member_ids = set(proposal.assignments.values_list('member_id', flat=True))
+            placed_member_ids = [
+                member_id for member_id in self.get_roster_member_ids()
+                if member_id in assigned_member_ids
+            ]
+            proposal.boxes.all().delete()
+            proposal.box_count = box_count
+            proposal.save(update_fields=['box_count'])
+            self._fill_proposal(proposal, self.get_active_session(), placed_member_ids)
+
+    def add_box(self, session, level):
+        with self._locked():
+            session = self._require_open_session(session)
+            bottom_level = session.boxes.aggregate(bottom=models.Max('level'))['bottom'] or 0
+            if not 1 <= level <= bottom_level + 1:
+                raise BoxLeagueRuleViolation(_('Choose an existing tier or a new bottom tier.'))
+            last_ordinal = session.boxes.filter(level=level).aggregate(
+                last=models.Max('ordinal'))['last'] or 0
+            return Box.objects.create(session=session, level=level, ordinal=last_ordinal + 1)
+
+    def remove_box(self, box):
+        with self._locked():
+            self._require_open_session(box.session)
+            if box.assignments.exists():
+                raise BoxLeagueRuleViolation(_('Move everyone out of this box before removing it.'))
+            if box.box_matches.filter(match__result__isnull=False).exists():
+                raise BoxLeagueRuleViolation(_('This box has recorded results, so it cannot be removed.'))
+            box.delete()
+
+    def discard_proposal(self):
+        with self._locked():
+            self._require_proposal().delete()
+
+    def start_session(self, starts_on, ends_on):
+        if ends_on < starts_on:
+            raise BoxLeagueRuleViolation(
+                _('The session must end on or after its start date.'))
+        with self._locked():
+            proposal = self._require_proposal()
+            if not proposal.assignments.exists():
+                raise BoxLeagueRuleViolation(
+                    _('Place at least one player before starting the session.'))
+            proposal.boxes.filter(assignments__isnull=True).delete()
+            self.sessions.filter(
+                status=BoxLeagueSession.SessionStatuses.ACTIVE
+            ).update(status=BoxLeagueSession.SessionStatuses.COMPLETED)
+            proposal.status = BoxLeagueSession.SessionStatuses.ACTIVE
+            proposal.starts_on = starts_on
+            proposal.ends_on = ends_on
+            proposal.started_on = timezone.now()
+            proposal.save()
+            for box in proposal.boxes.all():
+                self._create_round_robin(box)
+            return proposal
+
+    def confirm(self, member):
+        with self._locked():
+            proposal = self._require_proposal()
+            if not self.roster.filter(member=member).exists():
+                raise BoxLeagueRuleViolation(_('Join the league first.'))
+            BoxSessionConfirmation.objects.get_or_create(session=proposal, member=member)
+
+    def withdraw_confirmation(self, member):
+        with self._locked():
+            self._require_proposal().confirmations.filter(member=member).delete()
+
+    def record_result(self, box_match, winner, recorded_by):
+        self._ensure_participant_or_organizer(box_match.match, recorded_by)
+        with self._locked():
+            box_match = self._reload_box_match_in_active_session(box_match)
+            if box_match.match.has_result():
+                raise BoxLeagueRuleViolation(_('This match already has a result.'))
+            self._ensure_winner_in_match(box_match.match, winner)
+            MatchResult.objects.create(
+                match=box_match.match, winner=winner, recorded_by=recorded_by)
+
+    def change_result(self, box_match, winner, acting_user):
+        if not self.is_organizer(acting_user):
+            raise PermissionDenied
+        with self._locked():
+            box_match = self._reload_box_match_in_active_session(box_match)
+            self._ensure_winner_in_match(box_match.match, winner)
+            MatchResult.objects.update_or_create(
+                match=box_match.match,
+                defaults={'winner': winner, 'recorded_by': acting_user},
+            )
+
+    def clear_result(self, box_match, acting_user):
+        if not self.is_organizer(acting_user):
+            raise PermissionDenied
+        with self._locked():
+            box_match = self._reload_box_match_in_active_session(box_match)
+            if not box_match.match.has_result():
+                raise BoxLeagueRuleViolation(_('This match has no result to clear.'))
+            box_match.match.result.delete()
+
+    @contextmanager
+    def _locked(self):
+        with transaction.atomic():
+            BoxLeague.objects.select_for_update().get(pk=self.pk)
+            yield
+
+    def _next_session_number(self):
+        latest_number = self.sessions.aggregate(
+            latest=models.Max('number'))['latest'] or 0
+        return latest_number + 1
+
+    def _fill_proposal(self, proposal, active_session, participating_member_ids):
+        completed_boxes = active_session.get_completed_boxes() if active_session else []
+        participating = set(participating_member_ids)
+        departing_member_ids = [
+            member_id
+            for completed_box in completed_boxes
+            for member_id in completed_box.ranked_member_ids
+            if member_id not in participating
+        ]
+        ordered_member_ids = next_session_order(
+            completed_boxes,
+            self.promotion_count,
+            self.relegation_count,
+            departing_member_ids,
+            participating_member_ids,
+        )
+        box_count = proposal.box_count or self.suggested_box_count(len(ordered_member_ids))
+        tier_box_counts = self.tier_box_counts_for(box_count)
+        for proposed_box in place_into_boxes(ordered_member_ids, tier_box_counts):
+            box = Box.objects.create(
+                session=proposal, level=proposed_box.level, ordinal=proposed_box.ordinal)
+            BoxAssignment.objects.bulk_create([
+                BoxAssignment(session=proposal, box=box, member_id=member_id)
+                for member_id in proposed_box.member_ids
+            ])
+
+    def _create_round_robin(self, box):
+        member_ids = list(box.assignments.order_by('pk').values_list('member_id', flat=True))
+        for player_one_id, player_two_id in combinations(member_ids, 2):
+            self._create_box_match(box, player_one_id, player_two_id)
+
+    def _create_missing_matches(self, session, box, member):
+        opponent_ids = box.assignments.exclude(
+            member=member).order_by('pk').values_list('member_id', flat=True)
+        session_matches = Match.objects.filter(box_match__box__session=session)
+        already_paired_ids = set(
+            session_matches.filter(player_one=member).values_list('player_two_id', flat=True)
+        ) | set(
+            session_matches.filter(player_two=member).values_list('player_one_id', flat=True)
+        )
+        for opponent_id in opponent_ids:
+            if opponent_id not in already_paired_ids:
+                self._create_box_match(box, opponent_id, member.pk)
+
+    def _create_box_match(self, box, player_one_id, player_two_id):
+        match = Match.objects.create(
+            playgroup_id=self.playgroup_id, player_one_id=player_one_id, player_two_id=player_two_id)
+        BoxMatch.objects.create(box=box, match=match)
+
+    def _place_in_smallest_bottom_box(self, proposal, member):
+        bottom_level_boxes = proposal.boxes.annotate(
+            player_count=Count('assignments')
+        ).order_by('-level', 'player_count', 'ordinal')
+        smallest_bottom_box = bottom_level_boxes.first()
+        if smallest_bottom_box is None or proposal.assignments.filter(member=member).exists():
+            return
+        BoxAssignment.objects.create(session=proposal, box=smallest_bottom_box, member=member)
+
+    def _remove_from_session(self, session, member):
+        assignment = session.assignments.filter(member=member).select_related('box').first()
+        if assignment is None:
+            return
+        self._delete_unplayed_matches(assignment.box, member)
+        assignment.delete()
+
+    def _delete_unplayed_matches(self, box, member):
+        Match.objects.filter(
+            box_match__box=box, result__isnull=True
+        ).filter(
+            Q(player_one=member) | Q(player_two=member)
+        ).delete()
+
+    def _require_proposal(self):
+        proposal = self.get_proposed_session()
+        if proposal is None:
+            raise BoxLeagueRuleViolation(_('There is no proposed session.'))
+        return proposal
+
+    def _require_open_session(self, session):
+        if session.league_id != self.pk:
+            raise BoxLeagueRuleViolation(_('That session belongs to another league.'))
+        session.refresh_from_db()
+        if session.is_completed():
+            raise BoxLeagueRuleViolation(_('Completed sessions cannot be changed.'))
+        return session
+
+    def _reload_box_match_in_active_session(self, box_match):
+        box_match = BoxMatch.objects.select_related(
+            'match', 'box__session').get(pk=box_match.pk, box__session__league=self)
+        if not box_match.box.session.is_active():
+            raise BoxLeagueRuleViolation(
+                _('Results can only be recorded while the session is active.'))
+        return box_match
+
+    def _ensure_playgroup_member(self, member):
+        if member.playgroup_id != self.playgroup_id:
+            raise BoxLeagueRuleViolation(
+                _('%(name)s is not a member of this playgroup.') % {'name': member})
+
+    def _ensure_participant_or_organizer(self, match, user):
+        participant_user_ids = (match.player_one.user_id, match.player_two.user_id)
+        if user.pk not in participant_user_ids and not self.is_organizer(user):
+            raise PermissionDenied
+
+    @staticmethod
+    def _ensure_winner_in_match(match, winner):
+        if winner is not None and not match.involves(winner):
+            raise BoxLeagueRuleViolation(
+                _('The winner must be one of the players in this match.'))
+
+
+class BoxLeagueTier(models.Model):
+    league = models.ForeignKey(
+        BoxLeague, on_delete=models.CASCADE, related_name='tiers')
+    level = models.PositiveSmallIntegerField()
+    name = models.CharField(max_length=50)
+
+    class Meta:
+        ordering = ['level']
+        constraints = [
+            UniqueConstraint(fields=['league', 'level'],
+                             name='unique_box_league_tier_level'),
+        ]
+
+    def __str__(self):
+        return f'{self.league} - {self.name}'
+
+    @staticmethod
+    def default_name(level):
+        return _('Tier %(level)s') % {'level': level}
+
+
+class BoxLeagueMember(models.Model):
+    league = models.ForeignKey(
+        BoxLeague, on_delete=models.CASCADE, related_name='roster')
+    member = models.ForeignKey(
+        PlaygroupMember, on_delete=models.CASCADE, related_name='box_league_entries')
+    joined_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['joined_on', 'pk']
+        constraints = [
+            UniqueConstraint(fields=['league', 'member'],
+                             name='unique_box_league_member'),
+        ]
+
+    def __str__(self):
+        return f'{self.league} - {self.member}'
+
+
+class BoxLeagueSession(models.Model):
+    class SessionStatuses(models.IntegerChoices):
+        PROPOSED = (0, _('Proposed'))
+        ACTIVE = (1, _('Active'))
+        COMPLETED = (2, _('Completed'))
+
+    league = models.ForeignKey(
+        BoxLeague, on_delete=models.CASCADE, related_name='sessions')
+    number = models.PositiveIntegerField()
+    status = models.IntegerField(
+        choices=SessionStatuses.choices, default=SessionStatuses.PROPOSED)
+    starts_on = models.DateField(default=None, null=True, blank=True)
+    ends_on = models.DateField(default=None, null=True, blank=True)
+    planned_on = models.DateTimeField(auto_now_add=True)
+    started_on = models.DateTimeField(default=None, null=True, blank=True)
+    result_fingerprint = models.CharField(max_length=64, default='', blank=True)
+    box_count = models.PositiveSmallIntegerField(
+        default=None, null=True, blank=True,
+        help_text=_('Set when an organizer chooses the number of boxes; otherwise it follows the target box size.'))
+
+    class Meta:
+        ordering = ['number']
+        constraints = [
+            UniqueConstraint(fields=['league', 'number'],
+                             name='unique_box_league_session_number'),
+            UniqueConstraint(fields=['league'], condition=Q(status=0),
+                             name='one_proposed_session_per_box_league'),
+            UniqueConstraint(fields=['league'], condition=Q(status=1),
+                             name='one_active_session_per_box_league'),
+        ]
+
+    def __str__(self):
+        return f'{self.league} - Session {self.number}'
+
+    def is_proposed(self):
+        return self.status == self.SessionStatuses.PROPOSED
+
+    def is_active(self):
+        return self.status == self.SessionStatuses.ACTIVE
+
+    def is_completed(self):
+        return self.status == self.SessionStatuses.COMPLETED
+
+    def get_previous_session(self):
+        return self.league.sessions.filter(number__lt=self.number).order_by('-number').first()
+
+    def get_next_session(self):
+        return self.league.sessions.filter(number__gt=self.number).order_by('number').first()
+
+    def get_confirmed_member_ids(self):
+        return set(self.confirmations.values_list('member_id', flat=True))
+
+    def get_result_fingerprint(self):
+        results = sorted(MatchResult.objects.filter(
+            match__box_match__box__session=self
+        ).values_list('match_id', 'winner_id'))
+        assignments = sorted(self.assignments.values_list('box_id', 'member_id'))
+        return hashlib.sha256(repr((results, assignments)).encode()).hexdigest()
+
+    def is_stale_proposal(self):
+        if not self.is_proposed():
+            return False
+        active_session = self.league.get_active_session()
+        current_fingerprint = active_session.get_result_fingerprint() if active_session else ''
+        return current_fingerprint != self.result_fingerprint
+
+    def get_completed_boxes(self):
+        return [
+            CompletedBox(box.level, box.ordinal, [player.member_id for player in ranked_players])
+            for box, ranked_players, _box_matches in self._rank_boxes()
+        ]
+
+    def get_box_summaries(self, viewer_member=None):
+        tier_names_by_level = self.league.get_tier_names_by_level()
+        ranked_boxes = self._rank_boxes()
+        boxes_per_level = boxes_per_level_of(
+            [CompletedBox(box.level, box.ordinal, []) for box, _ranked, _matches in ranked_boxes]
+        ) if ranked_boxes else []
+        members_by_id = {
+            assignment.member_id: assignment.member
+            for assignment in self.assignments.select_related('member__user__pmc_profile__avatar')
+        }
+        summaries = []
+        for box, ranked_players, box_matches in ranked_boxes:
+            promoted_count, relegated_count = movement_for_box(
+                len(ranked_players), box.level, boxes_per_level,
+                self.league.promotion_count, self.league.relegation_count)
+            show_zones = not self.is_proposed()
+            standings = [
+                BoxStanding(
+                    rank=player.rank,
+                    member=members_by_id[player.member_id],
+                    played=player.played,
+                    wins=player.wins,
+                    ties=player.ties,
+                    losses=player.losses,
+                    points=player.points,
+                    is_promoted=show_zones and player.rank <= promoted_count,
+                    is_relegated=show_zones and player.rank > len(ranked_players) - relegated_count,
+                )
+                for player in ranked_players
+            ]
+            position_in_level = sum(
+                1 for earlier_summary in summaries if earlier_summary.box.level == box.level) + 1
+            summaries.append(BoxSummary(
+                box=box,
+                name=box_display_name(
+                    self.league.get_tier_name(box.level, tier_names_by_level),
+                    position_in_level,
+                    boxes_per_level[box.level - 1],
+                ),
+                standings=standings,
+                box_matches=box_matches,
+                is_viewer_box=viewer_member is not None and any(
+                    player.member_id == viewer_member.pk for player in ranked_players),
+            ))
+        return summaries
+
+    def _rank_boxes(self):
+        boxes = list(self.boxes.all())
+        member_ids_by_box_id = {box.pk: [] for box in boxes}
+        for box_id, member_id in self.assignments.order_by('pk').values_list('box_id', 'member_id'):
+            member_ids_by_box_id[box_id].append(member_id)
+        box_matches_by_box_id = {box.pk: [] for box in boxes}
+        for box_match in BoxMatch.objects.filter(box__session=self).select_related(
+                'match__player_one__user', 'match__player_two__user', 'match__result__winner__user'
+        ).order_by('match__pk'):
+            box_matches_by_box_id[box_match.box_id].append(box_match)
+
+        session_results = [
+            (box_match.match.player_one_id, box_match.match.player_two_id, box_match.match.result.winner_id)
+            for box_matches in box_matches_by_box_id.values()
+            for box_match in box_matches
+            if box_match.match.has_result()
+        ]
+
+        ranked_boxes = []
+        for box in boxes:
+            member_ids = member_ids_by_box_id[box.pk]
+            if self.is_proposed():
+                ranked_players = rank_box(member_ids, [], member_ids.index)
+            else:
+                ranked_players = rank_box(member_ids, session_results, box.tiebreak_key)
+            ranked_boxes.append((box, ranked_players, box_matches_by_box_id[box.pk]))
+        return ranked_boxes
+
+
+class Box(models.Model):
+    session = models.ForeignKey(
+        BoxLeagueSession, on_delete=models.CASCADE, related_name='boxes')
+    level = models.PositiveSmallIntegerField()
+    ordinal = models.PositiveSmallIntegerField()
+
+    class Meta:
+        verbose_name_plural = 'Boxes'
+        ordering = ['level', 'ordinal']
+        constraints = [
+            UniqueConstraint(fields=['session', 'level', 'ordinal'],
+                             name='unique_box_position_per_session'),
+        ]
+
+    def __str__(self):
+        return f'{self.session} - Level {self.level} Box {self.ordinal}'
+
+    def tiebreak_key(self, member_id):
+        return hashlib.sha256(f'{self.pk}:{member_id}'.encode()).hexdigest()
+
+
+class BoxAssignment(models.Model):
+    session = models.ForeignKey(
+        BoxLeagueSession, on_delete=models.CASCADE, related_name='assignments')
+    box = models.ForeignKey(
+        Box, on_delete=models.CASCADE, related_name='assignments')
+    member = models.ForeignKey(
+        PlaygroupMember, on_delete=models.CASCADE, related_name='box_assignments')
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['session', 'member'],
+                             name='unique_box_assignment_per_session'),
+        ]
+
+    def __str__(self):
+        return f'{self.box} - {self.member}'
+
+
+class BoxSessionConfirmation(models.Model):
+    session = models.ForeignKey(
+        BoxLeagueSession, on_delete=models.CASCADE, related_name='confirmations')
+    member = models.ForeignKey(
+        PlaygroupMember, on_delete=models.CASCADE, related_name='+')
+    confirmed_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['session', 'member'],
+                             name='unique_box_session_confirmation'),
+        ]
+
+    def __str__(self):
+        return f'{self.session} - {self.member}'
+
+
+class BoxMatch(models.Model):
+    box = models.ForeignKey(
+        Box, on_delete=models.CASCADE, related_name='box_matches')
+    match = models.OneToOneField(
+        Match, on_delete=models.CASCADE, related_name='box_match')
+
+    class Meta:
+        verbose_name_plural = 'Box matches'
+
+    def __str__(self):
+        return f'{self.box} - {self.match}'

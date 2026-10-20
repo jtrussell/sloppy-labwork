@@ -1,0 +1,62 @@
+.box-session-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.box-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+.box-card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.box-card.is-viewer-box {
+  box-shadow: inset var(--border-size) 0 0 var(--color-primary);
+}
+
+.box-standings tr.is-viewer>td {
+  background-color: var(--color-gray);
+}
+
+.box-standings tr.is-promoted>td:first-child {
+  box-shadow: inset var(--border-size) 0 0 var(--color-success);
+}
+
+.box-standings tr.is-relegated>td:first-child {
+  box-shadow: inset var(--border-size) 0 0 var(--color-danger);
+}
+
+.box-matches {
+  margin-top: 1rem;
+}
+
+.box-matches summary {
+  cursor: pointer;
+}
+
+.box-match-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-lines);
+}
+
+.box-match-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.box-league-tiers input[type="number"] {
+  width: 4.5rem;
+}

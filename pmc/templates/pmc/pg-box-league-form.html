@@ -1,0 +1,62 @@
+{% extends "pmc/_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/box-leagues.css' %}">
+{% endblock %}
+
+{% block content %}
+  {% if league %}
+    <h1>{{ league.name }}</h1>
+    <div class="subheading">League Settings</div>
+  {% else %}
+    <h1>New Box League</h1>
+  {% endif %}
+
+  <form method="POST">
+    {% csrf_token %}
+    <div class="card staff-only form">
+      <h2>Details</h2>
+      {{ form.as_p }}
+    </div>
+
+    {% if tier_formset %}
+      <div class="card staff-only">
+        <h2>Tier Names</h2>
+        <p class="text-muted">
+          Name tiers from the top down, e.g. Gold, Silver, Bronze. Unnamed tiers show as
+          "Tier 2", "Tier 3" and so on. Each session's boxes follow the layout and players per box.
+        </p>
+        {{ tier_formset.management_form }}
+        <table class="box-league-tiers">
+          <thead>
+            <tr>
+              <th class="col-sm">Tier</th>
+              <th class="text-left">Name</th>
+              <th class="col-md">Remove</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tier_form in tier_formset %}
+              <tr>
+                <td class="col-sm">{{ forloop.counter }}</td>
+                <td class="text-left">{{ tier_form.name }}</td>
+                <td class="col-md">{{ tier_form.DELETE }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <p class="text-muted text-smaller">Save to add another tier name.</p>
+      </div>
+    {% endif %}
+
+    <div class="card-actions">
+      {% if league %}
+        <a class="btn" href="{% url 'pmc-pg-box-league-manage' playgroup.slug league.pk %}">Cancel</a>
+      {% else %}
+        <a class="btn" href="{% url 'pmc-pg-box-leagues' playgroup.slug %}">Cancel</a>
+      {% endif %}
+      <button class="btn btn-solid" type="submit">Save</button>
+    </div>
+  </form>
+{% endblock %}

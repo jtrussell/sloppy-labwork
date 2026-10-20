@@ -255,7 +255,13 @@ nav {
 nav ul {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
   list-style-type: none;
+}
+
+nav li {
+  white-space: nowrap;
 }
 
 nav select {

@@ -1,0 +1,21 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+  <h1>Start Session {{ proposal.number }}</h1>
+  <div class="subheading">{{ league.name }}</div>
+
+  <div class="card staff-only">
+    <p>
+      Starting creates every match in each box using the proposal exactly as shown.
+      The current session will be completed and its results locked.
+    </p>
+    <form method="POST">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <div class="card-actions">
+        <a class="btn" href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk proposal.number %}">Cancel</a>
+        <button class="btn btn-solid" type="submit">Start Session</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+  <h1>Record Result</h1>
+  <div class="subheading">{{ league.name }} · Session {{ box_match.box.session.number }}</div>
+
+  <div class="card">
+    <h2>{{ box_match.match.player_one }} vs {{ box_match.match.player_two }}</h2>
+    <p>Standings update as soon as the result is saved.</p>
+    <form method="POST">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <div class="card-actions">
+        <a class="btn" href="{{ session_url }}">Cancel</a>
+        <button class="btn btn-solid" type="submit">Save Result</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

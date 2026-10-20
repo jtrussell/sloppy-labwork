@@ -34,6 +34,9 @@
     {% if not object.is_global and 'ladders' in pg_features %}
       <p><a href="{% url 'pmc-pg-ladder-new' object.slug %}" class="btn btn-block">Add Ladder</a></p>
     {% endif %}
+    {% if not object.is_global and 'box-leagues' in pg_features %}
+      <p><a href="{% url 'pmc-pg-box-league-new' object.slug %}" class="btn btn-block">Add Box League</a></p>
+    {% endif %}
   </div>
 
   {% if not playgroup_member and not object.is_global %}
@@ -64,6 +67,15 @@
     <ul class="card-list">
       {% for ladder in ladders %}
         {% include 'pmc/_ladder-card.html' %}
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if box_leagues %}
+    <h2>Box Leagues</h2>
+    <ul class="card-list">
+      {% for box_league in box_leagues %}
+        {% include 'pmc/_box-league-card.html' %}
       {% endfor %}
     </ul>
   {% endif %}

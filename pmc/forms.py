@@ -7,6 +7,8 @@ from .models import PlaygroupMember
 from .models import Venue
 from .models import EventFormat
 from .models import Ladder
+from .models import BoxLeague
+from django.db.models import Max
 from django.utils.translation import gettext_lazy as _
 
 
@@ -333,11 +335,8 @@ class VenueForm(forms.ModelForm):
         }
 
 
-class LadderForm(forms.ModelForm):
-    class Meta:
-        model = Ladder
-        fields = ('name', 'challenges_enabled', 'challenge_range',
-                  'open_challenge_limit', 'response_window_days')
+class UniqueNameInPlaygroupForm(forms.ModelForm):
+    duplicate_name_message = None
 
     def __init__(self, *args, playgroup, **kwargs):
         super().__init__(*args, **kwargs)
@@ -345,12 +344,20 @@ class LadderForm(forms.ModelForm):
 
     def clean_name(self):
         name = self.cleaned_data['name']
-        same_named_ladders = Ladder.objects.filter(
+        same_named_objects = self._meta.model.objects.filter(
             playgroup=self.playgroup, name__iexact=name).exclude(pk=self.instance.pk)
-        if same_named_ladders.exists():
-            raise forms.ValidationError(
-                _('This playgroup already has a ladder with that name.'))
+        if same_named_objects.exists():
+            raise forms.ValidationError(self.duplicate_name_message)
         return name
+
+
+class LadderForm(UniqueNameInPlaygroupForm):
+    duplicate_name_message = _('This playgroup already has a ladder with that name.')
+
+    class Meta:
+        model = Ladder
+        fields = ('name', 'challenges_enabled', 'challenge_range',
+                  'open_challenge_limit', 'response_window_days')
 
 
 class LadderAddMemberForm(forms.Form):
@@ -371,25 +378,130 @@ class LadderMoveMemberForm(forms.Form):
     position = forms.IntegerField(min_value=1)
 
 
-class LadderResultForm(forms.Form):
-    CHALLENGER_WON = 'challenger'
-    DEFENDER_WON = 'defender'
+class MatchOutcomeForm(forms.Form):
+    PLAYER_ONE_WON = 'player_one'
+    PLAYER_TWO_WON = 'player_two'
     TIE = 'tie'
+    PLAYER_WON_LABEL = _('%(name)s won')
 
     outcome = forms.ChoiceField(widget=forms.RadioSelect, label=_('Result'))
 
-    def __init__(self, *args, challenge, **kwargs):
+    def __init__(self, *args, match, player_one_won_label=PLAYER_WON_LABEL, **kwargs):
         super().__init__(*args, **kwargs)
-        self.challenge = challenge
+        self.match = match
         self.fields['outcome'].choices = [
-            (self.CHALLENGER_WON, _('%(name)s won and moves ahead') % {'name': challenge.challenger}),
-            (self.DEFENDER_WON, _('%(name)s won') % {'name': challenge.defender}),
+            (self.PLAYER_ONE_WON, player_one_won_label % {'name': match.player_one}),
+            (self.PLAYER_TWO_WON, self.PLAYER_WON_LABEL % {'name': match.player_two}),
             (self.TIE, _('Tie')),
         ]
 
+    @classmethod
+    def initial_for(cls, result):
+        if result.is_tie():
+            return {'outcome': cls.TIE}
+        if result.winner_id == result.match.player_one_id:
+            return {'outcome': cls.PLAYER_ONE_WON}
+        return {'outcome': cls.PLAYER_TWO_WON}
+
     def get_winner(self):
         return {
-            self.CHALLENGER_WON: self.challenge.challenger,
-            self.DEFENDER_WON: self.challenge.defender,
+            self.PLAYER_ONE_WON: self.match.player_one,
+            self.PLAYER_TWO_WON: self.match.player_two,
             self.TIE: None,
         }[self.cleaned_data['outcome']]
+
+
+class BoxLeagueForm(UniqueNameInPlaygroupForm):
+    duplicate_name_message = _('This playgroup already has a box league with that name.')
+
+    class Meta:
+        model = BoxLeague
+        fields = ('name', 'layout', 'target_box_size', 'promotion_count',
+                  'relegation_count', 'session_length_months')
+        labels = {
+            'target_box_size': _('Players per box'),
+            'promotion_count': _('Moving up'),
+            'relegation_count': _('Moving down'),
+            'session_length_months': _('Session length (months)'),
+        }
+
+
+class BoxLeagueTierNameForm(forms.Form):
+    name = forms.CharField(max_length=50, required=False)
+
+
+class BaseBoxLeagueTierNameFormSet(forms.BaseFormSet):
+    def get_tier_names(self):
+        tier_names = [
+            form.cleaned_data.get('name', '').strip()
+            for form in self.forms
+            if not form.cleaned_data.get('DELETE')
+        ]
+        while tier_names and not tier_names[-1]:
+            tier_names.pop()
+        return tier_names
+
+
+BoxLeagueTierNameFormSet = forms.formset_factory(
+    BoxLeagueTierNameForm, formset=BaseBoxLeagueTierNameFormSet, extra=1, can_delete=True)
+
+
+class BoxProposalResizeForm(forms.Form):
+    box_count = forms.IntegerField(min_value=1, max_value=128, label=_('Boxes this session'))
+
+
+class BoxAddForm(forms.Form):
+    level = forms.TypedChoiceField(coerce=int, label=_('Tier'))
+
+    def __init__(self, *args, session, **kwargs):
+        super().__init__(*args, **kwargs)
+        tier_names_by_level = session.league.get_tier_names_by_level()
+        bottom_level = session.boxes.aggregate(bottom=Max('level'))['bottom'] or 0
+        self.fields['level'].choices = [
+            (level, session.league.get_tier_name(level, tier_names_by_level))
+            for level in range(1, bottom_level + 1)
+        ] + [(bottom_level + 1, _('New bottom tier'))]
+
+
+class BoxLeagueAddMemberForm(forms.Form):
+    member = forms.ModelChoiceField(
+        queryset=PlaygroupMember.objects.none(), label=_('Player'))
+
+    def __init__(self, *args, league, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['member'].queryset = league.playgroup.members.exclude(
+            box_league_entries__league=league
+        ).select_related('user').order_by('user__username')
+
+
+class BoxAssignmentForm(forms.Form):
+    member = forms.ModelChoiceField(
+        queryset=PlaygroupMember.objects.none(), label=_('Player'))
+    box = forms.ChoiceField(label=_('Box'))
+
+    def __init__(self, *args, session, box_summaries, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.session = session
+        self.fields['member'].queryset = session.league.playgroup.members.select_related(
+            'user').order_by('user__username')
+        self.fields['member'].help_text = _('Players not yet in the league are added to it.')
+        self.fields['box'].choices = [
+            (summary.box.pk, summary.name) for summary in box_summaries]
+
+    def get_box(self):
+        return self.session.boxes.get(pk=self.cleaned_data['box'])
+
+
+class BoxSessionStartForm(forms.Form):
+    starts_on = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}))
+    ends_on = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        help_text=_('Advertised to players; the session stays open until the next one starts.'))
+
+    def clean(self):
+        cleaned_data = super().clean()
+        starts_on = cleaned_data.get('starts_on')
+        ends_on = cleaned_data.get('ends_on')
+        if starts_on and ends_on and ends_on < starts_on:
+            raise forms.ValidationError(_('The session must end on or after its start date.'))
+        return cleaned_data

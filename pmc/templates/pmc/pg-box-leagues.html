@@ -1,0 +1,18 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+  <h1>Box Leagues</h1>
+
+  <div class="card staff-only">
+    <h2>Staff Area</h2>
+    <a href="{% url 'pmc-pg-box-league-new' playgroup.slug %}" class="btn btn-solid btn-block">Add Box League</a>
+  </div>
+
+  <ul class="card-list">
+    {% for box_league in box_leagues %}
+      {% include 'pmc/_box-league-card.html' %}
+    {% empty %}
+      <li class="card text-muted">No box leagues yet.</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

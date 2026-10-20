@@ -2283,7 +2283,7 @@ class LadderViewTests(LadderTestBase):
         result_url = self.ladder_url('pmc-pg-ladder-challenge-result', challenge.pk)
 
         self.assertEqual(self.client.get(result_url).status_code, 200)
-        self.client.post(result_url, {'outcome': 'challenger'})
+        self.client.post(result_url, {'outcome': 'player_one'})
 
         self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 5, 3, 4, 6))
 
@@ -2364,7 +2364,7 @@ class LadderViewTests(LadderTestBase):
         self.make_overdue(challenge)
         self.client.force_login(self.player(3).user)
         response = self.client.post(
-            self.ladder_url('pmc-pg-ladder-challenge-result', challenge.pk), {'outcome': 'defender'})
+            self.ladder_url('pmc-pg-ladder-challenge-result', challenge.pk), {'outcome': 'player_two'})
         self.assertIn('The response window has passed, so the challenger won by forfeit.',
                       self.message_texts(response))
         self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 5, 3, 4, 6))
@@ -2420,23 +2420,23 @@ class LadderNavigationTests(LadderTestBase):
         return [str(link['name']) for link in response.context['nav_links']]
 
     def test_ladders_link_shown_when_ladders_exist(self):
-        self.assertIn('Ladders', self.nav_names(self.player(1).user, self.playgroup))
+        self.assertIn('Play', self.nav_names(self.player(1).user, self.playgroup))
 
     def test_ladders_link_shown_to_staff_before_any_ladder_exists(self):
         playgroup = Playgroup.objects.create(name='Fresh', slug='fresh')
         self.enable_ladders_for(playgroup)
         organizer = self.create_member('fresh-organizer', playgroup=playgroup, is_staff=True)
-        self.assertIn('Ladders', self.nav_names(organizer.user, playgroup))
+        self.assertIn('Play', self.nav_names(organizer.user, playgroup))
 
     def test_ladders_link_hidden_from_players_when_no_ladders_exist(self):
         playgroup = Playgroup.objects.create(name='Fresh', slug='fresh')
         self.enable_ladders_for(playgroup)
         member = self.create_member('fresh-member', playgroup=playgroup)
-        self.assertNotIn('Ladders', self.nav_names(member.user, playgroup))
+        self.assertNotIn('Play', self.nav_names(member.user, playgroup))
 
     def test_ladders_hidden_from_non_members(self):
         outsider = User.objects.create_user(username='outsider')
-        self.assertNotIn('Ladders', self.nav_names(outsider, self.playgroup))
+        self.assertNotIn('Play', self.nav_names(outsider, self.playgroup))
         response = self.client.get(reverse('pmc-pg-detail', args=[self.playgroup.slug]))
         self.assertNotIn('ladders', response.context)
 
@@ -2528,7 +2528,7 @@ class LadderFeatureGuardTests(LadderTestBase):
         self.client.force_login(self.organizer.user)
         response = self.client.get(self.playgroup_url)
         nav_names = [str(link['name']) for link in response.context['nav_links']]
-        self.assertNotIn('Ladders', nav_names)
+        self.assertNotIn('Play', nav_names)
         self.assertNotIn('ladders', response.context)
         self.assertNotContains(response, 'Add Ladder')
         self.assertNotIn('ladders', response.context['pg_features'])

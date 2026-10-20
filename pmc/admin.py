@@ -20,6 +20,8 @@ from .models import Trophy, UserTrophy, AwardCredit, Achievement, AchievementTie
 from .models import EventResultDeck
 from .models import Ladder, LadderEntry, LadderChallenge, Match, MatchResult
 from .models import Feature, PlaygroupFeature
+from .models import BoxLeague, BoxLeagueTier, BoxLeagueMember, BoxLeagueSession
+from .models import Box, BoxAssignment, BoxSessionConfirmation, BoxMatch
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -328,6 +330,57 @@ class MatchResultAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
     list_filter = ('is_forfeit',)
 
 
+class BoxLeagueTierInline(admin.TabularInline):
+    model = BoxLeagueTier
+    extra = 0
+
+
+class BoxLeagueAdmin(admin.ModelAdmin):
+    list_display = ('name', 'playgroup', 'layout', 'target_box_size', 'created_on')
+    search_fields = ['name', 'playgroup__name']
+    inlines = [BoxLeagueTierInline]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ('playgroup',)
+        return ()
+
+
+class BoxLeagueSessionAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
+    list_display = ('league', 'number', 'status', 'box_count', 'starts_on', 'ends_on')
+    list_filter = ('status',)
+    search_fields = ['league__name']
+
+
+class BoxLeagueMemberAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
+    list_display = ('league', 'member', 'joined_on')
+    search_fields = ['league__name', 'member__user__username']
+
+
+class BoxAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
+    list_display = ('session', 'level', 'ordinal')
+
+
+class BoxAssignmentAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
+    list_display = ('session', 'box', 'member')
+    search_fields = ['member__user__username']
+
+
+class BoxSessionConfirmationAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
+    list_display = ('session', 'member', 'confirmed_on')
+
+
+class BoxMatchAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
+    list_display = ('box', 'match')
+
+
+admin.site.register(BoxLeague, BoxLeagueAdmin)
+admin.site.register(BoxLeagueSession, BoxLeagueSessionAdmin)
+admin.site.register(BoxLeagueMember, BoxLeagueMemberAdmin)
+admin.site.register(Box, BoxAdmin)
+admin.site.register(BoxAssignment, BoxAssignmentAdmin)
+admin.site.register(BoxSessionConfirmation, BoxSessionConfirmationAdmin)
+admin.site.register(BoxMatch, BoxMatchAdmin)
 admin.site.register(Feature, FeatureAdmin)
 admin.site.register(PlaygroupFeature, PlaygroupFeatureAdmin)
 admin.site.register(Ladder, LadderAdmin)

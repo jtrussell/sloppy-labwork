@@ -15,16 +15,25 @@ def _get_playgroup_slug(request):
     return playgroup_slug
 
 
-def _should_show_ladders_link(request, playgroup):
+def _should_show_play_link(request, playgroup):
     if playgroup.is_global or not request.user.is_authenticated:
         return False
-    if not playgroup.has_feature(Feature.Keys.LADDERS):
+    enabled_feature_keys = playgroup.get_enabled_feature_keys()
+    competitions_by_feature_key = {
+        Feature.Keys.LADDERS: playgroup.ladders,
+        Feature.Keys.BOX_LEAGUES: playgroup.box_leagues,
+    }
+    enabled_competitions = [
+        competitions for feature_key, competitions in competitions_by_feature_key.items()
+        if feature_key in enabled_feature_keys
+    ]
+    if not enabled_competitions:
         return False
     viewer_member = PlaygroupMember.objects.filter(
         playgroup=playgroup, user=request.user).first()
     if viewer_member is None:
         return False
-    return viewer_member.is_staff or playgroup.ladders.exists()
+    return viewer_member.is_staff or any(competitions.exists() for competitions in enabled_competitions)
 
 
 def nav_links(request):
@@ -63,10 +72,14 @@ def nav_links(request):
                 'is_active': False,
             })
 
-        if current_playgroup and _should_show_ladders_link(request, current_playgroup):
+        if current_playgroup and _should_show_play_link(request, current_playgroup):
             nav_links.append({
-                'name': _('Ladders'),
-                'url': reverse('pmc-pg-ladders', args=[playgroup_slug]),
+                'name': _('Play'),
+                'url': reverse('pmc-pg-play', args=[playgroup_slug]),
+                'active_prefixes': [
+                    reverse('pmc-pg-ladders', args=[playgroup_slug]),
+                    reverse('pmc-pg-box-leagues', args=[playgroup_slug]),
+                ],
                 'is_active': False,
             })
 
@@ -107,14 +120,16 @@ def nav_links(request):
             'is_active': False,
         })
 
-    longest_matched_path = ''
+    longest_matched_prefix = ''
+    active_link = None
     for link in nav_links:
-        if request.path.startswith(link['url']) and len(link['url']) > len(longest_matched_path):
-            longest_matched_path = link['url']
+        for prefix in [link['url'], *link.get('active_prefixes', [])]:
+            if request.path.startswith(prefix) and len(prefix) > len(longest_matched_prefix):
+                longest_matched_prefix = prefix
+                active_link = link
 
-    for link in nav_links:
-        if link['url'] == longest_matched_path:
-            link['is_active'] = True
+    if active_link:
+        active_link['is_active'] = True
 
     return {'nav_links': nav_links}
 
