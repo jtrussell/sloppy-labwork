@@ -1274,6 +1274,18 @@ class ResponsesFeedTestCase(GhostformTestMixin, TestCase):
         self.assertEqual(answers[0].findtext('deck_id'), DECK_UUID)
         self.assertEqual(answers[1].findtext('value'), 'Brobnar;Mars')
 
+    def test_csv_feed_is_public_and_matches_export_columns(self):
+        response = self.client.get(self._feed_url('csv'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        self.assertNotIn('Content-Disposition', response)
+        rows = list(csv.reader(io.StringIO(response.content.decode())))
+        self.assertEqual(rows[0], [
+            'Submitted at', 'User', 'Round', 'Deck', 'Deck (Deck ID)', 'Houses', 'Notes'])
+        self.assertEqual(rows[1][1:], ['player', '1', DOK_DECK_LINK, DECK_UUID, 'Brobnar;Mars', ''])
+        self.assertEqual(len(rows), 2)
+
     def test_unknown_feed_token_is_not_found(self):
         response = self.client.get(self._feed_url('json', uuid.uuid4()))
 
@@ -1316,5 +1328,6 @@ class ResponsesFeedTestCase(GhostformTestMixin, TestCase):
 
         response = self.client.get(reverse('ghostform:ghostform-detail', args=[self.ghostform.code]))
 
+        self.assertContains(response, self._feed_url('csv'))
         self.assertContains(response, self._feed_url('xml'))
         self.assertContains(response, self._feed_url('json'))

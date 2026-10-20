@@ -134,6 +134,12 @@
   margin-left: auto;
 }
 
+@media (max-width: 549px) {
+  .ghostform-feed-actions {
+    margin-left: 0;
+  }
+}
+
 .ghostform-status {
   display: inline-block;
   font-size: 0.75rem;

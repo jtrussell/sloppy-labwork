@@ -191,6 +191,14 @@ def form_update_feed(request, form_code):
 
 
 @require_GET
+def form_responses_feed_csv(request, feed_token):
+    ghostform = get_object_or_404(Form, feed_token=feed_token)
+    response = HttpResponse(content_type='text/csv')
+    write_responses_csv(ghostform, response)
+    return response
+
+
+@require_GET
 def form_responses_feed_json(request, feed_token):
     ghostform = get_object_or_404(Form, feed_token=feed_token)
     return JsonResponse(build_responses_feed(ghostform))
