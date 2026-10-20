@@ -10,7 +10,7 @@ from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Exists, OuterRef, Sum, Count, Q, Prefetch
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.views import generic
 from django.template import loader
@@ -28,6 +28,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from pmc.context_processors import playgroup
 from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm, PmcProfilePrivacyForm, RankingPointsMapVersionForm, VenueForm
 from pmc.forms import PlaygroupMemberForm
+from pmc.forms import LadderForm, LadderAddMemberForm, LadderMoveMemberForm, LadderResultForm
 from user_profile.forms import EditUsernameForm
 from .models import AchievementTier, AwardBase, Badge, EventResult, EventResultDeck, LeaderboardLog, LeaderboardSeasonPeriod, PlaygroupJoinRequest, PinnedAward, UserAchievementTier, UserBadge, Trophy, UserTrophy, Achievement
 from .models import PlayerRank
@@ -46,6 +47,8 @@ from .models import AwardAssignmentService
 from .models import Venue, PlaygroupVenue, PlaygroupType, EventFormat, PlaygroupQuerySet
 from .models import exclude_upcoming_event_results
 from .models import filter_upcoming_events, get_activity_level
+from .models import Ladder, LadderChallenge, LadderRuleViolation
+from .models import Feature
 
 
 def is_pg_member(view):
@@ -74,6 +77,17 @@ def is_pg_staff(view):
             raise PermissionDenied
         return wrapper
     return decorator(view)
+
+
+def requires_pg_feature(feature_key):
+    def decorator(view_func):
+        def wrapper(request, *args, **kwargs):
+            playgroup = get_object_or_404(Playgroup, slug=kwargs['slug'])
+            if not playgroup.has_feature(feature_key):
+                return redirect_to(request, reverse('pmc-pg-detail', kwargs={'slug': playgroup.slug}))
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def api_key_required(view):
@@ -118,6 +132,11 @@ class PlaygroupDetail(generic.DetailView):
             results__finishing_position__isnull=False,
         ).order_by('start_date')
         context['upcoming_events'] = upcoming_events
+        is_member = self.request.user.is_authenticated and self.object.members.filter(
+            user=self.request.user).exists()
+        if is_member and not self.object.is_global and self.object.has_feature(Feature.Keys.LADDERS):
+            context['ladders'] = self.object.ladders.annotate(
+                num_players=Count('entries'))
         return context
 
 
@@ -321,6 +340,302 @@ def set_playgroup_primary_venue(request, slug):
             'venues': playgroup.venues.all(),
         })
     return redirect_to(request, reverse('pmc-pg-manage', kwargs={'slug': slug}))
+
+
+def get_ladder_or_404(slug, ladder_id):
+    return get_object_or_404(
+        Ladder.objects.select_related('playgroup'),
+        pk=ladder_id, playgroup__slug=slug, playgroup__is_global=False)
+
+
+def get_ladder_challenge_or_404(ladder, challenge_id):
+    return get_object_or_404(
+        LadderChallenge.objects.select_related(
+            'match__player_one__user', 'match__player_two__user'),
+        pk=challenge_id, ladder=ladder)
+
+
+def get_viewer_member_or_403(request, playgroup):
+    member = PlaygroupMember.objects.filter(
+        playgroup=playgroup, user=request.user).first()
+    if member is None:
+        raise PermissionDenied
+    return member
+
+
+def ladder_detail_url(ladder):
+    return reverse('pmc-pg-ladder-detail', kwargs={'slug': ladder.playgroup.slug, 'ladder_id': ladder.pk})
+
+
+def ladder_manage_url(ladder):
+    return reverse('pmc-pg-ladder-manage', kwargs={'slug': ladder.playgroup.slug, 'ladder_id': ladder.pk})
+
+
+def run_ladder_action(request, action, success_message, redirect_url):
+    try:
+        action()
+    except LadderRuleViolation as violation:
+        messages.error(request, str(violation))
+    else:
+        messages.success(request, success_message)
+    return redirect_to(request, redirect_url)
+
+
+def report_invalid_form(request, form):
+    for errors in form.errors.values():
+        for error in errors:
+            messages.error(request, error)
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@is_pg_member
+def playgroup_ladders(request, slug):
+    playgroup = get_object_or_404(Playgroup, slug=slug, is_global=False)
+    return render(request, 'pmc/pg-ladders.html', {
+        'ladders': playgroup.ladders.annotate(num_players=Count('entries')),
+    })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@is_pg_staff
+def create_playgroup_ladder(request, slug):
+    playgroup = get_object_or_404(Playgroup, slug=slug, is_global=False)
+    form = LadderForm(request.POST or None, playgroup=playgroup)
+    if request.method == 'POST' and form.is_valid():
+        ladder = form.save(commit=False)
+        ladder.playgroup = playgroup
+        ladder.created_by = request.user
+        ladder.save()
+        messages.success(request, _('Ladder created.'))
+        return HttpResponseRedirect(ladder_manage_url(ladder))
+    return render(request, 'pmc/pg-ladder-form.html', {'form': form})
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@is_pg_staff
+def edit_playgroup_ladder(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    form = LadderForm(request.POST or None, instance=ladder,
+                      playgroup=ladder.playgroup)
+    if request.method == 'POST' and form.is_valid():
+        ladder = form.save()
+        if 'challenges_enabled' in form.changed_data and not ladder.challenges_enabled:
+            ladder.void_open_challenges()
+        messages.success(request, _('Ladder settings saved.'))
+        return HttpResponseRedirect(ladder_manage_url(ladder))
+    return render(request, 'pmc/pg-ladder-form.html', {'form': form, 'ladder': ladder})
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@is_pg_member
+def playgroup_ladder_detail(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    ladder.resolve_overdue_challenges()
+    viewer_member = PlaygroupMember.objects.filter(
+        playgroup=ladder.playgroup, user=request.user).first()
+    standings = ladder.get_standings_for(viewer_member)
+    viewer_standing = next(
+        (standing for standing in standings if standing.is_viewer), None)
+    open_challenges = list(ladder.get_open_challenges())
+    return render(request, 'pmc/pg-ladder-detail.html', {
+        'ladder': ladder,
+        'standings': standings,
+        'viewer_standing': viewer_standing,
+        'viewer_open_challenge_count': sum(
+            1 for challenge in open_challenges
+            if viewer_member and challenge.match.involves(viewer_member)),
+        'open_challenges': open_challenges,
+        'recent_results': ladder.get_recent_results(),
+    })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@is_pg_staff
+def manage_playgroup_ladder(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    ladder.resolve_overdue_challenges()
+    return render(request, 'pmc/pg-ladder-manage.html', {
+        'ladder': ladder,
+        'standings': ladder.get_standings_for(None),
+        'add_member_form': LadderAddMemberForm(ladder=ladder),
+        'open_challenges': ladder.get_open_challenges(),
+        'recent_results': ladder.get_recent_results(),
+    })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@require_POST
+@is_pg_member
+def join_playgroup_ladder(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    viewer_member = get_viewer_member_or_403(request, ladder.playgroup)
+    return run_ladder_action(
+        request,
+        lambda: ladder.add_member(viewer_member),
+        _('Welcome to the ladder!'),
+        ladder_detail_url(ladder),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@require_POST
+@is_pg_member
+def leave_playgroup_ladder(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    viewer_member = get_viewer_member_or_403(request, ladder.playgroup)
+    return run_ladder_action(
+        request,
+        lambda: ladder.remove_member(viewer_member),
+        _('You have left the ladder.'),
+        ladder_detail_url(ladder),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@require_POST
+@is_pg_member
+def issue_ladder_challenge(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    viewer_member = get_viewer_member_or_403(request, ladder.playgroup)
+    defender_id = request.POST.get('defender_id', '')
+    if not defender_id.isdigit():
+        raise Http404
+    defender = get_object_or_404(
+        PlaygroupMember, pk=defender_id, playgroup=ladder.playgroup)
+    return run_ladder_action(
+        request,
+        lambda: ladder.issue_challenge(viewer_member, defender),
+        _('Challenge issued to %(name)s.') % {'name': defender},
+        ladder_detail_url(ladder),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@is_pg_member
+def record_ladder_challenge_result(request, slug, ladder_id, challenge_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    ladder.resolve_overdue_challenges()
+    challenge = get_ladder_challenge_or_404(ladder, challenge_id)
+    is_participant = request.user.pk in (
+        challenge.match.player_one.user_id, challenge.match.player_two.user_id)
+    if not is_participant and not ladder.is_organizer(request.user):
+        raise PermissionDenied
+    if challenge.status == LadderChallenge.ChallengeStatuses.FORFEITED:
+        messages.error(request, _(
+            'The response window has passed, so the challenger won by forfeit.'))
+        return HttpResponseRedirect(ladder_detail_url(ladder))
+    if not challenge.is_pending():
+        messages.error(request, _('This challenge has already been resolved.'))
+        return HttpResponseRedirect(ladder_detail_url(ladder))
+
+    form = LadderResultForm(request.POST or None, challenge=challenge)
+    if request.method == 'POST' and form.is_valid():
+        return run_ladder_action(
+            request,
+            lambda: ladder.record_result(
+                challenge, form.get_winner(), request.user),
+            _('Result recorded.'),
+            ladder_detail_url(ladder),
+        )
+    return render(request, 'pmc/pg-ladder-challenge-result.html', {
+        'ladder': ladder,
+        'challenge': challenge,
+        'form': form,
+    })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@require_POST
+@is_pg_member
+def withdraw_ladder_challenge(request, slug, ladder_id, challenge_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    challenge = get_ladder_challenge_or_404(ladder, challenge_id)
+    return run_ladder_action(
+        request,
+        lambda: ladder.withdraw_challenge(challenge, request.user),
+        _('Challenge withdrawn.'),
+        ladder_detail_url(ladder),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@require_POST
+@is_pg_staff
+def void_ladder_challenge(request, slug, ladder_id, challenge_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    challenge = get_ladder_challenge_or_404(ladder, challenge_id)
+    return run_ladder_action(
+        request,
+        lambda: ladder.void_challenge(challenge, request.user),
+        _('Challenge voided. Positions were not changed; use Move to correct them if needed.'),
+        ladder_manage_url(ladder),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@require_POST
+@is_pg_staff
+def add_ladder_member(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    form = LadderAddMemberForm(request.POST, ladder=ladder)
+    if not form.is_valid():
+        report_invalid_form(request, form)
+        return redirect_to(request, ladder_manage_url(ladder))
+    member = form.cleaned_data['member']
+    return run_ladder_action(
+        request,
+        lambda: ladder.add_member(member, form.cleaned_data['position']),
+        _('%(name)s added to the ladder.') % {'name': member},
+        ladder_manage_url(ladder),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@require_POST
+@is_pg_staff
+def move_ladder_member(request, slug, ladder_id, member_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    member = get_object_or_404(
+        PlaygroupMember, pk=member_id, playgroup=ladder.playgroup)
+    form = LadderMoveMemberForm(request.POST)
+    if not form.is_valid():
+        report_invalid_form(request, form)
+        return redirect_to(request, ladder_manage_url(ladder))
+    return run_ladder_action(
+        request,
+        lambda: ladder.move_member(member, form.cleaned_data['position']),
+        _('%(name)s moved.') % {'name': member},
+        ladder_manage_url(ladder),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@require_POST
+@is_pg_staff
+def remove_ladder_member(request, slug, ladder_id, member_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    member = get_object_or_404(
+        PlaygroupMember, pk=member_id, playgroup=ladder.playgroup)
+    return run_ladder_action(
+        request,
+        lambda: ladder.remove_member(member),
+        _('%(name)s removed from the ladder.') % {'name': member},
+        ladder_manage_url(ladder),
+    )
 
 
 @login_required

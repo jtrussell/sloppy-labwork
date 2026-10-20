@@ -6,6 +6,7 @@ from .models import Event, EventTag, LeaderboardSeason, LeaderboardSeasonPeriod,
 from .models import PlaygroupMember
 from .models import Venue
 from .models import EventFormat
+from .models import Ladder
 from django.utils.translation import gettext_lazy as _
 
 
@@ -330,3 +331,65 @@ class VenueForm(forms.ModelForm):
         help_texts = {
             'address': _('Enter the full address as it would appear on mail.'),
         }
+
+
+class LadderForm(forms.ModelForm):
+    class Meta:
+        model = Ladder
+        fields = ('name', 'challenges_enabled', 'challenge_range',
+                  'open_challenge_limit', 'response_window_days')
+
+    def __init__(self, *args, playgroup, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.playgroup = playgroup
+
+    def clean_name(self):
+        name = self.cleaned_data['name']
+        same_named_ladders = Ladder.objects.filter(
+            playgroup=self.playgroup, name__iexact=name).exclude(pk=self.instance.pk)
+        if same_named_ladders.exists():
+            raise forms.ValidationError(
+                _('This playgroup already has a ladder with that name.'))
+        return name
+
+
+class LadderAddMemberForm(forms.Form):
+    member = forms.ModelChoiceField(
+        queryset=PlaygroupMember.objects.none(), label=_('Player'))
+    position = forms.IntegerField(
+        min_value=1, required=False,
+        help_text=_('Leave blank to add the player at the bottom.'))
+
+    def __init__(self, *args, ladder, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['member'].queryset = ladder.playgroup.members.exclude(
+            ladder_entries__ladder=ladder
+        ).select_related('user').order_by('user__username')
+
+
+class LadderMoveMemberForm(forms.Form):
+    position = forms.IntegerField(min_value=1)
+
+
+class LadderResultForm(forms.Form):
+    CHALLENGER_WON = 'challenger'
+    DEFENDER_WON = 'defender'
+    TIE = 'tie'
+
+    outcome = forms.ChoiceField(widget=forms.RadioSelect, label=_('Result'))
+
+    def __init__(self, *args, challenge, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.challenge = challenge
+        self.fields['outcome'].choices = [
+            (self.CHALLENGER_WON, _('%(name)s won and moves ahead') % {'name': challenge.challenger}),
+            (self.DEFENDER_WON, _('%(name)s won') % {'name': challenge.defender}),
+            (self.TIE, _('Tie')),
+        ]
+
+    def get_winner(self):
+        return {
+            self.CHALLENGER_WON: self.challenge.challenger,
+            self.DEFENDER_WON: self.challenge.defender,
+            self.TIE: None,
+        }[self.cleaned_data['outcome']]

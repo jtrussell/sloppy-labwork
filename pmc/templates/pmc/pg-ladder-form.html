@@ -1,0 +1,26 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+  {% if ladder %}
+    <h1>{{ ladder.name }}</h1>
+    <div class="subheading">Ladder Settings</div>
+  {% else %}
+    <h1>New Ladder</h1>
+  {% endif %}
+
+  <div class="card staff-only">
+    <form method="POST">
+      {% csrf_token %}
+      {{ form.as_p }}
+
+      <div class="card-actions">
+        {% if ladder %}
+          <a class="btn" href="{% url 'pmc-pg-ladder-manage' playgroup.slug ladder.pk %}">Cancel</a>
+        {% else %}
+          <a class="btn" href="{% url 'pmc-pg-ladders' playgroup.slug %}">Cancel</a>
+        {% endif %}
+        <button class="btn btn-solid" type="submit">Save</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

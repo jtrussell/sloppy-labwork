@@ -18,6 +18,8 @@ from .models import AvatarCategory
 from .models import PlaygroupJoinRequest
 from .models import Trophy, UserTrophy, AwardCredit, Achievement, AchievementTier, UserAchievementTier
 from .models import EventResultDeck
+from .models import Ladder, LadderEntry, LadderChallenge, Match, MatchResult
+from .models import Feature, PlaygroupFeature
 
 
 class PlaygroupAdmin(admin.ModelAdmin):
@@ -272,6 +274,67 @@ class PlaygroupTypeAdmin(admin.ModelAdmin):
     list_filter = ()
 
 
+class FeatureAdmin(admin.ModelAdmin):
+    list_display = ('name', 'key', 'is_enabled')
+    search_fields = ['name', 'key']
+    list_filter = ('is_enabled',)
+
+
+class PlaygroupFeatureAdmin(admin.ModelAdmin):
+    list_display = ('playgroup', 'feature', 'is_enabled')
+    search_fields = ['playgroup__name', 'feature__name']
+    list_filter = ('feature', 'is_enabled')
+    autocomplete_fields = ('playgroup',)
+
+
+class LadderAdmin(admin.ModelAdmin):
+    list_display = ('name', 'playgroup', 'challenges_enabled', 'created_on')
+    search_fields = ['name', 'playgroup__name']
+    list_filter = ('challenges_enabled',)
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ('playgroup',)
+        return ()
+
+
+class ReadOnlyAdminMixin:
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+class LadderEntryAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
+    list_display = ('ladder', 'position', 'member', 'joined_on')
+    search_fields = ['ladder__name', 'member__user__username']
+    ordering = ('ladder', 'position')
+
+
+class LadderChallengeAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
+    list_display = ('ladder', 'match', 'status', 'issued_on', 'respond_by', 'resolved_on')
+    search_fields = ['ladder__name']
+    list_filter = ('status',)
+
+
+class MatchAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
+    list_display = ('playgroup', 'player_one', 'player_two', 'created_on')
+    search_fields = ['playgroup__name', 'player_one__user__username', 'player_two__user__username']
+
+
+class MatchResultAdmin(ReadOnlyAdminMixin, admin.ModelAdmin):
+    list_display = ('match', 'winner', 'is_forfeit', 'voided_on', 'created_on')
+    list_filter = ('is_forfeit',)
+
+
+admin.site.register(Feature, FeatureAdmin)
+admin.site.register(PlaygroupFeature, PlaygroupFeatureAdmin)
+admin.site.register(Ladder, LadderAdmin)
+admin.site.register(LadderEntry, LadderEntryAdmin)
+admin.site.register(LadderChallenge, LadderChallengeAdmin)
+admin.site.register(Match, MatchAdmin)
+admin.site.register(MatchResult, MatchResultAdmin)
 admin.site.register(Playgroup, PlaygroupAdmin)
 admin.site.register(PlaygroupMember, PlaygroupMemberAdmin)
 admin.site.register(EventTag, EventTagAdmin)

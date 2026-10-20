@@ -31,6 +31,9 @@
   <div class="card staff-only">
     <h2>Staff Area</h2>
     <a href="{% url 'pmc-pg-manage' object.slug %}" class="btn btn-solid btn-block">Manage Playgroup</a>
+    {% if not object.is_global and 'ladders' in pg_features %}
+      <p><a href="{% url 'pmc-pg-ladder-new' object.slug %}" class="btn btn-block">Add Ladder</a></p>
+    {% endif %}
   </div>
 
   {% if not playgroup_member and not object.is_global %}
@@ -54,6 +57,15 @@
     <div class="card no-top-margin markdown">
       {{ object.description | markdown | safe }}
     </div>
+  {% endif %}
+
+  {% if ladders %}
+    <h2>Ladders</h2>
+    <ul class="card-list">
+      {% for ladder in ladders %}
+        {% include 'pmc/_ladder-card.html' %}
+      {% endfor %}
+    </ul>
   {% endif %}
 
   {% if upcoming_events %}

@@ -1,0 +1,110 @@
+{% extends "pmc/_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/ladders.css' %}">
+{% endblock %}
+
+{% block content %}
+  <h1>{{ ladder.name }}</h1>
+  <ul class="subheading inline-list">
+    <li>{{ standings|length }} Player{{ standings|length|pluralize }}</li>
+    {% if ladder.challenges_enabled %}
+      <li>Challenge up to {{ ladder.challenge_range }} place{{ ladder.challenge_range|pluralize }} above you</li>
+      <li>Results due within {{ ladder.response_window_days }} day{{ ladder.response_window_days|pluralize }}</li>
+    {% else %}
+      <li>Positions set by organizers</li>
+    {% endif %}
+  </ul>
+
+  <div class="card staff-only">
+    <h2>Staff Area</h2>
+    <a href="{% url 'pmc-pg-ladder-manage' playgroup.slug ladder.pk %}" class="btn btn-solid btn-block">Manage Ladder</a>
+  </div>
+
+  {% if playgroup_member %}
+    <div class="card">
+      {% if viewer_standing %}
+        <h2>You're #{{ viewer_standing.rank }}</h2>
+        {% if ladder.challenges_enabled %}
+          <p>Open challenges: {{ viewer_open_challenge_count }} of {{ ladder.open_challenge_limit }}.</p>
+        {% endif %}
+        <div class="card-actions">
+          <button
+            class="btn"
+            hx-post="{% url 'pmc-pg-ladder-leave' playgroup.slug ladder.pk %}"
+            hx-confirm="Leave {{ ladder.name }}? Players below you will move up."
+          >Leave Ladder</button>
+        </div>
+      {% else %}
+        <h2>Join the Ladder</h2>
+        <p>
+          New players start at the bottom{% if ladder.challenges_enabled %} and climb by challenging players above them{% endif %}.
+        </p>
+        <form method="POST" action="{% url 'pmc-pg-ladder-join' playgroup.slug ladder.pk %}" class="card-actions">
+          {% csrf_token %}
+          <button class="btn btn-solid" type="submit">Join Ladder</button>
+        </form>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if open_challenges %}
+    <h2>Open Challenges</h2>
+    <ul class="card-list">
+      {% for challenge in open_challenges %}
+        {% include 'pmc/_ladder-challenge-card.html' %}
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <h2>Standings</h2>
+  <table class="ladder-standings">
+    <thead>
+      <tr>
+        <th class="col-sm">#</th>
+        <th class="text-left">Player</th>
+        {% if ladder.challenges_enabled %}<th class="col-md">&nbsp;</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for standing in standings %}
+        <tr{% if standing.is_viewer %} class="is-viewer"{% endif %}>
+          <td class="col-sm">{{ standing.rank }}</td>
+          <td class="text-left">
+            <div class="name-with-avatar">
+              <img class="avatar" src="{{ standing.entry.member.user.pmc_profile.get_avatar.src }}" alt="">
+              <div>
+                <a href="{% url 'pmc-pg-member-detail' playgroup.slug standing.entry.member.user.username %}">{{ standing.entry.member }}</a>
+                {% if standing.has_open_challenge %}
+                  <div class="text-smaller text-muted">In a challenge</div>
+                {% endif %}
+                {% if standing.challenge_block_reason %}
+                  <div class="text-smaller text-muted">{{ standing.challenge_block_reason }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          {% if ladder.challenges_enabled %}
+            <td class="col-md">
+              {% if standing.can_be_challenged %}
+                <form method="POST" action="{% url 'pmc-pg-ladder-challenge-new' playgroup.slug ladder.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="defender_id" value="{{ standing.entry.member_id }}">
+                  <button class="btn btn-solid btn-small" type="submit">Challenge</button>
+                </form>
+              {% endif %}
+            </td>
+          {% endif %}
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="3" class="text-muted">No players yet.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Recent Results</h2>
+  {% include 'pmc/_ladder-results.html' %}
+{% endblock %}

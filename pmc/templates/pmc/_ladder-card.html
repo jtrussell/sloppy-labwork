@@ -1,0 +1,14 @@
+<li class="card">
+  <h2>{{ ladder.name }}</h2>
+  <ul class="subheading inline-list">
+    <li>{{ ladder.num_players }} Player{{ ladder.num_players|pluralize }}</li>
+    {% if ladder.challenges_enabled %}
+      <li>Open for challenges</li>
+    {% else %}
+      <li>Positions set by organizers</li>
+    {% endif %}
+  </ul>
+  <div class="card-actions">
+    <a class="btn btn-solid" href="{% url 'pmc-pg-ladder-detail' playgroup.slug ladder.pk %}">View Ladder</a>
+  </div>
+</li>

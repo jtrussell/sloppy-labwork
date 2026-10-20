@@ -6,7 +6,9 @@ from datetime import date
 from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, PermissionDenied
+from django.utils import timezone
+from contextlib import contextmanager
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.db.models import Sum, F, Count, Window, Value, Func
@@ -256,6 +258,18 @@ class Playgroup(models.Model):
 
     def get_staff_email_list(self):
         return self.members.filter(is_staff=True).values_list('user__email', flat=True)
+
+    def get_enabled_feature_keys(self):
+        override_by_key = dict(
+            self.feature_overrides.values_list('feature__key', 'is_enabled'))
+        return {
+            key
+            for key, is_globally_enabled in Feature.objects.values_list('key', 'is_enabled')
+            if override_by_key.get(key, is_globally_enabled)
+        }
+
+    def has_feature(self, key):
+        return key in self.get_enabled_feature_keys()
 
 
 class PlaygroupMember(models.Model):
@@ -2086,3 +2100,497 @@ class AwardAssignmentService():
         ).aggregate(total=Coalesce(Sum('amount'), 0))['total'] or 0
 
         return value
+
+
+class Feature(models.Model):
+    class Keys:
+        LADDERS = 'ladders'
+
+    key = models.SlugField(max_length=50, unique=True)
+    name = models.CharField(max_length=100)
+    description = models.TextField(default=None, null=True, blank=True)
+    is_enabled = models.BooleanField(
+        default=False,
+        help_text=_('Applies to every playgroup without its own override.'))
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
+class PlaygroupFeature(models.Model):
+    playgroup = models.ForeignKey(
+        Playgroup, on_delete=models.CASCADE, related_name='feature_overrides')
+    feature = models.ForeignKey(
+        Feature, on_delete=models.CASCADE, related_name='playgroup_overrides')
+    is_enabled = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['playgroup', 'feature'],
+                             name='unique_playgroup_feature'),
+        ]
+
+    def __str__(self):
+        return f'{self.playgroup} - {self.feature}'
+
+
+class LadderRuleViolation(Exception):
+    pass
+
+
+class Match(models.Model):
+    playgroup = models.ForeignKey(
+        Playgroup, on_delete=models.CASCADE, related_name='matches')
+    player_one = models.ForeignKey(
+        PlaygroupMember, on_delete=models.CASCADE, related_name='matches_as_player_one')
+    player_two = models.ForeignKey(
+        PlaygroupMember, on_delete=models.CASCADE, related_name='matches_as_player_two')
+    created_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'Matches'
+        ordering = ['created_on']
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(player_one=F('player_two')),
+                name='pmc_match_distinct_players'),
+        ]
+
+    def __str__(self):
+        return f'{self.player_one} vs {self.player_two}'
+
+    def has_result(self):
+        return hasattr(self, 'result')
+
+    def involves(self, member):
+        return member.pk in (self.player_one_id, self.player_two_id)
+
+
+class MatchResult(models.Model):
+    match = models.OneToOneField(
+        Match, on_delete=models.CASCADE, related_name='result')
+    winner = models.ForeignKey(
+        PlaygroupMember, on_delete=models.CASCADE, related_name='match_wins',
+        default=None, null=True, blank=True)
+    player_one_score = models.PositiveIntegerField(
+        default=None, null=True, blank=True)
+    player_two_score = models.PositiveIntegerField(
+        default=None, null=True, blank=True)
+    is_forfeit = models.BooleanField(default=False)
+    recorded_by = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, related_name='+',
+        default=None, null=True, blank=True)
+    voided_on = models.DateTimeField(default=None, null=True, blank=True)
+    voided_by = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, related_name='+',
+        default=None, null=True, blank=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_on']
+
+    def __str__(self):
+        if self.winner:
+            return f'{self.winner} wins - {self.match}'
+        return f'Tie - {self.match}'
+
+    def is_tie(self):
+        return self.winner_id is None
+
+    def is_voided(self):
+        return self.voided_on is not None
+
+    def get_loser(self):
+        if self.is_tie():
+            return None
+        if self.winner_id == self.match.player_one_id:
+            return self.match.player_two
+        return self.match.player_one
+
+
+LadderStanding = namedtuple('LadderStanding', [
+    'rank', 'entry', 'is_viewer', 'can_be_challenged', 'challenge_block_reason', 'has_open_challenge'])
+
+
+class Ladder(models.Model):
+    playgroup = models.ForeignKey(
+        Playgroup, on_delete=models.CASCADE, related_name='ladders')
+    name = models.CharField(max_length=100)
+    challenges_enabled = models.BooleanField(
+        default=True,
+        help_text=_('When disabled, only EOs can change positions on this ladder.'))
+    challenge_range = models.PositiveSmallIntegerField(
+        default=3, validators=[MinValueValidator(1)],
+        help_text=_('How many places above themselves a player may challenge.'))
+    open_challenge_limit = models.PositiveSmallIntegerField(
+        default=1, validators=[MinValueValidator(1)],
+        help_text=_('The most open challenges a player may be part of at once, issued or received.'))
+    response_window_days = models.PositiveSmallIntegerField(
+        default=7, validators=[MinValueValidator(1)],
+        help_text=_('Days to record a result before the challenger wins by forfeit.'))
+    created_on = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, related_name='+',
+        default=None, null=True, blank=True)
+
+    class Meta:
+        ordering = ['name']
+        constraints = [
+            UniqueConstraint(fields=['playgroup', 'name'],
+                             name='unique_ladder_name_per_playgroup'),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    def is_organizer(self, user):
+        return self.playgroup.members.filter(user=user, is_staff=True).exists()
+
+    def get_ordered_entries(self):
+        return list(self.entries.select_related(
+            'member__user__pmc_profile__avatar').order_by('position', 'pk'))
+
+    def get_rank_of(self, member):
+        ranked_member_ids = [entry.member_id for entry in self.get_ordered_entries()]
+        if member is None or member.pk not in ranked_member_ids:
+            return None
+        return ranked_member_ids.index(member.pk) + 1
+
+    def get_open_challenges(self):
+        return self.challenges.filter(
+            status=LadderChallenge.ChallengeStatuses.PENDING
+        ).select_related(
+            'match__player_one__user', 'match__player_two__user'
+        ).order_by('respond_by', 'pk')
+
+    def get_recent_results(self, limit=10):
+        return self.challenges.filter(
+            match__result__isnull=False
+        ).select_related(
+            'match__result__winner__user', 'match__player_one__user', 'match__player_two__user'
+        ).order_by('-resolved_on', '-pk')[:limit]
+
+    def get_challenge_ineligibility_reason(self, challenger, defender):
+        return self._challenge_ineligibility_reason(
+            [entry.member_id for entry in self.get_ordered_entries()],
+            list(self.get_open_challenges()),
+            challenger,
+            defender,
+        )
+
+    def get_standings_for(self, viewer_member):
+        entries = self.get_ordered_entries()
+        ranked_member_ids = [entry.member_id for entry in entries]
+        open_challenges = list(self.get_open_challenges())
+        members_with_open_challenges = {
+            member_id
+            for challenge in open_challenges
+            for member_id in (challenge.match.player_one_id, challenge.match.player_two_id)
+        }
+        viewer_index = None
+        if viewer_member is not None and viewer_member.pk in ranked_member_ids:
+            viewer_index = ranked_member_ids.index(viewer_member.pk)
+
+        standings = []
+        for index, entry in enumerate(entries):
+            is_within_viewer_reach = (
+                self.challenges_enabled
+                and viewer_index is not None
+                and 0 < viewer_index - index <= self.challenge_range
+            )
+            challenge_block_reason = None
+            if is_within_viewer_reach:
+                challenge_block_reason = self._challenge_ineligibility_reason(
+                    ranked_member_ids, open_challenges, viewer_member, entry.member)
+            standings.append(LadderStanding(
+                rank=index + 1,
+                entry=entry,
+                is_viewer=index == viewer_index,
+                can_be_challenged=is_within_viewer_reach and challenge_block_reason is None,
+                challenge_block_reason=challenge_block_reason,
+                has_open_challenge=entry.member_id in members_with_open_challenges,
+            ))
+        return standings
+
+    def add_member(self, member, rank=None):
+        self._ensure_playgroup_member(member)
+        with self._ordered_entries_for_update() as entries:
+            if self._find_entry(entries, member):
+                raise LadderRuleViolation(
+                    _('%(name)s is already on this ladder.') % {'name': member})
+            entry = LadderEntry.objects.create(
+                ladder=self, member=member, position=len(entries) + 1)
+            entries.insert(self._index_for_rank(rank, entries), entry)
+            return entry
+
+    def move_member(self, member, rank):
+        with self._ordered_entries_for_update() as entries:
+            entry = self._require_entry(entries, member)
+            entries.remove(entry)
+            entries.insert(self._index_for_rank(rank, entries), entry)
+
+    def remove_member(self, member):
+        with self._ordered_entries_for_update() as entries:
+            entry = self._require_entry(entries, member)
+            self._close_open_challenges_for_departing(member)
+            entries.remove(entry)
+            entry.delete()
+
+    def issue_challenge(self, challenger, defender):
+        with self._ordered_entries_for_update() as entries:
+            reason = self._challenge_ineligibility_reason(
+                [entry.member_id for entry in entries],
+                list(self.get_open_challenges()),
+                challenger,
+                defender,
+            )
+            if reason:
+                raise LadderRuleViolation(reason)
+            match = Match.objects.create(
+                playgroup_id=self.playgroup_id, player_one=challenger, player_two=defender)
+            return LadderChallenge.objects.create(
+                ladder=self,
+                match=match,
+                respond_by=timezone.now() + timedelta(days=self.response_window_days),
+            )
+
+    def record_result(self, challenge, winner, recorded_by):
+        self._ensure_participant_or_organizer(challenge, recorded_by)
+        with self._ordered_entries_for_update() as entries:
+            challenge = self._reload_pending_challenge(challenge)
+            if winner is not None and not challenge.match.involves(winner):
+                raise LadderRuleViolation(
+                    _('The winner must be one of the players in this challenge.'))
+            MatchResult.objects.create(
+                match=challenge.match, winner=winner, recorded_by=recorded_by)
+            challenge.mark_resolved(LadderChallenge.ChallengeStatuses.COMPLETED)
+            if winner is not None and winner.pk == challenge.match.player_one_id:
+                self._move_challenger_ahead_of_defender(entries, challenge.match)
+
+    def withdraw_challenge(self, challenge, acting_user):
+        is_challenger = challenge.match.player_one.user_id == acting_user.pk
+        if not is_challenger and not self.is_organizer(acting_user):
+            raise PermissionDenied
+        with self._ordered_entries_for_update():
+            challenge = self._reload_pending_challenge(challenge)
+            challenge.mark_resolved(LadderChallenge.ChallengeStatuses.WITHDRAWN)
+
+    def void_challenge(self, challenge, acting_user):
+        if not self.is_organizer(acting_user):
+            raise PermissionDenied
+        with self._ordered_entries_for_update():
+            challenge = LadderChallenge.objects.select_related(
+                'match').get(pk=challenge.pk, ladder=self)
+            if challenge.status in (LadderChallenge.ChallengeStatuses.WITHDRAWN, LadderChallenge.ChallengeStatuses.VOIDED):
+                raise LadderRuleViolation(
+                    _('This challenge has already been withdrawn or voided.'))
+            if challenge.match.has_result():
+                challenge.match.result.voided_on = timezone.now()
+                challenge.match.result.voided_by = acting_user
+                challenge.match.result.save()
+            challenge.mark_resolved(LadderChallenge.ChallengeStatuses.VOIDED)
+
+    def void_open_challenges(self):
+        self.challenges.filter(
+            status=LadderChallenge.ChallengeStatuses.PENDING
+        ).update(status=LadderChallenge.ChallengeStatuses.VOIDED, resolved_on=timezone.now())
+
+    def resolve_overdue_challenges(self):
+        if not self._get_overdue_challenges().exists():
+            return
+        with transaction.atomic():
+            Ladder.objects.select_for_update().get(pk=self.pk)
+            entries = self.get_ordered_entries()
+            self._forfeit_overdue_challenges(entries)
+            self._save_positions(entries)
+
+    @contextmanager
+    def _ordered_entries_for_update(self):
+        self.resolve_overdue_challenges()
+        with transaction.atomic():
+            Ladder.objects.select_for_update().get(pk=self.pk)
+            entries = self.get_ordered_entries()
+            self._forfeit_overdue_challenges(entries)
+            yield entries
+            self._save_positions(entries)
+
+    def _forfeit_overdue_challenges(self, entries):
+        for challenge in self._get_overdue_challenges().select_related('match').order_by('respond_by', 'pk'):
+            self._resolve_by_forfeit(challenge, entries)
+
+    def _save_positions(self, entries):
+        repositioned_entries = []
+        for position, entry in enumerate(entries, start=1):
+            if entry.position != position:
+                entry.position = position
+                repositioned_entries.append(entry)
+        LadderEntry.objects.bulk_update(repositioned_entries, ['position'])
+
+    def _get_overdue_challenges(self):
+        return self.challenges.filter(
+            status=LadderChallenge.ChallengeStatuses.PENDING,
+            respond_by__lt=timezone.now(),
+        )
+
+    def _resolve_by_forfeit(self, challenge, entries):
+        MatchResult.objects.create(
+            match=challenge.match, winner_id=challenge.match.player_one_id, is_forfeit=True)
+        challenge.mark_resolved(LadderChallenge.ChallengeStatuses.FORFEITED)
+        self._move_challenger_ahead_of_defender(entries, challenge.match)
+
+    def _move_challenger_ahead_of_defender(self, entries, match):
+        challenger_entry = self._find_entry(entries, match.player_one)
+        defender_entry = self._find_entry(entries, match.player_two)
+        if challenger_entry is None or defender_entry is None:
+            return
+        defender_index = entries.index(defender_entry)
+        if entries.index(challenger_entry) < defender_index:
+            return
+        entries.remove(challenger_entry)
+        entries.insert(defender_index, challenger_entry)
+
+    def _close_open_challenges_for_departing(self, member):
+        open_challenges = self.challenges.filter(
+            status=LadderChallenge.ChallengeStatuses.PENDING)
+        now = timezone.now()
+        open_challenges.filter(match__player_one=member).update(
+            status=LadderChallenge.ChallengeStatuses.WITHDRAWN, resolved_on=now)
+        open_challenges.filter(match__player_two=member).update(
+            status=LadderChallenge.ChallengeStatuses.VOIDED, resolved_on=now)
+
+    def _reload_pending_challenge(self, challenge):
+        challenge = LadderChallenge.objects.select_related(
+            'match').get(pk=challenge.pk, ladder=self)
+        if challenge.status == LadderChallenge.ChallengeStatuses.FORFEITED:
+            raise LadderRuleViolation(
+                _('The response window has passed, so the challenger won by forfeit.'))
+        if challenge.status != LadderChallenge.ChallengeStatuses.PENDING:
+            raise LadderRuleViolation(
+                _('This challenge has already been resolved.'))
+        return challenge
+
+    def _ensure_playgroup_member(self, member):
+        if member.playgroup_id != self.playgroup_id:
+            raise LadderRuleViolation(
+                _('%(name)s is not a member of this playgroup.') % {'name': member})
+
+    def _ensure_participant_or_organizer(self, challenge, user):
+        participant_user_ids = (
+            challenge.match.player_one.user_id, challenge.match.player_two.user_id)
+        if user.pk not in participant_user_ids and not self.is_organizer(user):
+            raise PermissionDenied
+
+    def _require_entry(self, entries, member):
+        entry = self._find_entry(entries, member)
+        if entry is None:
+            raise LadderRuleViolation(
+                _('%(name)s is not on this ladder.') % {'name': member})
+        return entry
+
+    @staticmethod
+    def _find_entry(entries, member):
+        return next((entry for entry in entries if entry.member_id == member.pk), None)
+
+    @staticmethod
+    def _index_for_rank(rank, entries):
+        if rank is None:
+            return len(entries)
+        return min(max(rank, 1), len(entries) + 1) - 1
+
+    def _challenge_ineligibility_reason(self, ranked_member_ids, open_challenges, challenger, defender):
+        if not self.challenges_enabled:
+            return _('Challenges are disabled on this ladder.')
+        if challenger.pk not in ranked_member_ids:
+            return _('Join the ladder before issuing challenges.')
+        if defender.pk not in ranked_member_ids:
+            return _('That player is not on this ladder.')
+        if challenger.pk == defender.pk:
+            return _('You cannot challenge yourself.')
+
+        places_above_challenger = ranked_member_ids.index(
+            challenger.pk) - ranked_member_ids.index(defender.pk)
+        if places_above_challenger < 1:
+            return _('You can only challenge players ranked above you.')
+        if places_above_challenger > self.challenge_range:
+            return _('You can only challenge players up to %(range)s places above you.') % {
+                'range': self.challenge_range}
+
+        if any(challenge.match.involves(challenger) and challenge.match.involves(defender) for challenge in open_challenges):
+            return _('You already have an open challenge with %(name)s.') % {'name': defender}
+
+        def count_open_challenges_involving(member):
+            return sum(1 for challenge in open_challenges if challenge.match.involves(member))
+
+        if count_open_challenges_involving(challenger) >= self.open_challenge_limit:
+            return _('You have reached your limit of open challenges.')
+        if count_open_challenges_involving(defender) >= self.open_challenge_limit:
+            return _('%(name)s has reached their limit of open challenges.') % {'name': defender}
+        return None
+
+
+class LadderEntry(models.Model):
+    ladder = models.ForeignKey(
+        Ladder, on_delete=models.CASCADE, related_name='entries')
+    member = models.ForeignKey(
+        PlaygroupMember, on_delete=models.CASCADE, related_name='ladder_entries')
+    position = models.PositiveIntegerField()
+    joined_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'Ladder entries'
+        ordering = ['position', 'pk']
+        constraints = [
+            UniqueConstraint(fields=['ladder', 'member'],
+                             name='unique_ladder_entry_member'),
+        ]
+
+    def __str__(self):
+        return f'{self.ladder} - #{self.position} {self.member}'
+
+
+class LadderChallenge(models.Model):
+    class ChallengeStatuses(models.IntegerChoices):
+        PENDING = (0, _('Pending'))
+        COMPLETED = (1, _('Completed'))
+        FORFEITED = (2, _('Won by Forfeit'))
+        WITHDRAWN = (3, _('Withdrawn'))
+        VOIDED = (4, _('Voided'))
+
+    ladder = models.ForeignKey(
+        Ladder, on_delete=models.CASCADE, related_name='challenges')
+    match = models.OneToOneField(
+        Match, on_delete=models.CASCADE, related_name='ladder_challenge')
+    status = models.IntegerField(
+        choices=ChallengeStatuses.choices, default=ChallengeStatuses.PENDING)
+    issued_on = models.DateTimeField(auto_now_add=True)
+    respond_by = models.DateTimeField()
+    resolved_on = models.DateTimeField(default=None, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-issued_on']
+
+    def __str__(self):
+        return f'{self.ladder} - {self.match}'
+
+    @property
+    def challenger(self):
+        return self.match.player_one
+
+    @property
+    def defender(self):
+        return self.match.player_two
+
+    def is_pending(self):
+        return self.status == self.ChallengeStatuses.PENDING
+
+    def is_overdue(self):
+        return self.is_pending() and self.respond_by < timezone.now()
+
+    def mark_resolved(self, status):
+        self.status = status
+        self.resolved_on = timezone.now()
+        self.save(update_fields=['status', 'resolved_on'])

@@ -13,6 +13,11 @@ from .models import (
     PlaygroupQuerySet, PlaygroupVenue, Venue, PlaygroupMember, Avatar,
     get_activity_level
 )
+from .models import Ladder, LadderChallenge, LadderRuleViolation
+from .models import Feature, PlaygroupFeature
+from django.contrib.messages import get_messages
+from django.core.exceptions import PermissionDenied
+from django.utils import timezone
 from .forms import PmcProfileForm, PmcProfilePrivacyForm
 from .templatetags.pmc_extras import relative_event_day
 from django.urls import reverse
@@ -1813,3 +1818,717 @@ class ManageProfileEmailChangeTests(TestCase):
         self.assertEqual(self.user.email, 'player@example.com')
         self.assertEqual(EmailAddress.objects.get_new(self.user).email, 'new@example.com')
         self.assertEqual(len(mail.outbox), 1)
+
+
+class LadderTestBase(TestCase):
+    def setUp(self):
+        self.playgroup = Playgroup.objects.create(
+            name='Ladder Group', slug='ladder-group')
+        self.enable_ladders_for(self.playgroup)
+        self.organizer = self.create_member('organizer', is_staff=True)
+        self.players = [self.create_member(f'player{number}') for number in range(1, 7)]
+        self.ladder = Ladder.objects.create(
+            playgroup=self.playgroup, name='Main Ladder')
+        for player in self.players:
+            self.ladder.add_member(player)
+
+    def enable_ladders_for(self, playgroup):
+        PlaygroupFeature.objects.create(
+            playgroup=playgroup, feature=Feature.objects.get(key=Feature.Keys.LADDERS))
+
+    def create_member(self, username, playgroup=None, is_staff=False):
+        user = User.objects.create_user(username=username)
+        return PlaygroupMember.objects.create(
+            playgroup=playgroup or self.playgroup, user=user, is_staff=is_staff)
+
+    def player(self, number):
+        return self.players[number - 1]
+
+    def ranked_usernames(self):
+        return [entry.member.user.username for entry in self.ladder.get_ordered_entries()]
+
+    def usernames_for(self, *numbers):
+        return [f'player{number}' for number in numbers]
+
+    def assert_positions_contiguous(self):
+        positions = list(self.ladder.entries.order_by(
+            'position').values_list('position', flat=True))
+        self.assertEqual(positions, list(range(1, len(positions) + 1)))
+
+    def make_overdue(self, challenge, days_overdue=1):
+        LadderChallenge.objects.filter(pk=challenge.pk).update(
+            respond_by=timezone.now() - timedelta(days=days_overdue))
+
+    def allow_open_challenges(self, limit):
+        self.ladder.open_challenge_limit = limit
+        self.ladder.save()
+
+
+class LadderMembershipTests(LadderTestBase):
+    def test_joining_places_member_at_the_bottom(self):
+        newcomer = self.create_member('newcomer')
+        self.ladder.add_member(newcomer)
+        self.assertEqual(self.ladder.get_rank_of(newcomer), 7)
+        self.assert_positions_contiguous()
+
+    def test_joining_twice_is_rejected(self):
+        with self.assertRaisesMessage(LadderRuleViolation, 'already on this ladder'):
+            self.ladder.add_member(self.player(1))
+
+    def test_member_of_another_playgroup_is_rejected(self):
+        other_playgroup = Playgroup.objects.create(name='Other', slug='other')
+        outsider = self.create_member('outsider', playgroup=other_playgroup)
+        with self.assertRaisesMessage(LadderRuleViolation, 'not a member of this playgroup'):
+            self.ladder.add_member(outsider)
+
+    def test_adding_at_a_rank_shifts_lower_players_down(self):
+        newcomer = self.create_member('newcomer')
+        self.ladder.add_member(newcomer, rank=2)
+        self.assertEqual(self.ranked_usernames(), [
+            'player1', 'newcomer', 'player2', 'player3', 'player4', 'player5', 'player6'])
+        self.assert_positions_contiguous()
+
+    def test_adding_beyond_the_bottom_places_member_last(self):
+        newcomer = self.create_member('newcomer')
+        self.ladder.add_member(newcomer, rank=50)
+        self.assertEqual(self.ladder.get_rank_of(newcomer), 7)
+
+    def test_moving_a_member_up(self):
+        self.ladder.move_member(self.player(5), 2)
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 5, 2, 3, 4, 6))
+        self.assert_positions_contiguous()
+
+    def test_moving_a_member_down(self):
+        self.ladder.move_member(self.player(2), 5)
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 3, 4, 5, 2, 6))
+        self.assert_positions_contiguous()
+
+    def test_removing_a_member_closes_the_gap(self):
+        self.ladder.remove_member(self.player(3))
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 4, 5, 6))
+        self.assert_positions_contiguous()
+
+    def test_removing_a_member_not_on_the_ladder_is_rejected(self):
+        with self.assertRaisesMessage(LadderRuleViolation, 'not on this ladder'):
+            self.ladder.remove_member(self.organizer)
+
+    def test_leaving_withdraws_issued_and_voids_received_challenges(self):
+        self.allow_open_challenges(2)
+        issued = self.ladder.issue_challenge(self.player(4), self.player(3))
+        received = self.ladder.issue_challenge(self.player(5), self.player(4))
+
+        self.ladder.remove_member(self.player(4))
+
+        issued.refresh_from_db()
+        received.refresh_from_db()
+        self.assertEqual(issued.status, LadderChallenge.ChallengeStatuses.WITHDRAWN)
+        self.assertEqual(received.status, LadderChallenge.ChallengeStatuses.VOIDED)
+
+    def test_deleted_playgroup_member_drops_off_and_ranks_stay_sequential(self):
+        self.player(2).delete()
+        self.assertEqual(self.ladder.get_rank_of(self.player(3)), 2)
+        self.ladder.move_member(self.player(6), 1)
+        self.assert_positions_contiguous()
+
+
+class LadderChallengeEligibilityTests(LadderTestBase):
+    def assert_challenge_rejected(self, challenger, defender, message):
+        self.assertIn(message, str(
+            self.ladder.get_challenge_ineligibility_reason(challenger, defender)))
+        with self.assertRaisesMessage(LadderRuleViolation, message):
+            self.ladder.issue_challenge(challenger, defender)
+
+    def test_challenges_disabled(self):
+        self.ladder.challenges_enabled = False
+        self.ladder.save()
+        self.assert_challenge_rejected(
+            self.player(2), self.player(1), 'Challenges are disabled')
+
+    def test_challenger_must_be_on_the_ladder(self):
+        self.assert_challenge_rejected(
+            self.organizer, self.player(6), 'Join the ladder')
+
+    def test_defender_must_be_on_the_ladder(self):
+        self.assert_challenge_rejected(
+            self.player(6), self.organizer, 'not on this ladder')
+
+    def test_cannot_challenge_self(self):
+        self.assert_challenge_rejected(
+            self.player(3), self.player(3), 'cannot challenge yourself')
+
+    def test_cannot_challenge_players_ranked_below(self):
+        self.assert_challenge_rejected(
+            self.player(2), self.player(3), 'ranked above you')
+
+    def test_challenge_at_the_edge_of_range_is_allowed(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(1))
+        self.assertTrue(challenge.is_pending())
+
+    def test_challenge_beyond_range_is_rejected(self):
+        self.assert_challenge_rejected(
+            self.player(5), self.player(1), 'up to 3 places above you')
+
+    def test_challenger_at_open_challenge_limit_is_rejected(self):
+        self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.assert_challenge_rejected(
+            self.player(4), self.player(2), 'reached your limit')
+
+    def test_defender_at_open_challenge_limit_is_rejected(self):
+        self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.assert_challenge_rejected(
+            self.player(5), self.player(3), 'player3 has reached their limit')
+
+    def test_received_challenges_count_toward_the_limit(self):
+        self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.assert_challenge_rejected(
+            self.player(3), self.player(2), 'reached your limit')
+
+    def test_duplicate_open_challenge_is_rejected(self):
+        self.allow_open_challenges(2)
+        self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.assert_challenge_rejected(
+            self.player(4), self.player(3), 'already have an open challenge with player3')
+
+    def test_withdrawn_challenge_frees_the_slot(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.withdraw_challenge(challenge, self.player(4).user)
+        self.assertIsNone(self.ladder.get_challenge_ineligibility_reason(
+            self.player(4), self.player(2)))
+
+    def test_deadline_is_fixed_when_the_challenge_is_issued(self):
+        before_issue = timezone.now()
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.response_window_days = 30
+        self.ladder.save()
+        challenge.refresh_from_db()
+        self.assertGreaterEqual(challenge.respond_by, before_issue + timedelta(days=7))
+        self.assertLess(challenge.respond_by, before_issue + timedelta(days=8))
+
+    def test_standings_only_offer_challenges_within_reach(self):
+        standings = self.ladder.get_standings_for(self.player(5))
+        challengeable_ranks = [s.rank for s in standings if s.can_be_challenged]
+        self.assertEqual(challengeable_ranks, [2, 3, 4])
+        self.assertTrue(standings[4].is_viewer)
+
+    def test_standings_explain_why_a_reachable_player_cannot_be_challenged(self):
+        self.ladder.issue_challenge(self.player(3), self.player(2))
+        standings = self.ladder.get_standings_for(self.player(4))
+        self.assertFalse(standings[1].can_be_challenged)
+        self.assertIn('reached their limit', str(standings[1].challenge_block_reason))
+        self.assertTrue(standings[1].has_open_challenge)
+
+
+class LadderResultTests(LadderTestBase):
+    def test_challenger_win_moves_challenger_directly_ahead_of_defender(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        self.ladder.record_result(challenge, self.player(5), self.player(5).user)
+
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 5, 3, 4, 6))
+        self.assert_positions_contiguous()
+        challenge.refresh_from_db()
+        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.COMPLETED)
+        self.assertEqual(challenge.match.result.winner, self.player(5))
+        self.assertFalse(challenge.match.result.is_forfeit)
+
+    def test_defender_win_keeps_positions(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        self.ladder.record_result(challenge, self.player(3), self.player(3).user)
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 3, 4, 5, 6))
+
+    def test_tie_keeps_positions(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        self.ladder.record_result(challenge, None, self.player(5).user)
+        challenge.refresh_from_db()
+        self.assertTrue(challenge.match.result.is_tie())
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 3, 4, 5, 6))
+
+    def test_organizer_may_record_a_result(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        self.ladder.record_result(challenge, self.player(3), self.organizer.user)
+        challenge.refresh_from_db()
+        self.assertEqual(challenge.match.result.recorded_by, self.organizer.user)
+
+    def test_unrelated_player_cannot_record_a_result(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        with self.assertRaises(PermissionDenied):
+            self.ladder.record_result(challenge, self.player(3), self.player(1).user)
+
+    def test_winner_must_be_in_the_match(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        with self.assertRaisesMessage(LadderRuleViolation, 'must be one of the players'):
+            self.ladder.record_result(challenge, self.player(1), self.organizer.user)
+
+    def test_resolved_challenge_cannot_be_recorded_again(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        self.ladder.record_result(challenge, self.player(3), self.player(3).user)
+        with self.assertRaisesMessage(LadderRuleViolation, 'already been resolved'):
+            self.ladder.record_result(challenge, self.player(5), self.player(5).user)
+
+    def test_result_after_deadline_is_rejected_and_challenger_wins_by_forfeit(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        self.make_overdue(challenge)
+
+        with self.assertRaisesMessage(LadderRuleViolation, 'won by forfeit'):
+            self.ladder.record_result(challenge, self.player(3), self.player(3).user)
+
+        challenge.refresh_from_db()
+        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.FORFEITED)
+        self.assertTrue(challenge.match.result.is_forfeit)
+        self.assertIsNone(challenge.match.result.recorded_by)
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 5, 3, 4, 6))
+
+    def test_challenger_already_ahead_of_defender_does_not_move(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        self.ladder.move_member(self.player(5), 1)
+        self.ladder.record_result(challenge, self.player(5), self.player(5).user)
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(5, 1, 2, 3, 4, 6))
+
+
+class LadderForfeitTests(LadderTestBase):
+    def test_only_overdue_challenges_are_forfeited(self):
+        self.allow_open_challenges(2)
+        overdue = self.ladder.issue_challenge(self.player(4), self.player(3))
+        upcoming = self.ladder.issue_challenge(self.player(6), self.player(5))
+        self.make_overdue(overdue)
+
+        self.ladder.resolve_overdue_challenges()
+
+        overdue.refresh_from_db()
+        upcoming.refresh_from_db()
+        self.assertEqual(overdue.status, LadderChallenge.ChallengeStatuses.FORFEITED)
+        self.assertTrue(upcoming.is_pending())
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 4, 3, 5, 6))
+
+    def test_overdue_challenges_resolve_in_deadline_order(self):
+        self.allow_open_challenges(2)
+        earlier = self.ladder.issue_challenge(self.player(4), self.player(3))
+        later = self.ladder.issue_challenge(self.player(6), self.player(4))
+        self.make_overdue(earlier, days_overdue=2)
+        self.make_overdue(later, days_overdue=1)
+
+        self.ladder.resolve_overdue_challenges()
+
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 6, 4, 3, 5))
+        self.assert_positions_contiguous()
+
+    def test_resolving_twice_changes_nothing(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.make_overdue(challenge)
+        self.ladder.resolve_overdue_challenges()
+        self.ladder.resolve_overdue_challenges()
+        self.assertEqual(LadderChallenge.objects.get(pk=challenge.pk).match.result.is_forfeit, True)
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 4, 3, 5, 6))
+
+    def test_overdue_challenge_frees_slot_before_issuing(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.make_overdue(challenge)
+        next_challenge = self.ladder.issue_challenge(self.player(3), self.player(2))
+        self.assertTrue(next_challenge.is_pending())
+
+
+class LadderWithdrawAndVoidTests(LadderTestBase):
+    def test_challenger_can_withdraw(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.withdraw_challenge(challenge, self.player(4).user)
+        challenge.refresh_from_db()
+        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.WITHDRAWN)
+
+    def test_defender_cannot_withdraw(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        with self.assertRaises(PermissionDenied):
+            self.ladder.withdraw_challenge(challenge, self.player(3).user)
+
+    def test_organizer_can_withdraw(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.withdraw_challenge(challenge, self.organizer.user)
+        challenge.refresh_from_db()
+        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.WITHDRAWN)
+
+    def test_resolved_challenge_cannot_be_withdrawn(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.record_result(challenge, None, self.player(4).user)
+        with self.assertRaisesMessage(LadderRuleViolation, 'already been resolved'):
+            self.ladder.withdraw_challenge(challenge, self.player(4).user)
+
+    def test_organizer_void_marks_result_voided_without_moving_players(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.record_result(challenge, self.player(4), self.player(4).user)
+
+        self.ladder.void_challenge(challenge, self.organizer.user)
+
+        challenge.refresh_from_db()
+        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.VOIDED)
+        self.assertTrue(challenge.match.result.is_voided())
+        self.assertEqual(challenge.match.result.voided_by, self.organizer.user)
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 4, 3, 5, 6))
+
+    def test_player_cannot_void(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        with self.assertRaises(PermissionDenied):
+            self.ladder.void_challenge(challenge, self.player(4).user)
+
+    def test_withdrawn_challenge_cannot_be_voided(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.withdraw_challenge(challenge, self.player(4).user)
+        with self.assertRaisesMessage(LadderRuleViolation, 'already been withdrawn or voided'):
+            self.ladder.void_challenge(challenge, self.organizer.user)
+
+
+@override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
+class LadderViewTests(LadderTestBase):
+    def ladder_url(self, name, *args):
+        return reverse(name, args=[self.playgroup.slug, self.ladder.pk, *args])
+
+    def message_texts(self, response):
+        return [str(message) for message in get_messages(response.wsgi_request)]
+
+    def test_detail_requires_login(self):
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_detail_forbidden_for_non_members(self):
+        outsider = User.objects.create_user(username='outsider')
+        self.client.force_login(outsider)
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_detail_lists_standings_and_challenge_options(self):
+        self.client.force_login(self.player(5).user)
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [standing.entry.member for standing in response.context['standings']], self.players)
+        self.assertContains(response, 'Challenge</button>', count=3)
+        self.assertContains(response, "You're #5")
+
+    def test_detail_resolves_overdue_challenges(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.make_overdue(challenge)
+        self.client.force_login(self.player(1).user)
+        self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        challenge.refresh_from_db()
+        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.FORFEITED)
+
+    def test_staff_pages_forbidden_for_players(self):
+        self.client.force_login(self.player(1).user)
+        self.assertEqual(self.client.get(self.ladder_url('pmc-pg-ladder-manage')).status_code, 403)
+        self.assertEqual(self.client.get(self.ladder_url('pmc-pg-ladder-edit')).status_code, 403)
+        self.assertEqual(self.client.get(
+            reverse('pmc-pg-ladder-new', args=[self.playgroup.slug])).status_code, 403)
+
+    def test_manage_page_renders_for_organizer(self):
+        self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.client.force_login(self.organizer.user)
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-manage'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Void</button>')
+
+    def test_actions_require_post(self):
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-leave'))
+        self.assertEqual(response.status_code, 405)
+
+    def test_ladders_are_unavailable_for_global_playgroups(self):
+        global_playgroup = Playgroup.objects.create(
+            name='Global', slug='global', is_global=True)
+        self.enable_ladders_for(global_playgroup)
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(reverse('pmc-pg-ladders', args=[global_playgroup.slug]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_ladder_from_another_playgroup_is_not_found(self):
+        other_playgroup = Playgroup.objects.create(name='Other', slug='other')
+        self.enable_ladders_for(other_playgroup)
+        other_member = self.create_member('other-member', playgroup=other_playgroup)
+        self.client.force_login(other_member.user)
+        response = self.client.get(
+            reverse('pmc-pg-ladder-detail', args=[other_playgroup.slug, self.ladder.pk]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_join_adds_member_at_the_bottom(self):
+        newcomer = self.create_member('newcomer')
+        self.client.force_login(newcomer.user)
+        response = self.client.post(self.ladder_url('pmc-pg-ladder-join'))
+        self.assertRedirects(response, self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertEqual(self.ladder.get_rank_of(newcomer), 7)
+
+    def test_htmx_leave_responds_with_htmx_redirect(self):
+        self.client.force_login(self.player(2).user)
+        response = self.client.post(
+            self.ladder_url('pmc-pg-ladder-leave'), HTTP_HX_REQUEST='true')
+        self.assertEqual(response['HX-Redirect'], self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertIsNone(self.ladder.get_rank_of(self.player(2)))
+
+    def test_issue_challenge_view(self):
+        self.client.force_login(self.player(4).user)
+        response = self.client.post(
+            self.ladder_url('pmc-pg-ladder-challenge-new'), {'defender_id': self.player(3).pk})
+        self.assertIn('Challenge issued to player3.', self.message_texts(response))
+        self.assertEqual(self.ladder.get_open_challenges().count(), 1)
+
+    def test_rejected_challenge_shows_reason_and_creates_nothing(self):
+        self.client.force_login(self.player(6).user)
+        response = self.client.post(
+            self.ladder_url('pmc-pg-ladder-challenge-new'), {'defender_id': self.player(1).pk})
+        self.assertIn('You can only challenge players up to 3 places above you.',
+                      self.message_texts(response))
+        self.assertFalse(self.ladder.challenges.exists())
+
+    def test_record_result_view(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        self.client.force_login(self.player(3).user)
+        result_url = self.ladder_url('pmc-pg-ladder-challenge-result', challenge.pk)
+
+        self.assertEqual(self.client.get(result_url).status_code, 200)
+        self.client.post(result_url, {'outcome': 'challenger'})
+
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 5, 3, 4, 6))
+
+    def test_record_result_view_forbidden_for_unrelated_players(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(
+            self.ladder_url('pmc-pg-ladder-challenge-result', challenge.pk))
+        self.assertEqual(response.status_code, 403)
+
+    def test_create_ladder_with_defaults(self):
+        self.client.force_login(self.organizer.user)
+        response = self.client.post(reverse('pmc-pg-ladder-new', args=[self.playgroup.slug]), {
+            'name': 'Second Ladder',
+            'challenges_enabled': 'on',
+            'challenge_range': 3,
+            'open_challenge_limit': 1,
+            'response_window_days': 7,
+        })
+        ladder = Ladder.objects.get(name='Second Ladder')
+        self.assertRedirects(response, reverse(
+            'pmc-pg-ladder-manage', args=[self.playgroup.slug, ladder.pk]))
+        self.assertEqual(ladder.playgroup, self.playgroup)
+        self.assertEqual(ladder.created_by, self.organizer.user)
+
+    def test_create_ladder_rejects_duplicate_name(self):
+        self.client.force_login(self.organizer.user)
+        response = self.client.post(reverse('pmc-pg-ladder-new', args=[self.playgroup.slug]), {
+            'name': 'main ladder',
+            'challenge_range': 3,
+            'open_challenge_limit': 1,
+            'response_window_days': 7,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'already has a ladder with that name')
+
+    def test_organizer_adds_member_at_position(self):
+        newcomer = self.create_member('newcomer')
+        self.client.force_login(self.organizer.user)
+        self.client.post(self.ladder_url('pmc-pg-ladder-member-add'),
+                         {'member': newcomer.pk, 'position': 1})
+        self.assertEqual(self.ladder.get_rank_of(newcomer), 1)
+
+    def test_organizer_moves_member(self):
+        self.client.force_login(self.organizer.user)
+        self.client.post(
+            self.ladder_url('pmc-pg-ladder-member-move', self.player(6).pk), {'position': 2})
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 6, 2, 3, 4, 5))
+
+    def test_organizer_removes_member(self):
+        self.client.force_login(self.organizer.user)
+        self.client.post(self.ladder_url('pmc-pg-ladder-member-remove', self.player(1).pk))
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(2, 3, 4, 5, 6))
+
+    def test_player_cannot_move_members(self):
+        self.client.force_login(self.player(6).user)
+        response = self.client.post(
+            self.ladder_url('pmc-pg-ladder-member-move', self.player(6).pk), {'position': 1})
+        self.assertEqual(response.status_code, 403)
+
+    def test_disabling_challenges_voids_open_challenges(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.client.force_login(self.organizer.user)
+        self.client.post(self.ladder_url('pmc-pg-ladder-edit'), {
+            'name': 'Main Ladder',
+            'challenge_range': 3,
+            'open_challenge_limit': 1,
+            'response_window_days': 7,
+        })
+        challenge.refresh_from_db()
+        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.VOIDED)
+        self.make_overdue(challenge)
+        self.ladder.resolve_overdue_challenges()
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 3, 4, 5, 6))
+
+    def test_late_result_view_explains_the_forfeit(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        self.make_overdue(challenge)
+        self.client.force_login(self.player(3).user)
+        response = self.client.post(
+            self.ladder_url('pmc-pg-ladder-challenge-result', challenge.pk), {'outcome': 'defender'})
+        self.assertIn('The response window has passed, so the challenger won by forfeit.',
+                      self.message_texts(response))
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 5, 3, 4, 6))
+
+    def test_challenging_a_member_of_another_playgroup_is_not_found(self):
+        other_playgroup = Playgroup.objects.create(name='Other', slug='other')
+        outsider = self.create_member('outsider', playgroup=other_playgroup)
+        self.client.force_login(self.player(4).user)
+        response = self.client.post(
+            self.ladder_url('pmc-pg-ladder-challenge-new'), {'defender_id': outsider.pk})
+        self.assertEqual(response.status_code, 404)
+
+    def test_malformed_defender_is_not_found(self):
+        self.client.force_login(self.player(4).user)
+        response = self.client.post(
+            self.ladder_url('pmc-pg-ladder-challenge-new'), {'defender_id': 'abc'})
+        self.assertEqual(response.status_code, 404)
+
+    def test_htmx_withdraw_responds_with_htmx_redirect(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.client.force_login(self.player(4).user)
+        response = self.client.post(
+            self.ladder_url('pmc-pg-ladder-challenge-withdraw', challenge.pk), HTTP_HX_REQUEST='true')
+        self.assertEqual(response['HX-Redirect'], self.ladder_url('pmc-pg-ladder-detail'))
+        challenge.refresh_from_db()
+        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.WITHDRAWN)
+
+    def test_player_cannot_void_via_view(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.client.force_login(self.player(4).user)
+        response = self.client.post(
+            self.ladder_url('pmc-pg-ladder-challenge-void', challenge.pk))
+        self.assertEqual(response.status_code, 403)
+
+    def test_organizer_voids_via_view(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.client.force_login(self.organizer.user)
+        response = self.client.post(
+            self.ladder_url('pmc-pg-ladder-challenge-void', challenge.pk))
+        self.assertRedirects(response, self.ladder_url('pmc-pg-ladder-manage'))
+        challenge.refresh_from_db()
+        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.VOIDED)
+
+
+@override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
+class LadderNavigationTests(LadderTestBase):
+    def nav_names(self, user, playgroup):
+        self.client.force_login(user)
+        response = self.client.get(reverse('pmc-pg-detail', args=[playgroup.slug]))
+        return [str(link['name']) for link in response.context['nav_links']]
+
+    def test_ladders_link_shown_when_ladders_exist(self):
+        self.assertIn('Ladders', self.nav_names(self.player(1).user, self.playgroup))
+
+    def test_ladders_link_shown_to_staff_before_any_ladder_exists(self):
+        playgroup = Playgroup.objects.create(name='Fresh', slug='fresh')
+        self.enable_ladders_for(playgroup)
+        organizer = self.create_member('fresh-organizer', playgroup=playgroup, is_staff=True)
+        self.assertIn('Ladders', self.nav_names(organizer.user, playgroup))
+
+    def test_ladders_link_hidden_from_players_when_no_ladders_exist(self):
+        playgroup = Playgroup.objects.create(name='Fresh', slug='fresh')
+        self.enable_ladders_for(playgroup)
+        member = self.create_member('fresh-member', playgroup=playgroup)
+        self.assertNotIn('Ladders', self.nav_names(member.user, playgroup))
+
+    def test_ladders_hidden_from_non_members(self):
+        outsider = User.objects.create_user(username='outsider')
+        self.assertNotIn('Ladders', self.nav_names(outsider, self.playgroup))
+        response = self.client.get(reverse('pmc-pg-detail', args=[self.playgroup.slug]))
+        self.assertNotIn('ladders', response.context)
+
+    def test_playgroup_page_lists_ladders_for_members(self):
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(reverse('pmc-pg-detail', args=[self.playgroup.slug]))
+        self.assertContains(response, 'Main Ladder')
+
+
+class FeatureResolutionTests(TestCase):
+    def setUp(self):
+        self.playgroup = Playgroup.objects.create(name='Feature Group', slug='feature-group')
+        self.feature = Feature.objects.create(key='preview-thing', name='Preview Thing')
+
+    def set_global(self, is_enabled):
+        self.feature.is_enabled = is_enabled
+        self.feature.save()
+
+    def override(self, is_enabled):
+        PlaygroupFeature.objects.create(
+            playgroup=self.playgroup, feature=self.feature, is_enabled=is_enabled)
+
+    def test_ladders_feature_is_seeded_globally_disabled(self):
+        ladders = Feature.objects.get(key=Feature.Keys.LADDERS)
+        self.assertFalse(ladders.is_enabled)
+        self.assertFalse(self.playgroup.has_feature(Feature.Keys.LADDERS))
+
+    def test_unknown_feature_is_disabled(self):
+        self.assertFalse(self.playgroup.has_feature('does-not-exist'))
+
+    def test_global_flag_applies_without_override(self):
+        self.assertFalse(self.playgroup.has_feature('preview-thing'))
+        self.set_global(True)
+        self.assertTrue(self.playgroup.has_feature('preview-thing'))
+
+    def test_override_enables_a_globally_disabled_feature(self):
+        self.override(True)
+        self.assertTrue(self.playgroup.has_feature('preview-thing'))
+
+    def test_override_disables_a_globally_enabled_feature(self):
+        self.set_global(True)
+        self.override(False)
+        self.assertFalse(self.playgroup.has_feature('preview-thing'))
+
+    def test_override_only_affects_its_playgroup(self):
+        self.override(True)
+        other_playgroup = Playgroup.objects.create(name='Other', slug='other')
+        self.assertFalse(other_playgroup.has_feature('preview-thing'))
+
+
+@override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
+class LadderFeatureGuardTests(LadderTestBase):
+    def setUp(self):
+        super().setUp()
+        PlaygroupFeature.objects.filter(playgroup=self.playgroup).update(is_enabled=False)
+        self.playgroup_url = reverse('pmc-pg-detail', args=[self.playgroup.slug])
+
+    def ladder_url(self, name):
+        return reverse(name, args=[self.playgroup.slug, self.ladder.pk])
+
+    def test_pages_redirect_to_the_playgroup_when_disabled(self):
+        self.client.force_login(self.organizer.user)
+        for url in [
+            reverse('pmc-pg-ladders', args=[self.playgroup.slug]),
+            reverse('pmc-pg-ladder-new', args=[self.playgroup.slug]),
+            self.ladder_url('pmc-pg-ladder-detail'),
+            self.ladder_url('pmc-pg-ladder-manage'),
+        ]:
+            self.assertRedirects(self.client.get(url), self.playgroup_url)
+
+    def test_actions_redirect_without_changing_anything_when_disabled(self):
+        newcomer = self.create_member('newcomer')
+        self.client.force_login(newcomer.user)
+        response = self.client.post(self.ladder_url('pmc-pg-ladder-join'))
+        self.assertRedirects(response, self.playgroup_url)
+        self.assertIsNone(self.ladder.get_rank_of(newcomer))
+
+    def test_htmx_actions_redirect_when_disabled(self):
+        self.client.force_login(self.player(2).user)
+        response = self.client.post(
+            self.ladder_url('pmc-pg-ladder-leave'), HTTP_HX_REQUEST='true')
+        self.assertEqual(response['HX-Redirect'], self.playgroup_url)
+        self.assertEqual(self.ladder.get_rank_of(self.player(2)), 2)
+
+    def test_nav_and_playgroup_page_hide_ladders_when_disabled(self):
+        self.client.force_login(self.organizer.user)
+        response = self.client.get(self.playgroup_url)
+        nav_names = [str(link['name']) for link in response.context['nav_links']]
+        self.assertNotIn('Ladders', nav_names)
+        self.assertNotIn('ladders', response.context)
+        self.assertNotContains(response, 'Add Ladder')
+        self.assertNotIn('ladders', response.context['pg_features'])

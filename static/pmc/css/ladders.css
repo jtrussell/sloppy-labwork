@@ -1,0 +1,24 @@
+.ladder-standings tr.is-viewer>td {
+  background-color: var(--color-gray);
+}
+
+.ladder-standings tr.is-viewer>td:first-child {
+  box-shadow: inset var(--border-size) 0 0 var(--color-primary);
+}
+
+.ladder-roster-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.ladder-roster-actions form {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.ladder-roster-actions input[type="number"] {
+  width: 4.5rem;
+}
