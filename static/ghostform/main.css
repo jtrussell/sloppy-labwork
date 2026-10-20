@@ -126,6 +126,14 @@
   margin: 0;
 }
 
+.ghostform-feed-actions {
+  display: flex;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-left: auto;
+}
+
 .ghostform-status {
   display: inline-block;
   font-size: 0.75rem;
@@ -271,6 +279,10 @@
 
 .ghostform-share input {
   flex: 1 1 16rem;
+  margin: 0;
+}
+
+.ghostform-share .button {
   margin: 0;
 }
 

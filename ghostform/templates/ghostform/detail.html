@@ -71,6 +71,38 @@
     </form>
   </div>
 </section>
+
+<section>
+  <h2>Spreadsheet Links</h2>
+  {% if ghostform.feed_token %}
+  <p class="text-muted">Anyone with these links can read every response, no sign-in required. Use them with IMPORTXML or similar in Google Sheets.</p>
+  <div class="ghostform-actions">
+    <button type="button" class="button" data-copy-link="{% abs_url 'ghostform:ghostform-responses-feed-xml' ghostform.feed_token %}">⚙️ XML</button>
+    <button type="button" class="button" data-copy-link="{% abs_url 'ghostform:ghostform-responses-feed-json' ghostform.feed_token %}">⚙️ JSON</button>
+    <div class="ghostform-feed-actions">
+      <form method="post" action="{% url 'ghostform:ghostform-update-feed' ghostform.code %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="rotate">
+        <button type="submit" class="button" hx-post="{% url 'ghostform:ghostform-update-feed' ghostform.code %}" hx-confirm="Generate new links? The current links will stop working.">Rotate Links</button>
+      </form>
+      <form method="post" action="{% url 'ghostform:ghostform-update-feed' ghostform.code %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="disable">
+        <button type="submit" class="button" hx-post="{% url 'ghostform:ghostform-update-feed' ghostform.code %}" hx-confirm="Disable spreadsheet links? The current links will stop working.">Disable Links</button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-muted">Generate links to pull responses into a spreadsheet. Anyone with the links can read every response, no sign-in required.</p>
+  <div class="ghostform-actions">
+    <form method="post" action="{% url 'ghostform:ghostform-update-feed' ghostform.code %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="rotate">
+      <button type="submit" class="button">Generate Links</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
 {% endif %}
 
 <section>
@@ -89,4 +121,8 @@
   <p class="ghostform-empty-message">No questions yet.</p>
   {% endif %}
 </section>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{% static 'ghostform/copy-link.js' %}"></script>
 {% endblock %}

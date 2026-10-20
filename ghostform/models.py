@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 
 from django.contrib.auth.models import User
@@ -41,6 +42,9 @@ class Form(models.Model):
     description = models.TextField(default='', blank=True)
     status = models.CharField(
         max_length=10, choices=Status.choices, default=Status.DRAFT)
+    feed_token = models.UUIDField(
+        default=None, null=True, blank=True, unique=True,
+        help_text="Grants public read access to responses via the feed URLs")
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
 
@@ -54,6 +58,14 @@ class Form(models.Model):
         if not self.code:
             self.code = generate_form_code()
         super().save(*args, **kwargs)
+
+    def rotate_feed_token(self):
+        self.feed_token = uuid.uuid4()
+        self.save(update_fields=['feed_token', 'updated_on'])
+
+    def disable_feed(self):
+        self.feed_token = None
+        self.save(update_fields=['feed_token', 'updated_on'])
 
     def can_edit(self, user):
         return user.is_authenticated and self.owner_id == user.id

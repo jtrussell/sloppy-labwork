@@ -3,6 +3,7 @@ import io
 import json
 import uuid
 from decimal import Decimal
+from xml.etree import ElementTree
 
 from django.contrib.auth.models import User
 from django.template.loader import render_to_string
@@ -1208,3 +1209,112 @@ class ResponsesCsvTestCase(GhostformTestMixin, TestCase):
         _response, rows = self._download_rows()
 
         self.assertEqual(Decimal(rows[1][-1]), Decimal('2.5'))
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class ResponsesFeedTestCase(GhostformTestMixin, TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        self.player = User.objects.create_user('player', 'player@test.com', 'password')
+        self.ghostform = self._create_form(self.owner)
+        self.deck_question = self._add_question(
+            self.ghostform, 'Deck', answer_type=Question.AnswerType.DECK_LINK)
+        self.houses_question = self._add_question(
+            self.ghostform, 'Houses', answer_type=Question.AnswerType.MULTIPLE_CHOICE,
+            choices=['Brobnar', 'Dis', 'Mars'], allows_multiple_answers=True)
+        self.notes_question = self._add_question(self.ghostform, 'Notes')
+        response = self._submit_response(self.ghostform, self.player, {
+            **self._field_data(self.deck_question, DOK_DECK_LINK),
+            **self._field_data(self.houses_question, ['Brobnar', 'Mars']),
+        })
+        response.context = [{'label': 'Round', 'value': 1}]
+        response.save()
+        self.ghostform.rotate_feed_token()
+
+    def _feed_url(self, feed_format, feed_token=None):
+        return reverse(
+            f'ghostform:ghostform-responses-feed-{feed_format}',
+            args=[feed_token or self.ghostform.feed_token])
+
+    def _update_feed(self, action):
+        return self.client.post(
+            reverse('ghostform:ghostform-update-feed', args=[self.ghostform.code]),
+            {'action': action})
+
+    def test_new_forms_have_no_feed_token(self):
+        self.assertIsNone(self._create_form(self.owner).feed_token)
+
+    def test_json_feed_is_public_and_lists_responses(self):
+        response = self.client.get(self._feed_url('json'))
+
+        self.assertEqual(response.status_code, 200)
+        feed = response.json()
+        self.assertEqual(feed['code'], self.ghostform.code)
+        self.assertEqual(len(feed['responses']), 1)
+        feed_response = feed['responses'][0]
+        self.assertEqual(feed_response['user'], 'player')
+        self.assertEqual(feed_response['context'], [{'label': 'Round', 'value': 1}])
+        self.assertEqual(feed_response['answers'], [
+            {'question': 'Deck', 'is_archived': False, 'value': DOK_DECK_LINK, 'deck_id': DECK_UUID},
+            {'question': 'Houses', 'is_archived': False, 'value': 'Brobnar;Mars', 'deck_id': ''},
+            {'question': 'Notes', 'is_archived': False, 'value': '', 'deck_id': ''},
+        ])
+
+    def test_xml_feed_is_public_and_lists_responses(self):
+        response = self.client.get(self._feed_url('xml'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/xml')
+        root = ElementTree.fromstring(response.content)
+        self.assertEqual(root.findtext('code'), self.ghostform.code)
+        self.assertEqual(root.findtext('responses/response/user'), 'player')
+        self.assertEqual(root.findtext('responses/response/context/item/value'), '1')
+        answers = root.findall('responses/response/answers/answer')
+        self.assertEqual([answer.findtext('question') for answer in answers], ['Deck', 'Houses', 'Notes'])
+        self.assertEqual(answers[0].findtext('deck_id'), DECK_UUID)
+        self.assertEqual(answers[1].findtext('value'), 'Brobnar;Mars')
+
+    def test_unknown_feed_token_is_not_found(self):
+        response = self.client.get(self._feed_url('json', uuid.uuid4()))
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_owner_can_rotate_feed_token(self):
+        original_token = self.ghostform.feed_token
+        self.client.login(username='owner', password='password')
+
+        response = self._update_feed('rotate')
+
+        self.assertRedirects(response, reverse('ghostform:ghostform-detail', args=[self.ghostform.code]))
+        self.ghostform.refresh_from_db()
+        self.assertNotEqual(self.ghostform.feed_token, original_token)
+        self.assertEqual(self.client.get(self._feed_url('json', original_token)).status_code, 404)
+        self.assertEqual(self.client.get(self._feed_url('json')).status_code, 200)
+
+    def test_owner_can_disable_feed(self):
+        original_token = self.ghostform.feed_token
+        self.client.login(username='owner', password='password')
+
+        self._update_feed('disable')
+
+        self.ghostform.refresh_from_db()
+        self.assertIsNone(self.ghostform.feed_token)
+        self.assertEqual(self.client.get(self._feed_url('xml', original_token)).status_code, 404)
+
+    def test_stranger_cannot_update_feed(self):
+        original_token = self.ghostform.feed_token
+        self.client.login(username='player', password='password')
+
+        response = self._update_feed('disable')
+
+        self.assertEqual(response.status_code, 403)
+        self.ghostform.refresh_from_db()
+        self.assertEqual(self.ghostform.feed_token, original_token)
+
+    def test_detail_shows_feed_links_to_owner(self):
+        self.client.login(username='owner', password='password')
+
+        response = self.client.get(reverse('ghostform:ghostform-detail', args=[self.ghostform.code]))
+
+        self.assertContains(response, self._feed_url('xml'))
+        self.assertContains(response, self._feed_url('json'))

@@ -6,13 +6,14 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Max, Q
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.text import slugify
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from decks.models import House, Set
-from .exports import write_responses_csv
+from .exports import build_responses_feed, render_responses_feed_xml, write_responses_csv
 from .forms import FormDetailsForm, QuestionsPayloadForm
 from .hooks import get_response_form
 from .models import Form, Question, MAXIMUM_QUESTIONS_PER_FORM
@@ -20,6 +21,14 @@ from .picker import search_pickable_forms
 
 
 FORMS_PER_PAGE = 20
+
+
+def redirect_to(request, url):
+    if request.htmx:
+        resp = HttpResponse(url)
+        resp['HX-Redirect'] = url
+        return resp
+    return redirect(url)
 
 
 def get_editable_form_or_403(user, form_code):
@@ -161,6 +170,39 @@ def form_responses_csv(request, form_code):
     )
     write_responses_csv(ghostform, response)
     return response
+
+
+@login_required
+@require_POST
+def form_update_feed(request, form_code):
+    ghostform = get_editable_form_or_403(request.user, form_code)
+    requested_action = request.POST.get('action')
+
+    if requested_action == 'rotate':
+        ghostform.rotate_feed_token()
+        messages.success(request, 'New spreadsheet links generated.')
+    elif requested_action == 'disable':
+        ghostform.disable_feed()
+        messages.success(request, 'Spreadsheet links disabled.')
+    else:
+        messages.error(request, 'Unknown spreadsheet link action.')
+
+    return redirect_to(request, reverse('ghostform:ghostform-detail', args=[ghostform.code]))
+
+
+@require_GET
+def form_responses_feed_json(request, feed_token):
+    ghostform = get_object_or_404(Form, feed_token=feed_token)
+    return JsonResponse(build_responses_feed(ghostform))
+
+
+@require_GET
+def form_responses_feed_xml(request, feed_token):
+    ghostform = get_object_or_404(Form, feed_token=feed_token)
+    return HttpResponse(
+        render_responses_feed_xml(build_responses_feed(ghostform)),
+        content_type='application/xml',
+    )
 
 
 @login_required
