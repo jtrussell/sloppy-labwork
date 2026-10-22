@@ -1,0 +1,11 @@
+<span>
+  {% if match.has_result %}
+    {% if match.result.is_tie %}
+      {{ match.player_one }} tied {{ match.player_two }}
+    {% else %}
+      {{ match.result.winner }} beat {{ match.result.get_loser }}
+    {% endif %}
+  {% else %}
+    {{ match.player_one }} vs {{ match.player_two }}
+  {% endif %}
+</span>

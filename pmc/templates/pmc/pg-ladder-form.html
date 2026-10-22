@@ -1,9 +1,12 @@
 {% extends "pmc/_base.html" %}
 
+{% block extra_head %}
+  {% include 'pmc/_competition-assets.html' %}
+{% endblock %}
+
 {% block content %}
   {% if ladder %}
-    <h1>{{ ladder.name }}</h1>
-    <div class="subheading">Ladder Settings</div>
+    {% include 'pmc/_ladder-manage-tabs.html' %}
   {% else %}
     <h1>New Ladder</h1>
   {% endif %}
@@ -14,13 +17,24 @@
       {{ form.as_p }}
 
       <div class="card-actions">
-        {% if ladder %}
-          <a class="btn" href="{% url 'pmc-pg-ladder-manage' playgroup.slug ladder.pk %}">Cancel</a>
-        {% else %}
-          <a class="btn" href="{% url 'pmc-pg-ladders' playgroup.slug %}">Cancel</a>
+        {% if not ladder %}
+          <a class="btn" href="{% url 'pmc-pg-play' playgroup.slug %}">Cancel</a>
         {% endif %}
         <button class="btn btn-solid" type="submit">Save</button>
       </div>
     </form>
   </div>
+
+  {% if ladder.discord_webhook_url %}
+    <div class="card staff-only">
+      <div class="section-heading">
+        <h2>Discord</h2>
+        <form method="POST" action="{% url 'pmc-pg-ladder-discord-test' playgroup.slug ladder.pk %}">
+          {% csrf_token %}
+          <button class="text-button" type="submit">Send a test message</button>
+        </form>
+      </div>
+      <p class="text-muted">New challenges and results are posted to your Discord channel.</p>
+    </div>
+  {% endif %}
 {% endblock %}

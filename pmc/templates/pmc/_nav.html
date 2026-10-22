@@ -18,7 +18,7 @@
       <option value="" disabled selected hidden>KeyChain</option>
       {% for link in nav_links %}
       {% if not link.is_preview %}
-      <option value="{{ link.url }}" {% if link.is_active %}selected{% endif %}>{{ link.name }}</option>
+      <option value="{{ link.url }}" {% if link.is_active %}selected data-active{% endif %}>{{ link.name }}</option>
       {% endif %}
       {% endfor %}
     </select>
@@ -27,11 +27,16 @@
           var pathname = document.location.pathname;
           var elSelect = document.querySelector('#responsive-nav-select')
           var navValue = '/'
-          elSelect.childNodes.forEach(function (opt) {
-            if (pathname.indexOf(opt.value) === 0) {
-              navValue = opt.value
-            }
-          })
+          var serverActiveOption = elSelect.querySelector('option[data-active]')
+          if (serverActiveOption) {
+            navValue = serverActiveOption.value
+          } else {
+            elSelect.childNodes.forEach(function (opt) {
+              if (pathname.indexOf(opt.value) === 0) {
+                navValue = opt.value
+              }
+            })
+          }
           elSelect.value = navValue
           function slHandleResponsiveNavMenuChange (event) {
             window.location = event.target.value

@@ -2,11 +2,17 @@
   <div class="box-card-heading">
     <h3>{{ summary.name }}</h3>
     {% if playgroup_member.is_staff and not session.is_completed and not summary.standings %}
-      <button
-        class="btn btn-small staff-only"
-        hx-post="{% url 'pmc-pg-box-league-box-remove' playgroup.slug league.pk session.number summary.box.pk %}"
-        hx-confirm="Remove the empty box {{ summary.name }}?"
-      >Remove Box</button>
+      <details class="action-menu staff-only">
+        <summary class="menu-trigger" aria-label="Actions for {{ summary.name }}">{% include 'pmc/_more-actions-icon.html' %}</summary>
+        <div class="action-menu-items">
+          <button
+            type="button"
+            class="is-destructive"
+            hx-post="{% url 'pmc-pg-box-league-box-remove' playgroup.slug league.pk session.number summary.box.pk %}"
+            hx-confirm="Remove the empty box {{ summary.name }}?"
+          >Remove box</button>
+        </div>
+      </details>
     {% endif %}
   </div>
   <table class="box-standings">
@@ -19,9 +25,6 @@
           <th class="col-md lg-only">W-T-L</th>
         {% else %}
           <th class="col-md">Status</th>
-        {% endif %}
-        {% if playgroup_member.is_staff and not session.is_completed %}
-          <th class="col-sm staff-only">&nbsp;</th>
         {% endif %}
       </tr>
     </thead>
@@ -45,16 +48,6 @@
               {% if standing.member.pk in confirmed_member_ids %}Confirmed{% else %}<span class="text-muted">Not yet</span>{% endif %}
             </td>
           {% endif %}
-          {% if playgroup_member.is_staff and not session.is_completed %}
-            <td class="col-sm staff-only">
-              <button
-                class="btn btn-small"
-                hx-post="{% url 'pmc-pg-box-league-session-remove' playgroup.slug league.pk session.number standing.member.pk %}"
-                hx-confirm="Remove {{ standing.member }} from this session? Their unplayed matches will be deleted."
-                aria-label="Remove {{ standing.member }} from this session"
-              >&times;</button>
-            </td>
-          {% endif %}
         </tr>
       {% empty %}
         <tr>
@@ -67,38 +60,24 @@
   {% if summary.box_matches %}
     <details class="box-matches"{% if summary.is_viewer_box %} open{% endif %}>
       <summary>Matches</summary>
-      <ul class="box-match-list">
+      <ul class="link-list">
         {% for box_match in summary.box_matches %}
           {% with match=box_match.match %}
             <li>
-              <span>
-                {% if match.has_result %}
-                  {% if match.result.is_tie %}
-                    {{ match.player_one }} tied {{ match.player_two }}
-                  {% else %}
-                    {{ match.result.winner }} beat {{ match.result.get_loser }}
-                  {% endif %}
-                {% else %}
-                  {{ match.player_one }} vs {{ match.player_two }}
-                {% endif %}
-              </span>
-              {% if session.is_active %}
-                {% if playgroup_member.is_staff %}
-                  <span class="box-match-actions">
-                    <a class="btn btn-small" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk box_match.pk %}">{% if match.has_result %}Change{% else %}Record{% endif %}</a>
-                    {% if match.has_result %}
-                      <button
-                        class="btn btn-small"
-                        hx-post="{% url 'pmc-pg-box-league-match-clear' playgroup.slug league.pk box_match.pk %}"
-                        hx-confirm="Clear this result so it can be recorded again?"
-                      >Clear</button>
-                    {% endif %}
-                  </span>
-                {% elif not match.has_result and playgroup_member %}
-                  {% if match.player_one_id == playgroup_member.pk or match.player_two_id == playgroup_member.pk %}
-                    <a class="btn btn-small btn-solid" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk box_match.pk %}">Record Result</a>
-                  {% endif %}
-                {% endif %}
+              {% if session.is_active and playgroup_member.is_staff %}
+                <a class="link-list-row" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk box_match.pk %}">
+                  {% include 'pmc/_box-match-summary.html' %}
+                  <span class="link-list-hint">{% if match.has_result %}Change{% else %}Record{% endif %}</span>
+                </a>
+              {% elif session.is_active and not match.has_result and playgroup_member.pk in match.player_ids %}
+                <a class="link-list-row" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk box_match.pk %}">
+                  {% include 'pmc/_box-match-summary.html' %}
+                  <span class="link-list-hint">Record result</span>
+                </a>
+              {% else %}
+                <div class="link-list-row">
+                  {% include 'pmc/_box-match-summary.html' %}
+                </div>
               {% endif %}
             </li>
           {% endwith %}

@@ -16,4 +16,19 @@
       </div>
     </form>
   </div>
+
+  {% if box_match.match.has_result %}
+    <p class="staff-only">
+      <button
+        type="button"
+        class="text-button is-destructive"
+        hx-post="{% url 'pmc-pg-box-league-match-clear' playgroup.slug league.pk box_match.pk %}"
+        hx-confirm="Clear this result so it can be recorded again?"
+      >Clear this result</button>
+    </p>
+  {% endif %}
+{% endblock %}
+
+{% block extra_head %}
+  {% include 'pmc/_competition-assets.html' %}
 {% endblock %}

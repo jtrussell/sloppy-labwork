@@ -3,93 +3,117 @@
 
 {% block extra_head %}
   <link rel="stylesheet" href="{% static 'pmc/css/ladders.css' %}">
+  {% include 'pmc/_competition-assets.html' %}
 {% endblock %}
 
 {% block content %}
-  <h1>{{ ladder.name }}</h1>
-  <div class="subheading">Manage</div>
+  {% include 'pmc/_ladder-manage-tabs.html' %}
 
-  <div class="card staff-only">
-    <h2>Settings</h2>
-    <ul class="inline-list">
-      {% if ladder.challenges_enabled %}
-        <li>Challenge range: {{ ladder.challenge_range }}</li>
-        <li>Open challenge limit: {{ ladder.open_challenge_limit }}</li>
-        <li>Results due within {{ ladder.response_window_days }} day{{ ladder.response_window_days|pluralize }}</li>
-      {% else %}
-        <li>Challenges disabled</li>
-      {% endif %}
-    </ul>
-    <div class="card-actions">
-      <a class="btn" href="{% url 'pmc-pg-ladder-edit' playgroup.slug ladder.pk %}">Edit Settings</a>
-      <a class="btn btn-solid" href="{% url 'pmc-pg-ladder-detail' playgroup.slug ladder.pk %}">View Ladder</a>
-    </div>
-  </div>
-
-  <div class="card staff-only">
-    <h2>Add Player</h2>
-    <form method="POST" action="{% url 'pmc-pg-ladder-member-add' playgroup.slug ladder.pk %}">
-      {% csrf_token %}
-      {{ add_member_form.as_p }}
-      <div class="card-actions">
-        <button class="btn btn-solid" type="submit">Add Player</button>
-      </div>
-    </form>
-  </div>
-
-  <h2>Roster</h2>
-  <table class="ladder-roster">
-    <thead>
-      <tr>
-        <th class="col-sm">#</th>
-        <th class="text-left">Player</th>
-        <th>&nbsp;</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for standing in standings %}
-        <tr>
-          <td class="col-sm">{{ standing.rank }}</td>
-          <td class="text-left">{{ standing.entry.member }}</td>
-          <td>
-            <div class="ladder-roster-actions">
-              <form method="POST" action="{% url 'pmc-pg-ladder-member-move' playgroup.slug ladder.pk standing.entry.member_id %}">
-                {% csrf_token %}
-                <input
-                  type="number"
-                  name="position"
-                  min="1"
-                  max="{{ standings|length }}"
-                  value="{{ standing.rank }}"
-                  aria-label="New position for {{ standing.entry.member }}"
-                >
-                <button class="btn btn-small" type="submit">Move</button>
-              </form>
-              <button
-                class="btn btn-small"
-                hx-post="{% url 'pmc-pg-ladder-member-remove' playgroup.slug ladder.pk standing.entry.member_id %}"
-                hx-confirm="Remove {{ standing.entry.member }} from {{ ladder.name }}?"
-              >Remove</button>
-            </div>
-          </td>
-        </tr>
-      {% empty %}
-        <tr>
-          <td colspan="3" class="text-muted">No players yet.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  {% if open_challenges %}
+  {% if active_tab == 'challenges' %}
     <h2>Open Challenges</h2>
-    <ul class="card-list">
-      {% for challenge in open_challenges %}
-        {% include 'pmc/_ladder-challenge-card.html' with show_void=True %}
-      {% endfor %}
-    </ul>
-  {% endif %}
+    <table>
+      <tbody>
+        {% for challenge in open_challenges %}
+          <tr>
+            <td class="text-left">
+              {{ challenge.challenger }} challenged {{ challenge.defender }}
+              <div class="text-smaller text-muted">Due {{ challenge.respond_by|date:"SHORT_DATE_FORMAT" }}</div>
+            </td>
+            <td class="row-menu">
+              <details class="action-menu">
+                <summary class="menu-trigger" aria-label="Actions for {{ challenge.challenger }} vs {{ challenge.defender }}">{% include 'pmc/_more-actions-icon.html' %}</summary>
+                <div class="action-menu-items">
+                  <a href="{% url 'pmc-pg-ladder-challenge-result' playgroup.slug ladder.pk challenge.pk %}">Record result</a>
+                  <button
+                    type="button"
+                    hx-post="{% url 'pmc-pg-ladder-challenge-withdraw' playgroup.slug ladder.pk challenge.pk %}"
+                    hx-confirm="Withdraw the challenge between {{ challenge.challenger }} and {{ challenge.defender }}?"
+                  >Withdraw</button>
+                  <button
+                    type="button"
+                    class="is-destructive"
+                    hx-post="{% url 'pmc-pg-ladder-challenge-void' playgroup.slug ladder.pk challenge.pk %}"
+                    hx-confirm="Void the challenge between {{ challenge.challenger }} and {{ challenge.defender }}?"
+                  >Void</button>
+                </div>
+              </details>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td class="text-muted">No open challenges.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
 
-  <h2>Recent Results</h2>
-  {% include 'pmc/_ladder-results.html' with show_void=True %}
+    <h2>Recent Results</h2>
+    {% include 'pmc/_ladder-results.html' with show_void=True %}
+  {% else %}
+    <div class="section-heading">
+      <h2>Roster</h2>
+      <button class="btn btn-solid" type="button" data-dialog-open="add-player-dialog">Add Player</button>
+    </div>
+    <table class="ladder-roster">
+      <thead>
+        <tr>
+          <th class="col-sm">#</th>
+          <th class="text-left">Player</th>
+          <th class="col-sm">&nbsp;</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for standing in standings %}
+          <tr>
+            <td class="col-sm">{{ standing.rank }}</td>
+            <td class="text-left">{{ standing.entry.member }}</td>
+            <td class="row-menu">
+              <details class="action-menu">
+                <summary class="menu-trigger" aria-label="Actions for {{ standing.entry.member }}">{% include 'pmc/_more-actions-icon.html' %}</summary>
+                <div class="action-menu-items">
+                  <button type="button" data-dialog-open="move-dialog-{{ standing.entry.member_id }}">Move to position&hellip;</button>
+                  <button
+                    type="button"
+                    class="is-destructive"
+                    hx-post="{% url 'pmc-pg-ladder-member-remove' playgroup.slug ladder.pk standing.entry.member_id %}"
+                    hx-confirm="Remove {{ standing.entry.member }} from {{ ladder.name }}?"
+                  >Remove from ladder</button>
+                </div>
+              </details>
+              <dialog id="move-dialog-{{ standing.entry.member_id }}" class="competition-dialog" aria-labelledby="move-dialog-title-{{ standing.entry.member_id }}">
+                <form method="POST" action="{% url 'pmc-pg-ladder-member-move' playgroup.slug ladder.pk standing.entry.member_id %}">
+                  {% csrf_token %}
+                  <h2 id="move-dialog-title-{{ standing.entry.member_id }}">Move {{ standing.entry.member }}</h2>
+                  <p>
+                    <label for="move-position-{{ standing.entry.member_id }}">New position:</label>
+                    <input id="move-position-{{ standing.entry.member_id }}" type="number" name="position" min="1" max="{{ standings|length }}" value="{{ standing.rank }}" required>
+                  </p>
+                  <div class="card-actions">
+                    <button class="btn" type="submit" formmethod="dialog" formnovalidate>Cancel</button>
+                    <button class="btn btn-solid" type="submit">Move</button>
+                  </div>
+                </form>
+              </dialog>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="3" class="text-muted">No players yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <dialog id="add-player-dialog" class="competition-dialog" aria-labelledby="add-player-dialog-title">
+      <form method="POST" action="{% url 'pmc-pg-ladder-member-add' playgroup.slug ladder.pk %}">
+        {% csrf_token %}
+        <h2 id="add-player-dialog-title">Add a Player</h2>
+        {{ add_member_form.as_p }}
+        <div class="card-actions">
+          <button class="btn" type="submit" formmethod="dialog" formnovalidate>Cancel</button>
+          <button class="btn btn-solid" type="submit">Add Player</button>
+        </div>
+      </form>
+    </dialog>
+  {% endif %}
 {% endblock %}

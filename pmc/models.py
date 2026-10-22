@@ -10,6 +10,8 @@ from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
 from contextlib import contextmanager
 from itertools import combinations
+from . import ladder_notifications
+from .discord_webhooks import validate_discord_webhook_url
 import calendar
 from .box_league_placement import (
     MINIMUM_PLAYERS_PER_BOX, CompletedBox, boxes_per_level_of, linear_tier_box_counts,
@@ -2172,8 +2174,12 @@ class Match(models.Model):
     def has_result(self):
         return hasattr(self, 'result')
 
+    @property
+    def player_ids(self):
+        return (self.player_one_id, self.player_two_id)
+
     def involves(self, member):
-        return member.pk in (self.player_one_id, self.player_two_id)
+        return member.pk in self.player_ids
 
 
 class MatchResult(models.Model):
@@ -2239,6 +2245,11 @@ class Ladder(models.Model):
     response_window_days = models.PositiveSmallIntegerField(
         default=7, validators=[MinValueValidator(1)],
         help_text=_('Days to record a result before the challenger wins by forfeit.'))
+    discord_webhook_url = models.URLField(
+        max_length=300, default='', blank=True,
+        validators=[validate_discord_webhook_url],
+        verbose_name=_('Discord webhook URL'),
+        help_text=_('Optional. New challenges and results are posted to this Discord channel.'))
     created_on = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         'auth.User', on_delete=models.SET_NULL, related_name='+',
@@ -2359,24 +2370,88 @@ class Ladder(models.Model):
                 raise LadderRuleViolation(reason)
             match = Match.objects.create(
                 playgroup_id=self.playgroup_id, player_one=challenger, player_two=defender)
-            return LadderChallenge.objects.create(
+            challenge = LadderChallenge.objects.create(
                 ladder=self,
                 match=match,
                 respond_by=timezone.now() + timedelta(days=self.response_window_days),
             )
+            ranked_member_ids = [entry.member_id for entry in entries]
+            ladder_notifications.notify_after_commit(
+                ladder_notifications.notify_challenge_issued,
+                challenge.pk,
+                ranked_member_ids.index(challenger.pk) + 1,
+                ranked_member_ids.index(defender.pk) + 1,
+            )
+            return challenge
 
     def record_result(self, challenge, winner, recorded_by):
         self._ensure_participant_or_organizer(challenge, recorded_by)
         with self._ordered_entries_for_update() as entries:
             challenge = self._reload_pending_challenge(challenge)
-            if winner is not None and not challenge.match.involves(winner):
-                raise LadderRuleViolation(
-                    _('The winner must be one of the players in this challenge.'))
-            MatchResult.objects.create(
-                match=challenge.match, winner=winner, recorded_by=recorded_by)
-            challenge.mark_resolved(LadderChallenge.ChallengeStatuses.COMPLETED)
-            if winner is not None and winner.pk == challenge.match.player_one_id:
-                self._move_challenger_ahead_of_defender(entries, challenge.match)
+            self._complete_challenge(entries, challenge, winner, recorded_by)
+
+    def record_played_result(self, first_player, second_player, winner, recorded_by):
+        participant_user_ids = (first_player.user_id, second_player.user_id)
+        if recorded_by.pk not in participant_user_ids and not self.is_organizer(recorded_by):
+            raise PermissionDenied
+        with self._ordered_entries_for_update() as entries:
+            ranked_member_ids = [entry.member_id for entry in entries]
+            reason = self._played_result_ineligibility_reason(ranked_member_ids, first_player, second_player)
+            if reason:
+                raise LadderRuleViolation(reason)
+            lower_ranked, higher_ranked = sorted(
+                (first_player, second_player),
+                key=lambda player: ranked_member_ids.index(player.pk),
+                reverse=True,
+            )
+            open_challenge = next(
+                (
+                    challenge for challenge in self.get_open_challenges()
+                    if challenge.match.involves(first_player) and challenge.match.involves(second_player)
+                ),
+                None,
+            )
+            if open_challenge is None:
+                match = Match.objects.create(
+                    playgroup_id=self.playgroup_id, player_one=lower_ranked, player_two=higher_ranked)
+                open_challenge = LadderChallenge.objects.create(
+                    ladder=self, match=match, respond_by=timezone.now(), was_issued=False)
+            self._complete_challenge(entries, open_challenge, winner, recorded_by)
+            return open_challenge
+
+    def get_played_result_opponents(self, member):
+        entries = self.get_ordered_entries()
+        ranked_member_ids = [entry.member_id for entry in entries]
+        return [
+            entry.member for entry in entries
+            if self._played_result_ineligibility_reason(ranked_member_ids, member, entry.member) is None
+        ]
+
+    def _played_result_ineligibility_reason(self, ranked_member_ids, first_player, second_player):
+        if not self.challenges_enabled:
+            return _('Results can only be recorded while challenges are enabled on this ladder.')
+        if first_player.pk not in ranked_member_ids or second_player.pk not in ranked_member_ids:
+            return _('Both players must be on this ladder.')
+        if first_player.pk == second_player.pk:
+            return _('Choose an opponent other than yourself.')
+        places_apart = abs(ranked_member_ids.index(first_player.pk) - ranked_member_ids.index(second_player.pk))
+        if places_apart > self.challenge_range:
+            return _('Games can only be recorded between players up to %(range)s places apart.') % {
+                'range': self.challenge_range}
+        return None
+
+    def _complete_challenge(self, entries, challenge, winner, recorded_by):
+        if winner is not None and not challenge.match.involves(winner):
+            raise LadderRuleViolation(
+                _('The winner must be one of the players in this challenge.'))
+        MatchResult.objects.create(
+            match=challenge.match, winner=winner, recorded_by=recorded_by)
+        challenge.mark_resolved(LadderChallenge.ChallengeStatuses.COMPLETED)
+        challenger_new_rank = None
+        if winner is not None and winner.pk == challenge.match.player_one_id:
+            challenger_new_rank = self._move_challenger_ahead_of_defender(entries, challenge.match)
+        ladder_notifications.notify_after_commit(
+            ladder_notifications.notify_result_recorded, challenge.pk, challenger_new_rank)
 
     def withdraw_challenge(self, challenge, acting_user):
         is_challenger = challenge.match.player_one.user_id == acting_user.pk
@@ -2447,18 +2522,21 @@ class Ladder(models.Model):
         MatchResult.objects.create(
             match=challenge.match, winner_id=challenge.match.player_one_id, is_forfeit=True)
         challenge.mark_resolved(LadderChallenge.ChallengeStatuses.FORFEITED)
-        self._move_challenger_ahead_of_defender(entries, challenge.match)
+        challenger_new_rank = self._move_challenger_ahead_of_defender(entries, challenge.match)
+        ladder_notifications.notify_after_commit(
+            ladder_notifications.notify_result_recorded, challenge.pk, challenger_new_rank)
 
     def _move_challenger_ahead_of_defender(self, entries, match):
         challenger_entry = self._find_entry(entries, match.player_one)
         defender_entry = self._find_entry(entries, match.player_two)
         if challenger_entry is None or defender_entry is None:
-            return
+            return None
         defender_index = entries.index(defender_entry)
         if entries.index(challenger_entry) < defender_index:
-            return
+            return None
         entries.remove(challenger_entry)
         entries.insert(defender_index, challenger_entry)
+        return defender_index + 1
 
     def _close_open_challenges_for_departing(self, member):
         open_challenges = self.challenges.filter(
@@ -2546,6 +2624,7 @@ class LadderEntry(models.Model):
         PlaygroupMember, on_delete=models.CASCADE, related_name='ladder_entries')
     position = models.PositiveIntegerField()
     joined_on = models.DateTimeField(auto_now_add=True)
+    email_on_challenge = models.BooleanField(default=False)
 
     class Meta:
         verbose_name_plural = 'Ladder entries'
@@ -2576,6 +2655,8 @@ class LadderChallenge(models.Model):
     issued_on = models.DateTimeField(auto_now_add=True)
     respond_by = models.DateTimeField()
     resolved_on = models.DateTimeField(default=None, null=True, blank=True)
+    was_issued = models.BooleanField(
+        default=True, help_text=_('False when the game was played without a challenge first.'))
 
     class Meta:
         ordering = ['-issued_on']

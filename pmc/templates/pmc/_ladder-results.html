@@ -19,19 +19,26 @@
               {{ result.winner }} beat {{ result.get_loser }}
             {% endif %}
             <ul class="inline-list text-smaller text-muted">
+              {% if not challenge.was_issued %}<li>Played without a challenge</li>{% endif %}
               {% if result.is_voided %}<li>Voided</li>{% endif %}
               <li class="sm-only">{{ challenge.resolved_on|date:"SHORT_DATE_FORMAT" }}</li>
             </ul>
           </td>
           <td class="col-md lg-only">{{ challenge.resolved_on|date:"SHORT_DATE_FORMAT" }}</td>
           {% if show_void %}
-            <td class="col-md">
+            <td class="row-menu">
               {% if not result.is_voided %}
-                <button
-                  class="btn btn-small"
-                  hx-post="{% url 'pmc-pg-ladder-challenge-void' playgroup.slug ladder.pk challenge.pk %}"
-                  hx-confirm="Void this result? Positions will not change; use Move to correct them."
-                >Void</button>
+                <details class="action-menu">
+                  <summary class="menu-trigger" aria-label="Actions for this result">{% include 'pmc/_more-actions-icon.html' %}</summary>
+                  <div class="action-menu-items">
+                    <button
+                      type="button"
+                      class="is-destructive"
+                      hx-post="{% url 'pmc-pg-ladder-challenge-void' playgroup.slug ladder.pk challenge.pk %}"
+                      hx-confirm="Void this result? Positions will not change; use Move on the Roster tab to correct them."
+                    >Void result</button>
+                  </div>
+                </details>
               {% endif %}
             </td>
           {% endif %}

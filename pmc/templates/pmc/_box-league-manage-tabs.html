@@ -1,0 +1,9 @@
+<div class="page-heading">
+  <h1>{{ league.name }}</h1>
+  <a href="{% url 'pmc-pg-box-league-detail' playgroup.slug league.pk %}">View league</a>
+</div>
+<nav class="btn-group btn-group-center manage-tabs" aria-label="Manage {{ league.name }}">
+  <a class="btn{% if active_tab == 'players' %} btn-solid{% endif %}" href="{% url 'pmc-pg-box-league-manage' playgroup.slug league.pk %}">Players</a>
+  <a class="btn{% if active_tab == 'sessions' %} btn-solid{% endif %}" href="{% url 'pmc-pg-box-league-manage' playgroup.slug league.pk %}?tab=sessions">Sessions</a>
+  <a class="btn{% if active_tab == 'settings' %} btn-solid{% endif %}" href="{% url 'pmc-pg-box-league-edit' playgroup.slug league.pk %}">Settings</a>
+</nav>

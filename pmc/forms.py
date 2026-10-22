@@ -357,7 +357,35 @@ class LadderForm(UniqueNameInPlaygroupForm):
     class Meta:
         model = Ladder
         fields = ('name', 'challenges_enabled', 'challenge_range',
-                  'open_challenge_limit', 'response_window_days')
+                  'open_challenge_limit', 'response_window_days', 'discord_webhook_url')
+
+
+class LadderPlayedResultForm(forms.Form):
+    I_WON = 'won'
+    THEY_WON = 'lost'
+    TIE = 'tie'
+
+    opponent = forms.ModelChoiceField(
+        queryset=PlaygroupMember.objects.none(), label=_('Opponent'))
+    outcome = forms.ChoiceField(
+        widget=forms.RadioSelect,
+        label=_('Result'),
+        choices=[(I_WON, _('I won')), (THEY_WON, _('They won')), (TIE, _('Tie'))],
+    )
+
+    def __init__(self, *args, ladder, member, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.member = member
+        self.fields['opponent'].queryset = PlaygroupMember.objects.filter(
+            pk__in=[opponent.pk for opponent in ladder.get_played_result_opponents(member)]
+        ).select_related('user').order_by('user__username')
+
+    def get_winner(self):
+        return {
+            self.I_WON: self.member,
+            self.THEY_WON: self.cleaned_data['opponent'],
+            self.TIE: None,
+        }[self.cleaned_data['outcome']]
 
 
 class LadderAddMemberForm(forms.Form):

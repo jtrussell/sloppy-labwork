@@ -1,20 +1,17 @@
 {% extends "pmc/_base.html" %}
 
+{% block extra_head %}
+  {% include 'pmc/_competition-assets.html' %}
+{% endblock %}
+
 {% block content %}
   <h1>Play</h1>
 
-  <div class="card staff-only">
-    <h2>Staff Area</h2>
-    {% if ladders is not None %}
-      <p><a href="{% url 'pmc-pg-ladder-new' playgroup.slug %}" class="btn btn-solid btn-block">Add Ladder</a></p>
-    {% endif %}
-    {% if box_leagues is not None %}
-      <p><a href="{% url 'pmc-pg-box-league-new' playgroup.slug %}" class="btn btn-solid btn-block">Add Box League</a></p>
-    {% endif %}
-  </div>
-
   {% if ladders is not None %}
-    <h2>Ladders</h2>
+    <div class="section-heading">
+      <h2>Ladders</h2>
+      <a class="staff-only" href="{% url 'pmc-pg-ladder-new' playgroup.slug %}">Add ladder</a>
+    </div>
     <ul class="card-list">
       {% for ladder in ladders %}
         {% include 'pmc/_ladder-card.html' %}
@@ -25,7 +22,10 @@
   {% endif %}
 
   {% if box_leagues is not None %}
-    <h2>Box Leagues</h2>
+    <div class="section-heading">
+      <h2>Box Leagues</h2>
+      <a class="staff-only" href="{% url 'pmc-pg-box-league-new' playgroup.slug %}">Add box league</a>
+    </div>
     <ul class="card-list">
       {% for box_league in box_leagues %}
         {% include 'pmc/_box-league-card.html' %}

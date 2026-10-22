@@ -506,12 +506,37 @@ class BoxLeagueViewTests(BoxLeagueTestBase):
         active_names = [str(link['name']) for link in response.context['nav_links'] if link['is_active']]
         self.assertEqual(active_names, ['Play'])
 
-    def test_manage_page_warns_about_unbalanced_movement(self):
+    def test_settings_page_warns_about_unbalanced_movement(self):
         self.league.promotion_count = 2
         self.league.save()
         self.client.force_login(self.organizer.user)
-        response = self.client.get(self.league_url('pmc-pg-box-league-manage'))
+        response = self.client.get(self.league_url('pmc-pg-box-league-edit'))
         self.assertContains(response, 'More players move up than down each session.')
+
+    def test_next_step_points_players_to_their_next_game(self):
+        session = self.start_next_session()
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(self.league_url('pmc-pg-box-league-session', session.number))
+        self.assertEqual(response.context['viewer_games_left'], 2)
+        self.assertContains(response, self.league_url(
+            'pmc-pg-box-league-match-result', response.context['viewer_next_match'].pk))
+
+    def test_proposal_next_step_asks_players_to_confirm(self):
+        self.start_next_session()
+        proposal = self.league.plan_next_session()
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(self.league_url('pmc-pg-box-league-session', proposal.number))
+        self.assertContains(response, 'Playing in session 2?')
+
+    def test_manage_tabs(self):
+        self.start_next_session()
+        self.client.force_login(self.organizer.user)
+        response = self.client.get(self.league_url('pmc-pg-box-league-manage') + '?tab=sessions')
+        self.assertEqual(response.context['active_tab'], 'sessions')
+        self.assertContains(response, 'Plan Next Session')
+        response = self.client.get(self.league_url('pmc-pg-box-league-manage'))
+        self.assertEqual(response.context['active_tab'], 'players')
+        self.assertContains(response, 'Remove from session 1')
 
     def test_resize_and_box_views(self):
         proposal = self.league.plan_next_session()

@@ -2201,7 +2201,9 @@ class LadderViewTests(LadderTestBase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             [standing.entry.member for standing in response.context['standings']], self.players)
-        self.assertContains(response, 'Challenge</button>', count=3)
+        self.assertEqual(
+            [standing.rank for standing in response.context['challengeable_standings']], [2, 3, 4])
+        self.assertContains(response, 'name="defender_id"', count=3)
         self.assertContains(response, "You're #5")
 
     def test_detail_resolves_overdue_challenges(self):
@@ -2222,7 +2224,7 @@ class LadderViewTests(LadderTestBase):
     def test_manage_page_renders_for_organizer(self):
         self.ladder.issue_challenge(self.player(4), self.player(3))
         self.client.force_login(self.organizer.user)
-        response = self.client.get(self.ladder_url('pmc-pg-ladder-manage'))
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-manage') + '?tab=challenges')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Void</button>')
 
@@ -2404,7 +2406,7 @@ class LadderViewTests(LadderTestBase):
         self.client.force_login(self.organizer.user)
         response = self.client.post(
             self.ladder_url('pmc-pg-ladder-challenge-void', challenge.pk))
-        self.assertRedirects(response, self.ladder_url('pmc-pg-ladder-manage'))
+        self.assertRedirects(response, self.ladder_url('pmc-pg-ladder-manage') + '?tab=challenges')
         challenge.refresh_from_db()
         self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.VOIDED)
 

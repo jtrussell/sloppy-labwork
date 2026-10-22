@@ -3,12 +3,20 @@
 
 {% block extra_head %}
   <link rel="stylesheet" href="{% static 'pmc/css/box-leagues.css' %}">
+  {% include 'pmc/_competition-assets.html' %}
 {% endblock %}
 
 {% block content %}
   {% if league %}
-    <h1>{{ league.name }}</h1>
-    <div class="subheading">League Settings</div>
+    {% include 'pmc/_box-league-manage-tabs.html' %}
+    {% if league.has_unbalanced_movement %}
+      <div class="card staff-only">
+        <p>
+          {% if league.promotion_count > league.relegation_count %}More players move up than down each session.{% else %}More players move down than up each session.{% endif %}
+          Boxes are evened out when the next session is planned, so some players may stay in their tier.
+        </p>
+      </div>
+    {% endif %}
   {% else %}
     <h1>New Box League</h1>
   {% endif %}
@@ -51,10 +59,8 @@
     {% endif %}
 
     <div class="card-actions">
-      {% if league %}
-        <a class="btn" href="{% url 'pmc-pg-box-league-manage' playgroup.slug league.pk %}">Cancel</a>
-      {% else %}
-        <a class="btn" href="{% url 'pmc-pg-box-leagues' playgroup.slug %}">Cancel</a>
+      {% if not league %}
+        <a class="btn" href="{% url 'pmc-pg-play' playgroup.slug %}">Cancel</a>
       {% endif %}
       <button class="btn btn-solid" type="submit">Save</button>
     </div>

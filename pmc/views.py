@@ -29,6 +29,8 @@ from pmc.context_processors import playgroup
 from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm, PmcProfilePrivacyForm, RankingPointsMapVersionForm, VenueForm
 from pmc.forms import PlaygroupMemberForm
 from pmc.forms import LadderForm, LadderAddMemberForm, LadderMoveMemberForm, MatchOutcomeForm
+from pmc.forms import LadderPlayedResultForm
+from pmc.ladder_notifications import send_test_message as send_ladder_test_message
 from pmc.forms import BoxLeagueForm, BoxLeagueTierNameFormSet, BoxLeagueAddMemberForm
 from pmc.forms import BoxAssignmentForm, BoxSessionStartForm, BoxProposalResizeForm, BoxAddForm
 from user_profile.forms import EditUsernameForm
@@ -433,7 +435,11 @@ def edit_playgroup_ladder(request, slug, ladder_id):
             ladder.void_open_challenges()
         messages.success(request, _('Ladder settings saved.'))
         return HttpResponseRedirect(ladder_manage_url(ladder))
-    return render(request, 'pmc/pg-ladder-form.html', {'form': form, 'ladder': ladder})
+    return render(request, 'pmc/pg-ladder-form.html', {
+        'form': form,
+        'ladder': ladder,
+        'active_tab': 'settings',
+    })
 
 
 @login_required
@@ -448,16 +454,84 @@ def playgroup_ladder_detail(request, slug, ladder_id):
     viewer_standing = next(
         (standing for standing in standings if standing.is_viewer), None)
     open_challenges = list(ladder.get_open_challenges())
+    viewer_challenges = [
+        challenge for challenge in open_challenges
+        if viewer_member and challenge.match.involves(viewer_member)
+    ]
+    challengeable_standings = [standing for standing in standings if standing.can_be_challenged]
     return render(request, 'pmc/pg-ladder-detail.html', {
         'ladder': ladder,
         'standings': standings,
         'viewer_standing': viewer_standing,
-        'viewer_open_challenge_count': sum(
-            1 for challenge in open_challenges
-            if viewer_member and challenge.match.involves(viewer_member)),
+        'viewer_entry': viewer_standing.entry if viewer_standing else None,
+        'viewer_challenge': viewer_challenges[0] if viewer_challenges else None,
+        'challengeable_standings': challengeable_standings,
+        'challenge_block_reason': next(
+            (standing.challenge_block_reason for standing in standings if standing.challenge_block_reason), None),
         'open_challenges': open_challenges,
         'recent_results': ladder.get_recent_results(),
     })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@is_pg_member
+def record_played_ladder_result(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    viewer_member = get_viewer_member_or_403(request, ladder.playgroup)
+    if not ladder.entries.filter(member=viewer_member).exists() or not ladder.challenges_enabled:
+        messages.error(request, _('Join this ladder to record games, and make sure challenges are enabled.'))
+        return HttpResponseRedirect(ladder_detail_url(ladder))
+    form = LadderPlayedResultForm(request.POST or None, ladder=ladder, member=viewer_member)
+    if request.method == 'POST' and form.is_valid():
+        return run_competition_action(
+            request,
+            lambda: ladder.record_played_result(
+                viewer_member, form.cleaned_data['opponent'], form.get_winner(), request.user),
+            _('Result recorded.'),
+            ladder_detail_url(ladder),
+        )
+    return render(request, 'pmc/pg-ladder-played-result.html', {
+        'ladder': ladder,
+        'form': form,
+    })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@require_POST
+@is_pg_member
+def update_ladder_challenge_emails(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    viewer_member = get_viewer_member_or_403(request, ladder.playgroup)
+    entry = get_object_or_404(ladder.entries, member=viewer_member)
+    entry.email_on_challenge = request.POST.get('email_on_challenge') == 'on'
+    entry.save(update_fields=['email_on_challenge'])
+    if entry.email_on_challenge:
+        messages.success(request, _('We will email you when someone challenges you on this ladder.'))
+    else:
+        messages.success(request, _('Challenge emails turned off for this ladder.'))
+    if request.htmx:
+        return HttpResponse(status=HTTPStatus.NO_CONTENT)
+    return HttpResponseRedirect(ladder_detail_url(ladder))
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@require_POST
+@is_pg_staff
+def test_ladder_discord_webhook(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    if not ladder.discord_webhook_url:
+        messages.error(request, _('Add a Discord webhook URL first.'))
+    else:
+        was_sent, problem = send_ladder_test_message(ladder)
+        if was_sent:
+            messages.success(request, _('Test message sent to Discord.'))
+        else:
+            messages.error(request, problem)
+    return redirect_to(request, reverse(
+        'pmc-pg-ladder-edit', kwargs={'slug': slug, 'ladder_id': ladder.pk}))
 
 
 @login_required
@@ -468,6 +542,7 @@ def manage_playgroup_ladder(request, slug, ladder_id):
     ladder.resolve_overdue_challenges()
     return render(request, 'pmc/pg-ladder-manage.html', {
         'ladder': ladder,
+        'active_tab': 'challenges' if request.GET.get('tab') == 'challenges' else 'roster',
         'standings': ladder.get_standings_for(None),
         'add_member_form': LadderAddMemberForm(ladder=ladder),
         'open_challenges': ladder.get_open_challenges(),
@@ -590,7 +665,7 @@ def void_ladder_challenge(request, slug, ladder_id, challenge_id):
         request,
         lambda: ladder.void_challenge(challenge, request.user),
         _('Challenge voided. Positions were not changed; use Move to correct them if needed.'),
-        ladder_manage_url(ladder),
+        f'{ladder_manage_url(ladder)}?tab=challenges',
     )
 
 
@@ -743,6 +818,7 @@ def edit_playgroup_box_league(request, slug, league_id):
         'form': form,
         'tier_formset': tier_formset,
         'league': league,
+        'active_tab': 'settings',
     })
 
 
@@ -780,7 +856,15 @@ def render_box_league_session(request, league, session):
     ]
     is_session_open = session is not None and not session.is_completed()
     placed_player_count = len(assigned_member_ids)
+    viewer_summary = next((summary for summary in box_summaries if summary.is_viewer_box), None)
+    viewer_unplayed_matches = [
+        box_match for box_match in (viewer_summary.box_matches if viewer_summary else [])
+        if box_match.match.involves(viewer_member) and not box_match.match.has_result()
+    ]
     return render(request, 'pmc/pg-box-league-session.html', {
+        'viewer_next_match': viewer_unplayed_matches[0] if viewer_unplayed_matches else None,
+        'viewer_games_left': len(viewer_unplayed_matches),
+        'proposal': league.get_proposed_session(),
         'placed_player_count': placed_player_count,
         'suggested_box_count': league.suggested_box_count(placed_player_count),
         'resize_form': BoxProposalResizeForm(
@@ -789,7 +873,7 @@ def render_box_league_session(request, league, session):
         'league': league,
         'session': session,
         'box_summaries': box_summaries,
-        'viewer_summary': next((summary for summary in box_summaries if summary.is_viewer_box), None),
+        'viewer_summary': viewer_summary,
         'previous_session': session.get_previous_session() if session else None,
         'next_session': session.get_next_session() if session else None,
         'is_on_roster': league.is_on_roster(viewer_member),
@@ -797,7 +881,6 @@ def render_box_league_session(request, league, session):
         'viewer_has_confirmed': viewer_member is not None and viewer_member.pk in confirmed_member_ids,
         'waiting_members': waiting_members,
         'is_stale_proposal': session is not None and session.is_stale_proposal(),
-        'has_proposal': league.get_proposed_session() is not None,
         'assignment_form': BoxAssignmentForm(session=session, box_summaries=box_summaries) if is_session_open else None,
     })
 
@@ -815,7 +898,8 @@ def manage_playgroup_box_league(request, slug, league_id):
                 box_name_by_member_id[standing.member.pk] = summary.name
     return render(request, 'pmc/pg-box-league-manage.html', {
         'league': league,
-        'tiers': league.get_tiers(),
+        'active_tab': 'sessions' if request.GET.get('tab') == 'sessions' else 'players',
+        'sessions': league.sessions.order_by('-number'),
         'current_session': current_session,
         'proposal': league.get_proposed_session(),
         'roster': [

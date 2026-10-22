@@ -1,0 +1,9 @@
+<div class="page-heading">
+  <h1>{{ ladder.name }}</h1>
+  <a href="{% url 'pmc-pg-ladder-detail' playgroup.slug ladder.pk %}">View ladder</a>
+</div>
+<nav class="btn-group btn-group-center manage-tabs" aria-label="Manage {{ ladder.name }}">
+  <a class="btn{% if active_tab == 'roster' %} btn-solid{% endif %}" href="{% url 'pmc-pg-ladder-manage' playgroup.slug ladder.pk %}">Roster</a>
+  <a class="btn{% if active_tab == 'challenges' %} btn-solid{% endif %}" href="{% url 'pmc-pg-ladder-manage' playgroup.slug ladder.pk %}?tab=challenges">Challenges</a>
+  <a class="btn{% if active_tab == 'settings' %} btn-solid{% endif %}" href="{% url 'pmc-pg-ladder-edit' playgroup.slug ladder.pk %}">Settings</a>
+</nav>

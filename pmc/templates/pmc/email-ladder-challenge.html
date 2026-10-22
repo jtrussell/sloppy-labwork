@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <head></head>
+  <body>
+    <p>Hi {{ challenge.defender }}!</p>
+    <p>
+      {{ challenge.challenger }} (#{{ challenger_rank }}) has challenged you (#{{ defender_rank }})
+      on {{ challenge.ladder.name }} in {{ challenge.ladder.playgroup.name }}.
+    </p>
+    <p>
+      Play your game and record the result by {{ challenge.respond_by|date:"DATE_FORMAT" }}.
+      If no result is recorded by then, the challenger wins by forfeit.
+      {% if ladder_url %}<a href="{{ ladder_url }}">View the ladder</a>.{% endif %}
+    </p>
+    <p>
+      You're receiving this because you asked to be emailed about challenges on this ladder.
+      You can turn this off from the ladder page.
+    </p>
+    <p>
+      Regards,<br />
+      The KeyChain Team
+    </p>
+  </body>
+</html>

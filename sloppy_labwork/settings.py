@@ -149,6 +149,7 @@ APPEND_SLASH = True
 WSGI_APPLICATION = 'sloppy_labwork.wsgi.application'
 
 DEFAULT_FROM_EMAIL = 'no-reply@sloppylabwork.com'
+PMC_SITE_URL = os.environ.get('PMC_SITE_URL', '')
 EMAIL_BACKEND = 'django_ses.SESBackend'
 
 # Database
