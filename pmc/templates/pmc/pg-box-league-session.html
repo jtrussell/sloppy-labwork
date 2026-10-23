@@ -38,6 +38,7 @@
 
   {% if playgroup_member %}
     <div class="card next-step">
+      {% include 'pmc/_next-step-label.html' with is_due=next_step_is_due %}
       <div class="next-step-body">
         {% if not is_on_roster %}
           <p><strong>Join {{ league.name }}.</strong> New players start in the bottom tier when the next session begins.</p>

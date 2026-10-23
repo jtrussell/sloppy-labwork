@@ -23,6 +23,7 @@
 
   {% if playgroup_member %}
     <div class="card next-step">
+      {% include 'pmc/_next-step-label.html' with is_due=viewer_challenge %}
       {% if not viewer_standing %}
         <div class="next-step-body">
           <p>

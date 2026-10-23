@@ -527,6 +527,25 @@ class BoxLeagueViewTests(BoxLeagueTestBase):
         self.client.force_login(self.player(1).user)
         response = self.client.get(self.league_url('pmc-pg-box-league-session', proposal.number))
         self.assertContains(response, 'Playing in session 2?')
+        self.assertTrue(response.context['next_step_is_due'])
+        self.assertContains(response, 'pulse-dot')
+
+        self.league.confirm(self.player(1))
+        response = self.client.get(self.league_url('pmc-pg-box-league-session', proposal.number))
+        self.assertFalse(response.context['next_step_is_due'])
+        self.assertNotContains(response, 'pulse-dot')
+        self.assertContains(response, 'Up next')
+
+    def test_unplayed_games_make_the_next_step_due(self):
+        session = self.start_next_session()
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(self.league_url('pmc-pg-box-league-session', session.number))
+        self.assertTrue(response.context['next_step_is_due'])
+        self.assertContains(response, 'Your move')
+
+        self.play_out(session, [self.player(1), self.player(2), self.player(3)])
+        response = self.client.get(self.league_url('pmc-pg-box-league-session', session.number))
+        self.assertFalse(response.context['next_step_is_due'])
 
     def test_manage_tabs(self):
         self.start_next_session()

@@ -861,7 +861,12 @@ def render_box_league_session(request, league, session):
         box_match for box_match in (viewer_summary.box_matches if viewer_summary else [])
         if box_match.match.involves(viewer_member) and not box_match.match.has_result()
     ]
+    is_on_roster = league.is_on_roster(viewer_member)
+    viewer_has_confirmed = viewer_member is not None and viewer_member.pk in confirmed_member_ids
+    awaiting_confirmation = session is not None and session.is_proposed() and is_on_roster and not viewer_has_confirmed
+    awaiting_results = session is not None and session.is_active() and bool(viewer_unplayed_matches)
     return render(request, 'pmc/pg-box-league-session.html', {
+        'next_step_is_due': awaiting_confirmation or awaiting_results,
         'viewer_next_match': viewer_unplayed_matches[0] if viewer_unplayed_matches else None,
         'viewer_games_left': len(viewer_unplayed_matches),
         'proposal': league.get_proposed_session(),
@@ -876,9 +881,9 @@ def render_box_league_session(request, league, session):
         'viewer_summary': viewer_summary,
         'previous_session': session.get_previous_session() if session else None,
         'next_session': session.get_next_session() if session else None,
-        'is_on_roster': league.is_on_roster(viewer_member),
+        'is_on_roster': is_on_roster,
         'confirmed_member_ids': confirmed_member_ids,
-        'viewer_has_confirmed': viewer_member is not None and viewer_member.pk in confirmed_member_ids,
+        'viewer_has_confirmed': viewer_has_confirmed,
         'waiting_members': waiting_members,
         'is_stale_proposal': session is not None and session.is_stale_proposal(),
         'assignment_form': BoxAssignmentForm(session=session, box_summaries=box_summaries) if is_session_open else None,

@@ -2085,6 +2085,16 @@ class LadderResultTests(LadderTestBase):
 
 
 class LadderForfeitTests(LadderTestBase):
+    def test_forfeit_is_dated_at_the_deadline_not_when_processed(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.make_overdue(challenge, days_overdue=3)
+        deadline = LadderChallenge.objects.get(pk=challenge.pk).respond_by
+
+        self.ladder.resolve_overdue_challenges()
+
+        challenge.refresh_from_db()
+        self.assertEqual(challenge.resolved_on, deadline)
+
     def test_only_overdue_challenges_are_forfeited(self):
         self.allow_open_challenges(2)
         overdue = self.ladder.issue_challenge(self.player(4), self.player(3))
@@ -2205,6 +2215,17 @@ class LadderViewTests(LadderTestBase):
             [standing.rank for standing in response.context['challengeable_standings']], [2, 3, 4])
         self.assertContains(response, 'name="defender_id"', count=3)
         self.assertContains(response, "You're #5")
+
+    def test_next_step_pulses_only_while_a_challenge_is_open(self):
+        self.client.force_login(self.player(3).user)
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertContains(response, 'Up next')
+        self.assertNotContains(response, 'pulse-dot')
+
+        self.ladder.issue_challenge(self.player(4), self.player(3))
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertContains(response, 'Your move')
+        self.assertContains(response, 'pulse-dot')
 
     def test_detail_resolves_overdue_challenges(self):
         challenge = self.ladder.issue_challenge(self.player(4), self.player(3))

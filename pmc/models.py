@@ -2521,7 +2521,8 @@ class Ladder(models.Model):
     def _resolve_by_forfeit(self, challenge, entries):
         MatchResult.objects.create(
             match=challenge.match, winner_id=challenge.match.player_one_id, is_forfeit=True)
-        challenge.mark_resolved(LadderChallenge.ChallengeStatuses.FORFEITED)
+        challenge.mark_resolved(
+            LadderChallenge.ChallengeStatuses.FORFEITED, resolved_on=challenge.respond_by)
         challenger_new_rank = self._move_challenger_ahead_of_defender(entries, challenge.match)
         ladder_notifications.notify_after_commit(
             ladder_notifications.notify_result_recorded, challenge.pk, challenger_new_rank)
@@ -2678,9 +2679,9 @@ class LadderChallenge(models.Model):
     def is_overdue(self):
         return self.is_pending() and self.respond_by < timezone.now()
 
-    def mark_resolved(self, status):
+    def mark_resolved(self, status, resolved_on=None):
         self.status = status
-        self.resolved_on = timezone.now()
+        self.resolved_on = resolved_on or timezone.now()
         self.save(update_fields=['status', 'resolved_on'])
 
 
