@@ -1,0 +1,246 @@
+{% extends 'page.html' %}
+{% load static partials %}
+
+{% block head_title %}{{ session.template.name }} · Trade Secrets{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'trade_secrets/main.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include 'trade_secrets/partials/icons.html' %}
+
+{% partialdef board inline %}
+<section id="ts-board" class="ts-board" data-session-code="{{ session.code }}" data-revealed-count="{{ session.revealed_step_count }}">
+  <header class="ts-header">
+    <h1 class="ts-header__title">{{ session.template.name }}</h1>
+    <div class="subheading">Trade Secrets · <span class="ts-code">{{ session.code }}</span>{% if view.role == 'spectator' %} · {% include 'trade_secrets/partials/icon.html' with name='eye' %} Spectating{% endif %}</div>
+    {% if view.session.has_guest %}
+    <p class="ts-header__players"><strong>{{ view.host_name }}</strong> <span class="text-muted">vs</span> <strong>{{ view.guest_name }}</strong></p>
+    {% endif %}
+  </header>
+
+  {% if view.role == 'spectator' and not user.is_authenticated %}
+  <p class="ts-login-cue"><a href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Log in</a> to start your own session.</p>
+  {% endif %}
+
+  {% if view.action_state != 'invite-join' and view.action_state != 'invite-login' %}
+  {% include 'trade_secrets/partials/step-rail.html' with rail=view.rail mini=False %}
+  {% endif %}
+
+  {% partialdef overview inline %}
+  <div id="ts-overview" class="ts-overview"
+       hx-get="{% url 'trade_secrets:session-poll' session.code %}?v={{ view.version }}&amp;stage={{ view.stage_key|urlencode }}"
+       hx-trigger="every {{ view.poll_interval_ms }}ms [document.visibilityState === 'visible']"
+       hx-swap="outerHTML"
+       hx-sync="#ts-board:drop">
+    {% if view.shows_share_card %}
+    <div class="ts-share surface">
+      <p class="ts-share__title">Invite your opponent</p>
+      <p class="ts-share__code ts-code">{{ session.code }}</p>
+      <input class="ts-share__url" type="text" readonly value="{{ view.share_url }}" aria-label="Session link" data-select-on-focus>
+      <div class="ts-share__actions">
+        <button type="button" class="button button-primary" data-copy-text="{{ view.share_url }}">{% include 'trade_secrets/partials/icon.html' with name='copy' %}<span data-copy-label>Copy link</span></button>
+        <button type="button" class="button" data-share-url="{{ view.share_url }}" data-share-title="{{ view.host_name }} invites you to play {{ session.template.name }}" hidden>{% include 'trade_secrets/partials/icon.html' with name='share' %}Share</button>
+      </div>
+      <p class="ts-share__waiting" aria-live="polite"><span class="ts-dots" aria-hidden="true"></span>Waiting for someone to join</p>
+    </div>
+    {% endif %}
+    {% if view.presence %}
+    <ul class="ts-presence" role="list" aria-live="polite">
+      {% for seat in view.presence %}
+      <li class="ts-presence__seat{% if seat.has_locked_in %} is-locked{% endif %}{% if not seat.needs_to_act %} is-idle{% endif %}">
+        {% if seat.has_locked_in %}{% include 'trade_secrets/partials/icon.html' with name='lock' %}{% else %}<span class="ts-dots" aria-hidden="true"></span>{% endif %}
+        <span class="ts-presence__name">{% if seat.is_viewer %}You{% else %}{{ seat.name }}{% endif %}</span>
+        <span class="ts-presence__state">{% if not seat.needs_to_act %}nothing to pick{% elif seat.has_locked_in %}locked in{% else %}choosing{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endpartialdef %}
+
+  {% if view.action_state == 'invite-join' or view.action_state == 'invite-login' %}
+  <div class="ts-invite surface">
+    <span class="ts-invite__avatar" aria-hidden="true">{{ view.host_name|first|upper }}</span>
+    <p class="ts-invite__host">{{ view.host_name }}</p>
+    <p class="ts-invite__lede">invites you to play</p>
+    <p class="ts-invite__format">{{ session.template.name }}</p>
+    {% include 'trade_secrets/partials/step-rail.html' with rail=view.rail mini=True %}
+    {% if session.template.description %}<p class="ts-invite__description">{{ session.template.description }}</p>{% endif %}
+    {% for error in action_errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
+    {% if view.action_state == 'invite-join' %}
+    <form method="post" action="{% url 'trade_secrets:session-join' session.code %}">
+      {% csrf_token %}
+      <button type="submit" class="button button-primary button-jumbo ts-wide">Join game</button>
+    </form>
+    <p class="ts-invite__aside">Just watching? Keep this link to follow along.</p>
+    {% else %}
+    <a class="button button-primary button-jumbo ts-wide" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Log in to join</a>
+    <p class="ts-invite__aside">Both players need a Sloppy Labwork account.</p>
+    {% endif %}
+  </div>
+  {% else %}
+
+  <div class="ts-instruction{% if view.action_state == 'pick' %} ts-instruction--active{% endif %}">
+    <p class="ts-instruction__step">{% if view.is_finished %}Finished{% else %}Step {{ view.current_step_number }} of {{ view.step_total }}{% endif %}</p>
+    <p class="ts-instruction__title">{{ view.instruction }}</p>
+    {% if view.instruction_hint %}<p class="ts-instruction__hint">{{ view.instruction_hint }}</p>{% endif %}
+    {% if view.is_finished and view.has_games %}
+    <p class="ts-scoreline">{% for name, wins in view.games_won %}<span><strong>{{ name }}</strong> {{ wins }}</span>{% if not forloop.last %}<span class="ts-scoreline__dash">–</span>{% endif %}{% endfor %}</p>
+    {% endif %}
+  </div>
+
+  {% if action_errors %}
+  <div class="note note-danger" role="alert"><ul class="note__list">{% for error in action_errors %}<li>{{ error }}</li>{% endfor %}</ul></div>
+  {% endif %}
+
+  {% if view.last_reveal and view.last_reveal.action != 'submit' and not view.is_finished %}
+  <div class="ts-reveal" data-reveal-order="{{ view.last_reveal.order }}" aria-live="polite">
+    <p class="ts-reveal__title">{{ view.last_reveal.reveal_title }}</p>
+    <div class="ts-reveal__cards">
+      {% for seat in view.last_reveal.seat_picks %}
+      <div class="ts-reveal__card">
+        <span class="ts-reveal__who">{{ seat.name }}{% if view.last_reveal.verb %} {{ view.last_reveal.verb }}{% endif %}</span>
+        <span class="ts-reveal__what">{{ seat.decks|join:", "|default:"nothing" }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if view.action_state == 'submit-decks' or view.action_state == 'submit-decks-locked' %}
+    {% if view.action_state == 'submit-decks-locked' %}
+    {% for lineup in view.lineups %}{% if lineup.is_mine or view.session.has_guest %}{% include 'trade_secrets/partials/lineup.html' %}{% endif %}{% endfor %}
+    <details class="ts-change-decks"{% if action_errors %} open{% endif %}>
+      <summary class="button button-small">Change decks</summary>
+      {% partial deck-forms %}
+    </details>
+    {% else %}
+    {% partialdef deck-forms inline %}
+    <div class="ts-submit">
+      <input class="ts-sr-only" type="radio" name="ts-deck-source" id="ts-source-links"{% if deck_source != 'lineup' %} checked{% endif %}>
+      <input class="ts-sr-only" type="radio" name="ts-deck-source" id="ts-source-lineup"{% if deck_source == 'lineup' %} checked{% endif %}>
+      <div class="ts-segmented" role="presentation">
+        <label for="ts-source-links">Paste links</label>
+        <label for="ts-source-lineup">My lineups</label>
+      </div>
+      <form class="ts-submit__panel ts-submit__panel--links form-wide" method="post" action="{% url 'trade_secrets:session-decks' session.code %}"
+            hx-post="{% url 'trade_secrets:session-decks' session.code %}" hx-target="#ts-board" hx-swap="outerHTML"
+            hx-sync="#ts-board:replace" hx-disabled-elt="find button" hx-indicator="#ts-decks-loading">
+        {% csrf_token %}
+        <input type="hidden" name="source" value="links">
+        <label for="{{ links_form.deck_links.id_for_label }}">{{ links_form.deck_links.label }}</label>
+        {{ links_form.deck_links }}
+        <p class="helptext">Master Vault or Decks of KeyForge links, one per line. Exactly {{ required_count }}.</p>
+        <button type="submit" class="button button-primary ts-wide">Submit decks</button>
+      </form>
+      <form class="ts-submit__panel ts-submit__panel--lineup form-wide" method="post" action="{% url 'trade_secrets:session-decks' session.code %}"
+            hx-post="{% url 'trade_secrets:session-decks' session.code %}" hx-target="#ts-board" hx-swap="outerHTML"
+            hx-sync="#ts-board:replace" hx-disabled-elt="find button" hx-indicator="#ts-decks-loading">
+        {% csrf_token %}
+        <input type="hidden" name="source" value="lineup">
+        {% if lineups %}
+        <label for="ts-lineup-select">Lineup</label>
+        <select name="lineup" id="ts-lineup-select"
+                hx-get="{% url 'trade_secrets:lineup-versions' %}?count={{ required_count }}"
+                hx-trigger="change" hx-target="#ts-version-select" hx-swap="outerHTML">
+          {% for lineup in lineups %}<option value="{{ lineup.pk }}">{{ lineup.name }}</option>{% endfor %}
+        </select>
+        <label for="ts-version-select">Version</label>
+        {% include 'trade_secrets/partials/version-select.html' %}
+        <div id="ts-lineup-preview" class="ts-lineup-preview" aria-live="polite"></div>
+        <button type="submit" class="button button-primary ts-wide">Submit lineup</button>
+        {% else %}
+        <p class="text-muted">No lineups yet. Paste links instead, or build one in <a href="{% url 'lineups-list' %}">Lineup Manager</a>.</p>
+        {% endif %}
+      </form>
+      <p id="ts-decks-loading" class="htmx-indicator ts-loading">Fetching decks from Master Vault…</p>
+    </div>
+    {% endpartialdef %}
+    {% for lineup in view.lineups %}{% if not lineup.is_mine and view.session.has_guest %}{% include 'trade_secrets/partials/lineup.html' %}{% endif %}{% endfor %}
+    {% endif %}
+  {% elif view.action_state == 'pick' %}
+  <form class="ts-pick-form" method="post" action="{% url 'trade_secrets:session-pick' session.code %}"
+        data-pick-count="{{ view.required_pick_count }}" data-opponent="{{ view.opponent_name }}"
+        hx-post="{% url 'trade_secrets:session-pick' session.code %}" hx-target="#ts-board" hx-swap="outerHTML"
+        hx-sync="#ts-board:replace" hx-disabled-elt="find button[type=submit]">
+    {% csrf_token %}
+    <input type="hidden" name="step_order" value="{{ view.pick_step_order }}">
+    {% for lineup in view.lineups %}{% include 'trade_secrets/partials/lineup.html' %}{% endfor %}
+    <div class="ts-actionbar">
+      <p class="ts-actionbar__status" data-pick-status aria-live="polite">{% if view.has_pending_pick %}Locked in. You can change until {{ view.opponent_name }} locks in.{% else %}Tap a deck to select it, tap again to lock in.{% endif %}</p>
+      <button type="submit" class="button button-primary" data-pick-submit>{% if view.has_pending_pick %}Update pick{% else %}Lock in{% endif %}</button>
+    </div>
+  </form>
+  {% else %}
+    {% if view.action_state == 'awaiting-result' and view.is_player %}
+    <div class="ts-blocked surface">
+      {% include 'trade_secrets/partials/icon.html' with name='alert' %}
+      <p>Game {{ view.blocking_game_number }} decides which decks stay eligible.</p>
+      {% for entry in view.history %}{% if entry.is_play and entry.game_number == view.blocking_game_number %}
+      <button type="button" class="button button-primary" hx-get="{% url 'trade_secrets:session-result' session.code entry.order %}" hx-target="#ts-dialog">Record result</button>
+      {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+    {% for lineup in view.lineups %}{% include 'trade_secrets/partials/lineup.html' %}{% endfor %}
+  {% endif %}
+
+  {% if view.summary_text %}
+  <div class="ts-copy{% if view.is_finished %} ts-copy--primary{% endif %}">
+    <textarea id="ts-results-text" class="ts-copy__text" readonly hidden aria-label="Results">{{ view.summary_text }}</textarea>
+    <button type="button" class="button{% if view.is_finished %} button-primary ts-wide{% else %} button-small{% endif %}" data-copy-from="#ts-results-text">{% include 'trade_secrets/partials/icon.html' with name='copy' %}<span data-copy-label>Copy results</span></button>
+  </div>
+  {% endif %}
+
+  {% if view.history %}
+  <details class="ts-history"{% if view.is_finished or view.history|length <= 3 %} open{% endif %}>
+    <summary class="ts-history__summary">History <span class="text-muted">({{ view.history|length }})</span></summary>
+    <ol class="ts-history__list" role="list">
+      {% for entry in view.history %}
+      <li class="ts-history__entry ts-history__entry--{{ entry.action }}">
+        <span class="ts-history__icon">{% include 'trade_secrets/partials/icon.html' with name=entry.icon %}</span>
+        <div class="ts-history__body">
+          <p class="ts-history__title">{{ entry.title }}</p>
+          {% if entry.action == 'submit' %}
+          <p class="ts-history__detail">Both lineups are in.</p>
+          {% elif entry.is_play %}
+          <p class="ts-history__detail">{% for seat in entry.seat_picks %}{{ seat.decks|join:", "|default:"no deck" }} <span class="text-muted">({{ seat.name }})</span>{% if not forloop.last %} <span class="text-muted">vs</span> {% endif %}{% endfor %}</p>
+          <p class="ts-history__result">
+            {% if entry.has_result %}
+            {% include 'trade_secrets/partials/icon.html' with name='check' %}<strong>{{ entry.winner_name }} won</strong>{% if entry.score %} · {{ entry.score }}{% endif %}
+            {% if entry.is_result_locked and view.is_player %}<span class="text-muted"> · locked</span>{% endif %}
+            {% else %}
+            <span class="text-muted">No result yet</span>
+            {% endif %}
+          </p>
+          {% if entry.can_record or entry.can_reset %}
+          <div class="ts-history__actions">
+            {% if entry.can_record %}
+            <button type="button" class="button button-small" hx-get="{% url 'trade_secrets:session-result' session.code entry.order %}" hx-target="#ts-dialog">{% if entry.has_result %}Edit{% else %}Record result{% endif %}</button>
+            {% endif %}
+            {% if entry.can_reset %}
+            <button type="button" class="button button-small" hx-post="{% url 'trade_secrets:session-result-reset' session.code entry.order %}" hx-target="#ts-board" hx-swap="outerHTML" hx-sync="#ts-board:replace"
+                    hx-confirm="Reset the game {{ entry.game_number }} result?{% if entry.warns_about_eligibility %} This can change which decks are eligible and may clear a locked-in pick.{% endif %}">Reset</button>
+            {% endif %}
+          </div>
+          {% endif %}
+          {% else %}
+          <p class="ts-history__detail">{% for seat in entry.seat_picks %}{{ seat.name }} {{ entry.verb }} {{ seat.decks|join:", "|default:"nothing" }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+  </details>
+  {% endif %}
+  {% endif %}
+</section>
+{% endpartialdef %}
+
+<dialog id="ts-dialog" class="ts-dialog" aria-label="Game result"></dialog>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{% static 'trade_secrets/trade-secrets.js' %}"></script>
+{% endblock %}

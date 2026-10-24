@@ -83,7 +83,7 @@ class Deck(models.Model):
         return self.get_master_vault_ui_url_from_id(self.id)
 
     def hydrate_from_master_vault(self, save=True):
-        r = get(self.get_master_vault_api_url(), headers={
+        r = get(self.get_master_vault_api_url(), timeout=10, headers={
                 'X-Forwarded-For': '192.168.{}.{}'.format(
                     random.randint(1, 255),
                     random.randint(1, 255)

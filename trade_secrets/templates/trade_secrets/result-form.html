@@ -1,0 +1,42 @@
+{% extends 'page.html' %}
+{% load static partials %}
+
+{% block head_title %}Game {{ game_number }} result · Trade Secrets{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'trade_secrets/main.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include 'trade_secrets/partials/icons.html' %}
+{% partialdef form inline %}
+<form class="ts-result-form" method="post" action="{% url 'trade_secrets:session-result' session.code step_order %}"
+      hx-post="{% url 'trade_secrets:session-result' session.code step_order %}" hx-target="#ts-board" hx-swap="outerHTML"
+      hx-sync="#ts-board:replace" hx-disabled-elt="find button[type=submit]">
+  {% csrf_token %}
+  <h2 class="ts-result-form__title">Game {{ game_number }}</h2>
+  {% if form.non_field_errors %}
+  <div class="note note-danger" role="alert"><ul class="note__list">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul></div>
+  {% endif %}
+  <fieldset class="ts-result-form__winner">
+    <legend>{{ form.winner_seat.label }}</legend>
+    <div class="ts-segmented ts-segmented--choices">
+      {% for choice in form.winner_seat %}
+      <label for="{{ choice.id_for_label }}">{{ choice.tag }}<span>{{ choice.choice_label }}</span></label>
+      {% endfor %}
+    </div>
+    {% for error in form.winner_seat.errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
+  </fieldset>
+  <label for="{{ form.score.id_for_label }}">{{ form.score.label }}</label>
+  {{ form.score }}
+  {% for error in form.score.errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
+  {% if warns_about_eligibility %}
+  <p class="ts-result-form__warning">{% include 'trade_secrets/partials/icon.html' with name='alert' %}The winning deck can't be played again. {% if has_result %}Changing this result can change which decks are eligible and may clear a locked-in pick.{% endif %}</p>
+  {% endif %}
+  <div class="ts-result-form__actions">
+    <button type="submit" class="button button-primary">Save result</button>
+    <a class="button" href="{% url 'trade_secrets:session-detail' session.code %}" data-close-dialog>Cancel</a>
+  </div>
+</form>
+{% endpartialdef %}
+{% endblock %}

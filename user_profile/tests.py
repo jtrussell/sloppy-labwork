@@ -21,6 +21,7 @@ from pmc.models import (
     UserBadge, UserTrophy,
 )
 from tourney.models import Player, Tournament, TournamentAdmin
+from trade_secrets.models import Session as TradeSecretsSession, SessionTemplate
 from user_profile.management.commands import merge_users
 from .forms import EditUsernameForm
 
@@ -307,6 +308,16 @@ class MergeUsersCommandTests(TestCase):
         player.refresh_from_db()
         self.assertEqual(player.user, self.primary)
         self.assertEqual(AwardCredit.objects.get().user, self.primary)
+
+    def test_moves_trade_secrets_sessions_and_deletes_sessions_between_the_two(self):
+        triad = SessionTemplate.objects.get(system_key='triad')
+        opponent = User.objects.create_user(username='Opponent')
+        shared_session = TradeSecretsSession.objects.create(template=triad, host=self.primary, guest=self.secondary)
+        other_session = TradeSecretsSession.objects.create(template=triad, host=self.secondary, guest=opponent)
+        merge_users.merge_users(self.primary, self.secondary)
+        self.assertFalse(TradeSecretsSession.objects.filter(pk=shared_session.pk).exists())
+        other_session.refresh_from_db()
+        self.assertEqual(other_session.host, self.primary)
 
     def test_moves_social_account_and_its_token_still_resolves(self):
         social_app = SocialApp.objects.create(

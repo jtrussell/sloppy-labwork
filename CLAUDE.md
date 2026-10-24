@@ -46,10 +46,11 @@ by function:
 - `views.py` - Our controllers/route handlers.
 - `templates/` - Page templates
 
-All stylesheets are centralized at the root of the repo in `./static/css` with
-KeyChain related stylesheets in `./static/pmc/css` Note that we have a
-`main.css` stylesheet containing global stiles for both sites as well as page
-specific stylesheets.
+Static assets are centralized at the root of the repo in `./static`. Global
+stylesheets live in `./static/css`, including `main.css` with global styles for
+both sites. KeyChain assets live in `./static/pmc`. Each gizmo or app keeps
+its own assets in `./static/<app_name>/` (e.g. `./static/ghostform/main.css`
+and its JavaScript files).
 
 ## Agents
 

@@ -1,0 +1,8 @@
+{% if cards %}
+<p class="ts-lineup-preview__label">Preview</p>
+<ul class="ts-lineup__list" role="list">
+  {% for card in cards %}
+  <li>{% include 'trade_secrets/partials/deck-card.html' with card=card selectable=False %}</li>
+  {% endfor %}
+</ul>
+{% endif %}

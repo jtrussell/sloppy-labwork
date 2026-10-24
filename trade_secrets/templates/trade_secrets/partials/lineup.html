@@ -1,0 +1,32 @@
+<section class="ts-lineup{% if lineup.is_mine %} ts-lineup--mine{% endif %}{% if lineup.is_targetable %} ts-lineup--targetable{% endif %}" aria-labelledby="ts-lineup-{{ lineup.seat }}">
+  <header class="ts-lineup__header">
+    <h2 class="ts-lineup__title" id="ts-lineup-{{ lineup.seat }}">{% if lineup.is_mine %}Your lineup{% else %}{{ lineup.owner_name }}{% endif %}</h2>
+    {% if lineup.is_targetable %}
+    <span class="ts-lineup__cue">Choose from here</span>
+    {% elif lineup.cards and not lineup.is_hidden %}
+    <span class="ts-lineup__count">{{ lineup.in_play_count }} in play{% if lineup.out_count %} · {{ lineup.out_count }} out{% endif %}</span>
+    {% endif %}
+  </header>
+  {% if lineup.is_hidden %}
+    {% if lineup.facedown_count %}
+    <ul class="ts-lineup__list" role="list">
+      {% for slot in lineup.facedown_slots %}
+      <li><div class="ts-deck ts-deck--facedown">{% include 'trade_secrets/partials/icon.html' with name='lock' class_name='ts-deck__lock' %}<span class="ts-deck__body"><span class="ts-deck__name">Hidden deck</span></span></div></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="ts-lineup__empty">No decks submitted yet.</p>
+    {% endif %}
+  {% else %}
+  <ul class="ts-lineup__list" role="list">
+    {% for card in lineup.cards %}
+    <li>{% include 'trade_secrets/partials/deck-card.html' with card=card selectable=card.is_selectable %}</li>
+    {% empty %}
+    <li class="ts-lineup__empty">No decks submitted yet.</li>
+    {% endfor %}
+    {% for ghost in lineup.ghosts %}
+    <li class="ts-ghost">{% include 'trade_secrets/partials/icon.html' with name='swap' %}<span class="ts-ghost__name">{{ ghost.deck.name }}</span><span class="ts-ghost__by">stolen by {{ ghost.taken_by }}</span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>

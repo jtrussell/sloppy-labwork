@@ -1,0 +1,65 @@
+{% extends 'page.html' %}
+{% load static %}
+
+{% block head_title %}{{ template.name }} · Trade Secrets{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'trade_secrets/main.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include 'trade_secrets/partials/icons.html' %}
+<p class="ts-back"><a href="{% url 'trade_secrets:home' %}">← Trade Secrets</a></p>
+<h1>{{ template.name }}</h1>
+<div class="subheading">{% if template.is_system %}Official format{% elif template.is_archived %}Archived template{% else %}Your template{% endif %}</div>
+{% if template.description %}<p class="ts-lede">{{ template.description }}</p>{% endif %}
+
+<ol class="ts-step-list" role="list">
+  {% for row in rows %}
+  <li class="ts-step-list__item">
+    <span class="ts-step-list__number">{{ row.number }}</span>
+    {% include 'trade_secrets/partials/icon.html' with name=row.icon %}
+    <span class="ts-step-list__label">{{ row.label }}</span>
+    {% if row.detail %}<span class="ts-step-list__detail">{{ row.detail }}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ol>
+
+<div class="ts-template-actions">
+  {% if can_start %}
+  <form method="post" action="{% url 'trade_secrets:session-create' %}">
+    {% csrf_token %}
+    <input type="hidden" name="template_code" value="{{ template.code }}">
+    <button type="submit" class="button button-primary">Start a session</button>
+  </form>
+  {% elif not user.is_authenticated %}
+  <a class="button button-primary" href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Log in to start</a>
+  {% endif %}
+
+  {% if can_manage %}
+  <form method="post" action="{% url 'trade_secrets:template-archive' template.code %}">
+    {% csrf_token %}
+    <button type="submit" class="button">{% if template.is_archived %}Unarchive{% else %}Archive{% endif %}</button>
+  </form>
+  {% endif %}
+
+  {% if can_delete %}
+  <form method="post" action="{% url 'trade_secrets:template-delete' template.code %}">
+    {% csrf_token %}
+    <button type="submit" class="button ts-danger-button" hx-post="{% url 'trade_secrets:template-delete' template.code %}" hx-confirm="Permanently delete {{ template.name }}? This can't be undone.">Delete permanently</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if can_manage %}
+<p class="helptext">
+  {% if template.is_archived and session_count %}
+  This template can't be deleted because {{ session_count }} session{{ session_count|pluralize }} use{{ session_count|pluralize:"s," }} it.
+  {% elif template.is_archived %}
+  Archived templates are hidden from your list and can't start new sessions.
+  {% else %}
+  Templates can't be edited once created. Archive it to hide it from your list.
+  {% endif %}
+</p>
+{% endif %}
+{% endblock %}

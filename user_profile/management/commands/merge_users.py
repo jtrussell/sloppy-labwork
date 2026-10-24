@@ -25,6 +25,11 @@ REPOINTED_RELATIONS = {
     ('lineups.Lineup', 'owner'),
     ('ghostform.Form', 'owner'),
     ('ghostform.Response', 'user'),
+    ('trade_secrets.SessionTemplate', 'owner'),
+    ('trade_secrets.Session', 'host'),
+    ('trade_secrets.Session', 'guest'),
+    ('trade_secrets.StepSubmission', 'submitted_by'),
+    ('trade_secrets.PlayResult', 'updated_by'),
 }
 
 MERGED_RELATIONS = {
@@ -177,6 +182,13 @@ def merge_pod_player(primary, secondary):
         PodPlayer.objects.filter(user=secondary).update(user=primary)
 
 
+def delete_trade_secrets_sessions_between(primary, secondary):
+    Session = apps.get_model('trade_secrets.Session')
+    Session.objects.filter(
+        Q(host=primary, guest=secondary) | Q(host=secondary, guest=primary)
+    ).delete()
+
+
 MERGE_STEPS = [
     merge_playgroup_memberships,
     merge_player_ranks,
@@ -184,6 +196,7 @@ MERGE_STEPS = [
     merge_manual_user_trophies,
     merge_tournament_admin_roles,
     merge_pod_player,
+    delete_trade_secrets_sessions_between,
 ]
 
 

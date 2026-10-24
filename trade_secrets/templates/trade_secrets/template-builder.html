@@ -1,0 +1,87 @@
+{% extends 'page.html' %}
+{% load static partials %}
+
+{% block head_title %}New template · Trade Secrets{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'trade_secrets/main.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include 'trade_secrets/partials/icons.html' %}
+<p class="ts-back"><a href="{% url 'trade_secrets:home' %}">← Trade Secrets</a></p>
+<h1>New template</h1>
+<div class="subheading">Build your own format</div>
+
+{% partialdef builder inline %}
+<form id="ts-builder" class="ts-builder form-wide" method="post" novalidate action="{% url 'trade_secrets:template-create' %}"
+      hx-post="{% url 'trade_secrets:template-create' %}" hx-target="#ts-builder" hx-swap="outerHTML"
+      hx-trigger="submit, change" hx-sync="this:replace">
+  {% csrf_token %}
+  <button type="submit" name="builder_action" value="refresh" class="ts-sr-only" tabindex="-1" aria-hidden="true">Refresh</button>
+  <label for="{{ details_form.name.id_for_label }}">{{ details_form.name.label }}</label>
+  {{ details_form.name }}
+  {% for error in details_form.name.errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
+  <label for="{{ details_form.description.id_for_label }}">{{ details_form.description.label }} <span class="text-muted">(optional)</span></label>
+  {{ details_form.description }}
+
+  <h2 class="ts-section-title">Steps</h2>
+  <ol class="ts-builder__steps" role="list">
+    {% for row in rows %}
+    <li class="ts-builder-step{% if row.trace.error %} is-invalid{% endif %}" id="ts-step-{{ row.index }}">
+      <input type="hidden" name="steps-{{ row.index }}-action" value="{{ row.spec.action }}">
+      <div class="ts-builder-step__header">
+        <span class="ts-builder-step__number">{{ forloop.counter }}</span>
+        {% include 'trade_secrets/partials/icon.html' with name=row.icon %}
+        <span class="ts-builder-step__label">{{ row.label }}</span>
+        {% if not row.is_first %}
+        <span class="ts-builder-step__controls">
+          <button type="submit" name="builder_action" value="up:{{ row.index }}" class="ts-icon-button" aria-label="Move step {{ forloop.counter }} up"{% if row.index == 1 %} disabled{% endif %}>↑</button>
+          <button type="submit" name="builder_action" value="down:{{ row.index }}" class="ts-icon-button" aria-label="Move step {{ forloop.counter }} down"{% if row.is_last %} disabled{% endif %}>↓</button>
+          <button type="submit" name="builder_action" value="remove:{{ row.index }}" class="ts-icon-button" aria-label="Remove step {{ forloop.counter }}">×</button>
+        </span>
+        {% endif %}
+      </div>
+      {% if row.spec.is_play %}
+      <fieldset class="ts-builder-step__field">
+        <legend>Can played decks be played again?</legend>
+        <div class="ts-segmented ts-segmented--choices">
+          {% for value, label in played_deck_rules %}
+          <label for="ts-step-{{ row.index }}-rule-{{ value }}"><input type="radio" id="ts-step-{{ row.index }}-rule-{{ value }}" name="steps-{{ row.index }}-rule" value="{{ value }}"{% if row.spec.played_deck_rule == value %} checked{% endif %}><span>{{ label }}</span></label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      {% else %}
+      <div class="ts-builder-step__field ts-builder-step__quantity">
+        <label for="ts-step-{{ row.index }}-quantity">{% if row.is_first %}Decks per player{% else %}How many{% endif %}</label>
+        <input type="number" id="ts-step-{{ row.index }}-quantity" name="steps-{{ row.index }}-quantity" value="{{ row.spec.quantity }}" min="1" max="{{ row.quantity_maximum }}" inputmode="numeric">
+      </div>
+      {% endif %}
+      {% if row.trace %}
+      <p class="ts-builder-step__pool">{% if row.trace.error %}{% include 'trade_secrets/partials/icon.html' with name='alert' %}{{ row.trace.error }}{% else %}Open decks: {{ row.trace.fewest_open }}{% if row.trace.open_range_varies %}–{{ row.trace.most_open }}{% endif %}{% if row.trace.most_safed %} · Safe: {{ row.trace.fewest_safed }}{% if row.trace.safed_range_varies %}–{{ row.trace.most_safed }}{% endif %}{% endif %}{% endif %}</p>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+
+  {% if can_add_step %}
+  <p class="ts-builder__add-label">Add a step</p>
+  <div class="ts-builder__add">
+    {% for action in step_actions %}
+    <button type="submit" name="builder_action" value="add:{{ action.value }}" class="button">+ {{ action.label }}</button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if summary_errors %}
+  <div class="note note-danger" role="alert"><ul class="note__list">{% for error in summary_errors %}<li>{{ error }}</li>{% endfor %}</ul></div>
+  {% endif %}
+
+  <div class="ts-builder__save">
+    <button type="submit" name="builder_action" value="save" class="button button-primary"{% if not is_valid %} disabled{% endif %}>Save template</button>
+    <a href="{% url 'trade_secrets:home' %}" class="button button-link">Cancel</a>
+  </div>
+  <p class="helptext">Templates can't be edited after saving, so every session that uses one plays by the same rules.</p>
+</form>
+{% endpartialdef %}
+{% endblock %}

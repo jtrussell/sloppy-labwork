@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'timekeeper',
     'lineups',
     'ghostform',
+    'trade_secrets',
     'shortlinks',
     'discord_bot',
     'common',
