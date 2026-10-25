@@ -11,7 +11,7 @@
 {% include 'trade_secrets/partials/icons.html' %}
 <p class="ts-back"><a href="{% url 'trade_secrets:home' %}">← Trade Secrets</a></p>
 <h1>{{ template.name }}</h1>
-<div class="subheading">{% if template.is_system %}Official format{% elif is_shared_with_viewer %}Shared by {{ template.owner.username }}{% elif template.is_archived %}Archived template · {{ template.get_visibility_display }}{% else %}Your template · {{ template.get_visibility_display }}{% endif %}</div>
+<div class="subheading">{% if template.is_system %}Standard format{% elif is_shared_with_viewer %}Shared by {{ template.owner.username }}{% elif template.is_archived %}Archived template · {{ template.get_visibility_display }}{% else %}Your template · {{ template.get_visibility_display }}{% endif %}</div>
 {% if template.description %}<p class="ts-lede">{{ template.description }}</p>{% endif %}
 
 <ol class="ts-step-list" role="list">
