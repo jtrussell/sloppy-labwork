@@ -2,7 +2,7 @@ from django.test import SimpleTestCase
 
 from .engine import (
     Action, DeckStatus, Phase, PlayedDeckRule, PoolDeck, Seat, StepSpec,
-    choices_for, deck_status, games_won, ineligible_reason, missing_result_step,
+    choices_for, deck_status, game_label, games_won, ineligible_reason, missing_result_step, unbanned_matchup_orders,
     phase, replay, required_pick_count, results_summary_lines, seats_needing_picks,
     simulate_template_steps, validate_picks, validate_template_steps,
 )
@@ -445,14 +445,14 @@ class SummaryTests(SimpleTestCase):
         deck_names = {deck.id: f'Deck {deck.id}' for deck in match.pool}
         lines = results_summary_lines(
             match.state, 'Triad', 'ABC123', {HOST: 'Alice', GUEST: 'Bob'},
-            deck_names, {2: '3-1'}, 'https://example.com/trade-secrets/ABC123/')
+            deck_names, {2: (3, 1)}, 'https://example.com/trade-secrets/ABC123/')
         self.assertEqual(lines, [
             'Trade Secrets: Triad (ABC123)',
             'Alice vs Bob',
             'Alice decks: Deck 1; Deck 2; Deck 3',
             'Bob decks: Deck 101; Deck 102; Deck 103',
             'Ban: Alice banned Deck 103; Bob banned Deck 3',
-            'Game 1: Deck 1 (Alice) vs Deck 101 (Bob) - Alice won, 3-1',
+            'Game 1: Deck 1 (Alice) vs Deck 101 (Bob) - Alice won, Alice 3 – 1 Bob',
             'Games won: Alice 1, Bob 0',
             'https://example.com/trade-secrets/ABC123/',
         ])
@@ -518,3 +518,104 @@ class ReviewRegressionTests(SimpleTestCase):
             ['Step 4 (Ban 2): needs 2 eligible deck(s) but as few as 1 may remain.'])
         self.assertEqual(
             validate_template_steps(make_steps('submit:3', 'ban:1', 'play:losing_only', 'ban:1')), [])
+
+
+HEXAD_BO1 = ('submit:6', 'ban:1', 'safe:1', 'ban:1', 'play', 'play', 'play', 'ban_matchup')
+
+
+class MatchupBanTests(SimpleTestCase):
+    def play_three_matchups(self, match):
+        match.reveal(host=[guest_deck(1)], guest=[host_deck(1)])
+        match.reveal(host=[host_deck(2)], guest=[guest_deck(2)])
+        match.reveal(host=[guest_deck(3)], guest=[host_deck(3)])
+        for number in (4, 5, 6):
+            match.reveal(host=[host_deck(number)], guest=[guest_deck(number)])
+        return match
+
+    def test_choices_are_revealed_unbanned_matchups_for_both_players(self):
+        match = self.play_three_matchups(Match(*HEXAD_BO1))
+        self.assertEqual(match.choices(HOST), [4, 5, 6])
+        self.assertEqual(match.choices(GUEST), [4, 5, 6])
+        self.assertEqual(required_pick_count(match.state, match.current_step, HOST), 1)
+
+    def test_separate_bans_leave_one_matchup(self):
+        match = self.play_three_matchups(Match(*HEXAD_BO1))
+        match.reveal(host=[4], guest=[6])
+        self.assertEqual(match.state.banned_matchup_orders, {4, 6})
+        self.assertEqual(unbanned_matchup_orders(match.state), [5])
+        self.assertEqual(phase(match.state, has_guest=True), Phase.COMPLETE)
+
+    def test_same_ban_leaves_two_matchups(self):
+        match = self.play_three_matchups(Match(*HEXAD_BO1))
+        match.reveal(host=[5], guest=[5])
+        self.assertEqual(unbanned_matchup_orders(match.state), [4, 6])
+
+    def test_matchup_picks_are_validated(self):
+        match = self.play_three_matchups(Match(*HEXAD_BO1))
+        state, step = match.state, match.current_step
+        self.assertEqual(validate_picks(state, step, HOST, [5]), [])
+        self.assertTrue(validate_picks(state, step, HOST, [1]))
+        self.assertTrue(validate_picks(state, step, HOST, [4, 5]))
+        self.assertIn('That matchup cannot be picked for this step.', validate_picks(state, step, HOST, [99]))
+
+    def test_banned_matchups_do_not_count_as_games_won(self):
+        match = self.play_three_matchups(Match(*HEXAD_BO1))
+        match.record_winner(4, HOST).record_winner(5, GUEST)
+        match.reveal(host=[4], guest=[6])
+        self.assertEqual(games_won(match.state), {HOST: 0, GUEST: 1})
+
+    def test_play_steps_before_a_matchup_ban_are_matchups(self):
+        steps = make_steps(*HEXAD_BO1)
+        self.assertEqual(game_label(steps, steps[4]), 'Matchup 1')
+        self.assertEqual(game_label(steps, steps[6]), 'Matchup 3')
+        hexad = make_steps('submit:6', 'ban:1', 'safe:1', 'ban:1', 'play', 'play', 'play')
+        self.assertEqual(game_label(hexad, hexad[4]), 'Game 1')
+
+    def test_play_after_the_last_matchup_ban_is_a_game(self):
+        steps = make_steps('submit:6', 'play', 'play', 'play', 'ban_matchup', 'play')
+        self.assertEqual(game_label(steps, steps[1]), 'Matchup 1')
+        self.assertEqual(game_label(steps, steps[5]), 'Game 4')
+
+    def test_summary_marks_banned_matchups(self):
+        match = self.play_three_matchups(Match(*HEXAD_BO1))
+        match.reveal(host=[4], guest=[6])
+        match.record_winner(5, GUEST)
+        deck_names = {deck.id: f'Deck {deck.id}' for deck in match.pool}
+        lines = results_summary_lines(
+            match.state, 'Hexad Bo1', 'ts_ABC123', {HOST: 'Alice', GUEST: 'Bob'}, deck_names, {}, 'url')
+        self.assertIn('Matchup 1: Deck 4 (Alice) vs Deck 104 (Bob) - banned', lines)
+        self.assertIn('Matchup 2: Deck 5 (Alice) vs Deck 105 (Bob) - Bob won', lines)
+        self.assertIn('Ban matchup: Alice banned Matchup 1; Bob banned Matchup 3', lines)
+        self.assertIn('Games won: Alice 0, Bob 1', lines)
+
+
+class MatchupBanValidationTests(SimpleTestCase):
+    def test_hexad_bo1_is_valid(self):
+        self.assertEqual(validate_template_steps(make_steps(*HEXAD_BO1)), [])
+
+    def test_needs_three_unbanned_matchups(self):
+        self.assertEqual(
+            validate_template_steps(make_steps('submit:6', 'play', 'play', 'ban_matchup')),
+            ['Step 4 (Ban matchup): needs at least 3 unbanned matchups but as few as 2 may remain.'])
+        self.assertTrue(validate_template_steps(make_steps('submit:3', 'ban_matchup')))
+
+    def test_consecutive_bans_assume_separate_picks(self):
+        self.assertEqual(validate_template_steps(make_steps(
+            'submit:6', 'play', 'play', 'play', 'play', 'play', 'ban_matchup', 'ban_matchup')), [])
+        self.assertTrue(validate_template_steps(make_steps(
+            'submit:6', 'play', 'play', 'play', 'play', 'ban_matchup', 'ban_matchup')))
+
+    def test_rejected_after_only_losing_decks(self):
+        errors = validate_template_steps(make_steps(
+            'submit:6', 'play:losing_only', 'play', 'play', 'ban_matchup'))
+        self.assertEqual(len(errors), 1)
+        self.assertIn('Only losing decks', errors[0])
+
+    def test_ban_matchup_quantity_is_always_one(self):
+        self.assertTrue(validate_template_steps(
+            [StepSpec(0, 'submit', 3), StepSpec(1, 'play'), StepSpec(2, 'play'), StepSpec(3, 'play'),
+             StepSpec(4, 'ban_matchup', 2)]))
+
+    def test_trace_counts_matchups(self):
+        traces = simulate_template_steps(make_steps(*HEXAD_BO1))
+        self.assertEqual([trace.fewest_matchups for trace in traces], [0, 0, 0, 0, 1, 2, 3, 1])

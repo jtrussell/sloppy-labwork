@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Count
 from django.http import Http404, HttpResponse
@@ -61,6 +62,8 @@ def home(request):
 
 
 def step_detail(step):
+    if step.is_matchup_ban:
+        return 'Each player bans one matchup; banned matchups are not played'
     if step.is_play:
         return f'Played decks eligible again: {engine.PlayedDeckRule(step.played_deck_rule).label}'
     return ''
@@ -132,7 +135,11 @@ def get_viewable_template(request, template_code):
 
 
 def template_detail(request, template_code):
-    template = get_viewable_template(request, template_code)
+    template = get_object_or_404(SessionTemplate, code=template_code)
+    if not template.can_view(request.user):
+        if template.is_public and not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        raise Http404
     rail = template_rail(template.step_specs)
     return render(request, 'trade_secrets/template-detail.html', {
         'template': template,
@@ -141,8 +148,11 @@ def template_detail(request, template_code):
             for rail_step, step in zip(rail, template.step_specs)
         ],
         'can_manage': template.can_manage(request.user),
+        'is_shared_with_viewer': not template.is_system and not template.is_owned_by(request.user),
+        'share_url': request.build_absolute_uri(reverse('trade_secrets:template-detail', args=[template.code])),
         'can_delete': template.can_delete(request.user),
         'can_start': template.can_start_session(request.user),
+        'visibility_choices': SessionTemplate.Visibility.choices,
         'session_count': template.sessions.count(),
     })
 
@@ -159,6 +169,21 @@ def template_archive(request, template_code):
     else:
         template.archive()
         messages.success(request, f'"{template.name}" is archived.')
+    return redirect_to(request, reverse('trade_secrets:template-detail', args=[template.code]))
+
+
+@login_required
+@require_POST
+def template_visibility(request, template_code):
+    template = get_viewable_template(request, template_code)
+    if not template.can_manage(request.user):
+        raise PermissionDenied
+    try:
+        template.set_visibility(request.POST.get('visibility', ''))
+    except ValidationError as error:
+        messages.error(request, ' '.join(validation_messages(error)))
+        return redirect_to(request, reverse('trade_secrets:template-detail', args=[template.code]))
+    messages.success(request, f'"{template.name}" is now {template.get_visibility_display().lower()}.')
     return redirect_to(request, reverse('trade_secrets:template-detail', args=[template.code]))
 
 
@@ -333,10 +358,13 @@ def session_decks(request, session_code):
 def session_pick(request, session_code):
     session = get_session(session_code)
     seat = require_seat(session, request.user)
-    form = PickForm(request.POST, choice_ids=session.decks.values_list('id', flat=True))
+    form = PickForm(
+        request.POST,
+        choice_ids=set(session.decks.values_list('id', flat=True))
+        | set(session.template.steps.values_list('order', flat=True)))
     if not form.is_valid():
         return respond_after_session_action(
-            request, session, ['That deck cannot be picked for this step.'])
+            request, session, ['That choice cannot be picked for this step.'])
     try:
         session.submit_picks(seat, request.user, form.cleaned_data['step_order'], form.cleaned_data['deck'])
     except ValidationError as error:
@@ -347,11 +375,12 @@ def session_pick(request, session_code):
 def result_form_context(session, step_order, form):
     step = get_object_or_404(session.template.steps, order=step_order, action=engine.Action.PLAY)
     result = session.results.filter(step=step).first()
+    step_specs = session.template.step_specs
     return {
         'session': session,
         'form': form,
         'step_order': step_order,
-        'game_number': engine.game_number_for_order(session.template.step_specs, step_order),
+        'game_label': engine.game_label(step_specs, step_specs[step_order]),
         'has_result': result is not None,
         'warns_about_eligibility': step.played_deck_rule == engine.PlayedDeckRule.LOSING_ONLY,
     }
@@ -368,7 +397,11 @@ def session_result(request, session_code, step_order):
 
     if request.method == 'GET':
         result = session.results.filter(step__order=step_order).first()
-        initial = {'winner_seat': result.winner_seat, 'score': result.score} if result else {}
+        initial = {
+            'winner_seat': result.winner_seat,
+            'host_score': result.host_score,
+            'guest_score': result.guest_score,
+        } if result else {}
         form = PlayResultForm(initial=initial, seat_names=seat_names)
         return render_result_form(request, session, step_order, form)
 
@@ -376,7 +409,8 @@ def session_result(request, session_code, step_order):
     if form.is_valid():
         try:
             session.record_result(
-                request.user, step_order, form.cleaned_data['winner_seat'], form.cleaned_data['score'])
+                request.user, step_order, form.cleaned_data['winner_seat'],
+                form.cleaned_data['host_score'], form.cleaned_data['guest_score'])
             return respond_after_session_action(request, session)
         except ValidationError as error:
             form.add_error(None, error)

@@ -4,6 +4,7 @@
 {% block head_title %}{{ session.template.name }} · Trade Secrets{% endblock %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{% static 'tourney/report-dialog.css' %}">
 <link rel="stylesheet" href="{% static 'trade_secrets/main.css' %}">
 {% endblock %}
 
@@ -86,7 +87,7 @@
     <p class="ts-instruction__step">{% if view.is_finished %}Finished{% else %}Step {{ view.current_step_number }} of {{ view.step_total }}{% endif %}</p>
     <p class="ts-instruction__title">{{ view.instruction }}</p>
     {% if view.instruction_hint %}<p class="ts-instruction__hint">{{ view.instruction_hint }}</p>{% endif %}
-    {% if view.is_finished and view.has_games %}
+    {% if view.is_finished and view.has_results %}
     <p class="ts-scoreline">{% for name, wins in view.games_won %}<span><strong>{{ name }}</strong> {{ wins }}</span>{% if not forloop.last %}<span class="ts-scoreline__dash">–</span>{% endif %}{% endfor %}</p>
     {% endif %}
   </div>
@@ -95,7 +96,7 @@
   <div class="note note-danger" role="alert"><ul class="note__list">{% for error in action_errors %}<li>{{ error }}</li>{% endfor %}</ul></div>
   {% endif %}
 
-  {% if view.last_reveal and view.last_reveal.action != 'submit' and not view.is_finished %}
+  {% if view.last_reveal and view.last_reveal.action != 'submit' and not view.is_finished or view.last_reveal.action == 'ban_matchup' %}
   <div class="ts-reveal" data-reveal-order="{{ view.last_reveal.order }}" aria-live="polite">
     <p class="ts-reveal__title">{{ view.last_reveal.reveal_title }}</p>
     <div class="ts-reveal__cards">
@@ -162,14 +163,37 @@
     {% endif %}
   {% elif view.action_state == 'pick' %}
   <form class="ts-pick-form" method="post" action="{% url 'trade_secrets:session-pick' session.code %}"
-        data-pick-count="{{ view.required_pick_count }}" data-opponent="{{ view.opponent_name }}"
+        data-pick-count="{{ view.required_pick_count }}" data-pick-noun="{{ view.pick_noun }}" data-opponent="{{ view.opponent_name }}"
         hx-post="{% url 'trade_secrets:session-pick' session.code %}" hx-target="#ts-board" hx-swap="outerHTML"
         hx-sync="#ts-board:replace" hx-disabled-elt="find button[type=submit]">
     {% csrf_token %}
     <input type="hidden" name="step_order" value="{{ view.pick_step_order }}">
+    {% if view.matchup_choices %}
+    <section class="ts-lineup ts-lineup--targetable" aria-labelledby="ts-matchups-title">
+      <header class="ts-lineup__header">
+        <h2 class="ts-lineup__title" id="ts-matchups-title">Matchups</h2>
+        <span class="ts-lineup__cue">Choose from here</span>
+      </header>
+      <ul class="ts-lineup__list" role="list">
+        {% for matchup in view.matchup_choices %}
+        <li>
+          <label class="ts-deck ts-deck--selectable ts-matchup{% if matchup.is_selected %} is-locked is-selected{% endif %}">
+            <input type="checkbox" class="ts-pick-input ts-sr-only" name="deck" value="{{ matchup.order }}"{% if matchup.is_selected %} checked data-locked{% endif %}>
+            <span class="ts-matchup__label">{% include 'trade_secrets/partials/icon.html' with name='play' %}</span>
+            <span class="ts-deck__body">
+              <span class="ts-deck__name">{{ matchup.label }}</span>
+              <span class="ts-matchup__decks">{% for seat in matchup.seat_decks %}<span>{{ seat.decks|join:", " }} <span class="text-muted">({{ seat.name }})</span></span>{% if not forloop.last %}<span class="ts-matchup__versus">vs</span>{% endif %}{% endfor %}</span>
+            </span>
+            <span class="ts-deck__badges"><span class="ts-deck__pick-hint" aria-hidden="true"></span></span>
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
     {% for lineup in view.lineups %}{% include 'trade_secrets/partials/lineup.html' %}{% endfor %}
     <div class="ts-actionbar">
-      <p class="ts-actionbar__status" data-pick-status aria-live="polite">{% if view.has_pending_pick %}Locked in. You can change until {{ view.opponent_name }} locks in.{% else %}Tap a deck to select it, tap again to lock in.{% endif %}</p>
+      <p class="ts-actionbar__status" data-pick-status aria-live="polite">{% if view.has_pending_pick %}Locked in. You can change until {{ view.opponent_name }} locks in.{% else %}Tap a {{ view.pick_noun }} to select it, tap again to lock in.{% endif %}</p>
       <button type="submit" class="button button-primary" data-pick-submit>{% if view.has_pending_pick %}Update pick{% else %}Lock in{% endif %}</button>
     </div>
   </form>
@@ -205,10 +229,14 @@
           {% if entry.action == 'submit' %}
           <p class="ts-history__detail">Both lineups are in.</p>
           {% elif entry.is_play %}
-          <p class="ts-history__detail">{% for seat in entry.seat_picks %}{{ seat.decks|join:", "|default:"no deck" }} <span class="text-muted">({{ seat.name }})</span>{% if not forloop.last %} <span class="text-muted">vs</span> {% endif %}{% endfor %}</p>
+          <p class="ts-history__detail{% if entry.is_banned %} ts-history__detail--banned{% endif %}">{% for seat in entry.seat_picks %}{{ seat.decks|join:", "|default:"no deck" }} <span class="text-muted">({{ seat.name }})</span>{% if not forloop.last %} <span class="text-muted">vs</span> {% endif %}{% endfor %}</p>
           <p class="ts-history__result">
-            {% if entry.has_result %}
-            {% include 'trade_secrets/partials/icon.html' with name='check' %}<strong>{{ entry.winner_name }} won</strong>{% if entry.score %} · {{ entry.score }}{% endif %}
+            {% if entry.is_awaiting_ban %}
+            <span class="text-muted">Not played yet</span>
+            {% elif entry.is_banned %}
+            <span class="ts-status ts-status--banned">{% include 'trade_secrets/partials/icon.html' with name='ban' %}Banned</span>
+            {% elif entry.has_result %}
+            {% include 'trade_secrets/partials/icon.html' with name='check' %}<strong>{{ entry.winner_name }} won</strong>{% if entry.score_line %} · {{ entry.score_line }}{% endif %}
             {% if entry.is_result_locked and view.is_player %}<span class="text-muted"> · locked</span>{% endif %}
             {% else %}
             <span class="text-muted">No result yet</span>
@@ -221,7 +249,7 @@
             {% endif %}
             {% if entry.can_reset %}
             <button type="button" class="button button-small" hx-post="{% url 'trade_secrets:session-result-reset' session.code entry.order %}" hx-target="#ts-board" hx-swap="outerHTML" hx-sync="#ts-board:replace"
-                    hx-confirm="Reset the game {{ entry.game_number }} result?{% if entry.warns_about_eligibility %} This can change which decks are eligible and may clear a locked-in pick.{% endif %}">Reset</button>
+                    hx-confirm="Reset the {{ entry.title|lower }} result?{% if entry.warns_about_eligibility %} This can change which decks are eligible and may clear a locked-in pick.{% endif %}">Reset</button>
             {% endif %}
           </div>
           {% endif %}

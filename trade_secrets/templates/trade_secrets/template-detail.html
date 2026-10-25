@@ -11,7 +11,7 @@
 {% include 'trade_secrets/partials/icons.html' %}
 <p class="ts-back"><a href="{% url 'trade_secrets:home' %}">← Trade Secrets</a></p>
 <h1>{{ template.name }}</h1>
-<div class="subheading">{% if template.is_system %}Official format{% elif template.is_archived %}Archived template{% else %}Your template{% endif %}</div>
+<div class="subheading">{% if template.is_system %}Official format{% elif is_shared_with_viewer %}Shared by {{ template.owner.username }}{% elif template.is_archived %}Archived template · {{ template.get_visibility_display }}{% else %}Your template · {{ template.get_visibility_display }}{% endif %}</div>
 {% if template.description %}<p class="ts-lede">{{ template.description }}</p>{% endif %}
 
 <ol class="ts-step-list" role="list">
@@ -52,14 +52,38 @@
 </div>
 
 {% if can_manage %}
-<p class="helptext">
+<section class="ts-sharing surface" aria-labelledby="ts-sharing-title">
+  <h2 class="ts-sharing__title" id="ts-sharing-title">Sharing</h2>
+  <form method="post" action="{% url 'trade_secrets:template-visibility' template.code %}" class="ts-segmented ts-segmented--buttons">
+    {% csrf_token %}
+    {% for value, label in visibility_choices %}
+    <button type="submit" name="visibility" value="{{ value }}"{% if template.visibility == value %} class="is-active" aria-pressed="true"{% else %} aria-pressed="false"{% endif %}>{{ label }}</button>
+    {% endfor %}
+  </form>
+  {% if template.is_public %}
+  <p class="ts-sharing__hint">Anyone signed in with this link can start a session with this template.</p>
+  <div class="ts-sharing__link">
+    <input type="text" readonly value="{{ share_url }}" aria-label="Template link" data-select-on-focus>
+    <button type="button" class="button" data-copy-text="{{ share_url }}">{% include 'trade_secrets/partials/icon.html' with name='copy' %}<span data-copy-label>Copy link</span></button>
+  </div>
+  {% else %}
+  <p class="ts-sharing__hint">Only you can start sessions with this template. Make it public to share it by link.</p>
+  {% endif %}
+  <p class="ts-sharing__hint">Changing this never affects sessions that have already started.</p>
+</section>
+
+<p class="ts-template-note">
   {% if template.is_archived and session_count %}
   This template can't be deleted because {{ session_count }} session{{ session_count|pluralize }} use{{ session_count|pluralize:"s," }} it.
   {% elif template.is_archived %}
   Archived templates are hidden from your list and can't start new sessions.
   {% else %}
-  Templates can't be edited once created. Archive it to hide it from your list.
+  Templates can't be edited once created, except for their sharing setting. Archive it to hide it from your list.
   {% endif %}
 </p>
 {% endif %}
+{% endblock %}
+
+{% block extra_body %}
+<script src="{% static 'trade_secrets/trade-secrets.js' %}"></script>
 {% endblock %}

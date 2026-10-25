@@ -33,6 +33,7 @@
     const selectedCount = checkedPickInputs(form).length
     const status = form.querySelector('[data-pick-status]')
     const submitButton = form.querySelector('[data-pick-submit]')
+    const noun = form.dataset.pickNoun || 'deck'
 
     form.querySelectorAll('.ts-pick-input').forEach(input => {
       input.closest('.ts-deck').classList.toggle('is-selected', input.checked)
@@ -47,11 +48,11 @@
     if (matchesLockedPick(form)) {
       status.textContent = `Locked in. You can change until ${form.dataset.opponent} locks in.`
     } else if (selectedCount === requiredCount) {
-      status.textContent = 'Tap a selected deck again to lock in.'
+      status.textContent = `Tap a selected ${noun} again to lock in.`
     } else if (selectedCount === 0) {
       status.textContent = requiredCount === 1
-        ? 'Tap a deck to select it, tap again to lock in.'
-        : `Tap ${requiredCount} decks to select them.`
+        ? `Tap a ${noun} to select it, tap again to lock in.`
+        : `Tap ${requiredCount} ${noun}s to select them.`
     } else {
       status.textContent = `${selectedCount} of ${requiredCount} selected`
     }
@@ -149,7 +150,15 @@
     storeSeenRevealCount(key, revealedCount)
   }
 
+  function centerCurrentRailStep(rail) {
+    const current = rail.querySelector('.is-current')
+    if (current) {
+      rail.scrollLeft = current.offsetLeft - (rail.clientWidth - current.clientWidth) / 2
+    }
+  }
+
   function initialize(scope) {
+    scope.querySelectorAll('.ts-rail').forEach(centerCurrentRailStep)
     scope.querySelectorAll('#ts-board').forEach(markFreshReveal)
     scope.querySelectorAll('.ts-pick-form').forEach(refreshPickForm)
     if (navigator.share) {

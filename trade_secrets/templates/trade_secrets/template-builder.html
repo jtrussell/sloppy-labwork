@@ -51,6 +51,8 @@
           {% endfor %}
         </div>
       </fieldset>
+      {% elif row.spec.is_matchup_ban %}
+      <p class="ts-builder-step__note">Each player secretly bans one earlier matchup. Banned matchups are not played.</p>
       {% else %}
       <div class="ts-builder-step__field ts-builder-step__quantity">
         <label for="ts-step-{{ row.index }}-quantity">{% if row.is_first %}Decks per player{% else %}How many{% endif %}</label>
@@ -58,7 +60,7 @@
       </div>
       {% endif %}
       {% if row.trace %}
-      <p class="ts-builder-step__pool">{% if row.trace.error %}{% include 'trade_secrets/partials/icon.html' with name='alert' %}{{ row.trace.error }}{% else %}Open decks: {{ row.trace.fewest_open }}{% if row.trace.open_range_varies %}–{{ row.trace.most_open }}{% endif %}{% if row.trace.most_safed %} · Safe: {{ row.trace.fewest_safed }}{% if row.trace.safed_range_varies %}–{{ row.trace.most_safed }}{% endif %}{% endif %}{% endif %}</p>
+      <p class="ts-builder-step__pool">{% if row.trace.error %}{% include 'trade_secrets/partials/icon.html' with name='alert' %}{{ row.trace.error }}{% elif row.spec.is_matchup_ban %}Unbanned matchups: at least {{ row.trace.fewest_matchups }}{% else %}Open decks: {{ row.trace.fewest_open }}{% if row.trace.open_range_varies %}–{{ row.trace.most_open }}{% endif %}{% if row.trace.most_safed %} · Safe: {{ row.trace.fewest_safed }}{% if row.trace.safed_range_varies %}–{{ row.trace.most_safed }}{% endif %}{% endif %}{% if row.trace.has_matchups %} · Matchups: {{ row.trace.fewest_matchups }}{% endif %}{% endif %}</p>
       {% endif %}
     </li>
     {% endfor %}

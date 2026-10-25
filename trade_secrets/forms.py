@@ -11,7 +11,6 @@ from lineups.models import Lineup, LineupVersion
 
 from . import engine
 from .engine import Action, PlayedDeckRule, StepSpec
-from .models import SCORE_MAX_LENGTH
 
 DECK_LINK_SEPARATORS = re.compile(r'[\s,;]+')
 HYDRATION_FAILURES = (
@@ -125,14 +124,32 @@ class PickForm(forms.Form):
 
 
 class PlayResultForm(forms.Form):
-    winner_seat = forms.ChoiceField(widget=forms.RadioSelect, label=_('Who won?'))
-    score = forms.CharField(
-        max_length=SCORE_MAX_LENGTH, required=False, label=_('Score (optional)'),
-        widget=forms.TextInput(attrs={'placeholder': '3-1', 'autocomplete': 'off'}))
+    winner_seat = forms.ChoiceField(label=_('Who won?'))
+    host_score = forms.IntegerField(min_value=0, required=False)
+    guest_score = forms.IntegerField(min_value=0, required=False)
 
     def __init__(self, *args, seat_names, **kwargs):
         super().__init__(*args, **kwargs)
+        self.seat_names = seat_names
         self.fields['winner_seat'].choices = [(seat, seat_names[seat]) for seat in engine.SEATS]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (cleaned_data.get('host_score') is None) != (cleaned_data.get('guest_score') is None):
+            raise ValidationError(_('Enter a score for both players, or leave both blank.'))
+        return cleaned_data
+
+    def player_slots(self):
+        selected_seat = self['winner_seat'].value()
+        return [
+            {
+                'seat': seat,
+                'name': self.seat_names[seat],
+                'is_winner': selected_seat == seat,
+                'score_field': self[f'{seat}_score'],
+            }
+            for seat in engine.SEATS
+        ]
 
 
 class TemplateDetailsForm(forms.Form):
@@ -162,7 +179,7 @@ def parse_builder_steps(data):
     while f'steps-{index}-action' in data:
         action = data.get(f'steps-{index}-action')
         if action in Action.values:
-            quantity = 1 if action == Action.PLAY else parse_positive_integer(
+            quantity = 1 if action in (Action.PLAY, Action.BAN_MATCHUP) else parse_positive_integer(
                 data.get(f'steps-{index}-quantity'), 1)
             rule = data.get(f'steps-{index}-rule', PlayedDeckRule.INELIGIBLE)
             if rule not in PlayedDeckRule.values:

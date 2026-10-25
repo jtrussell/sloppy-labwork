@@ -14,7 +14,6 @@ from .engine import Action, PlayedDeckRule, Seat
 
 
 CODE_CHARACTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-SCORE_MAX_LENGTH = 50
 
 
 def generate_template_code():
@@ -32,6 +31,10 @@ def generate_session_code():
 
 
 class SessionTemplate(models.Model):
+    class Visibility(models.TextChoices):
+        PRIVATE = 'private', _('Private')
+        PUBLIC = 'public', _('Public')
+
     owner = models.ForeignKey(
         User, on_delete=models.CASCADE, null=True, blank=True,
         related_name='trade_secrets_templates')
@@ -39,6 +42,8 @@ class SessionTemplate(models.Model):
     code = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, default='')
+    visibility = models.CharField(
+        max_length=10, choices=Visibility.choices, default=Visibility.PRIVATE)
     archived_on = models.DateTimeField(null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
 
@@ -91,11 +96,20 @@ class SessionTemplate(models.Model):
     def is_archived(self):
         return self.archived_on is not None
 
+    @property
+    def is_public(self):
+        return self.visibility == self.Visibility.PUBLIC
+
+    def is_owned_by(self, user):
+        return user.is_authenticated and self.owner_id == user.id
+
     def can_view(self, user):
-        return self.is_system or (user.is_authenticated and self.owner_id == user.id)
+        if self.is_system or self.is_owned_by(user):
+            return True
+        return user.is_authenticated and self.is_public
 
     def can_manage(self, user):
-        return not self.is_system and user.is_authenticated and self.owner_id == user.id
+        return not self.is_system and self.is_owned_by(user)
 
     def can_start_session(self, user):
         return user.is_authenticated and self.can_view(user) and not self.is_archived
@@ -111,6 +125,12 @@ class SessionTemplate(models.Model):
         self.archived_on = None
         self.save(update_fields=['archived_on'])
 
+    def set_visibility(self, visibility):
+        if visibility not in self.Visibility.values:
+            raise ValidationError(_('Choose a valid visibility.'))
+        self.visibility = visibility
+        self.save(update_fields=['visibility'])
+
     @cached_property
     def step_specs(self):
         return [step.to_spec() for step in self.steps.all()]
@@ -124,7 +144,7 @@ class TemplateStep(models.Model):
     template = models.ForeignKey(
         SessionTemplate, on_delete=models.CASCADE, related_name='steps')
     order = models.PositiveSmallIntegerField()
-    action = models.CharField(max_length=10, choices=Action.choices)
+    action = models.CharField(max_length=20, choices=Action.choices)
     quantity = models.PositiveSmallIntegerField(default=1)
     played_deck_rule = models.CharField(
         max_length=12, choices=PlayedDeckRule.choices, default=PlayedDeckRule.INELIGIBLE)
@@ -220,11 +240,16 @@ class Session(models.Model):
         picks = {}
         submissions = self.submissions.filter(
             step__order__lt=self.revealed_step_count
-        ).select_related('step').prefetch_related('decks')
+        ).select_related('step').prefetch_related('decks', 'matchups')
         for submission in submissions:
-            picks.setdefault(submission.step.order, {})[submission.seat] = tuple(
-                deck.id for deck in submission.decks.all())
+            picks.setdefault(submission.step.order, {})[submission.seat] = submission.picked_ids()
         return picks
+
+    def banned_matchup_orders(self):
+        return set(TemplateStep.objects.filter(
+            matchup_bans__session=self,
+            matchup_bans__step__order__lt=self.revealed_step_count,
+        ).values_list('order', flat=True))
 
     def winners_by_order(self):
         return {
@@ -237,7 +262,7 @@ class Session(models.Model):
             return None
         return self.submissions.filter(
             seat=seat, step__order=self.revealed_step_count
-        ).prefetch_related('decks').first()
+        ).prefetch_related('decks', 'matchups').first()
 
     def step_at(self, order):
         return self.template.steps.get(order=order)
@@ -307,16 +332,23 @@ class Session(models.Model):
             submission, _created = StepSubmission.objects.update_or_create(
                 session=session, step=session.step_at(step_order), seat=seat,
                 defaults={'submitted_by': user})
-            submission.decks.set(deck_ids)
+            if step.is_matchup_ban:
+                submission.matchups.set(session.template.steps.filter(order__in=deck_ids))
+            else:
+                submission.decks.set(deck_ids)
             session.advance()
 
     def is_revealed_game(self, step_order):
-        if step_order >= self.revealed_step_count:
+        if step_order >= self.revealed_step_count or step_order in self.banned_matchup_orders():
             return False
-        return self.template.steps.filter(order=step_order, action=Action.PLAY).exists()
+        step_specs = self.template.step_specs
+        if step_order >= len(step_specs) or not step_specs[step_order].is_play:
+            return False
+        return not engine.is_awaiting_matchup_ban(step_specs, step_specs[step_order], self.revealed_step_count)
 
     def is_result_locked(self, step_order):
-        return self.results.filter(step__order__gt=step_order).exists()
+        result_orders = self.results.values_list('step__order', flat=True)
+        return engine.is_result_locked(self.template.step_specs, step_order, result_orders)
 
     def can_record_result(self, step_order):
         if not self.is_revealed_game(step_order):
@@ -326,24 +358,31 @@ class Session(models.Model):
 
     def can_reset_result(self, step_order):
         return (
-            self.results.filter(step__order=step_order).exists()
+            self.is_revealed_game(step_order)
+            and self.results.filter(step__order=step_order).exists()
             and not self.is_result_locked(step_order)
         )
 
-    def record_result(self, user, step_order, winner_seat, score):
+    def record_result(self, user, step_order, winner_seat, host_score=None, guest_score=None):
         if winner_seat not in Seat.values:
             raise ValidationError(_('Choose a winner.'))
-        if len(score) > SCORE_MAX_LENGTH:
-            raise ValidationError(
-                _('Keep the score under {length} characters.').format(length=SCORE_MAX_LENGTH))
+        if (host_score is None) != (guest_score is None):
+            raise ValidationError(_('Enter a score for both players, or leave both blank.'))
+        if any(score is not None and score < 0 for score in (host_score, guest_score)):
+            raise ValidationError(_('Scores cannot be negative.'))
         with self._locked() as session:
             if not session.is_revealed_game(step_order):
-                raise ValidationError(_('That game has not been played yet.'))
+                raise ValidationError(_('That game cannot have a result yet.'))
             if not session.can_record_result(step_order):
                 raise ValidationError(_('This result is locked because a later game has a result.'))
             PlayResult.objects.update_or_create(
                 session=session, step=session.step_at(step_order),
-                defaults={'winner_seat': winner_seat, 'score': score, 'updated_by': user})
+                defaults={
+                    'winner_seat': winner_seat,
+                    'host_score': host_score,
+                    'guest_score': guest_score,
+                    'updated_by': user,
+                })
             session.discard_invalid_pending_picks()
             session.advance()
 
@@ -360,9 +399,8 @@ class Session(models.Model):
         step = state.current_step
         if step is None or step.is_submit:
             return
-        for submission in self.submissions.filter(step__order=step.order).prefetch_related('decks'):
-            picked_ids = [deck.id for deck in submission.decks.all()]
-            if engine.validate_picks(state, step, submission.seat, picked_ids):
+        for submission in self.submissions.filter(step__order=step.order).prefetch_related('decks', 'matchups'):
+            if engine.validate_picks(state, step, submission.seat, submission.picked_ids()):
                 submission.delete()
 
     def advance(self):
@@ -409,6 +447,7 @@ class StepSubmission(models.Model):
     step = models.ForeignKey(TemplateStep, on_delete=models.RESTRICT, related_name='submissions')
     seat = models.CharField(max_length=5, choices=Seat.choices)
     decks = models.ManyToManyField(SessionDeck, blank=True, related_name='submissions')
+    matchups = models.ManyToManyField(TemplateStep, blank=True, related_name='matchup_bans')
     submitted_by = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='trade_secrets_submissions')
     updated_on = models.DateTimeField(auto_now=True)
@@ -422,12 +461,18 @@ class StepSubmission(models.Model):
     def __str__(self):
         return f'{self.session.code} step {self.step.order + 1} {self.seat}'
 
+    def picked_ids(self):
+        if self.step.action == Action.BAN_MATCHUP:
+            return tuple(matchup.order for matchup in self.matchups.all())
+        return tuple(deck.id for deck in self.decks.all())
+
 
 class PlayResult(models.Model):
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='results')
     step = models.ForeignKey(TemplateStep, on_delete=models.RESTRICT, related_name='results')
     winner_seat = models.CharField(max_length=5, choices=Seat.choices)
-    score = models.CharField(max_length=SCORE_MAX_LENGTH, blank=True, default='')
+    host_score = models.PositiveIntegerField(null=True, blank=True)
+    guest_score = models.PositiveIntegerField(null=True, blank=True)
     updated_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     updated_on = models.DateTimeField(auto_now=True)

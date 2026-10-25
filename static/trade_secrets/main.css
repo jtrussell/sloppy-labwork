@@ -175,13 +175,19 @@
 
 .ts-rail {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-4);
   margin: 0 0 var(--space-5);
   padding: var(--space-1) 0 var(--space-2);
   list-style: none;
+  position: relative;
   overflow-x: auto;
   scroll-snap-type: x proximity;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+}
+
+.ts-rail::-webkit-scrollbar {
+  display: none;
 }
 
 .ts-rail__step {
@@ -234,6 +240,7 @@
 
 .ts-rail--mini {
   gap: var(--space-1);
+  mask-image: none;
   margin: 0;
   padding: 0;
 }
@@ -685,6 +692,41 @@
   opacity: 0.7;
 }
 
+.ts-matchup {
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+}
+
+.ts-matchup__label {
+  display: grid;
+  place-items: center;
+  color: var(--color-accent);
+}
+
+.ts-matchup__decks {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+
+.ts-matchup__versus {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.09375rem;
+}
+
+.ts-history__detail--banned {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.ts-builder-step__note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
 .ts-ghost {
   display: flex;
   align-items: center;
@@ -812,8 +854,16 @@
   outline-offset: 2px;
 }
 
-.ts-segmented--choices input {
+.ts-segmented--choices label {
+  position: relative;
+}
+
+.ts-segmented--choices input,
+.form-wide .ts-segmented--choices input {
   position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
   opacity: 0;
   pointer-events: none;
 }
@@ -993,7 +1043,8 @@
   color: var(--color-text-muted);
 }
 
-.ts-history__entry--ban .ts-history__icon {
+.ts-history__entry--ban .ts-history__icon,
+.ts-history__entry--ban_matchup .ts-history__icon {
   color: var(--color-danger);
 }
 
@@ -1028,7 +1079,7 @@
   gap: var(--space-2);
 }
 
-.ts-history__result .ts-icon {
+.ts-history__result > .ts-icon {
   color: var(--color-success);
 }
 
@@ -1061,6 +1112,10 @@
   display: grid;
   gap: var(--space-3);
   padding: var(--space-6) var(--space-5);
+}
+
+.ts-result-form__title:focus {
+  outline: none;
 }
 
 .ts-result-form__title {
@@ -1160,6 +1215,79 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
+}
+
+.ts-sharing {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+}
+
+.ts-sharing__title {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.ts-sharing__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.ts-sharing__link {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.ts-sharing__link input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.ts-sharing__link .button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0 var(--space-4);
+}
+
+.ts-segmented--buttons {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+}
+
+.ts-segmented--buttons button {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 40px;
+  margin: 0;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.ts-segmented--buttons button.is-active {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.ts-template-note {
+  margin-top: var(--space-5);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
 }
 
 .ts-template-actions form {
@@ -1294,7 +1422,7 @@
 
 .ts-builder__add {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
   gap: var(--space-3);
   margin-bottom: var(--space-6);
 }
@@ -1321,12 +1449,6 @@
   display: inline-flex;
   align-items: center;
   font-size: 11px;
-}
-
-@media (min-width: 550px) {
-  .ts-builder__add {
-    grid-template-columns: repeat(4, 1fr);
-  }
 }
 
 @media (min-width: 750px) {

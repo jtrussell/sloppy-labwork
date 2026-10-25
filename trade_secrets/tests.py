@@ -266,11 +266,11 @@ class SessionFlowTests(TradeSecretsTestMixin, TestCase):
         self.assertEqual(self.phase(session), Phase.AWAITING_RESULT)
         with self.assertRaises(ValidationError):
             self.pick(session, HOST, self.alice_decks[1])
-        session.record_result(self.bob, 2, HOST, '3-1')
+        session.record_result(self.bob, 2, HOST, 3, 1)
         self.assertEqual(self.phase(session), Phase.SELECTING)
         self.pick(session, HOST, self.alice_decks[1])
         self.pick(session, GUEST, self.bob_decks[0])
-        session.record_result(self.alice, 3, HOST, '3-2')
+        session.record_result(self.alice, 3, HOST, 3, 2)
         self.assertEqual(self.phase(session), Phase.CONCLUDED)
 
     def test_triad_bo1_completes_after_one_game(self):
@@ -328,10 +328,10 @@ class SessionFlowTests(TradeSecretsTestMixin, TestCase):
         self.submit_both(session, self.alice_decks[:2], self.bob_decks[:2])
         self.pick(session, HOST, self.alice_decks[0])
         self.pick(session, GUEST, self.bob_decks[0])
-        session.record_result(self.alice, 1, HOST, '')
+        session.record_result(self.alice, 1, HOST)
         self.pick(session, HOST, self.alice_decks[1])
         self.pick(session, GUEST, self.bob_decks[0])
-        session.record_result(self.alice, 2, GUEST, '')
+        session.record_result(self.alice, 2, GUEST)
         self.pick(session, HOST, self.alice_decks[1])
         self.pick(session, GUEST, self.bob_decks[1])
         self.assertEqual(session.revealed_step_count, 5)
@@ -344,7 +344,7 @@ class SessionFlowTests(TradeSecretsTestMixin, TestCase):
         self.submit_both(session, self.alice_decks[:2], self.bob_decks[:2])
         self.pick(session, HOST, self.alice_decks[0])
         self.pick(session, GUEST, self.bob_decks[0])
-        session.record_result(self.alice, 1, HOST, '')
+        session.record_result(self.alice, 1, HOST)
         self.pick(session, HOST, self.alice_decks[1])
         self.pick(session, GUEST, self.bob_decks[0])
         self.assertEqual(session.revealed_step_count, 3)
@@ -370,34 +370,35 @@ class ResultTests(TradeSecretsTestMixin, TestCase):
 
     def test_unrevealed_game_cannot_have_result(self):
         with self.assertRaises(ValidationError):
-            self.session.record_result(self.alice, 2, HOST, '')
+            self.session.record_result(self.alice, 2, HOST)
 
     def test_non_play_step_cannot_have_result(self):
         with self.assertRaises(ValidationError):
-            self.session.record_result(self.alice, 1, HOST, '')
+            self.session.record_result(self.alice, 1, HOST)
 
     def test_either_player_can_edit_result(self):
         self.play_game(self.alice_decks[0], self.bob_decks[0])
-        self.session.record_result(self.alice, 2, HOST, '3-1')
-        self.session.record_result(self.bob, 2, GUEST, '3-2')
+        self.session.record_result(self.alice, 2, HOST, 3, 1)
+        self.session.record_result(self.bob, 2, GUEST, 3, 2)
         result = PlayResult.objects.get(session=self.session)
-        self.assertEqual((result.winner_seat, result.score, result.updated_by), (GUEST, '3-2', self.bob))
+        self.assertEqual(
+            (result.winner_seat, result.host_score, result.guest_score, result.updated_by), (GUEST, 3, 2, self.bob))
 
     def test_earlier_result_locks_once_later_result_recorded(self):
         self.play_game(self.alice_decks[0], self.bob_decks[0])
-        self.session.record_result(self.alice, 2, HOST, '')
+        self.session.record_result(self.alice, 2, HOST)
         self.play_game(self.alice_decks[1], self.bob_decks[0])
-        self.session.record_result(self.alice, 3, GUEST, '')
+        self.session.record_result(self.alice, 3, GUEST)
         with self.assertRaises(ValidationError):
-            self.session.record_result(self.alice, 2, GUEST, '')
+            self.session.record_result(self.alice, 2, GUEST)
         with self.assertRaises(ValidationError):
             self.session.reset_result(2)
 
     def test_reset_unwinds_results_one_at_a_time(self):
         self.play_game(self.alice_decks[0], self.bob_decks[0])
-        self.session.record_result(self.alice, 2, HOST, '')
+        self.session.record_result(self.alice, 2, HOST)
         self.play_game(self.alice_decks[1], self.bob_decks[0])
-        self.session.record_result(self.alice, 3, GUEST, '')
+        self.session.record_result(self.alice, 3, GUEST)
         self.session.reset_result(3)
         self.assertTrue(self.session.can_reset_result(2))
         self.session.reset_result(2)
@@ -405,26 +406,26 @@ class ResultTests(TradeSecretsTestMixin, TestCase):
 
     def test_reset_of_blocking_result_blocks_progress_again(self):
         self.play_game(self.alice_decks[0], self.bob_decks[0])
-        self.session.record_result(self.alice, 2, HOST, '')
+        self.session.record_result(self.alice, 2, HOST)
         self.session.reset_result(2)
         self.assertEqual(
             engine.phase(self.session.build_engine_state(), True), Phase.AWAITING_RESULT)
 
     def test_result_edit_keeps_locked_pick_that_is_still_legal(self):
         self.play_game(self.alice_decks[0], self.bob_decks[0])
-        self.session.record_result(self.alice, 2, GUEST, '')
+        self.session.record_result(self.alice, 2, GUEST)
         self.pick(self.session, GUEST, self.bob_decks[1])
         self.assertTrue(self.session.pending_submission_for(GUEST))
-        self.session.record_result(self.alice, 2, HOST, '')
+        self.session.record_result(self.alice, 2, HOST)
         self.assertIsNotNone(self.session.pending_submission_for(GUEST))
         self.pick(self.session, HOST, self.alice_decks[1])
         self.assertEqual(self.session.revealed_step_count, 4)
 
     def test_result_edit_clears_pick_of_deck_that_became_ineligible(self):
         self.play_game(self.alice_decks[0], self.bob_decks[0])
-        self.session.record_result(self.alice, 2, GUEST, '')
+        self.session.record_result(self.alice, 2, GUEST)
         self.pick(self.session, HOST, self.alice_decks[0])
-        self.session.record_result(self.bob, 2, HOST, '')
+        self.session.record_result(self.bob, 2, HOST)
         self.assertIsNone(self.session.pending_submission_for(HOST))
         self.assertEqual(self.session.revealed_step_count, 3)
 
@@ -474,28 +475,28 @@ class ReviewRegressionModelTests(TradeSecretsTestMixin, TestCase):
 
     def test_missing_earlier_result_can_be_recorded_after_a_later_one(self):
         session = self.start_hexad_through_two_games()
-        session.record_result(self.alice, 5, GUEST, '')
-        session.record_result(self.alice, 4, HOST, '')
+        session.record_result(self.alice, 5, GUEST)
+        session.record_result(self.alice, 4, HOST)
         self.assertEqual(session.results.count(), 2)
         with self.assertRaises(ValidationError):
-            session.record_result(self.alice, 4, GUEST, '')
+            session.record_result(self.alice, 4, GUEST)
         with self.assertRaises(ValidationError):
             session.reset_result(4)
 
     def test_existing_result_stays_editable_while_later_game_has_no_result(self):
         session = self.start_hexad_through_two_games()
-        session.record_result(self.alice, 4, HOST, '')
-        session.record_result(self.bob, 4, GUEST, '1-3')
+        session.record_result(self.alice, 4, HOST)
+        session.record_result(self.bob, 4, GUEST, 1, 3)
         self.assertEqual(session.results.get().winner_seat, GUEST)
 
     def test_picks_are_rejected_once_session_concludes(self):
         session = self.start_triad()
         self.pick(session, HOST, self.alice_decks[0])
         self.pick(session, GUEST, self.bob_decks[0])
-        session.record_result(self.alice, 2, HOST, '')
+        session.record_result(self.alice, 2, HOST)
         self.pick(session, HOST, self.alice_decks[1])
         self.pick(session, GUEST, self.bob_decks[0])
-        session.record_result(self.alice, 3, HOST, '')
+        session.record_result(self.alice, 3, HOST)
         version = session.version
         with self.assertRaises(ValidationError):
             self.pick(session, GUEST, self.bob_decks[1])
@@ -507,27 +508,27 @@ class ReviewRegressionModelTests(TradeSecretsTestMixin, TestCase):
         session = self.start_triad()
         self.pick(session, HOST, self.alice_decks[0])
         self.pick(session, GUEST, self.bob_decks[0])
-        session.record_result(self.alice, 2, HOST, '')
+        session.record_result(self.alice, 2, HOST)
         self.pick(session, HOST, self.alice_decks[1])
         self.pick(session, GUEST, self.bob_decks[0])
-        session.record_result(self.alice, 3, HOST, '')
+        session.record_result(self.alice, 3, HOST)
         self.assertEqual(self.phase(session), Phase.CONCLUDED)
-        session.record_result(self.bob, 3, GUEST, '')
+        session.record_result(self.bob, 3, GUEST)
         self.assertEqual(self.phase(session), Phase.SELECTING)
         self.pick(session, GUEST, self.bob_decks[1])
-        session.record_result(self.alice, 3, HOST, '')
+        session.record_result(self.alice, 3, HOST)
         self.assertEqual(self.phase(session), Phase.CONCLUDED)
 
     def test_reset_that_reblocks_keeps_legal_pending_pick(self):
         session = self.start_triad()
         self.pick(session, HOST, self.alice_decks[0])
         self.pick(session, GUEST, self.bob_decks[0])
-        session.record_result(self.alice, 2, GUEST, '')
+        session.record_result(self.alice, 2, GUEST)
         self.pick(session, GUEST, self.bob_decks[1])
         session.reset_result(2)
         self.assertEqual(self.phase(session), Phase.AWAITING_RESULT)
         self.assertIsNotNone(session.pending_submission_for(GUEST))
-        session.record_result(self.alice, 2, HOST, '')
+        session.record_result(self.alice, 2, HOST)
         self.assertIsNotNone(session.pending_submission_for(GUEST))
 
     def test_duplicate_deck_ids_are_a_validation_error(self):
@@ -543,11 +544,13 @@ class ReviewRegressionModelTests(TradeSecretsTestMixin, TestCase):
         self.pick(session, GUEST, self.bob_decks[0])
         version = session.version
         with self.assertRaises(ValidationError):
-            session.record_result(self.alice, 2, 'nobody', '')
+            session.record_result(self.alice, 2, 'nobody')
         with self.assertRaises(ValidationError):
-            session.record_result(self.alice, 2, HOST, 'x' * 51)
+            session.record_result(self.alice, 2, HOST, 3)
         with self.assertRaises(ValidationError):
-            session.record_result(self.alice, 99, HOST, '')
+            session.record_result(self.alice, 2, HOST, -1, 2)
+        with self.assertRaises(ValidationError):
+            session.record_result(self.alice, 99, HOST)
         with self.assertRaises(ValidationError):
             session.reset_result(2)
         with self.assertRaises(ValidationError):
@@ -984,7 +987,7 @@ class ResultViewTests(SessionViewTestCase):
 
     def test_recording_result_unblocks_and_returns_board(self):
         self.client.force_login(self.bob)
-        response = self.htmx_post(self.result_url, {'winner_seat': HOST, 'score': '3-1'})
+        response = self.htmx_post(self.result_url, {'winner_seat': HOST, 'host_score': 3, 'guest_score': 1})
         self.assertContains(response, 'id="ts-board"')
         self.assertContains(response, 'alice won')
         self.assertContains(response, 'Pick your deck for game 2')
@@ -995,13 +998,40 @@ class ResultViewTests(SessionViewTestCase):
         self.assertEqual(response['HX-Retarget'], '#ts-dialog')
         self.assertContains(response, 'ts-result-form')
 
+    def test_scores_must_be_entered_for_both_players_or_neither(self):
+        self.client.force_login(self.bob)
+        response = self.htmx_post(self.result_url, {'winner_seat': HOST, 'host_score': 3})
+        self.assertEqual(response['HX-Retarget'], '#ts-dialog')
+        self.assertContains(response, 'Enter a score for both players')
+        self.assertFalse(self.session.results.exists())
+
+    def test_result_without_scores_is_allowed(self):
+        self.client.force_login(self.bob)
+        self.htmx_post(self.result_url, {'winner_seat': GUEST})
+        result = self.session.results.get()
+        self.assertEqual((result.winner_seat, result.host_score, result.guest_score), (GUEST, None, None))
+
+    def test_history_shows_score_line_in_seat_order(self):
+        self.session.record_result(self.alice, 2, GUEST, 1, 3)
+        self.client.force_login(self.alice)
+        response = self.client.get(self.detail_url(self.session))
+        self.assertContains(response, 'alice 1 – 3 bob')
+
+    def test_result_dialog_uses_player_cards_and_prefills_scores(self):
+        self.session.record_result(self.alice, 2, HOST, 3, 2)
+        self.client.force_login(self.bob)
+        response = self.client.get(self.result_url, HTTP_HX_REQUEST='true')
+        self.assertContains(response, 'class="report-player"', count=2)
+        self.assertContains(response, 'name="host_score" id="id_host_score" value="3"')
+        self.assertContains(response, 'value="host" class="report-player__radio" required checked')
+
     def test_spectator_cannot_record_result(self):
         self.client.force_login(self.carol)
         response = self.client.post(self.result_url, {'winner_seat': HOST})
         self.assertEqual(response.status_code, 403)
 
     def test_reset_clears_latest_result(self):
-        self.session.record_result(self.alice, 2, HOST, '')
+        self.session.record_result(self.alice, 2, HOST)
         self.client.force_login(self.bob)
         response = self.htmx_post(
             reverse('trade_secrets:session-result-reset', args=[self.session.code, 2]), {})
@@ -1121,3 +1151,295 @@ class TemplateViewTests(SessionViewTestCase):
             reverse('trade_secrets:session-create'), {'template_code': self.system_template('hexad').code})
         session = Session.objects.get(host=self.alice)
         self.assertRedirects(response, self.detail_url(session))
+
+
+class HexadBo1Mixin:
+    def start_hexad_bo1(self):
+        template = self.make_template(
+            self.alice, 'submit:6', 'ban:1', 'safe:1', 'ban:1', 'play', 'play', 'play', 'ban_matchup',
+            name='Hexad Bo1')
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks, self.bob_decks)
+        for host_deck, guest_deck in [
+                (self.bob_decks[0], self.alice_decks[0]),
+                (self.alice_decks[1], self.bob_decks[1]),
+                (self.bob_decks[2], self.alice_decks[2]),
+                (self.alice_decks[3], self.bob_decks[3]),
+                (self.alice_decks[4], self.bob_decks[4]),
+                (self.alice_decks[5], self.bob_decks[5])]:
+            self.pick(session, HOST, host_deck)
+            self.pick(session, GUEST, guest_deck)
+        return session
+
+    def ban_matchups(self, session, host_order, guest_order):
+        session.submit_picks(HOST, self.alice, 7, [host_order])
+        session.submit_picks(GUEST, self.bob, 7, [guest_order])
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class MatchupBanSessionTests(HexadBo1Mixin, SessionViewTestCase):
+    def test_matchup_ban_reveals_and_completes(self):
+        session = self.start_hexad_bo1()
+        self.ban_matchups(session, 4, 6)
+        self.assertEqual(session.revealed_step_count, 8)
+        self.assertEqual(session.banned_matchup_orders(), {4, 6})
+
+    def test_banned_matchup_cannot_have_result(self):
+        session = self.start_hexad_bo1()
+        self.ban_matchups(session, 4, 6)
+        with self.assertRaises(ValidationError):
+            session.record_result(self.alice, 4, HOST)
+        session.record_result(self.alice, 5, GUEST, 3, 2)
+        self.assertEqual(session.results.get().step.order, 5)
+
+    def test_same_ban_leaves_two_recordable_matchups(self):
+        session = self.start_hexad_bo1()
+        self.ban_matchups(session, 5, 5)
+        self.assertTrue(session.can_record_result(4))
+        self.assertTrue(session.can_record_result(6))
+        self.assertFalse(session.can_record_result(5))
+
+    def test_matchup_ban_rejects_deck_ids_and_unplayed_steps(self):
+        session = self.start_hexad_bo1()
+        with self.assertRaises(ValidationError):
+            session.submit_picks(HOST, self.alice, 7, [1])
+        with self.assertRaises(ValidationError):
+            session.submit_picks(HOST, self.alice, 7, [4, 5])
+
+    def test_ban_page_offers_matchups_and_labels_them(self):
+        session = self.start_hexad_bo1()
+        self.client.force_login(self.alice)
+        response = self.client.get(self.detail_url(session))
+        self.assertContains(response, 'Ban 1 matchup')
+        self.assertContains(response, 'ts-matchup')
+        self.assertContains(response, 'Matchup 3')
+        self.assertNotContains(response, 'Game 1')
+
+    def test_matchup_ban_pick_view_and_finished_prompt(self):
+        session = self.start_hexad_bo1()
+        self.client.force_login(self.alice)
+        self.htmx_post(reverse('trade_secrets:session-pick', args=[session.code]), {'step_order': 7, 'deck': [4]})
+        self.assertEqual(session.pending_submission_for(HOST).picked_ids(), (4,))
+        self.client.force_login(self.bob)
+        response = self.htmx_post(
+            reverse('trade_secrets:session-pick', args=[session.code]), {'step_order': 7, 'deck': [6]})
+        self.assertContains(response, 'Matchup bans revealed')
+        self.assertContains(response, 'Play matchup 2 and record the result')
+        self.assertContains(response, 'Banned')
+
+    def test_pending_matchup_ban_stays_secret(self):
+        session = self.start_hexad_bo1()
+        session.submit_picks(HOST, self.alice, 7, [5])
+        self.client.force_login(self.bob)
+        response = self.client.get(self.detail_url(session))
+        self.assertNotContains(response, 'data-locked')
+        self.assertNotContains(response, 'Matchup bans revealed')
+
+    def test_builder_offers_ban_matchup(self):
+        self.client.force_login(self.alice)
+        response = self.client.get(reverse('trade_secrets:template-create'))
+        self.assertContains(response, 'value="add:ban_matchup"')
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class MatchupReviewRegressionTests(HexadBo1Mixin, SessionViewTestCase):
+    def start_matchups_then_games(self):
+        template = self.make_template(
+            self.alice, 'submit:6', 'play', 'play', 'play', 'ban_matchup', 'play:losing_only', 'play',
+            name='Matchups then games')
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks, self.bob_decks)
+        for index in range(3):
+            self.pick(session, HOST, self.alice_decks[index])
+            self.pick(session, GUEST, self.bob_decks[index])
+        session.submit_picks(HOST, self.alice, 4, [1])
+        session.submit_picks(GUEST, self.bob, 4, [3])
+        return session
+
+    def test_matchup_results_wait_for_the_ban(self):
+        template = self.make_template(
+            self.alice, 'submit:6', 'ban:1', 'safe:1', 'ban:1', 'play', 'play', 'play', 'ban_matchup')
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks, self.bob_decks)
+        for host_deck, guest_deck in [
+                (self.bob_decks[0], self.alice_decks[0]),
+                (self.alice_decks[1], self.bob_decks[1]),
+                (self.bob_decks[2], self.alice_decks[2]),
+                (self.alice_decks[3], self.bob_decks[3])]:
+            self.pick(session, HOST, host_deck)
+            self.pick(session, GUEST, guest_deck)
+        self.assertFalse(session.can_record_result(4))
+        with self.assertRaises(ValidationError):
+            session.record_result(self.alice, 4, HOST)
+        self.client.force_login(self.alice)
+        self.assertContains(self.client.get(self.detail_url(session)), 'Not played yet')
+
+    def test_finished_prompt_clears_once_any_unbanned_matchup_has_a_result(self):
+        session = self.start_hexad_bo1()
+        self.ban_matchups(session, 5, 5)
+        self.client.force_login(self.alice)
+        self.assertContains(self.client.get(self.detail_url(session)), 'Play matchup 1 or matchup 3')
+        session.record_result(self.alice, 4, HOST)
+        response = self.client.get(self.detail_url(session))
+        self.assertContains(response, 'All done')
+        self.assertNotContains(response, 'Play matchup 3')
+
+    def test_banned_matchup_cannot_be_reset(self):
+        session = self.start_hexad_bo1()
+        self.ban_matchups(session, 4, 6)
+        self.assertFalse(session.can_reset_result(4))
+        with self.assertRaises(ValidationError):
+            session.reset_result(4)
+
+    def test_game_results_do_not_lock_matchup_results(self):
+        session = self.start_matchups_then_games()
+        self.pick(session, HOST, self.alice_decks[3])
+        self.pick(session, GUEST, self.bob_decks[3])
+        session.record_result(self.alice, 5, HOST)
+        session.record_result(self.alice, 2, GUEST, 1, 3)
+        self.assertTrue(session.can_reset_result(2))
+        self.assertTrue(session.can_record_result(5))
+        session.record_result(self.bob, 2, HOST, 3, 1)
+        self.assertEqual(session.results.get(step__order=2).winner_seat, HOST)
+
+    def test_play_after_matchup_ban_is_a_game(self):
+        session = self.start_matchups_then_games()
+        self.client.force_login(self.alice)
+        response = self.client.get(self.detail_url(session))
+        self.assertContains(response, 'Pick your deck for game 4')
+        self.assertContains(response, 'Matchup 2')
+
+    def test_result_form_names_the_matchup(self):
+        session = self.start_hexad_bo1()
+        self.ban_matchups(session, 4, 6)
+        self.client.force_login(self.alice)
+        response = self.client.get(
+            reverse('trade_secrets:session-result', args=[session.code, 5]), HTTP_HX_REQUEST='true')
+        self.assertContains(response, 'Matchup 2')
+        self.assertNotContains(response, 'Game 2')
+
+    def test_finished_matchup_session_renders_for_every_viewer(self):
+        session = self.start_hexad_bo1()
+        self.ban_matchups(session, 4, 6)
+        for user in (self.alice, self.bob, self.carol, None):
+            self.client.logout()
+            if user:
+                self.client.force_login(user)
+            response = self.client.get(self.detail_url(session))
+            self.assertContains(response, 'Matchup bans revealed')
+
+    def test_opponent_does_not_see_pending_matchup_ban_selected(self):
+        session = self.start_hexad_bo1()
+        session.submit_picks(HOST, self.alice, 7, [5])
+        self.client.force_login(self.bob)
+        response = self.client.get(self.detail_url(session))
+        self.assertNotContains(response, 'is-selected')
+
+    def test_builder_adds_and_saves_ban_matchup(self):
+        self.client.force_login(self.alice)
+        steps = [('submit', 6, ''), ('play', 1, 'ineligible'), ('play', 1, 'ineligible'), ('play', 1, 'ineligible')]
+        data = {'name': 'Bo1', 'description': '', 'builder_action': 'add:ban_matchup'}
+        for index, (action, quantity, rule) in enumerate(steps):
+            data.update({f'steps-{index}-action': action, f'steps-{index}-quantity': quantity,
+                         f'steps-{index}-rule': rule})
+        response = self.htmx_post(reverse('trade_secrets:template-create'), data)
+        self.assertContains(response, 'value="ban_matchup"')
+        self.assertContains(response, 'Unbanned matchups: at least 1')
+        data.update({'steps-4-action': 'ban_matchup', 'steps-4-quantity': 1, 'builder_action': 'save'})
+        self.htmx_post(reverse('trade_secrets:template-create'), data)
+        template = SessionTemplate.objects.get(owner=self.alice, name='Bo1')
+        self.assertEqual(template.step_specs[-1].action, 'ban_matchup')
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class ScoreMigrationTests(TradeSecretsTestMixin, TestCase):
+    def test_text_scores_split_by_winner(self):
+        migration = importlib.import_module('trade_secrets.migrations.0005_per_player_scores')
+        match = migration.TEXT_SCORE_PATTERN.match(' 3 - 1 ')
+        self.assertEqual(match.groups(), ('3', '1'))
+        self.assertIsNone(migration.TEXT_SCORE_PATTERN.match('3 keys to 1'))
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class TemplateVisibilityTests(SessionViewTestCase):
+    def setUp(self):
+        super().setUp()
+        self.template = self.make_template(self.alice, 'submit:3', 'ban:1', 'play', name='Shared Format')
+        self.detail_url_for_template = reverse('trade_secrets:template-detail', args=[self.template.code])
+        self.visibility_url = reverse('trade_secrets:template-visibility', args=[self.template.code])
+
+    def start_as(self, user):
+        self.client.force_login(user)
+        return self.client.post(reverse('trade_secrets:session-create'), {'template_code': self.template.code})
+
+    def test_templates_start_private(self):
+        self.assertEqual(self.template.visibility, SessionTemplate.Visibility.PRIVATE)
+        self.assertEqual(self.start_as(self.bob).status_code, 403)
+
+    def test_public_template_can_be_opened_and_started_by_link(self):
+        self.template.set_visibility(SessionTemplate.Visibility.PUBLIC)
+        self.client.force_login(self.bob)
+        response = self.client.get(self.detail_url_for_template)
+        self.assertContains(response, 'Shared by alice')
+        self.assertNotContains(response, 'ts-sharing')
+        response = self.start_as(self.bob)
+        session = Session.objects.get(host=self.bob)
+        self.assertRedirects(response, self.detail_url(session))
+
+    def test_public_templates_are_not_listed_for_others(self):
+        self.template.set_visibility(SessionTemplate.Visibility.PUBLIC)
+        self.client.force_login(self.bob)
+        self.assertNotContains(self.client.get(reverse('trade_secrets:home')), 'Shared Format')
+
+    def test_anonymous_visitor_is_sent_to_log_in_for_public_templates(self):
+        self.template.set_visibility(SessionTemplate.Visibility.PUBLIC)
+        response = self.client.get(self.detail_url_for_template)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('login', response.url)
+
+    def test_private_template_is_hidden_from_others(self):
+        self.assertEqual(self.client.get(self.detail_url_for_template).status_code, 404)
+        self.client.force_login(self.bob)
+        self.assertEqual(self.client.get(self.detail_url_for_template).status_code, 404)
+
+    def test_owner_toggles_visibility_and_sees_share_link(self):
+        self.client.force_login(self.alice)
+        self.client.post(self.visibility_url, {'visibility': 'public'})
+        self.template.refresh_from_db()
+        self.assertTrue(self.template.is_public)
+        response = self.client.get(self.detail_url_for_template)
+        self.assertContains(response, 'Copy link')
+        self.assertContains(response, f'http://testserver{self.detail_url_for_template}')
+        self.client.post(self.visibility_url, {'visibility': 'private'})
+        self.template.refresh_from_db()
+        self.assertFalse(self.template.is_public)
+
+    def test_invalid_visibility_is_ignored(self):
+        self.client.force_login(self.alice)
+        self.client.post(self.visibility_url, {'visibility': 'secret'})
+        self.template.refresh_from_db()
+        self.assertEqual(self.template.visibility, SessionTemplate.Visibility.PRIVATE)
+
+    def test_only_owner_can_change_visibility(self):
+        self.template.set_visibility(SessionTemplate.Visibility.PUBLIC)
+        self.client.force_login(self.bob)
+        self.assertEqual(self.client.post(self.visibility_url, {'visibility': 'private'}).status_code, 403)
+        system_url = reverse('trade_secrets:template-visibility', args=[self.system_template('triad').code])
+        self.assertEqual(self.client.post(system_url, {'visibility': 'private'}).status_code, 403)
+
+    def test_making_private_keeps_existing_sessions_working(self):
+        self.template.set_visibility(SessionTemplate.Visibility.PUBLIC)
+        self.start_as(self.bob)
+        session = Session.objects.get(host=self.bob)
+        session.join(self.carol)
+        self.template.set_visibility(SessionTemplate.Visibility.PRIVATE)
+        self.client.force_login(self.bob)
+        self.assertEqual(self.client.get(self.detail_url(session)).status_code, 200)
+        self.submit_both(session, self.bob_decks[:3], self.alice_decks[:3])
+        self.assertEqual(session.revealed_step_count, 1)
+        self.assertEqual(self.start_as(self.bob).status_code, 403)
+
+    def test_archived_public_template_cannot_start_sessions(self):
+        self.template.set_visibility(SessionTemplate.Visibility.PUBLIC)
+        self.template.archive()
+        self.assertEqual(self.start_as(self.bob).status_code, 403)

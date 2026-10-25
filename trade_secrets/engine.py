@@ -7,6 +7,8 @@ from django.utils.translation import gettext_lazy as _
 MAXIMUM_STEPS_PER_TEMPLATE = 20
 MAXIMUM_DECKS_PER_PLAYER = 12
 MAXIMUM_STEP_QUANTITY = 12
+MINIMUM_MATCHUPS_FOR_BAN = 3
+MATCHUPS_REMOVED_BY_SEPARATE_BANS = 2
 
 
 class Action(TextChoices):
@@ -15,6 +17,7 @@ class Action(TextChoices):
     SAFE = 'safe', _('Safe')
     STEAL = 'steal', _('Steal')
     PLAY = 'play', _('Play')
+    BAN_MATCHUP = 'ban_matchup', _('Ban matchup')
 
 
 class PlayedDeckRule(TextChoices):
@@ -69,6 +72,10 @@ class StepSpec:
     def is_submit(self):
         return self.action == Action.SUBMIT
 
+    @property
+    def is_matchup_ban(self):
+        return self.action == Action.BAN_MATCHUP
+
 
 @dataclass(frozen=True)
 class PoolDeck:
@@ -115,6 +122,7 @@ class GameState:
     revealed_count: int
     winners: dict
     history: list
+    banned_matchup_orders: set = field(default_factory=set)
 
     @property
     def current_step(self):
@@ -136,6 +144,7 @@ class StepTrace:
     most_open: int
     fewest_safed: int
     most_safed: int
+    fewest_matchups: int = 0
     error: str = ''
 
     @property
@@ -145,6 +154,10 @@ class StepTrace:
     @property
     def safed_range_varies(self):
         return self.fewest_safed != self.most_safed
+
+    @property
+    def has_matchups(self):
+        return self.fewest_matchups > 0
 
 
 @dataclass
@@ -177,6 +190,30 @@ def game_number_for_order(steps, order):
 
 def play_steps(steps):
     return [step for step in steps if step.is_play]
+
+
+def is_matchup(steps, step):
+    return step.is_play and any(other.is_matchup_ban and other.order > step.order for other in steps)
+
+
+def is_awaiting_matchup_ban(steps, step, revealed_count):
+    return any(
+        other.is_matchup_ban and other.order > step.order and other.order >= revealed_count
+        for other in steps)
+
+
+def is_result_locked(steps, order, result_orders):
+    is_matchup_result = is_matchup(steps, steps[order])
+    return any(
+        other > order and is_matchup(steps, steps[other]) == is_matchup_result
+        for other in result_orders)
+
+
+def game_label(steps, step):
+    number = game_number_for_order(steps, step.order)
+    if is_matchup(steps, step):
+        return str(_('Matchup {number}').format(number=number))
+    return str(_('Game {number}').format(number=number))
 
 
 def replay(steps, pool_decks, revealed_count, revealed_picks, winners):
@@ -216,6 +253,8 @@ def resolve_step(state, step, picks_by_seat):
         for seat, deck_ids in normalized_picks.items():
             for deck_id in deck_ids:
                 record_play(state, step, seat, state.decks[deck_id])
+    elif step.action == Action.BAN_MATCHUP:
+        state.banned_matchup_orders.update(all_picked_ids(normalized_picks))
     state.history.append(RevealedStep(step=step, picks_by_seat=normalized_picks))
     state.revealed_count += 1
 
@@ -242,7 +281,16 @@ def choices_for(state, step, seat):
         return [deck.id for deck in state.decks_held_by(seat) if deck.is_open]
     if step.action == Action.PLAY:
         return [deck.id for deck in state.decks_held_by(seat) if deck.is_playable]
+    if step.action == Action.BAN_MATCHUP:
+        return unbanned_matchup_orders(state)
     return []
+
+
+def unbanned_matchup_orders(state):
+    return [
+        revealed.step.order for revealed in state.history
+        if revealed.step.is_play and revealed.step.order not in state.banned_matchup_orders
+    ]
 
 
 def required_pick_count(state, step, seat):
@@ -259,13 +307,14 @@ def validate_picks(state, step, seat, deck_ids):
     errors = []
     deck_ids = list(deck_ids)
     expected_count = required_pick_count(state, step, seat)
+    noun = _('matchup') if step.is_matchup_ban else _('deck')
     if len(set(deck_ids)) != len(deck_ids):
-        errors.append(str(_('Each deck can only be picked once.')))
+        errors.append(str(_('Each {noun} can only be picked once.').format(noun=noun)))
     if len(set(deck_ids)) != expected_count:
-        errors.append(str(_('Pick exactly {count} deck(s).').format(count=expected_count)))
+        errors.append(str(_('Pick exactly {count} {noun}(s).').format(count=expected_count, noun=noun)))
     eligible_ids = set(choices_for(state, step, seat))
     if any(deck_id not in eligible_ids for deck_id in deck_ids):
-        errors.append(str(_('That deck cannot be picked for this step.')))
+        errors.append(str(_('That {noun} cannot be picked for this step.').format(noun=noun)))
     return errors
 
 
@@ -311,15 +360,15 @@ def deck_status(deck):
 def ineligible_reason(state, deck):
     if not deck.is_spent:
         return ''
-    game_number = game_number_for_order(state.steps, deck.spent_at_order)
+    game = game_label(state.steps, state.steps[deck.spent_at_order]).lower()
     if deck.spent_by_winning:
-        return str(_('Won game {number}').format(number=game_number))
-    return str(_('Played in game {number}').format(number=game_number))
+        return str(_('Won {game}').format(game=game))
+    return str(_('Played in {game}').format(game=game))
 
 
 def step_label(step):
-    if step.is_play:
-        return str(Action.PLAY.label)
+    if step.is_play or step.is_matchup_ban:
+        return str(Action(step.action).label)
     return f'{Action(step.action).label} {step.quantity}'
 
 
@@ -328,16 +377,38 @@ def simulate_template_steps(steps):
         return []
     cautious = PoolEstimate(open=steps[0].quantity)
     hopeful = PoolEstimate(open=steps[0].quantity)
-    traces = [trace_for(steps[0], cautious, hopeful)]
+    fewest_matchups = 0
+    traces = [trace_for(steps[0], cautious, hopeful, fewest_matchups)]
     for display_number, step in enumerate(steps[1:], start=2):
-        error = shortage_error(display_number, step, cautious, hopeful)
-        apply_step_to_estimates(step, cautious, hopeful)
-        traces.append(trace_for(step, cautious, hopeful, error))
+        if step.is_matchup_ban:
+            error = matchup_ban_error(display_number, steps, step, fewest_matchups)
+            fewest_matchups = max(0, fewest_matchups - MATCHUPS_REMOVED_BY_SEPARATE_BANS)
+        else:
+            error = shortage_error(display_number, step, cautious, hopeful)
+            apply_step_to_estimates(step, cautious, hopeful)
+            fewest_matchups += 1 if step.is_play else 0
+        traces.append(trace_for(step, cautious, hopeful, fewest_matchups, error))
     return traces
 
 
-def trace_for(step, cautious, hopeful, error=''):
-    return StepTrace(step.order, cautious.open, hopeful.open, cautious.safed, hopeful.safed, error)
+def trace_for(step, cautious, hopeful, fewest_matchups, error=''):
+    return StepTrace(
+        step.order, cautious.open, hopeful.open, cautious.safed, hopeful.safed, fewest_matchups, error)
+
+
+def matchup_ban_error(display_number, steps, step, fewest_matchups):
+    if any(other.is_play and other.order < step.order and other.played_deck_rule == PlayedDeckRule.LOSING_ONLY
+           for other in steps):
+        return str(_(
+            'Step {number} (Ban matchup): matchups can\'t be banned after a Play step that uses '
+            '"Only losing decks", because those games must be played before the match can continue.'
+        ).format(number=display_number))
+    if fewest_matchups < MINIMUM_MATCHUPS_FOR_BAN:
+        return str(_(
+            'Step {number} (Ban matchup): needs at least {needed} unbanned matchups but as few as '
+            '{available} may remain.'
+        ).format(number=display_number, needed=MINIMUM_MATCHUPS_FOR_BAN, available=fewest_matchups))
+    return ''
 
 
 def shortage_error(display_number, step, cautious, hopeful):
@@ -399,6 +470,9 @@ def structural_errors_for_step(display_number, step):
     if step.is_play and step.quantity != 1:
         errors.append(str(_('Step {number}: a Play step is always a single game.').format(
             number=display_number)))
+    elif step.is_matchup_ban and step.quantity != 1:
+        errors.append(str(_('Step {number}: a Ban matchup step always bans one matchup.').format(
+            number=display_number)))
     elif not 1 <= step.quantity <= maximum:
         errors.append(str(_('Step {number}: quantity must be between 1 and {maximum}.').format(
             number=display_number, maximum=maximum)))
@@ -410,6 +484,8 @@ def structural_errors_for_step(display_number, step):
 def games_won(state):
     tally = {seat: 0 for seat in SEATS}
     for step in play_steps(state.steps[:state.revealed_count]):
+        if step.order in state.banned_matchup_orders:
+            continue
         winner = state.winners.get(step.order)
         if winner in tally:
             tally[winner] += 1
@@ -437,6 +513,13 @@ def results_summary_lines(state, format_name, session_code, seat_names, deck_nam
                 lines.append(f'{seat_names[seat]} decks: {names_for(d.id for d in state.decks_submitted_by(seat))}')
         elif step.is_play:
             lines.append(play_summary_line(state, step, picks, seat_names, deck_names, scores))
+        elif step.is_matchup_ban:
+            fragments = [
+                f'{seat_names[seat]} banned '
+                + ('; '.join(game_label(state.steps, state.steps[order]) for order in picks[seat]) or 'nothing')
+                for seat in SEATS
+            ]
+            lines.append(f'{Action(step.action).label}: ' + '; '.join(fragments))
         else:
             fragments = [
                 f'{seat_names[seat]} {past_tense[step.action]} {names_for(picks[seat]) or "nothing"}'
@@ -450,16 +533,24 @@ def results_summary_lines(state, format_name, session_code, seat_names, deck_nam
     return lines
 
 
+def score_line(seat_names, host_score, guest_score):
+    if host_score is None or guest_score is None:
+        return ''
+    return f'{seat_names[Seat.HOST]} {host_score} – {guest_score} {seat_names[Seat.GUEST]}'
+
+
 def play_summary_line(state, step, picks, seat_names, deck_names, scores):
-    game_number = game_number_for_order(state.steps, step.order)
     matchup = ' vs '.join(
         f'{deck_names.get(picks[seat][0], "?") if picks[seat] else "no deck"} ({seat_names[seat]})'
         for seat in SEATS)
     winner = state.winners.get(step.order)
-    if winner is None:
+    if step.order in state.banned_matchup_orders:
+        outcome = 'banned'
+    elif winner is None:
         outcome = 'result not recorded'
     else:
         outcome = f'{seat_names[winner]} won'
-        if scores.get(step.order):
-            outcome += f', {scores[step.order]}'
-    return f'Game {game_number}: {matchup} - {outcome}'
+        line = score_line(seat_names, *scores.get(step.order, (None, None)))
+        if line:
+            outcome += f', {line}'
+    return f'{game_label(state.steps, step)}: {matchup} - {outcome}'

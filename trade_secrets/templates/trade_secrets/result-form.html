@@ -1,9 +1,10 @@
 {% extends 'page.html' %}
 {% load static partials %}
 
-{% block head_title %}Game {{ game_number }} result · Trade Secrets{% endblock %}
+{% block head_title %}{{ game_label }} result · Trade Secrets{% endblock %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{% static 'tourney/report-dialog.css' %}">
 <link rel="stylesheet" href="{% static 'trade_secrets/main.css' %}">
 {% endblock %}
 
@@ -14,22 +15,31 @@
       hx-post="{% url 'trade_secrets:session-result' session.code step_order %}" hx-target="#ts-board" hx-swap="outerHTML"
       hx-sync="#ts-board:replace" hx-disabled-elt="find button[type=submit]">
   {% csrf_token %}
-  <h2 class="ts-result-form__title">Game {{ game_number }}</h2>
+  <h2 class="ts-result-form__title" tabindex="-1" autofocus>{{ game_label }}</h2>
   {% if form.non_field_errors %}
   <div class="note note-danger" role="alert"><ul class="note__list">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul></div>
   {% endif %}
-  <fieldset class="ts-result-form__winner">
-    <legend>{{ form.winner_seat.label }}</legend>
-    <div class="ts-segmented ts-segmented--choices">
-      {% for choice in form.winner_seat %}
-      <label for="{{ choice.id_for_label }}">{{ choice.tag }}<span>{{ choice.choice_label }}</span></label>
+  <fieldset class="report-outcome">
+    <legend class="report-outcome__legend">{{ form.winner_seat.label }} <span class="report-outcome__hint">Tap the winner</span></legend>
+    <div class="report-outcome__players">
+      {% for slot in form.player_slots %}
+      <div class="report-player">
+        <label class="report-player__pick">
+          <input type="radio" name="{{ form.winner_seat.html_name }}" value="{{ slot.seat }}" class="report-player__radio" required{% if slot.is_winner %} checked{% endif %}>
+          <span class="report-player__name">{{ slot.name }}</span>
+          <span class="report-player__winner" aria-hidden="true">Winner</span>
+        </label>
+        <div class="report-player__score">
+          <input type="number" name="{{ slot.score_field.html_name }}" id="{{ slot.score_field.id_for_label }}" value="{{ slot.score_field.value|default_if_none:'' }}" min="0" step="1" inputmode="numeric" placeholder="Score" aria-label="{{ slot.name }} score">
+        </div>
+      </div>
+      {% if forloop.first %}<span class="report-outcome__versus" aria-hidden="true">vs</span>{% endif %}
       {% endfor %}
     </div>
     {% for error in form.winner_seat.errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
+    {% for error in form.host_score.errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
+    {% for error in form.guest_score.errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
   </fieldset>
-  <label for="{{ form.score.id_for_label }}">{{ form.score.label }}</label>
-  {{ form.score }}
-  {% for error in form.score.errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
   {% if warns_about_eligibility %}
   <p class="ts-result-form__warning">{% include 'trade_secrets/partials/icon.html' with name='alert' %}The winning deck can't be played again. {% if has_result %}Changing this result can change which decks are eligible and may clear a locked-in pick.{% endif %}</p>
   {% endif %}

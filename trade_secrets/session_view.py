@@ -15,6 +15,7 @@ ACTION_ICONS = {
     Action.SAFE: 'shield',
     Action.STEAL: 'swap',
     Action.PLAY: 'play',
+    Action.BAN_MATCHUP: 'ban',
 }
 
 STATUS_ICONS = {
@@ -32,6 +33,7 @@ PLAY_RULE_HINTS = {
 
 PAST_TENSE = {
     Action.BAN: 'banned',
+    Action.BAN_MATCHUP: 'banned',
     Action.SAFE: 'safed',
     Action.STEAL: 'stole',
 }
@@ -41,6 +43,7 @@ REVEAL_TITLES = {
     Action.BAN: 'Bans revealed',
     Action.SAFE: 'Safes revealed',
     Action.STEAL: 'Heist complete',
+    Action.BAN_MATCHUP: 'Matchup bans revealed',
 }
 
 
@@ -135,12 +138,22 @@ class HistoryEntry:
     is_play: bool = False
     game_number: int = 0
     winner_name: str = ''
-    score: str = ''
+    score_line: str = ''
     has_result: bool = False
     can_record: bool = False
     can_reset: bool = False
     is_result_locked: bool = False
+    is_banned: bool = False
+    is_awaiting_ban: bool = False
     warns_about_eligibility: bool = False
+
+
+@dataclass
+class MatchupCard:
+    order: int
+    label: str
+    seat_decks: list
+    is_selected: bool = False
 
 
 @dataclass
@@ -171,16 +184,18 @@ class SessionView:
     instruction: str
     instruction_hint: str
     lineups: list
+    matchup_choices: list
     presence: list
     history: list
     last_reveal: object
     blocking_game_number: int
     required_pick_count: int
     pick_step_order: int
+    pick_noun: str
     has_pending_pick: bool
     summary_text: str
     games_won: list
-    has_games: bool
+    has_results: bool
 
     @property
     def is_player(self):
@@ -219,7 +234,9 @@ def template_rail(step_specs):
 
 def rail_label(step_specs, step):
     if step.is_play:
-        return _('Game {number}').format(number=engine.game_number_for_order(step_specs, step.order))
+        return engine.game_label(step_specs, step)
+    if step.is_matchup_ban:
+        return str(Action.BAN_MATCHUP.label)
     if step.is_submit:
         return _('Submit {count}').format(count=step.quantity)
     label = str(Action(step.action).label)
@@ -269,6 +286,7 @@ class SessionViewBuilder:
         self.current_step = self.state.current_step
         self.submitted_seats = self.current_submitted_seats()
         self.pending_pick_ids = self.viewer_pending_pick_ids()
+        self.picks_matchups = self.current_step is not None and self.current_step.is_matchup_ban
 
     def build(self):
         role = self.role()
@@ -293,16 +311,18 @@ class SessionViewBuilder:
             instruction=self.instruction(role, required_pick_count),
             instruction_hint=self.instruction_hint(),
             lineups=self.lineups(required_pick_count),
+            matchup_choices=self.matchup_choices(required_pick_count),
             presence=self.presence(),
             history=history,
             last_reveal=history[-1] if history else None,
             blocking_game_number=self.blocking_game_number(),
             required_pick_count=required_pick_count,
             pick_step_order=self.current_step.order if self.current_step else -1,
+            pick_noun=_('matchup') if self.picks_matchups else _('deck'),
             has_pending_pick=self.viewer_seat in self.submitted_seats,
             summary_text='\n'.join(self.summary_lines()),
             games_won=self.games_won(),
-            has_games=any(step.is_play for step in self.state.steps[:self.state.revealed_count]),
+            has_results=bool(self.results),
         )
 
     def role(self):
@@ -326,7 +346,7 @@ class SessionViewBuilder:
         submission = self.session.pending_submission_for(self.viewer_seat)
         if submission is None:
             return set()
-        return {deck.id for deck in submission.decks.all()}
+        return set(submission.picked_ids())
 
     def viewer_required_pick_count(self):
         if not self.viewer_seat or self.phase != Phase.SELECTING:
@@ -390,6 +410,9 @@ class SessionViewBuilder:
         step = self.current_step
         if self.phase == Phase.WAITING_FOR_GUEST and role != Role.PLAYER:
             return _('Waiting for an opponent')
+        if self.phase == Phase.COMPLETE and self.unplayed_matchup_labels():
+            return _('Play {matchups} and record the result').format(
+                matchups=_(' or ').join(self.unplayed_matchup_labels()).lower())
         if self.phase == Phase.COMPLETE:
             return _('All done')
         if self.phase == Phase.CONCLUDED:
@@ -404,10 +427,12 @@ class SessionViewBuilder:
             return engine.step_label(step) if not step.is_play else self.short_step_label(step)
         opponent = self.opponent_name()
         if step.is_play:
-            game_number = engine.game_number_for_order(self.state.steps, step.order)
+            game = engine.game_label(self.state.steps, step).lower()
             if required_pick_count == 0:
-                return _('No deck left for game {number}').format(number=game_number)
-            return _('Pick your deck for game {number}').format(number=game_number)
+                return _('No deck left for {game}').format(game=game)
+            return _('Pick your deck for {game}').format(game=game)
+        if step.is_matchup_ban:
+            return _('Ban 1 matchup')
         if required_pick_count == 0:
             return _('Nothing to {action} this step').format(action=str(Action(step.action).label).lower())
         templates = {
@@ -425,9 +450,12 @@ class SessionViewBuilder:
             return _('You can change them until {name} submits.').format(name=self.opponent_name())
         if step.is_submit:
             return _('Hidden from your opponent until you both submit.')
+        if step.is_play and engine.is_matchup(self.state.steps, step):
+            return _('This matchup is played after the matchup bans. ') + _(PLAY_RULE_HINTS[step.played_deck_rule])
         if step.is_play:
             return _(PLAY_RULE_HINTS[step.played_deck_rule])
         hints = {
+            Action.BAN_MATCHUP: _("Banned matchups won't be played. You may both ban the same one."),
             Action.BAN: _('Banned decks are out for the rest of the match.'),
             Action.SAFE: _('Safe decks cannot be banned or stolen.'),
             Action.STEAL: _('Stolen decks join your lineup. Steals resolve at the same time.'),
@@ -441,7 +469,7 @@ class SessionViewBuilder:
 
     def target_seat(self):
         step = self.current_step
-        if not self.viewer_seat or step is None or self.phase != Phase.SELECTING:
+        if not self.viewer_seat or step is None or self.phase != Phase.SELECTING or step.is_matchup_ban:
             return None
         if step.action in (Action.BAN, Action.STEAL):
             return engine.opponent_of(self.viewer_seat)
@@ -451,6 +479,38 @@ class SessionViewBuilder:
         target_seat = self.target_seat() if required_pick_count else None
         choice_ids = set(engine.choices_for(self.state, self.current_step, self.viewer_seat)) if target_seat else set()
         return [self.lineup_for(seat, target_seat, choice_ids) for seat in self.lineup_order()]
+
+    def matchup_choices(self, required_pick_count):
+        if not self.picks_matchups or not required_pick_count:
+            return []
+        deck_names = self.deck_names()
+        return [
+            MatchupCard(
+                order=order,
+                label=engine.game_label(self.state.steps, self.state.steps[order]),
+                seat_decks=self.matchup_seat_decks(order, deck_names),
+                is_selected=order in self.pending_pick_ids,
+            )
+            for order in engine.choices_for(self.state, self.current_step, self.viewer_seat)
+        ]
+
+    def matchup_seat_decks(self, order, deck_names):
+        revealed = next(entry for entry in self.state.history if entry.step.order == order)
+        return [
+            SeatPicks(
+                name=_('You') if seat == self.viewer_seat else self.seat_names[seat],
+                decks=[deck_names[deck_id] for deck_id in revealed.picks_by_seat.get(seat, ())])
+            for seat in engine.SEATS
+        ]
+
+    def unplayed_matchup_labels(self):
+        unbanned_matchup_orders = [
+            order for order in engine.unbanned_matchup_orders(self.state)
+            if engine.is_matchup(self.state.steps, self.state.steps[order])
+        ]
+        if any(order in self.results for order in unbanned_matchup_orders):
+            return []
+        return [engine.game_label(self.state.steps, self.state.steps[order]) for order in unbanned_matchup_orders]
 
     def lineup_for(self, seat, target_seat, choice_ids):
         lineup = LineupView(
@@ -504,7 +564,7 @@ class SessionViewBuilder:
                 self.seat_names[deck_state.original_seat]
                 if deck_state.is_held_by_opponent_of_owner else ''),
             is_selectable=deck_state.id in choice_ids,
-            is_selected=deck_state.id in self.pending_pick_ids,
+            is_selected=not self.picks_matchups and deck_state.id in self.pending_pick_ids,
         )
 
     def status_label(self, status, deck_state):
@@ -521,14 +581,18 @@ class SessionViewBuilder:
     def game_tags(self, deck_state):
         tags = []
         for order in deck_state.played_at_orders:
-            game_number = engine.game_number_for_order(self.state.steps, order)
+            step = self.state.steps[order]
+            prefix = _('M') if engine.is_matchup(self.state.steps, step) else _('G')
+            tag = f'{prefix}{engine.game_number_for_order(self.state.steps, order)}'
             winner = self.state.winners.get(order)
-            if winner is None:
-                tags.append(_('G{number}').format(number=game_number))
+            if order in self.state.banned_matchup_orders:
+                tags.append(_('{tag} Banned').format(tag=tag))
+            elif winner is None:
+                tags.append(tag)
             elif self.played_by_winner(order, deck_state):
-                tags.append(_('G{number} Won').format(number=game_number))
+                tags.append(_('{tag} Won').format(tag=tag))
             else:
-                tags.append(_('G{number} Lost').format(number=game_number))
+                tags.append(_('{tag} Lost').format(tag=tag))
         return tags
 
     def played_by_winner(self, order, deck_state):
@@ -562,7 +626,6 @@ class SessionViewBuilder:
 
     def history(self):
         deck_names = self.deck_names()
-        latest_result_order = max(self.results) if self.results else -1
         entries = []
         for revealed in self.state.history:
             step = revealed.step
@@ -577,20 +640,25 @@ class SessionViewBuilder:
                 seat_picks=[
                     SeatPicks(
                         name=_('You') if seat == self.viewer_seat else self.seat_names[seat],
-                        decks=[deck_names[deck_id] for deck_id in revealed.picks_by_seat.get(seat, ())])
+                        decks=self.picked_names(step, revealed.picks_by_seat.get(seat, ()), deck_names))
                     for seat in engine.SEATS
                 ],
             )
             if step.is_play:
-                self.fill_play_entry(entry, step, latest_result_order)
+                self.fill_play_entry(entry, step)
             entries.append(entry)
         return entries
+
+    def picked_names(self, step, picked_ids, deck_names):
+        if step.is_matchup_ban:
+            return [engine.game_label(self.state.steps, self.state.steps[order]) for order in picked_ids]
+        return [deck_names[deck_id] for deck_id in picked_ids]
 
     def history_title(self, step):
         if step.is_submit:
             return _('Lineups revealed')
         if step.is_play:
-            return _('Game {number}').format(number=engine.game_number_for_order(self.state.steps, step.order))
+            return engine.game_label(self.state.steps, step)
         return engine.step_label(step)
 
     def reveal_title(self, step):
@@ -598,17 +666,21 @@ class SessionViewBuilder:
             return self.history_title(step)
         return _(REVEAL_TITLES[step.action])
 
-    def fill_play_entry(self, entry, step, latest_result_order):
+    def fill_play_entry(self, entry, step):
         result = self.results.get(step.order)
         entry.is_play = True
         entry.game_number = engine.game_number_for_order(self.state.steps, step.order)
         entry.has_result = result is not None
-        entry.is_result_locked = result is not None and step.order < latest_result_order
+        entry.is_result_locked = result is not None and engine.is_result_locked(
+            self.state.steps, step.order, self.results.keys())
+        entry.is_banned = step.order in self.state.banned_matchup_orders
+        entry.is_awaiting_ban = engine.is_awaiting_matchup_ban(
+            self.state.steps, step, self.state.revealed_count)
         entry.warns_about_eligibility = step.played_deck_rule == PlayedDeckRule.LOSING_ONLY
         if result is not None:
             entry.winner_name = self.seat_names[result.winner_seat]
-            entry.score = result.score
-        if self.viewer_seat:
+            entry.score_line = engine.score_line(self.seat_names, result.host_score, result.guest_score)
+        if self.viewer_seat and not entry.is_banned and not entry.is_awaiting_ban:
             entry.can_record = not entry.is_result_locked
             entry.can_reset = entry.has_result and not entry.is_result_locked
 
@@ -627,7 +699,7 @@ class SessionViewBuilder:
             self.session.code,
             self.seat_names,
             self.deck_names(),
-            {order: result.score for order, result in self.results.items()},
+            {order: (result.host_score, result.guest_score) for order, result in self.results.items()},
             self.share_url(),
         )
 
