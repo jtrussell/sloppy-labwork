@@ -2,7 +2,7 @@ from django.test import SimpleTestCase
 
 from .engine import (
     Action, DeckStatus, Phase, PlayedDeckRule, PoolDeck, Seat, StepSpec,
-    choices_for, deck_status, game_label, games_won, ineligible_reason, missing_result_step, unbanned_matchup_orders,
+    choices_for, deck_status, game_label, games_won, step_label, wave_detail, ineligible_reason, missing_result_step, unbanned_matchup_orders,
     phase, replay, required_pick_count, results_summary_lines, seats_needing_picks,
     simulate_template_steps, validate_picks, validate_template_steps,
 )
@@ -424,10 +424,10 @@ class TemplateValidationTests(SimpleTestCase):
     def test_error_names_step_and_action(self):
         self.assertEqual(
             self.assertInvalid('submit:3', 'ban:1', 'ban:2', 'play'),
-            ['Step 4 (Play): needs 1 eligible deck(s) but at most 0 may remain.'])
+            ['Step 4 (Game 1): needs 1 eligible deck(s) but at most 0 may remain.'])
         self.assertEqual(
             self.assertInvalid('submit:3', 'safe:1', 'ban:3'),
-            ['Step 3 (Ban 3): needs 3 eligible deck(s) but at most 2 may remain.'])
+            ['Step 3 (Ban): needs 3 eligible deck(s) but at most 2 may remain.'])
 
     def test_simulation_trace_reports_pool_sizes(self):
         traces = simulate_template_steps(make_steps('submit:6', 'ban:1', 'safe:1', 'ban:1', 'play', 'play', 'play'))
@@ -477,12 +477,12 @@ class ReviewRegressionTests(SimpleTestCase):
     def test_steal_shortage_message(self):
         self.assertEqual(
             validate_template_steps(make_steps('submit:4', 'safe:2', 'steal:3')),
-            ['Step 3 (Steal 3): needs 3 eligible deck(s) but at most 2 may remain.'])
+            ['Step 3 (Steal): needs 3 eligible deck(s) but at most 2 may remain.'])
 
     def test_play_shortage_after_safed_decks_are_used(self):
         self.assertEqual(
             validate_template_steps(make_steps('submit:2', 'safe:1', 'ban:1', 'play', 'play')),
-            ['Step 5 (Play): needs 1 eligible deck(s) but at most 0 may remain.'])
+            ['Step 5 (Game 2): needs 1 eligible deck(s) but at most 0 may remain.'])
 
     def test_mixed_play_rules_in_one_template(self):
         match = Match('submit:2', 'play:eligible', 'play:losing_only', 'play:ineligible')
@@ -619,3 +619,38 @@ class MatchupBanValidationTests(SimpleTestCase):
     def test_trace_counts_matchups(self):
         traces = simulate_template_steps(make_steps(*HEXAD_BO1))
         self.assertEqual([trace.fewest_matchups for trace in traces], [0, 0, 0, 0, 1, 2, 3, 1])
+
+
+class WaveLabelTests(SimpleTestCase):
+    def test_waves_are_numbered_only_when_repeated(self):
+        hexad = make_steps('submit:6', 'ban:1', 'safe:1', 'ban:1', 'play', 'play', 'play')
+        self.assertEqual(
+            [step_label(hexad, step) for step in hexad],
+            ['Submit 6', 'Ban 1', 'Safe', 'Ban 2', 'Game 1', 'Game 2', 'Game 3'])
+        triad = make_steps('submit:3', 'ban:1', 'play')
+        self.assertEqual(step_label(triad, triad[1]), 'Ban')
+
+    def test_multiple_matchup_bans_are_numbered(self):
+        steps = make_steps('submit:6', 'play', 'play', 'play', 'play', 'play', 'ban_matchup', 'ban_matchup')
+        self.assertEqual(step_label(steps, steps[6]), 'Ban matchup 1')
+        self.assertEqual(step_label(steps, steps[7]), 'Ban matchup 2')
+
+    def test_wave_detail_only_for_multiple_decks(self):
+        steps = make_steps('submit:6', 'ban:2', 'safe:1', 'steal:3', 'play')
+        self.assertEqual([wave_detail(step) for step in steps], ['', '2 decks banned', '', '3 decks stolen', ''])
+
+    def test_summary_heading_includes_wave_detail(self):
+        match = Match('submit:5', 'ban:2', 'ban:1', 'play')
+        match.reveal(host=[guest_deck(1), guest_deck(2)], guest=[host_deck(1), host_deck(2)])
+        deck_names = {deck.id: f'Deck {deck.id}' for deck in match.pool}
+        lines = results_summary_lines(match.state, 'Custom', 'ts_X', {HOST: 'Alice', GUEST: 'Bob'}, deck_names, {}, 'url')
+        self.assertIn('Ban 1 (2 decks banned): Alice banned Deck 101; Deck 102; Bob banned Deck 1; Deck 2', lines)
+
+    def test_engine_records_wave_orders(self):
+        match = Match('submit:4', 'ban:1', 'safe:1', 'ban:1', 'play')
+        match.reveal(host=[guest_deck(1)], guest=[host_deck(1)])
+        match.reveal(host=[host_deck(2)], guest=[guest_deck(2)])
+        match.reveal(host=[guest_deck(3)], guest=[host_deck(3)])
+        self.assertEqual(match.deck(guest_deck(1)).banned_at_order, 1)
+        self.assertEqual(match.deck(guest_deck(3)).banned_at_order, 3)
+        self.assertEqual(match.deck(host_deck(2)).safed_at_order, 2)

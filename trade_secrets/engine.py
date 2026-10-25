@@ -93,6 +93,8 @@ class DeckState:
     is_spent: bool = False
     spent_by_winning: bool = False
     spent_at_order: int = None
+    banned_at_order: int = None
+    safed_at_order: int = None
     stolen_at_orders: list = field(default_factory=list)
     played_at_orders: list = field(default_factory=list)
 
@@ -241,9 +243,11 @@ def resolve_step(state, step, picks_by_seat):
     if step.action == Action.BAN:
         for deck_id in all_picked_ids(normalized_picks):
             state.decks[deck_id].is_banned = True
+            state.decks[deck_id].banned_at_order = step.order
     elif step.action == Action.SAFE:
         for deck_id in all_picked_ids(normalized_picks):
             state.decks[deck_id].is_safed = True
+            state.decks[deck_id].safed_at_order = step.order
     elif step.action == Action.STEAL:
         for seat, deck_ids in normalized_picks.items():
             for deck_id in deck_ids:
@@ -366,10 +370,43 @@ def ineligible_reason(state, deck):
     return str(_('Played in {game}').format(game=game))
 
 
-def step_label(step):
-    if step.is_play or step.is_matchup_ban:
-        return str(Action(step.action).label)
-    return f'{Action(step.action).label} {step.quantity}'
+WAVE_ACTIONS = (Action.BAN, Action.SAFE, Action.STEAL, Action.BAN_MATCHUP)
+DECK_WAVE_VERBS = {
+    Action.BAN: 'banned',
+    Action.SAFE: 'safed',
+    Action.STEAL: 'stolen',
+}
+
+
+def has_multiple_waves(steps, action):
+    return sum(1 for step in steps if step.action == action) > 1
+
+
+def wave_number(steps, step):
+    return sum(1 for other in steps if other.action == step.action and other.order <= step.order)
+
+
+def wave_suffix(steps, order):
+    step = steps[order]
+    if not has_multiple_waves(steps, step.action):
+        return ''
+    return str(wave_number(steps, step))
+
+
+def step_label(steps, step):
+    if step.is_play:
+        return game_label(steps, step)
+    if step.is_submit:
+        return str(_('Submit {count}').format(count=step.quantity))
+    label = str(Action(step.action).label)
+    suffix = wave_suffix(steps, step.order)
+    return f'{label} {suffix}' if suffix else label
+
+
+def wave_detail(step):
+    if step.action not in DECK_WAVE_VERBS or step.quantity < 2:
+        return ''
+    return str(_('{count} decks {verb}').format(count=step.quantity, verb=DECK_WAVE_VERBS[step.action]))
 
 
 def simulate_template_steps(steps):
@@ -384,7 +421,7 @@ def simulate_template_steps(steps):
             error = matchup_ban_error(display_number, steps, step, fewest_matchups)
             fewest_matchups = max(0, fewest_matchups - MATCHUPS_REMOVED_BY_SEPARATE_BANS)
         else:
-            error = shortage_error(display_number, step, cautious, hopeful)
+            error = shortage_error(display_number, steps, step, cautious, hopeful)
             apply_step_to_estimates(step, cautious, hopeful)
             fewest_matchups += 1 if step.is_play else 0
         traces.append(trace_for(step, cautious, hopeful, fewest_matchups, error))
@@ -400,26 +437,27 @@ def matchup_ban_error(display_number, steps, step, fewest_matchups):
     if any(other.is_play and other.order < step.order and other.played_deck_rule == PlayedDeckRule.LOSING_ONLY
            for other in steps):
         return str(_(
-            'Step {number} (Ban matchup): matchups can\'t be banned after a Play step that uses '
+            'Step {number} ({label}): matchups can\'t be banned after a Play step that uses '
             '"Only losing decks", because those games must be played before the match can continue.'
-        ).format(number=display_number))
+        ).format(number=display_number, label=step_label(steps, step)))
     if fewest_matchups < MINIMUM_MATCHUPS_FOR_BAN:
         return str(_(
-            'Step {number} (Ban matchup): needs at least {needed} unbanned matchups but as few as '
+            'Step {number} ({label}): needs at least {needed} unbanned matchups but as few as '
             '{available} may remain.'
-        ).format(number=display_number, needed=MINIMUM_MATCHUPS_FOR_BAN, available=fewest_matchups))
+        ).format(number=display_number, label=step_label(steps, step), needed=MINIMUM_MATCHUPS_FOR_BAN,
+                 available=fewest_matchups))
     return ''
 
 
-def shortage_error(display_number, step, cautious, hopeful):
+def shortage_error(display_number, steps, step, cautious, hopeful):
     if step.is_play:
         if hopeful.total < 1:
-            return shortage_message(display_number, step, 1, 'at most', 0)
+            return shortage_message(display_number, steps, step, 1, 'at most', 0)
         return ''
     if hopeful.open < step.quantity:
-        return shortage_message(display_number, step, step.quantity, 'at most', hopeful.open)
+        return shortage_message(display_number, steps, step, step.quantity, 'at most', hopeful.open)
     if cautious.open < step.quantity:
-        return shortage_message(display_number, step, step.quantity, 'as few as', cautious.open)
+        return shortage_message(display_number, steps, step, step.quantity, 'as few as', cautious.open)
     return ''
 
 
@@ -436,10 +474,11 @@ def apply_step_to_estimates(step, cautious, hopeful):
         cautious.consume_one()
 
 
-def shortage_message(display_number, step, needed, bound, available):
+def shortage_message(display_number, steps, step, needed, bound, available):
     return str(_(
         'Step {number} ({label}): needs {needed} eligible deck(s) but {bound} {available} may remain.'
-    ).format(number=display_number, label=step_label(step), needed=needed, bound=bound, available=available))
+    ).format(number=display_number, label=step_label(steps, step), needed=needed, bound=bound,
+             available=available))
 
 
 def validate_template_steps(steps):
@@ -519,13 +558,13 @@ def results_summary_lines(state, format_name, session_code, seat_names, deck_nam
                 + ('; '.join(game_label(state.steps, state.steps[order]) for order in picks[seat]) or 'nothing')
                 for seat in SEATS
             ]
-            lines.append(f'{Action(step.action).label}: ' + '; '.join(fragments))
+            lines.append(f'{summary_heading(state.steps, step)}: ' + '; '.join(fragments))
         else:
             fragments = [
                 f'{seat_names[seat]} {past_tense[step.action]} {names_for(picks[seat]) or "nothing"}'
                 for seat in SEATS
             ]
-            lines.append(f'{Action(step.action).label}: ' + '; '.join(fragments))
+            lines.append(f'{summary_heading(state.steps, step)}: ' + '; '.join(fragments))
     if play_steps(state.steps):
         tally = games_won(state)
         lines.append('Games won: ' + ', '.join(f'{seat_names[seat]} {tally[seat]}' for seat in SEATS))
@@ -537,6 +576,12 @@ def score_line(seat_names, host_score, guest_score):
     if host_score is None or guest_score is None:
         return ''
     return f'{seat_names[Seat.HOST]} {host_score} – {guest_score} {seat_names[Seat.GUEST]}'
+
+
+def summary_heading(steps, step):
+    detail = wave_detail(step)
+    label = step_label(steps, step)
+    return f'{label} ({detail})' if detail else label
 
 
 def play_summary_line(state, step, picks, seat_names, deck_names, scores):

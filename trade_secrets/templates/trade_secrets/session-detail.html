@@ -226,6 +226,7 @@
         <span class="ts-history__icon">{% include 'trade_secrets/partials/icon.html' with name=entry.icon %}</span>
         <div class="ts-history__body">
           <p class="ts-history__title">{{ entry.title }}</p>
+          {% if entry.subtitle %}<p class="ts-history__subtitle">{{ entry.subtitle }}</p>{% endif %}
           {% if entry.action == 'submit' %}
           <p class="ts-history__detail">Both lineups are in.</p>
           {% elif entry.is_play %}

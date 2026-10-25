@@ -1078,7 +1078,7 @@ class TemplateViewTests(SessionViewTestCase):
     def test_invalid_template_shows_step_error_and_cannot_save(self):
         self.client.force_login(self.alice)
         response = self.builder_post([('submit', 3, ''), ('ban', 3, ''), ('play', 1, 'ineligible')], 'save')
-        self.assertContains(response, 'Step 3 (Play)')
+        self.assertContains(response, 'Step 3 (Game 1)')
         self.assertContains(response, 'disabled>Save template')
         self.assertFalse(SessionTemplate.objects.filter(owner=self.alice).exists())
 
@@ -1443,3 +1443,76 @@ class TemplateVisibilityTests(SessionViewTestCase):
         self.template.set_visibility(SessionTemplate.Visibility.PUBLIC)
         self.template.archive()
         self.assertEqual(self.start_as(self.bob).status_code, 403)
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class WaveBadgeTests(SessionViewTestCase):
+    def badges_by_deck_name(self, session, user):
+        view = build_session_view(session, user)
+        return {
+            card.deck.name: [badge.label for badge in card.badges]
+            for lineup in view.lineups for card in lineup.cards
+        }
+
+    def test_hexad_bans_show_their_wave(self):
+        session = self.start_session(self.system_template('hexad'), self.alice, self.bob)
+        self.submit_both(session, self.alice_decks, self.bob_decks)
+        self.pick(session, HOST, self.bob_decks[0])
+        self.pick(session, GUEST, self.alice_decks[0])
+        self.pick(session, HOST, self.alice_decks[1])
+        self.pick(session, GUEST, self.bob_decks[1])
+        self.pick(session, HOST, self.bob_decks[2])
+        self.pick(session, GUEST, self.alice_decks[2])
+        badges = self.badges_by_deck_name(session, self.alice)
+        self.assertEqual(badges['Bob Deck 1'], ['Banned · Ban 1'])
+        self.assertEqual(badges['Bob Deck 3'], ['Banned · Ban 2'])
+        self.assertEqual(badges['Alice Deck 2'], ['Safed'])
+
+    def test_triad_ban_has_no_wave(self):
+        session = self.start_session(self.system_template('triad'), self.alice, self.bob)
+        self.submit_both(session, self.alice_decks[:3], self.bob_decks[:3])
+        self.pick(session, HOST, self.bob_decks[0])
+        self.pick(session, GUEST, self.alice_decks[0])
+        self.assertEqual(self.badges_by_deck_name(session, self.alice)['Bob Deck 1'], ['Banned'])
+
+    def test_safed_and_stolen_badges_stay_after_play(self):
+        template = self.make_template(self.alice, 'submit:4', 'safe:1', 'steal:1', 'play:eligible', 'play')
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks[:4], self.bob_decks[:4])
+        self.pick(session, HOST, self.alice_decks[0])
+        self.pick(session, GUEST, self.bob_decks[0])
+        self.pick(session, HOST, self.bob_decks[1])
+        self.pick(session, GUEST, self.alice_decks[1])
+        self.pick(session, HOST, self.alice_decks[0])
+        self.pick(session, GUEST, self.alice_decks[1])
+        badges = self.badges_by_deck_name(session, self.alice)
+        self.assertEqual(badges['Alice Deck 1'], ['Safed', 'G1'])
+        self.assertEqual(badges['Alice Deck 2'], ['Stolen from alice', 'G1'])
+
+    def test_mobile_badges_and_rail_detail_render(self):
+        template = self.make_template(self.alice, 'submit:5', 'ban:2', 'ban:1', 'play')
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks[:5], self.bob_decks[:5])
+        self.pick(session, HOST, *self.bob_decks[:2])
+        self.pick(session, GUEST, *self.alice_decks[:2])
+        self.client.force_login(self.alice)
+        response = self.client.get(self.detail_url(session))
+        self.assertContains(response, '2 decks banned')
+        self.assertContains(response, 'aria-label="Banned · Ban 1"')
+        self.assertContains(response, 'ts-history__subtitle')
+
+    def test_out_badge_shows_the_game_that_used_the_deck(self):
+        triad = self.start_session(self.system_template('triad'), self.alice, self.bob)
+        self.submit_both(triad, self.alice_decks[:3], self.bob_decks[:3])
+        self.pick(triad, HOST, self.bob_decks[2])
+        self.pick(triad, GUEST, self.alice_decks[2])
+        self.pick(triad, HOST, self.alice_decks[0])
+        self.pick(triad, GUEST, self.bob_decks[0])
+        triad.record_result(self.alice, 2, HOST)
+        view = build_session_view(triad, self.alice)
+        cards = {card.deck.name: card for lineup in view.lineups for card in lineup.cards}
+        out_badge = cards['Alice Deck 1'].badges[0]
+        self.assertEqual(
+            (out_badge.kind, out_badge.icon, out_badge.label, out_badge.short_label),
+            ('ineligible', 'play', 'Won game 1', '1W'))
+

@@ -18,13 +18,6 @@ ACTION_ICONS = {
     Action.BAN_MATCHUP: 'ban',
 }
 
-STATUS_ICONS = {
-    DeckStatus.BANNED: 'ban',
-    DeckStatus.SAFED: 'shield',
-    DeckStatus.STOLEN: 'swap',
-    DeckStatus.PLAYED: 'play',
-}
-
 PLAY_RULE_HINTS = {
     PlayedDeckRule.INELIGIBLE: 'Played decks cannot be played again.',
     PlayedDeckRule.ELIGIBLE: 'Played decks can be played again.',
@@ -67,14 +60,19 @@ class ActionState:
 
 
 @dataclass
+class DeckBadge:
+    kind: str
+    icon: str
+    label: str
+    short_label: str = ''
+
+
+@dataclass
 class DeckCard:
     session_deck_id: int
     deck: object
     status: str
-    status_label: str
-    status_icon: str
-    game_tags: list = field(default_factory=list)
-    stolen_from: str = ''
+    badges: list = field(default_factory=list)
     is_selectable: bool = False
     is_selected: bool = False
 
@@ -117,6 +115,7 @@ class RailStep:
     is_done: bool
     is_current: bool
     is_blocked: bool
+    detail: str = ''
 
 
 @dataclass
@@ -134,6 +133,7 @@ class HistoryEntry:
     title: str
     reveal_title: str
     verb: str
+    subtitle: str
     seat_picks: list
     is_play: bool = False
     game_number: int = 0
@@ -222,25 +222,15 @@ def template_rail(step_specs):
     return [
         RailStep(
             number=step.order + 1,
-            label=rail_label(step_specs, step),
+            label=engine.step_label(step_specs, step),
             icon=ACTION_ICONS[step.action],
             is_done=False,
             is_current=False,
             is_blocked=False,
+            detail=engine.wave_detail(step),
         )
         for step in step_specs
     ]
-
-
-def rail_label(step_specs, step):
-    if step.is_play:
-        return engine.game_label(step_specs, step)
-    if step.is_matchup_ban:
-        return str(Action.BAN_MATCHUP.label)
-    if step.is_submit:
-        return _('Submit {count}').format(count=step.quantity)
-    label = str(Action(step.action).label)
-    return f'{label} {step.quantity}' if step.quantity > 1 else label
 
 
 def template_summary(step_specs):
@@ -250,8 +240,10 @@ def template_summary(step_specs):
             fragments.append(_('{count} decks').format(count=step.quantity))
         elif step.is_play:
             fragments.append(_('play'))
+        elif step.quantity > 1:
+            fragments.append(f'{str(Action(step.action).label).lower()} {step.quantity}')
         else:
-            fragments.append(engine.step_label(step).lower())
+            fragments.append(str(Action(step.action).label).lower())
     collapsed = []
     for fragment in fragments:
         if collapsed and collapsed[-1][0] == fragment:
@@ -395,16 +387,14 @@ class SessionViewBuilder:
             is_done = step.order < self.state.revealed_count
             steps.append(RailStep(
                 number=step.order + 1,
-                label=self.short_step_label(step),
+                label=engine.step_label(self.state.steps, step),
                 icon=ACTION_ICONS[step.action],
                 is_done=is_done,
                 is_current=self.current_step is not None and step.order == self.current_step.order,
                 is_blocked=blocking_step is not None and step.order == blocking_step.order,
+                detail=engine.wave_detail(step),
             ))
         return steps
-
-    def short_step_label(self, step):
-        return rail_label(self.state.steps, step)
 
     def instruction(self, role, required_pick_count):
         step = self.current_step
@@ -424,7 +414,7 @@ class SessionViewBuilder:
         if step.is_submit:
             return _('Submit {count} decks').format(count=step.quantity)
         if role != Role.PLAYER:
-            return engine.step_label(step) if not step.is_play else self.short_step_label(step)
+            return engine.step_label(self.state.steps, step)
         opponent = self.opponent_name()
         if step.is_play:
             game = engine.game_label(self.state.steps, step).lower()
@@ -546,54 +536,64 @@ class SessionViewBuilder:
             session_deck_id=session_deck.id,
             deck=session_deck.deck,
             status=DeckStatus.AVAILABLE,
-            status_label='',
-            status_icon='',
         )
 
     def card_for(self, deck_state, choice_ids):
-        status = engine.deck_status(deck_state)
-        is_out = status == DeckStatus.INELIGIBLE
         return DeckCard(
             session_deck_id=deck_state.id,
             deck=self.session_decks[deck_state.id].deck,
-            status=status,
-            status_label=self.status_label(status, deck_state),
-            status_icon=STATUS_ICONS.get(status, ''),
-            game_tags=[] if is_out else self.game_tags(deck_state),
-            stolen_from=(
-                self.seat_names[deck_state.original_seat]
-                if deck_state.is_held_by_opponent_of_owner else ''),
+            status=engine.deck_status(deck_state),
+            badges=self.badges_for(deck_state),
             is_selectable=deck_state.id in choice_ids,
             is_selected=not self.picks_matchups and deck_state.id in self.pending_pick_ids,
         )
 
-    def status_label(self, status, deck_state):
-        if status == DeckStatus.AVAILABLE:
-            return ''
-        if status == DeckStatus.STOLEN:
-            return _('Stolen from {name}').format(name=self.seat_names[deck_state.original_seat])
-        if status == DeckStatus.PLAYED:
-            return ''
-        if status == DeckStatus.INELIGIBLE:
-            return engine.ineligible_reason(self.state, deck_state)
-        return str(status.label)
+    def badges_for(self, deck_state):
+        badges = []
+        if deck_state.is_banned:
+            badges.append(self.wave_badge('banned', 'ban', _('Banned'), deck_state.banned_at_order))
+        elif deck_state.is_spent:
+            badges.append(self.out_badge(deck_state))
+        if deck_state.is_safed:
+            badges.append(self.wave_badge('safed', 'shield', _('Safed'), deck_state.safed_at_order))
+        if deck_state.is_held_by_opponent_of_owner:
+            stolen_label = _('Stolen from {name}').format(name=self.seat_names[deck_state.original_seat])
+            badges.append(self.wave_badge('stolen', 'swap', stolen_label, deck_state.stolen_at_orders[-1]))
+        badges.extend(
+            self.game_badge(deck_state, order)
+            for order in deck_state.played_at_orders
+            if order != deck_state.spent_at_order)
+        return badges
 
-    def game_tags(self, deck_state):
-        tags = []
-        for order in deck_state.played_at_orders:
-            step = self.state.steps[order]
-            prefix = _('M') if engine.is_matchup(self.state.steps, step) else _('G')
-            tag = f'{prefix}{engine.game_number_for_order(self.state.steps, order)}'
-            winner = self.state.winners.get(order)
-            if order in self.state.banned_matchup_orders:
-                tags.append(_('{tag} Banned').format(tag=tag))
-            elif winner is None:
-                tags.append(tag)
-            elif self.played_by_winner(order, deck_state):
-                tags.append(_('{tag} Won').format(tag=tag))
-            else:
-                tags.append(_('{tag} Lost').format(tag=tag))
-        return tags
+    def out_badge(self, deck_state):
+        number = engine.game_number_for_order(self.state.steps, deck_state.spent_at_order)
+        short_label = _('{number}W').format(number=number) if deck_state.spent_by_winning else str(number)
+        return DeckBadge(
+            kind='ineligible', icon='play',
+            label=engine.ineligible_reason(self.state, deck_state), short_label=short_label)
+
+    def wave_badge(self, kind, icon, status_text, order):
+        suffix = engine.wave_suffix(self.state.steps, order)
+        label = status_text
+        if suffix:
+            label = f'{status_text} · {engine.step_label(self.state.steps, self.state.steps[order])}'
+        return DeckBadge(kind=kind, icon=icon, label=label, short_label=suffix)
+
+    def game_badge(self, deck_state, order):
+        step = self.state.steps[order]
+        number = engine.game_number_for_order(self.state.steps, order)
+        tag = f"{_('M') if engine.is_matchup(self.state.steps, step) else _('G')}{number}"
+        winner = self.state.winners.get(order)
+        if order in self.state.banned_matchup_orders:
+            return DeckBadge(kind='game-banned', icon='play', label=_('{tag} Banned').format(tag=tag),
+                             short_label=str(number))
+        if winner is None:
+            return DeckBadge(kind='game', icon='play', label=tag, short_label=str(number))
+        if self.played_by_winner(order, deck_state):
+            return DeckBadge(kind='game', icon='play', label=_('{tag} Won').format(tag=tag),
+                             short_label=_('{number}W').format(number=number))
+        return DeckBadge(kind='game', icon='play', label=_('{tag} Lost').format(tag=tag),
+                         short_label=_('{number}L').format(number=number))
 
     def played_by_winner(self, order, deck_state):
         revealed = next(entry for entry in self.state.history if entry.step.order == order)
@@ -635,6 +635,7 @@ class SessionViewBuilder:
                 action=step.action,
                 icon=ACTION_ICONS[step.action],
                 title=self.history_title(step),
+                subtitle=engine.wave_detail(step),
                 reveal_title=self.reveal_title(step),
                 verb=PAST_TENSE.get(step.action, ''),
                 seat_picks=[
@@ -657,9 +658,7 @@ class SessionViewBuilder:
     def history_title(self, step):
         if step.is_submit:
             return _('Lineups revealed')
-        if step.is_play:
-            return engine.game_label(self.state.steps, step)
-        return engine.step_label(step)
+        return engine.step_label(self.state.steps, step)
 
     def reveal_title(self, step):
         if step.is_play:

@@ -98,9 +98,15 @@
   color: var(--color-text-subtle);
 }
 
-.ts-status--game {
+.ts-status--game,
+.ts-status--game-banned {
   color: var(--color-accent);
   border-style: dashed;
+}
+
+.ts-status--game-banned {
+  color: var(--color-text-subtle);
+  text-decoration: line-through;
 }
 
 /* Template cards */
@@ -211,6 +217,13 @@
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-pill);
   background: var(--color-surface);
+}
+
+.ts-rail__detail {
+  margin-top: calc(-1 * var(--space-2));
+  color: var(--color-text-subtle);
+  font-size: 0.6875rem;
+  white-space: nowrap;
 }
 
 .ts-rail__step.is-done {
@@ -607,11 +620,54 @@
   background: color-mix(in srgb, var(--color-accent) 15%, transparent);
 }
 
-.ts-deck__badges {
+.ts-deck__aside {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: var(--space-2);
+}
+
+.ts-deck__badges {
+  display: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.ts-deck__mini-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.ts-mini-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.ts-mini-badge .ts-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+@media (min-width: 550px) {
+  .ts-deck__badges {
+    display: flex;
+  }
+
+  .ts-deck__mini-badges {
+    display: none;
+  }
 }
 
 .ts-deck--banned {
@@ -1063,6 +1119,12 @@
 .ts-history__title {
   margin: 0;
   font-weight: var(--weight-semibold);
+}
+
+.ts-history__subtitle {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
 }
 
 .ts-history__detail,

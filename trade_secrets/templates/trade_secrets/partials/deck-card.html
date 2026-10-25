@@ -17,11 +17,19 @@
         <a href="{{ deck.get_dok_url }}" target="_blank" rel="noopener" aria-label="Decks of KeyForge">DoK</a>
         <a href="{{ deck.get_mv_url }}" target="_blank" rel="noopener" aria-label="Master Vault">MV</a>
       </span>
+      {% if card.badges %}
+      <span class="ts-deck__mini-badges">
+        {% for badge in card.badges %}<span class="ts-mini-badge ts-status--{{ badge.kind }}" title="{{ badge.label }}" aria-label="{{ badge.label }}">{% include 'trade_secrets/partials/icon.html' with name=badge.icon %}{% if badge.short_label %}<span aria-hidden="true">{{ badge.short_label }}</span>{% endif %}</span>{% endfor %}
+      </span>
+      {% endif %}
     </span>
   </span>
-  <span class="ts-deck__badges">
-    {% if card.status_label %}<span class="ts-status ts-status--{{ card.status }}">{% if card.status_icon %}{% include 'trade_secrets/partials/icon.html' with name=card.status_icon %}{% endif %}{{ card.status_label }}</span>{% endif %}
-    {% for tag in card.game_tags %}<span class="ts-status ts-status--game">{{ tag }}</span>{% endfor %}
+  <span class="ts-deck__aside">
+    {% if card.badges %}
+    <span class="ts-deck__badges">
+      {% for badge in card.badges %}<span class="ts-status ts-status--{{ badge.kind }}">{% include 'trade_secrets/partials/icon.html' with name=badge.icon %}{{ badge.label }}</span>{% endfor %}
+    </span>
+    {% endif %}
     {% if selectable %}<span class="ts-deck__pick-hint" aria-hidden="true"></span>{% endif %}
   </span>
 </{% if selectable %}label{% else %}div{% endif %}>

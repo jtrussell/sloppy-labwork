@@ -66,7 +66,7 @@ def step_detail(step):
         return 'Each player bans one matchup; banned matchups are not played'
     if step.is_play:
         return f'Played decks eligible again: {engine.PlayedDeckRule(step.played_deck_rule).label}'
-    return ''
+    return engine.wave_detail(step)
 
 
 def builder_rows(steps):
@@ -75,7 +75,7 @@ def builder_rows(steps):
         {
             'index': step.order,
             'spec': step,
-            'label': str(engine.Action(step.action).label),
+            'label': engine.step_label(steps, step) if not step.is_submit else str(engine.Action.SUBMIT.label),
             'icon': ACTION_ICONS[step.action],
             'trace': traces.get(step.order),
             'is_first': step.order == 0,

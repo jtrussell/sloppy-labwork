@@ -162,7 +162,7 @@ class TemplateStep(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.template.name} #{self.order + 1}: {engine.step_label(self.to_spec())}'
+        return f'{self.template.name} #{self.order + 1}: {engine.step_label(self.template.step_specs, self.to_spec())}'
 
     def to_spec(self):
         return engine.StepSpec(self.order, self.action, self.quantity, self.played_deck_rule)
