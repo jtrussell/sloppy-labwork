@@ -37,6 +37,7 @@
   {% endif %}
 
   {% if can_manage %}
+  <a class="button" href="{% url 'trade_secrets:template-edit' template.code %}">Edit details</a>
   <form method="post" action="{% url 'trade_secrets:template-archive' template.code %}">
     {% csrf_token %}
     <button type="submit" class="button">{% if template.is_archived %}Unarchive{% else %}Archive{% endif %}</button>
@@ -78,7 +79,7 @@
   {% elif template.is_archived %}
   Archived templates are hidden from your list and can't start new sessions.
   {% else %}
-  Templates can't be edited once created, except for their sharing setting. Archive it to hide it from your list.
+  Steps can't be changed once a template is created, so every session plays by the same rules. You can still edit its name, description and sharing. Archive it to hide it from your list.
   {% endif %}
 </p>
 {% endif %}

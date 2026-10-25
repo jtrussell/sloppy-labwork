@@ -78,7 +78,7 @@
   white-space: nowrap;
 }
 
-.ts-status--official {
+.ts-status--standard {
   color: var(--color-accent);
 }
 

@@ -88,7 +88,7 @@ class SeededTemplateTests(TestCase):
     def test_exactly_the_three_system_templates_are_seeded(self):
         self.assertCountEqual(
             SessionTemplate.objects.filter(owner__isnull=True).values_list('system_key', flat=True),
-            ['triad', 'triad-bo1', 'hexad'])
+            ['triad', 'triad-bo1', 'hexad', 'exchange'])
 
     def test_seeded_templates_are_valid(self):
         for template in SessionTemplate.objects.filter(owner__isnull=True):
@@ -102,6 +102,9 @@ class SeededTemplateTests(TestCase):
         self.assertEqual(summary('triad'), [
             ('submit', 3, 'ineligible'), ('ban', 1, 'ineligible'),
             ('play', 1, 'losing_only'), ('play', 1, 'losing_only'), ('play', 1, 'losing_only')])
+        self.assertEqual(summary('exchange'), [
+            ('submit', 2, 'ineligible'), ('steal', 1, 'ineligible'), ('play', 1, 'losing_only'),
+            ('play', 1, 'losing_only'), ('play', 1, 'ineligible')])
         self.assertEqual(summary('triad-bo1'), [
             ('submit', 3, 'ineligible'), ('ban', 1, 'ineligible'), ('play', 1, 'ineligible')])
         self.assertEqual(summary('hexad'), [
@@ -131,7 +134,7 @@ class TemplateModelTests(TradeSecretsTestMixin, TestCase):
         self.assertIn(own, usable)
         self.assertNotIn(archived, usable)
         self.assertEqual(usable.filter(owner=self.bob).count(), 0)
-        self.assertEqual(usable.filter(owner__isnull=True).count(), 3)
+        self.assertEqual(usable.filter(owner__isnull=True).count(), 4)
 
     def test_template_requires_owner_or_system_key(self):
         with self.assertRaises(IntegrityError), transaction.atomic():
@@ -583,9 +586,9 @@ class ReviewRegressionModelTests(TradeSecretsTestMixin, TestCase):
         seed_migration.remove_unused_system_templates(django_apps, None)
         self.assertEqual(
             list(SessionTemplate.objects.filter(owner__isnull=True).values_list('system_key', flat=True)),
-            ['triad'])
+            ['exchange', 'triad'])
         seed_migration.seed_system_templates(django_apps, None)
-        self.assertEqual(SessionTemplate.objects.filter(owner__isnull=True).count(), 3)
+        self.assertEqual(SessionTemplate.objects.filter(owner__isnull=True).count(), 4)
         self.assertEqual(self.system_template('triad').steps.count(), 5)
 
 
@@ -1516,3 +1519,93 @@ class WaveBadgeTests(SessionViewTestCase):
             (out_badge.kind, out_badge.icon, out_badge.label, out_badge.short_label),
             ('ineligible', 'play', 'Won game 1', '1W'))
 
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class ExchangeFlowTests(TradeSecretsTestMixin, TestCase):
+    def setUp(self):
+        self.alice = self.make_user('alice')
+        self.bob = self.make_user('bob')
+        self.alice_decks = self.make_decks(2, 'Alice')
+        self.bob_decks = self.make_decks(2, 'Bob')
+        self.session = self.start_session(self.system_template('exchange'), self.alice, self.bob)
+        self.submit_both(self.session, self.alice_decks, self.bob_decks)
+        self.pick(self.session, HOST, self.bob_decks[0])
+        self.pick(self.session, GUEST, self.alice_decks[0])
+
+    def phase(self):
+        return engine.phase(self.session.build_engine_state(), True)
+
+    def test_steal_swaps_one_deck_each(self):
+        state = self.session.build_engine_state()
+        self.assertEqual(
+            sorted(state.decks_held_by(HOST), key=lambda deck: deck.id),
+            sorted([state.decks[self.session_deck_id(self.session, deck)]
+                    for deck in (self.alice_decks[1], self.bob_decks[0])], key=lambda deck: deck.id))
+
+    def test_winning_with_both_decks_ends_two_nothing(self):
+        self.pick(self.session, HOST, self.bob_decks[0])
+        self.pick(self.session, GUEST, self.bob_decks[1])
+        self.session.record_result(self.alice, 2, HOST)
+        self.pick(self.session, HOST, self.alice_decks[1])
+        self.pick(self.session, GUEST, self.bob_decks[1])
+        self.session.record_result(self.alice, 3, HOST)
+        self.assertEqual(self.phase(), engine.Phase.CONCLUDED)
+
+    def test_split_games_go_to_a_third(self):
+        self.pick(self.session, HOST, self.bob_decks[0])
+        self.pick(self.session, GUEST, self.bob_decks[1])
+        self.session.record_result(self.alice, 2, HOST)
+        self.pick(self.session, HOST, self.alice_decks[1])
+        self.pick(self.session, GUEST, self.bob_decks[1])
+        self.session.record_result(self.alice, 3, GUEST)
+        self.assertEqual(self.phase(), engine.Phase.SELECTING)
+        self.pick(self.session, HOST, self.alice_decks[1])
+        self.pick(self.session, GUEST, self.alice_decks[0])
+        self.assertEqual(self.phase(), engine.Phase.COMPLETE)
+
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class TemplateEditTests(SessionViewTestCase):
+    def setUp(self):
+        super().setUp()
+        self.template = self.make_template(self.alice, 'submit:3', 'ban:1', 'play', name='Old Name')
+        self.edit_url = reverse('trade_secrets:template-edit', args=[self.template.code])
+
+    def test_owner_can_edit_name_and_description_but_not_steps(self):
+        session = self.start_session(self.template, self.alice, self.bob)
+        self.client.force_login(self.alice)
+        self.assertContains(self.client.get(self.edit_url), 'value="Old Name"')
+        response = self.client.post(self.edit_url, {
+            'name': 'New Name', 'description': 'Fresh words',
+            'steps-0-action': 'submit', 'steps-0-quantity': 6,
+        })
+        self.assertRedirects(response, reverse('trade_secrets:template-detail', args=[self.template.code]))
+        self.template.refresh_from_db()
+        self.assertEqual((self.template.name, self.template.description), ('New Name', 'Fresh words'))
+        self.assertEqual([spec.quantity for spec in SessionTemplate.objects.get(pk=self.template.pk).step_specs], [3, 1, 1])
+        self.assertContains(self.client.get(self.detail_url(session)), 'New Name')
+
+    def test_name_is_required(self):
+        self.client.force_login(self.alice)
+        response = self.client.post(self.edit_url, {'name': '', 'description': ''})
+        self.assertEqual(response.status_code, 200)
+        self.template.refresh_from_db()
+        self.assertEqual(self.template.name, 'Old Name')
+
+    def test_only_owner_can_edit(self):
+        self.template.set_visibility(SessionTemplate.Visibility.PUBLIC)
+        self.client.force_login(self.bob)
+        self.assertEqual(self.client.get(self.edit_url).status_code, 403)
+        self.assertEqual(self.client.post(self.edit_url, {'name': 'Hijacked'}).status_code, 403)
+        system_url = reverse('trade_secrets:template-edit', args=[self.system_template('triad').code])
+        self.client.force_login(self.alice)
+        self.assertEqual(self.client.get(system_url).status_code, 403)
+
+    def test_detail_offers_edit_to_owner_only(self):
+        self.template.set_visibility(SessionTemplate.Visibility.PUBLIC)
+        self.client.force_login(self.alice)
+        detail_url = reverse('trade_secrets:template-detail', args=[self.template.code])
+        self.assertContains(self.client.get(detail_url), 'Edit details')
+        self.client.force_login(self.bob)
+        self.assertNotContains(self.client.get(detail_url), 'Edit details')

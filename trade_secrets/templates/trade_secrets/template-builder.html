@@ -83,7 +83,7 @@
     <button type="submit" name="builder_action" value="save" class="button button-primary"{% if not is_valid %} disabled{% endif %}>Save template</button>
     <a href="{% url 'trade_secrets:home' %}" class="button button-link">Cancel</a>
   </div>
-  <p class="helptext">Templates can't be edited after saving, so every session that uses one plays by the same rules.</p>
+  <p class="helptext">Steps can't be changed after saving, so every session that uses this template plays by the same rules. You can still edit the name and description later.</p>
 </form>
 {% endpartialdef %}
 {% endblock %}

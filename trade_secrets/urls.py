@@ -8,6 +8,7 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('templates/new/', views.template_create, name='template-create'),
     path('templates/<str:template_code>/', views.template_detail, name='template-detail'),
+    path('templates/<str:template_code>/edit/', views.template_edit, name='template-edit'),
     path('templates/<str:template_code>/archive/', views.template_archive, name='template-archive'),
     path('templates/<str:template_code>/visibility/', views.template_visibility, name='template-visibility'),
     path('templates/<str:template_code>/delete/', views.template_delete, name='template-delete'),

@@ -125,6 +125,11 @@ class SessionTemplate(models.Model):
         self.archived_on = None
         self.save(update_fields=['archived_on'])
 
+    def update_details(self, name, description):
+        self.name = name
+        self.description = description
+        self.save(update_fields=['name', 'description'])
+
     def set_visibility(self, visibility):
         if visibility not in self.Visibility.values:
             raise ValidationError(_('Choose a valid visibility.'))

@@ -173,6 +173,23 @@ def template_archive(request, template_code):
 
 
 @login_required
+@require_http_methods(['GET', 'POST'])
+def template_edit(request, template_code):
+    template = get_viewable_template(request, template_code)
+    if not template.can_manage(request.user):
+        raise PermissionDenied
+    if request.method == 'POST':
+        form = TemplateDetailsForm(request.POST)
+        if form.is_valid():
+            template.update_details(form.cleaned_data['name'], form.cleaned_data['description'])
+            messages.success(request, f'"{template.name}" was updated.')
+            return redirect(reverse('trade_secrets:template-detail', args=[template.code]))
+    else:
+        form = TemplateDetailsForm(initial={'name': template.name, 'description': template.description})
+    return render(request, 'trade_secrets/template-edit.html', {'template': template, 'form': form})
+
+
+@login_required
 @require_POST
 def template_visibility(request, template_code):
     template = get_viewable_template(request, template_code)

@@ -1,0 +1,28 @@
+{% extends 'page.html' %}
+{% load static %}
+
+{% block head_title %}Edit {{ template.name }} · Trade Secrets{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'trade_secrets/main.css' %}">
+{% endblock %}
+
+{% block content %}
+<p class="ts-back"><a href="{% url 'trade_secrets:template-detail' template.code %}">← {{ template.name }}</a></p>
+<h1>Edit template</h1>
+<div class="subheading">Name and description</div>
+
+<form method="post" action="{% url 'trade_secrets:template-edit' template.code %}" class="ts-builder form-wide">
+  {% csrf_token %}
+  <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+  {{ form.name }}
+  {% for error in form.name.errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
+  <label for="{{ form.description.id_for_label }}">{{ form.description.label }} <span class="text-muted">(optional)</span></label>
+  {{ form.description }}
+  <div class="ts-builder__save">
+    <button type="submit" class="button button-primary">Save changes</button>
+    <a href="{% url 'trade_secrets:template-detail' template.code %}" class="button button-link">Cancel</a>
+  </div>
+  <p class="helptext">Steps can't be changed, so sessions that already use this template keep their rules. Sessions show the template's current name.</p>
+</form>
+{% endblock %}
