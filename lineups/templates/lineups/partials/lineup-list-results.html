@@ -2,7 +2,7 @@
 <ul class="card-list">
   {% for lineup in lineups %}
   {% with latest=lineup.latest_version %}
-  <li class="card">
+  <li class="card card--interactive">
     {% if latest %}
     <h3 class="card__title"><a href="{% url 'lineups-version-detail' latest.code %}">{{ lineup.name }}</a></h3>
     <ul class="card__meta inline-list">

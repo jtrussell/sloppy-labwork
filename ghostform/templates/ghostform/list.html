@@ -17,7 +17,7 @@
 <div class="stack stack--lg">
   <ul class="card-list">
     {% for ghostform in forms_page %}
-    <li class="card">
+    <li class="card card--interactive">
       <div class="card__header">
         <h3 class="card__title"><a href="{% url 'ghostform:ghostform-detail' ghostform.code %}">{{ ghostform.title }}</a></h3>
         {% include 'ghostform/partials/status-badge.html' %}

@@ -1034,6 +1034,10 @@ fieldset.field {
   inset: 0;
 }
 
+.card--interactive .card__meta a {
+  position: relative;
+}
+
 .card__header {
   display: flex;
   flex-wrap: wrap;

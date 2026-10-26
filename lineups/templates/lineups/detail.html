@@ -55,7 +55,7 @@
     {% if versions %}
     <ul class="card-list">
       {% for version in versions %}
-      <li class="card">
+      <li class="card card--interactive">
         <h3 class="card__title"><a href="{% url 'lineups-version-detail' version.code %}">{{ version.name }}</a></h3>
         <ul class="card__meta inline-list">
           <li>{{ version.version_decks.count }} Deck{{ version.version_decks.count|pluralize }}</li>
