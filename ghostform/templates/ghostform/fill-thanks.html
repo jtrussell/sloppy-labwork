@@ -1,18 +1,15 @@
 {% extends 'page.html' %}
-{% load static %}
 
 {% block head_title %}{{ ghostform.title }}{% endblock %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'ghostform/main.css' %}">
-{% endblock %}
-
 {% block content %}
-<div class="ghostform-fill">
-  <h1>{{ ghostform.title }}</h1>
+<h1>{{ ghostform.title }}</h1>
+<div class="stack stack--md">
   <p>Thanks! Your response has been recorded.</p>
   {% if ghostform.is_accepting_responses %}
-  <a href="{% url 'ghostform:ghostform-fill' ghostform.code %}" class="button">Submit another response</a>
+  <div class="cluster">
+    <a href="{% url 'ghostform:ghostform-fill' ghostform.code %}" class="button">Submit another response</a>
+  </div>
   {% endif %}
 </div>
 {% endblock %}

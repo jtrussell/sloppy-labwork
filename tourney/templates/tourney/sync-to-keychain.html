@@ -1,27 +1,26 @@
 {% extends "tourney/_base.html" %}
 
 {% block content %}
-<div id="tournament-content">
-    <section>
-        <h1>Sync Results to KeyChain</h1>
-        <div class="subheading">{{ tournament.name }}</div>
+<header class="page-header">
+    <a href="{% url 'tourney:tourney-tournament-detail-admin' tournament.code %}" class="back-link">{{ tournament.name }}</a>
+    <h1>Sync Results to KeyChain</h1>
+</header>
 
+<div class="stack stack--xl">
+    <div class="stack stack--sm">
         <p class="text-muted">
             Merge standings into <strong>{{ event.name }}</strong>{% if playgroup %} in <strong>{{ playgroup.name }}</strong>{% endif %}.
         </p>
-
         {% if existing_result_count %}
         <p class="text-muted">{{ existing_result_count }} existing result{{ existing_result_count|pluralize }} will be updated.</p>
         {% endif %}
-    </section>
+    </div>
 
-    <section>
+    <section class="stack stack--sm">
         <h2>Tournament Standings</h2>
-
         <p class="text-muted">Only registered users will be included.</p>
-
-        <div class="table-responsive">
-            <table class="table">
+        <div class="table-scroll">
+            <table>
                 <thead>
                     <tr>
                         <th>Rank</th>
@@ -44,18 +43,12 @@
                 </tbody>
             </table>
         </div>
-
-        <form method="post">
-            {% csrf_token %}
-            <div class="hstack gap-1" style="margin-top: 0.9375rem;">
-                <button type="submit" class="button button-primary">
-                    Sync Results
-                </button>
-                <a href="{% url 'tourney:tourney-tournament-detail-admin' tournament.code %}" class="button button-secondary">
-                    Cancel
-                </a>
-            </div>
-        </form>
     </section>
+
+    <form method="post" class="form-actions">
+        {% csrf_token %}
+        <button type="submit" class="button button-primary">Sync Results</button>
+        <a href="{% url 'tourney:tourney-tournament-detail-admin' tournament.code %}" class="button">Cancel</a>
+    </form>
 </div>
 {% endblock %}

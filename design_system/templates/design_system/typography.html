@@ -1,0 +1,108 @@
+{% extends "design_system/_base.html" %}
+{% load design_system_extras %}
+
+{% block gallery_content %}
+<section>
+  <h2>Families</h2>
+  <table class="ds-token-table">
+    <tbody>
+      {% for token in tokens_by_group.font %}
+      <tr>
+        <td><span class="ds-token">{{ token.name }}</span></td>
+        <td><span style="font-family: {{ token.name|token_reference }}">The five boxing wizards jump quickly</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Size scale</h2>
+  <p class="ds-lede">Body copy is <code>--text-body</code>. Heading sizes step up at the 550px breakpoint automatically.</p>
+  <table class="ds-token-table">
+    <tbody>
+      {% for token in tokens_by_group.text %}
+      <tr>
+        <td><span class="ds-token">{{ token.name }}</span><br><span class="ds-token text-muted">{{ token.value }}{% with desktop_value=medium_breakpoint_tokens|lookup:token.name %}{% if desktop_value %} → {{ desktop_value }} at md{% endif %}{% endwith %}</span></td>
+        <td><p class="ds-type-sample" style="font-size: {{ token.name|token_reference }}">Archon</p></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Headings</h2>
+  <p>Use real heading elements for document structure. The <code>.h1</code>–<code>.h6</code> classes apply a heading's look to another element without changing the outline.</p>
+  {% ds_example %}
+  <div class="h1">Heading 1</div>
+  <div class="h2">Heading 2</div>
+  <div class="h3">Heading 3</div>
+  <div class="h4">Heading 4</div>
+  <div class="h5">Heading 5</div>
+  <div class="h6">Heading 6</div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Subheading</h2>
+  <p>A small uppercase accent line that follows a heading. Stack two for a second line of context.</p>
+  {% ds_example themed %}
+  <h3>Tournament with Test Form</h3>
+  <div class="subheading">Main stage · Round 1</div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Text color</h2>
+  {% ds_example themed %}
+  <p class="text-normal">.text-normal — default body color</p>
+  <p class="text-muted">.text-muted — secondary information</p>
+  <p class="text-success">.text-success — positive outcome</p>
+  <p class="text-danger">.text-danger — errors and destructive context</p>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Weight and line height</h2>
+  <div class="cluster cluster--lg">
+    <table class="ds-token-table">
+      <tbody>
+        {% for token in tokens_by_group.weight %}
+        <tr>
+          <td><span class="ds-token">{{ token.name }}</span></td>
+          <td><span style="font-weight: {{ token.name|token_reference }}">Æmber</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <table class="ds-token-table">
+      <tbody>
+        {% for token in tokens_by_group.leading %}
+        <tr>
+          <td><span class="ds-token">{{ token.name }}</span></td>
+          <td class="ds-token">{{ token.value }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Prose</h2>
+  {% ds_example %}
+  <p>Paragraphs, <a href="#">links</a>, <strong>strong</strong>, <em>emphasis</em> and <code>inline code</code> share the body rhythm.</p>
+  <ul>
+    <li>Unordered list item</li>
+    <li>Another item</li>
+  </ul>
+  <ol>
+    <li>Ordered list item</li>
+    <li>Another item</li>
+  </ol>
+  <blockquote>A blockquote for pulled-out commentary.</blockquote>
+  <pre><code>pre &gt; code block</code></pre>
+  {% end_ds_example %}
+</section>
+{% endblock %}

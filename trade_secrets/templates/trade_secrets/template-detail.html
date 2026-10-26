@@ -8,8 +8,7 @@
 {% endblock %}
 
 {% block content %}
-{% include 'trade_secrets/partials/icons.html' %}
-<p class="ts-back"><a href="{% url 'trade_secrets:home' %}">← Trade Secrets</a></p>
+<a href="{% url 'trade_secrets:home' %}" class="back-link">Trade Secrets</a>
 <h1>{{ template.name }}</h1>
 <div class="subheading">{% if template.is_system %}Standard format{% elif is_shared_with_viewer %}Shared by {{ template.owner.username }}{% elif template.is_archived %}Archived template · {{ template.get_visibility_display }}{% else %}Your template · {{ template.get_visibility_display }}{% endif %}</div>
 {% if template.description %}<p class="ts-lede">{{ template.description }}</p>{% endif %}
@@ -18,7 +17,7 @@
   {% for row in rows %}
   <li class="ts-step-list__item">
     <span class="ts-step-list__number">{{ row.number }}</span>
-    {% include 'trade_secrets/partials/icon.html' with name=row.icon %}
+    {% include "components/icon.html" with name=row.icon %}
     <span class="ts-step-list__label">{{ row.label }}</span>
     {% if row.detail %}<span class="ts-step-list__detail">{{ row.detail }}</span>{% endif %}
   </li>
@@ -47,7 +46,7 @@
   {% if can_delete %}
   <form method="post" action="{% url 'trade_secrets:template-delete' template.code %}">
     {% csrf_token %}
-    <button type="submit" class="button ts-danger-button" hx-post="{% url 'trade_secrets:template-delete' template.code %}" hx-confirm="Permanently delete {{ template.name }}? This can't be undone.">Delete permanently</button>
+    <button type="submit" class="button button-danger" hx-post="{% url 'trade_secrets:template-delete' template.code %}" hx-confirm="Permanently delete {{ template.name }}? This can't be undone.">Delete permanently</button>
   </form>
   {% endif %}
 </div>
@@ -55,7 +54,7 @@
 {% if can_manage %}
 <section class="ts-sharing surface" aria-labelledby="ts-sharing-title">
   <h2 class="ts-sharing__title" id="ts-sharing-title">Sharing</h2>
-  <form method="post" action="{% url 'trade_secrets:template-visibility' template.code %}" class="ts-segmented ts-segmented--buttons">
+  <form method="post" action="{% url 'trade_secrets:template-visibility' template.code %}" class="segmented">
     {% csrf_token %}
     {% for value, label in visibility_choices %}
     <button type="submit" name="visibility" value="{{ value }}"{% if template.visibility == value %} class="is-active" aria-pressed="true"{% else %} aria-pressed="false"{% endif %}>{{ label }}</button>
@@ -65,7 +64,7 @@
   <p class="ts-sharing__hint">Anyone signed in with this link can start a session with this template.</p>
   <div class="ts-sharing__link">
     <input type="text" readonly value="{{ share_url }}" aria-label="Template link" data-select-on-focus>
-    <button type="button" class="button" data-copy-text="{{ share_url }}">{% include 'trade_secrets/partials/icon.html' with name='copy' %}<span data-copy-label>Copy link</span></button>
+    <button type="button" class="button" data-copy-text="{{ share_url }}">{% include "components/icon.html" with name='copy' %}<span data-copy-label>Copy link</span></button>
   </div>
   {% else %}
   <p class="ts-sharing__hint">Only you can start sessions with this template. Make it public to share it by link.</p>

@@ -1,0 +1,20 @@
+<figure class="ds-example">
+  {% if themes %}
+  <div class="ds-example__themes">
+    {% for value, label in themes %}
+    <div class="ds-theme-frame" data-theme="{{ value }}">
+      <span class="ds-theme-frame__label">{{ label }}</span>
+      {{ preview }}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="ds-example__preview">{{ preview }}</div>
+  {% endif %}
+  {% if shows_markup %}
+  <details class="ds-example__markup">
+    <summary>Markup</summary>
+    <pre><code>{{ markup }}</code></pre>
+  </details>
+  {% endif %}
+</figure>

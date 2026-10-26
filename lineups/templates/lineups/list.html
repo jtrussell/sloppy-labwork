@@ -8,17 +8,26 @@
 {% endblock %}
 
 {% block content %}
-<h1>My Lineups</h1>
-<ul class="subheading inline-list">
-  <li><a href="{% url 'lineups-create' %}" class="button button-link button-link-bordered">New Lineup</a></li>
-</ul>
+<header class="page-header">
+  <div class="page-header__title-row">
+    <h1>My Lineups</h1>
+    <div class="page-header__actions">
+      <a href="{% url 'lineups-create' %}" class="button button-primary">New Lineup</a>
+    </div>
+  </div>
+</header>
 
-<form class="form-wide" hx-get="{% url 'lineups-list' %}" hx-target="#lineup-results" hx-swap="innerHTML" hx-trigger="input delay:300ms from:#search-input, change from:#format-select">
-  <input type="text" name="q" id="search-input" value="{{ search_query }}" placeholder="Search lineups...">
-  <span class="helptext">Type to search</span>
-</form>
+<div class="stack stack--lg">
+  <form role="search" hx-get="{% url 'lineups-list' %}" hx-target="#lineup-results" hx-swap="innerHTML" hx-trigger="input delay:300ms from:#search-input, change from:#format-select">
+    <div class="field">
+      <label class="sr-only" for="search-input">Search lineups</label>
+      <input type="search" name="q" id="search-input" value="{{ search_query }}" placeholder="Search lineups..." aria-describedby="search-input-help">
+      <div class="field__help" id="search-input-help">Type to search</div>
+    </div>
+  </form>
 
-<div id="lineup-results">
-  {% include 'lineups/partials/lineup-list-results.html' %}
+  <div id="lineup-results" class="stack stack--lg">
+    {% include 'lineups/partials/lineup-list-results.html' %}
+  </div>
 </div>
 {% endblock %}

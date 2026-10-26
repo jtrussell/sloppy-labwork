@@ -3,49 +3,31 @@
 
 {% block head_title %}{% if is_edit %}Edit{% else %}New{% endif %} Version - {{ lineup.name }} - Sloppy Labwork{% endblock %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'lineups/main.css' %}">
-{% endblock %}
-
 {% block content %}
-<nav class="breadcrumb">
-  <a href="{% url 'lineups-list' %}">Lineups</a> &raquo;
-  {% if show_lineup_details %}
-  <a href="{% url 'lineups-detail' lineup.code %}">{{ lineup.name }}</a>
-  {% else %}
-  <span class="breadcrumb-private">Private Lineup</span>
-  {% endif %}
-  &raquo; {% if is_edit %}Edit Version{% else %}New Version{% endif %}
-</nav>
+<header class="page-header">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'lineups-list' %}">Lineups</a> &raquo;
+    {% if show_lineup_details %}
+    <a href="{% url 'lineups-detail' lineup.code %}">{{ lineup.name }}</a>
+    {% else %}
+    <span class="breadcrumb-private">Private Lineup</span>
+    {% endif %}
+    &raquo; {% if is_edit %}Edit Version{% else %}New Version{% endif %}
+  </nav>
+  <h1>{% if is_edit %}Edit Version{% else %}New Version{% endif %}</h1>
+</header>
 
-<h1>{% if is_edit %}Edit Version{% else %}New Version{% endif %}</h1>
-
-<form method="post" class="version-form">
+<form method="post" class="stack stack--lg readable">
   {% csrf_token %}
-
-  <div class="form-group">
-    <label for="id_name">Name</label>
-    {{ form.name }}
-    {% if form.name.errors %}
-    <div class="form-errors">{{ form.name.errors }}</div>
-    {% endif %}
-  </div>
-
-  <div class="form-group">
-    <label for="id_description">Description (Markdown supported)</label>
-    {{ form.description }}
-    {% if form.description.errors %}
-    <div class="form-errors">{{ form.description.errors }}</div>
-    {% endif %}
-  </div>
-
-  <div class="form-group">
-    <label for="id_visibility_override">Visibility Override</label>
-    {{ form.visibility_override }}
-    <p class="helptext">Leave empty to inherit from lineup ({{ lineup.get_visibility_display }})</p>
-    {% if form.visibility_override.errors %}
-    <div class="form-errors">{{ form.visibility_override.errors }}</div>
-    {% endif %}
+  <div class="stack stack--md">
+    {% include "components/field.html" with field=form.name %}
+    {% include "components/field.html" with field=form.description %}
+    <div class="field{% if form.visibility_override.errors %} field--invalid{% endif %}">
+      <label class="field__label" for="{{ form.visibility_override.id_for_label }}">{{ form.visibility_override.label }}</label>
+      <div class="field__help" id="id_visibility_override_helptext">Leave empty to inherit from the lineup ({{ lineup.get_visibility_display }}).</div>
+      {{ form.visibility_override }}
+      {% if form.visibility_override.errors %}<ul class="field__errors">{% for error in form.visibility_override.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+    </div>
   </div>
 
   <div class="form-actions">

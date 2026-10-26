@@ -12,6 +12,7 @@
 
 <p>{% trans "Log in to get to the good stuff 😎." %}</p>
 
+<div class="stack stack--md">
 <div class="card">
 <form method="post" action="{% url 'account_login' %}">
     {% csrf_token %}
@@ -43,5 +44,6 @@
   </div>
 </div>
 {% endif %}
+</div>
 
 {% endblock %}

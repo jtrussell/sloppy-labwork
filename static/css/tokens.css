@@ -1,13 +1,17 @@
 /*
  * Sloppy Labwork design tokens.
  *
- * Theme selection: data-theme attribute on <html>. Default block applies when
- * no attribute is set (dark mode).
+ * Theme selection: data-theme attribute on <html> or any element. The default
+ * theme applies when no attribute is set.
  *
- *   (none)  Dark
- *   1       Light
- *   2       Contrast Dark
- *   3       Contrast Light
+ *   0 (or none)  Dark
+ *   1            Light
+ *   2            Contrast Dark
+ *   3            Contrast Light
+ *
+ * Every theme block defines the complete set of themeable tokens (color, tint,
+ * link, shadow) so a theme can be scoped to any element. Tokens derived from
+ * themeable tokens live in the final block so they recompute in each scope.
  *
  * KeyChain (pmc) does NOT use this file. It defines its own tokens in
  * static/pmc/css/main.css and must remain untouched by changes here.
@@ -15,10 +19,10 @@
 
 
 /* =============================================================
- * Default theme — Dark
+ * Theme — Dark  (default, data-theme="0")
  * ============================================================= */
-:root {
-  /* --- Color --- */
+:root,
+[data-theme="0"] {
   --color-bg: #0e0c14;
   --color-surface: #181522;
   --color-surface-raised: #221d2e;
@@ -34,12 +38,29 @@
   --color-highlight: #f0abfc;
   --color-success: #5dd39e;
   --color-danger: #f87171;
+  --color-warning: #fbbf24;
+  --color-info: #60a5fa;
+  --color-focus: #22d3ee;
   --color-overlay: rgba(8, 6, 14, 0.78);
   --color-on-primary: #ffffff;
   --color-on-accent: #0e0c14;
+  --color-on-danger: #0e0c14;
+  --color-on-success: #0e0c14;
+
+  --tint-subtle: 12%;
+  --tint-strong: 24%;
 
   --link-decoration: none;
 
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+
+/* =============================================================
+ * Theme-independent tokens
+ * ============================================================= */
+:root {
   /* --- Spacing --- */
   --space-0: 0;
   --space-1: 0.15625rem;
@@ -62,13 +83,23 @@
   --font-display: var(--font-body);
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
+  --text-2xs: 0.6875rem;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
+  --text-md: 0.9375rem;
   --text-base: 1rem;
   --text-lg: 1.125rem;
   --text-xl: 1.375rem;
   --text-2xl: 1.75rem;
   --text-3xl: 2.125rem;
+  --text-body: var(--text-lg);
+
+  --text-h1: 2.25rem;
+  --text-h2: 1.75rem;
+  --text-h3: 1.375rem;
+  --text-h4: 1.125rem;
+  --text-h5: 0.9375rem;
+  --text-h6: 0.8125rem;
 
   --leading-tight: 1.2;
   --leading-snug: 1.35;
@@ -82,17 +113,31 @@
   --weight-bold: 700;
   --weight-black: 800;
 
-  /* --- Shadows --- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 0 1px var(--color-accent), 0 0 16px -2px var(--color-accent);
+  /* --- Controls --- */
+  --control-height: 38px;
+  --control-height-sm: 24px;
+  --control-padding-x: 30px;
+  --control-padding-x-sm: 16px;
+  --tap-target: 44px;
+  --focus-offset: 2px;
 
   /* --- Transitions --- */
   --transition-quick: 120ms ease-out;
   --transition-default: 200ms ease-out;
+  --duration-enter: 240ms;
+  --duration-exit: 150ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.4, 0.64, 1);
 
   /* --- Layout --- */
   --container-max: 45rem;
+
+  /* --- Breakpoints (reference only; custom properties can't be used in media queries) ---
+   * xs  min-width: 400px
+   * md  min-width: 550px
+   * lg  min-width: 750px
+   */
 
   /* --- Z-index --- */
   --z-base: 0;
@@ -101,28 +146,23 @@
   --z-overlay: 900;
   --z-modal: 1000;
   --z-toast: 1100;
+}
 
-  /* --- Legacy aliases (kept for one release; remove after per-app migration in PR 3) --- */
-  --color-bg-secondary: var(--color-surface);
-  --color-nav-links: var(--color-text-muted);
-  --color-text-normal: var(--color-text);
-  --color-text-active: var(--color-text);
-  --color-lines: var(--color-border);
-  --color-lines-active: var(--color-border-strong);
-  --color-primary-active: var(--color-primary-hover);
-  --color-text-success: var(--color-success);
-  --color-text-danger: var(--color-danger);
-  --color-button-text: var(--color-text-muted);
-  --color-button-text-hover: var(--color-text);
-  --color-button-primary-text: var(--color-on-primary);
-  --color-danger-active: var(--color-danger);
+@media (min-width: 550px) {
+  :root {
+    --text-h1: 2.75rem;
+    --text-h2: 2rem;
+    --text-h3: 1.5rem;
+    --text-h4: 1.1875rem;
+    --text-h5: 1rem;
+  }
 }
 
 
 /* =============================================================
  * Theme — Light  (data-theme="1")
  * ============================================================= */
-html[data-theme="1"] {
+[data-theme="1"] {
   --color-bg: #faf8fb;
   --color-surface: #ffffff;
   --color-surface-raised: #ffffff;
@@ -138,22 +178,29 @@ html[data-theme="1"] {
   --color-highlight: #c026d3;
   --color-success: #15803d;
   --color-danger: #dc2626;
+  --color-warning: #b45309;
+  --color-info: #2563eb;
+  --color-focus: #0891b2;
   --color-overlay: rgba(26, 22, 34, 0.45);
   --color-on-primary: #ffffff;
   --color-on-accent: #ffffff;
+  --color-on-danger: #ffffff;
+  --color-on-success: #ffffff;
+
+  --tint-subtle: 12%;
+  --tint-strong: 24%;
 
   --link-decoration: none;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.12);
-  --shadow-glow: 0 0 0 1px var(--color-accent), 0 0 16px -2px var(--color-accent);
 }
 
 
 /* =============================================================
  * Theme — Contrast Dark  (data-theme="2")
  * ============================================================= */
-html[data-theme="2"] {
+[data-theme="2"] {
   --color-bg: #000000;
   --color-surface: #0a0a0a;
   --color-surface-raised: #1a1a1a;
@@ -169,18 +216,29 @@ html[data-theme="2"] {
   --color-highlight: #f5d0fe;
   --color-success: #4ade80;
   --color-danger: #fca5a5;
+  --color-warning: #fde047;
+  --color-info: #93c5fd;
+  --color-focus: #5eead4;
   --color-overlay: rgba(0, 0, 0, 0.88);
   --color-on-primary: #000000;
   --color-on-accent: #000000;
+  --color-on-danger: #000000;
+  --color-on-success: #000000;
+
+  --tint-subtle: 0%;
+  --tint-strong: 0%;
 
   --link-decoration: underline;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.5);
 }
 
 
 /* =============================================================
  * Theme — Contrast Light  (data-theme="3")
  * ============================================================= */
-html[data-theme="3"] {
+[data-theme="3"] {
   --color-bg: #ffffff;
   --color-surface: #f5f5f5;
   --color-surface-raised: #f5f5f5;
@@ -196,9 +254,30 @@ html[data-theme="3"] {
   --color-highlight: #86198f;
   --color-success: #166534;
   --color-danger: #991b1b;
+  --color-warning: #854d0e;
+  --color-info: #1e40af;
+  --color-focus: #0e7490;
   --color-overlay: rgba(0, 0, 0, 0.55);
   --color-on-primary: #ffffff;
   --color-on-accent: #ffffff;
+  --color-on-danger: #ffffff;
+  --color-on-success: #ffffff;
+
+  --tint-subtle: 0%;
+  --tint-strong: 0%;
 
   --link-decoration: underline;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+
+/* =============================================================
+ * Derived tokens — recomputed in every theme scope
+ * ============================================================= */
+:root,
+[data-theme] {
+  --focus-outline: 2px solid var(--color-focus);
+  --shadow-glow: 0 0 0 1px var(--color-accent), 0 0 16px -2px var(--color-accent);
 }

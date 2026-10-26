@@ -1,0 +1,97 @@
+{% extends "design_system/_base.html" %}
+{% load static design_system_extras %}
+
+{% block gallery_content %}
+
+<section>
+  <h2>Dialog</h2>
+  <p class="ds-lede">Every dialog is a native <code>&lt;dialog class="dialog"&gt;</code>. The browser handles focus trapping, Escape, the backdrop and stacking; <code>js/dialog.js</code> adds open and close triggers, backdrop clicks, scroll lock and the htmx wiring.</p>
+  {% ds_example no_markup %}
+  <button type="button" class="button" data-dialog-open="demo-dialog">Open dialog</button>
+  {% end_ds_example %}
+  <pre><code>{% verbatim %}&lt;button type="button" class="button" data-dialog-open="start-timer-dialog"&gt;Start timer&lt;/button&gt;
+
+&lt;dialog id="start-timer-dialog" class="dialog" aria-labelledby="start-timer-title"&gt;
+  {% include "components/dialog-header.html" with title="Start timer" title_id="start-timer-title" %}
+  &lt;form method="post" action="…"&gt;
+    {% csrf_token %}
+    &lt;div class="dialog__body"&gt;…fields…&lt;/div&gt;
+    &lt;div class="dialog__footer"&gt;
+      &lt;button type="button" class="button" data-dialog-close&gt;Cancel&lt;/button&gt;
+      &lt;button type="submit" class="button button-primary"&gt;Start&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/form&gt;
+&lt;/dialog&gt;{% endverbatim %}</code></pre>
+  <table class="ds-token-table">
+    <thead><tr><th>Piece</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td class="ds-token">data-dialog-open="id"</td><td>On any element: opens that dialog</td></tr>
+      <tr><td class="ds-token">data-dialog-close</td><td>On any element inside a dialog: closes it. <code>&lt;form method="dialog"&gt;</code> also works</td></tr>
+      <tr><td class="ds-token">.dialog__header / __title / __close</td><td>Rendered by <code>components/dialog-header.html</code></td></tr>
+      <tr><td class="ds-token">.dialog__body</td><td>Scrolls when content is tall</td></tr>
+      <tr><td class="ds-token">.dialog__footer</td><td>Actions, pinned below the body; secondary first, primary last</td></tr>
+      <tr><td class="ds-token">.dialog--wide</td><td>40rem instead of 28rem</td></tr>
+      <tr><td class="ds-token">.dialog--sheet</td><td>Docks to the bottom of the screen on phones</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>htmx-loaded dialogs</h2>
+  <p>Pages include one empty host, <code>components/dialog-host.html</code> (<code>&lt;dialog id="dialog" data-dialog-remote&gt;</code>). Target it with the default <code>innerHTML</code> swap to load a dialog from the server; it opens when content arrives and empties when it closes. Partials use <code>title_id="dialog-title"</code> so the host stays labelled.</p>
+  {% ds_example no_markup %}
+  <div class="stack stack--sm">
+    <button type="button" class="button" hx-get="{% url 'design_system:dialog-demo' %}" hx-target="#dialog">Rename deck…</button>
+    <div id="dialog-demo-result"></div>
+  </div>
+  {% end_ds_example %}
+  <div class="table-scroll">
+  <table class="ds-token-table">
+    <thead><tr><th>Outcome</th><th>View responds with</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Open</td><td>The dialog partial, requested with <code>hx-target="#dialog"</code></td><td>Content swaps in and the dialog opens</td></tr>
+      <tr><td>Validation errors</td><td>The partial with the bound form, wrapped in <code>reswap(retarget(response, '#dialog'), 'innerHTML')</code></td><td>The dialog stays open with the errors</td></tr>
+      <tr><td>Success, page updated</td><td>The fragment for the form's own <code>hx-target</code> outside the dialog</td><td>The dialog closes</td></tr>
+      <tr><td>Success, nothing to swap or out-of-band only</td><td><code>trigger_client_event(response, 'dialog:close')</code></td><td>The dialog closes</td></tr>
+      <tr><td>Success, navigate</td><td><code>HX-Redirect</code></td><td>The page navigates</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2>Confirm</h2>
+  <p>Pages include <code>components/dialog-confirm.html</code> once. Any htmx element with <code>hx-confirm</code> then asks through it. The question renders as plain text, and Cancel has focus so pressing Enter never confirms by accident.</p>
+  <pre><code>{% verbatim %}&lt;button hx-post="{% url 'lineups-note-delete' note.id %}" hx-confirm="Delete this note?"&gt;Delete&lt;/button&gt;{% endverbatim %}</code></pre>
+  {% ds_example no_markup %}
+  <div class="cluster">
+    <button type="button" class="button button-danger" data-ds-confirm-demo="Delete the “Spring Vault Tour” lineup? This can't be undone.">Delete lineup</button>
+    <span class="text-muted" data-ds-confirm-result></span>
+  </div>
+  {% end_ds_example %}
+  <p>Scripts can ask the same question with <code>window.sloppyConfirm(question)</code>, which resolves to <code>true</code> or <code>false</code>.</p>
+</section>
+
+<section>
+  <h2>Guidelines</h2>
+  <ul class="ds-rules">
+    <li>Give every dialog <code>aria-labelledby</code> pointing at its title.</li>
+    <li>Put <code>autofocus</code> on the element that should receive focus: the first field, or the title via <code>focus_title=True</code>.</li>
+    <li>Use a dialog for a short, focused task. Long or multi-step work belongs on its own page.</li>
+    <li>Don't open a dialog from page load.</li>
+    <li>Dialogs fade their backdrop in and rise into place with a slight overshoot (<code>--duration-enter</code>, <code>--ease-bounce</code>), then fade out faster on close (<code>--duration-exit</code>). Reduced-motion users get the fade without movement. Tune per dialog with <code>--dialog-hidden-transform</code>.</li>
+  </ul>
+</section>
+
+<dialog id="demo-dialog" class="dialog" aria-labelledby="demo-dialog-title">
+  {% include "components/dialog-header.html" with title="Start timer" title_id="demo-dialog-title" %}
+  <div class="dialog__body">
+    <p>Round 2 timer for 50 minutes. Players see it on the tournament page.</p>
+  </div>
+  <div class="dialog__footer">
+    <button type="button" class="button" data-dialog-close>Cancel</button>
+    <button type="button" class="button button-primary" data-dialog-close autofocus>Start</button>
+  </div>
+</dialog>
+{% endblock %}
+

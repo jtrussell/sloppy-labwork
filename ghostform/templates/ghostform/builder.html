@@ -4,71 +4,57 @@
 {% block head_title %}{% if ghostform %}Edit {{ ghostform.title }}{% else %}New Form{% endif %} - Ghostform{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/drag-drop.css' %}">
 <link rel="stylesheet" href="{% static 'ghostform/main.css' %}">
 {% endblock %}
 
 {% block content %}
-<h1>{% if ghostform %}Edit Form{% else %}New Form{% endif %}</h1>
-<div class="subheading">
+<header class="page-header">
   {% if ghostform %}
-  <a href="{% url 'ghostform:ghostform-detail' ghostform.code %}">&larr; Back to {{ ghostform.title }}</a>
+  <a href="{% url 'ghostform:ghostform-detail' ghostform.code %}" class="back-link">{{ ghostform.title }}</a>
   {% else %}
-  <a href="{% url 'ghostform:ghostform-list' %}">&larr; My Forms</a>
+  <a href="{% url 'ghostform:ghostform-list' %}" class="back-link">My Forms</a>
   {% endif %}
-</div>
+  <h1>{% if ghostform %}Edit Form{% else %}New Form{% endif %}</h1>
+</header>
 
 {{ builder_config|json_script:"ghostform-builder-config" }}
 
-<form method="post" class="ghostform-builder" x-data="questionBuilder('ghostform-builder-config')">
+<form method="post" class="stack stack--xl readable" x-data="questionBuilder('ghostform-builder-config')">
   {% csrf_token %}
 
-  <div class="ghostform-field">
-    <label for="{{ details_form.title.id_for_label }}">Title</label>
-    {{ details_form.title }}
-    {% if details_form.title.errors %}
-    <div class="ghostform-errors">{{ details_form.title.errors|join:" " }}</div>
-    {% endif %}
+  <div class="stack stack--md">
+    {% include "components/field.html" with field=details_form.title %}
+    {% include "components/field.html" with field=details_form.description %}
   </div>
 
-  <div class="ghostform-field">
-    <label for="{{ details_form.description.id_for_label }}">Description</label>
-    {{ details_form.description }}
-    <span class="ghostform-help">Optional. Shown above the questions.</span>
-    {% if details_form.description.errors %}
-    <div class="ghostform-errors">{{ details_form.description.errors|join:" " }}</div>
-    {% endif %}
-  </div>
+  <section class="stack stack--md">
+    <h2>Questions</h2>
+    <p class="text-muted">
+      Drag questions to reorder them. Removing a question, or changing its type, after it has
+      answers archives it; its answers stay in the CSV download.
+    </p>
 
-  <h2>Questions</h2>
-  <p class="text-muted">
-    Drag questions to reorder them. Removing a question, or changing its type, after it has
-    answers archives it; its answers stay in the CSV download.
-  </p>
-
-  {% if questions_form.questions_payload.errors %}
-  <div class="ghostform-errors">
-    <ul>
+    {% if questions_form.questions_payload.errors %}
+    <ul class="form-errors" role="alert">
       {% for error in questions_form.questions_payload.errors %}
       <li>{{ error }}</li>
       {% endfor %}
     </ul>
-  </div>
-  {% endif %}
+    {% endif %}
 
-  <input type="hidden" name="questions_payload" :value="payload">
+    <input type="hidden" name="questions_payload" :value="payload">
 
-  <p class="ghostform-empty-message" x-show="questions.length === 0">No questions yet.</p>
+    <p class="text-muted" x-show="questions.length === 0">No questions yet.</p>
 
-  <div class="ghostform-question-list"
+  <div class="stack stack--sm"
        x-sort="handleSort($item, $position)"
-       x-sort:config="{ ghostClass: 'dragging', animation: 150, handle: '.drag-handle' }">
+       x-sort:config="{ ghostClass: 'is-dragging', animation: 150, handle: '.sortable__handle' }">
     <template x-for="question in questions" :key="question.key">
-      <div class="ghostform-question-editor" x-sort:item="question.key">
+      <div class="card ghostform-question-editor" x-sort:item="question.key">
         <div class="ghostform-question-editor__header">
-          <span class="drag-handle" x-sort:handle title="Drag to reorder">⋮⋮</span>
+          <span class="sortable__handle" x-sort:handle title="Drag to reorder">⋮⋮</span>
           <strong x-text="'Question ' + questionNumber(question)"></strong>
-          <div class="ghostform-question-editor__actions">
+          <div class="cluster cluster--xs ghostform-question-editor__actions">
             <button type="button" class="button button-small" @click="moveQuestion(question.key, -1)"
                     :disabled="questionNumber(question) === 1"
                     :aria-label="'Move question ' + questionNumber(question) + ' up'">Up</button>
@@ -80,21 +66,21 @@
           </div>
         </div>
 
-        <div class="ghostform-field">
+        <div class="field">
           <label :for="'question-label-' + question.key">Question</label>
           <input type="text" class="ghostform-question-label" :id="'question-label-' + question.key"
                  x-model="question.label" maxlength="200" required>
         </div>
 
-        <div class="ghostform-field">
+        <div class="field">
           <label :for="'question-description-' + question.key">Description</label>
+          <span class="field__help">Optional context shown under the question.</span>
           <textarea rows="2" :id="'question-description-' + question.key"
                     x-model="question.description" maxlength="1000"></textarea>
-          <span class="ghostform-help">Optional context shown under the question.</span>
         </div>
 
         <div class="ghostform-question-editor__settings">
-          <div class="ghostform-field">
+          <div class="field">
             <label :for="'question-type-' + question.key">Answer type</label>
             <select :id="'question-type-' + question.key" x-model="question.answer_type">
               <template x-for="answerType in answerTypes" :key="answerType.value">
@@ -103,17 +89,18 @@
             </select>
           </div>
 
-          <div class="ghostform-field ghostform-field--checkbox">
-            <label :for="'question-required-' + question.key">
-              <input type="checkbox" :id="'question-required-' + question.key" x-model="question.is_required">
+          <div class="field ghostform-required-toggle">
+            <label class="switch" :for="'question-required-' + question.key">
+              <input type="checkbox" role="switch" :id="'question-required-' + question.key" x-model="question.is_required">
+              <span class="switch__track"></span>
               <span>Required</span>
             </label>
-            <span class="ghostform-help" x-show="question.answer_type === 'checkbox'">An unchecked box still counts as an answer.</span>
+            <span class="field__help" x-show="question.answer_type === 'checkbox'">An unchecked box still counts as an answer.</span>
           </div>
         </div>
 
-        <fieldset class="ghostform-field ghostform-choice-group" x-show="isMultipleChoice(question)">
-          <legend>Answers allowed</legend>
+        <fieldset class="field ghostform-choice-group" x-show="isMultipleChoice(question)">
+          <legend class="field__label">Answers allowed</legend>
           <label>
             <input type="radio" :name="'question-selection-mode-' + question.key"
                    :checked="!question.allows_multiple_answers" @change="question.allows_multiple_answers = false">
@@ -126,7 +113,7 @@
           </label>
         </fieldset>
 
-        <div class="ghostform-field" x-show="isMultipleChoice(question) && question.allows_multiple_answers">
+        <div class="field" x-show="isMultipleChoice(question) && question.allows_multiple_answers">
           <div class="ghostform-selection-limits">
             <div>
               <label :for="'question-minimum-selections-' + question.key">At least</label>
@@ -139,15 +126,15 @@
                      x-model="question.maximum_selections">
             </div>
           </div>
-          <span class="ghostform-help">Leave blank for no limit. Use the same number in both for an exact count.</span>
+          <span class="field__help">Leave blank for no limit. Use the same number in both for an exact count.</span>
         </div>
 
-        <div class="ghostform-field" x-show="isMultipleChoice(question)">
+        <div class="field" x-show="isMultipleChoice(question)">
           <label :for="'question-choices-' + question.key">Options</label>
+          <span class="field__help">One option per line. Options can't contain semicolons.</span>
           <textarea rows="6" class="ghostform-choices-input" :id="'question-choices-' + question.key"
                     x-model="question.choicesText" placeholder="One option per line"></textarea>
-          <span class="ghostform-help">One option per line. Options can't contain semicolons.</span>
-          <div class="ghostform-choice-presets">
+          <div class="cluster cluster--xs">
             <button type="button" class="button button-small" @click="appendChoices(question, choicePresets.houses)">Add houses</button>
             <button type="button" class="button button-small" @click="appendChoices(question, choicePresets.sets)">Add sets</button>
           </div>
@@ -156,12 +143,13 @@
     </template>
   </div>
 
-  <div class="ghostform-builder__add">
+  <div class="cluster">
     <button type="button" class="button" @click="addQuestion()" :disabled="!canAddQuestion()">Add Question</button>
-    <span class="ghostform-help" x-show="!canAddQuestion()" x-text="'A form can have at most ' + maximumQuestions + ' questions.'"></span>
+    <span class="field__help" x-show="!canAddQuestion()" x-text="'A form can have at most ' + maximumQuestions + ' questions.'"></span>
   </div>
+  </section>
 
-  <div class="ghostform-actions">
+  <div class="form-actions">
     <button type="submit" class="button button-primary">{% if ghostform %}Save Changes{% else %}Create Form{% endif %}</button>
     {% if ghostform %}
     <a href="{% url 'ghostform:ghostform-detail' ghostform.code %}" class="button">Cancel</a>

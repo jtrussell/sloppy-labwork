@@ -1,0 +1,70 @@
+{% extends "design_system/_base.html" %}
+{% load design_system_extras %}
+
+{% block gallery_content %}
+<section>
+  <h2>Radius</h2>
+  <div class="ds-shape-grid">
+    {% for token in tokens_by_group.radius %}
+    <div class="ds-shape-sample" style="border-radius: {{ token.name|token_reference }}">
+      <span><span class="ds-token">{{ token.name }}</span><br><span class="ds-token text-muted">{{ token.value }}</span></span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section>
+  <h2>Surfaces</h2>
+  <p>Bordered panels share the <code>.surface</code> primitive; components add their own padding and layout.</p>
+  {% ds_example themed %}
+  <div class="stack stack--xs">
+    <div class="surface ds-demo-panel">.surface</div>
+    <div class="surface surface--flat ds-demo-panel">.surface.surface--flat</div>
+    <div class="surface surface--sunken ds-demo-panel">.surface.surface--sunken</div>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Shadow</h2>
+  {% ds_example themed no_markup %}
+  <div class="ds-shape-grid">
+    {% for token in tokens_by_group.shadow %}
+    <div class="ds-shape-sample" style="box-shadow: {{ token.name|token_reference }}"><span class="ds-token">{{ token.name }}</span></div>
+    {% endfor %}
+    {% for token in derived_tokens %}{% if token.group_key == 'shadow' %}
+    <div class="ds-shape-sample" style="box-shadow: {{ token.name|token_reference }}"><span class="ds-token">{{ token.name }}</span></div>
+    {% endif %}{% endfor %}
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Motion</h2>
+  <table class="ds-token-table">
+    <tbody>
+      {% for token in tokens_by_group.transition %}
+      <tr><td><span class="ds-token">{{ token.name }}</span></td><td class="ds-token">{{ token.value }}</td></tr>
+      {% endfor %}
+      {% for token in tokens_by_group.duration %}
+      <tr><td><span class="ds-token">{{ token.name }}</span></td><td class="ds-token">{{ token.value }}</td></tr>
+      {% endfor %}
+      {% for token in tokens_by_group.ease %}
+      <tr><td><span class="ds-token">{{ token.name }}</span></td><td class="ds-token">{{ token.value }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p>Transitions are limited to color, background, border, shadow and transform on interactive elements. Nothing animates on first paint. Elements entering and leaving (dialogs) use <code>--duration-enter</code> / <code>--duration-exit</code> with <code>--ease-out</code>, <code>--ease-in</code> and, for a subtle overshoot, <code>--ease-bounce</code>. Movement is dropped under <code>prefers-reduced-motion</code>.</p>
+</section>
+
+<section>
+  <h2>Stacking</h2>
+  <table class="ds-token-table">
+    <tbody>
+      {% for token in tokens_by_group.z %}
+      <tr><td><span class="ds-token">{{ token.name }}</span></td><td class="ds-token">{{ token.value }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

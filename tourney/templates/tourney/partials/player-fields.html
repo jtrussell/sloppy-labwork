@@ -1,0 +1,22 @@
+{% if form.non_field_errors %}
+    <ul class="form-errors" role="alert">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+{% endif %}
+
+<div class="field{% if form.username.errors %} field--invalid{% endif %}">
+    <label class="field__label" for="{{ form.username.id_for_label }}">Username</label>
+    {% if form.username.help_text %}<div class="field__help" id="{{ form.username.auto_id }}_helptext">{{ form.username.help_text }}</div>{% endif %}
+    <input type="text" name="username" id="{{ form.username.id_for_label }}" list="usernames-list" value="{{ form.username.value|default:'' }}"{% if form.username.help_text or form.username.errors %} aria-describedby="{% if form.username.help_text %}{{ form.username.auto_id }}_helptext{% endif %}{% if form.username.errors %} {{ form.username.auto_id }}_error{% endif %}"{% endif %}{% if form.username.errors %} aria-invalid="true"{% endif %}>
+    <datalist id="usernames-list">
+        {% for username in playgroup_usernames %}
+            <option value="{{ username }}"></option>
+        {% endfor %}
+    </datalist>
+    {% if form.username.errors %}<ul class="field__errors" id="{{ form.username.auto_id }}_error">{% for error in form.username.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+</div>
+
+<div class="field{% if form.nickname.errors %} field--invalid{% endif %}">
+    <label class="field__label" for="{{ form.nickname.id_for_label }}">Nickname</label>
+    <div class="field__help" id="{{ form.nickname.auto_id }}_helptext">{{ nickname_help }}</div>
+    <input type="text" name="nickname" id="{{ form.nickname.id_for_label }}" value="{{ form.nickname.value|default:'' }}" maxlength="{{ form.nickname.field.max_length }}" autocomplete="off" aria-describedby="{{ form.nickname.auto_id }}_helptext{% if form.nickname.errors %} {{ form.nickname.auto_id }}_error{% endif %}"{% if form.nickname.errors %} aria-invalid="true"{% endif %}>
+    {% if form.nickname.errors %}<ul class="field__errors" id="{{ form.nickname.auto_id }}_error">{% for error in form.nickname.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+</div>

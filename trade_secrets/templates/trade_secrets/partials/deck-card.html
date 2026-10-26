@@ -1,13 +1,13 @@
 {% with deck=card.deck %}
 <{% if selectable %}label{% else %}div{% endif %} class="ts-deck ts-deck--{{ card.status }}{% if selectable %} ts-deck--selectable{% endif %}{% if card.is_selected %} is-locked is-selected{% endif %}"{% if card.session_deck_id %} id="ts-deck-{{ card.session_deck_id }}"{% endif %}>
   {% if selectable %}
-  <input type="checkbox" class="ts-pick-input ts-sr-only" name="deck" value="{{ card.session_deck_id }}"{% if card.is_selected %} checked data-locked{% endif %}>
+  <input type="checkbox" class="ts-pick-input sr-only" name="deck" value="{{ card.session_deck_id }}"{% if card.is_selected %} checked data-locked{% endif %}>
   {% endif %}
   <span class="ts-deck__houses">
     {% if deck.house_1 %}<img src="{{ deck.house_1.src }}" alt="" loading="lazy">{% endif %}
     {% if deck.house_2 %}<img src="{{ deck.house_2.src }}" alt="" loading="lazy">{% endif %}
     {% if deck.house_3 %}<img src="{{ deck.house_3.src }}" alt="" loading="lazy">{% endif %}
-    {% if deck.house_1 %}<span class="ts-sr-only">Houses: {{ deck.house_1.name }}{% if deck.house_2 %}, {{ deck.house_2.name }}{% endif %}{% if deck.house_3 %}, {{ deck.house_3.name }}{% endif %}</span>{% endif %}
+    {% if deck.house_1 %}<span class="sr-only">Houses: {{ deck.house_1.name }}{% if deck.house_2 %}, {{ deck.house_2.name }}{% endif %}{% if deck.house_3 %}, {{ deck.house_3.name }}{% endif %}</span>{% endif %}
   </span>
   <span class="ts-deck__body">
     <span class="ts-deck__name" title="{{ deck.name }}">{{ deck.name|default:deck.id }}</span>
@@ -19,7 +19,7 @@
       </span>
       {% if card.badges %}
       <span class="ts-deck__mini-badges">
-        {% for badge in card.badges %}<span class="ts-mini-badge ts-status--{{ badge.kind }}" title="{{ badge.label }}" aria-label="{{ badge.label }}">{% include 'trade_secrets/partials/icon.html' with name=badge.icon %}{% if badge.short_label %}<span aria-hidden="true">{{ badge.short_label }}</span>{% endif %}</span>{% endfor %}
+        {% for badge in card.badges %}<span class="badge badge--small ts-status--{{ badge.kind }}" title="{{ badge.label }}" aria-label="{{ badge.label }}">{% include "components/icon.html" with name=badge.icon %}{% if badge.short_label %}<span aria-hidden="true">{{ badge.short_label }}</span>{% endif %}</span>{% endfor %}
       </span>
       {% endif %}
     </span>
@@ -27,7 +27,7 @@
   <span class="ts-deck__aside">
     {% if card.badges %}
     <span class="ts-deck__badges">
-      {% for badge in card.badges %}<span class="ts-status ts-status--{{ badge.kind }}">{% include 'trade_secrets/partials/icon.html' with name=badge.icon %}{{ badge.label }}</span>{% endfor %}
+      {% for badge in card.badges %}<span class="badge ts-status--{{ badge.kind }}">{% include "components/icon.html" with name=badge.icon %}{{ badge.label }}</span>{% endfor %}
     </span>
     {% endif %}
     {% if selectable %}<span class="ts-deck__pick-hint" aria-hidden="true"></span>{% endif %}

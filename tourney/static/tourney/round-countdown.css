@@ -1,31 +1,27 @@
 .round-countdown-container {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
   text-align: center;
-  margin: 0.9375rem 0;
-  padding: 0.625rem;
-  background-color: var(--color-bg-secondary, #f5f5f5);
-  border-radius: 0.3125rem;
 }
 
 .round-countdown-label {
-  font-size: 0.5625rem;
-  color: var(--color-text-muted, #666);
-  margin-bottom: 0.3125rem;
-  text-transform: uppercase;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
   letter-spacing: 0.05em;
-}
-
-.round-countdown {
-  display: inline-block;
+  text-transform: uppercase;
 }
 
 .countdown-display {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 1.25rem;
-  font-weight: bold;
-  color: var(--color-primary, #2563eb);
+  color: var(--color-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
   letter-spacing: 0.1em;
 }
 
 .countdown-display.countdown-expired {
-  color: var(--color-danger, #dc2626);
+  color: var(--color-danger);
 }

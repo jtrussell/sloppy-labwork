@@ -12,8 +12,11 @@
     {% if active_result_form %}
     <link rel="stylesheet" href="{% static 'ghostform/main.css' %}">
     {% endif %}
-    <h1>{{ tournament.name }}</h1>
+    <header class="page-header">
+        <h1>{{ tournament.name }}</h1>
+    </header>
 
+    <div class="stack stack--md tournament-header">
     {% if tournament.description %}
         <section>{{ tournament.description | markdown | safe }}</section>
     {% endif %}
@@ -37,118 +40,75 @@
     </div>
     {% endif %}
 
-    <!-- Pending Matches for Current User -->
     {% include "tourney/partials/my-pending-matches.html" %}
 
-    <!-- Tab Navigation -->
-    <nav>
-        <ul class="nav short">
-            <li class="nav__item">
-                <a href="{% url 'tourney:tourney-detail-matches' tournament.code %}{{ pod_query_string }}"
-                class="nav__link {% if current_tab == 'matches' %}nav__link--active{% endif %}">
-                    Matches
-                </a>
-            </li>
-            <li class="nav__item">
-                <a href="{% url 'tourney:tourney-detail-standings' tournament.code %}{{ pod_query_string }}"
-                class="nav__link {% if current_tab == 'standings' %}nav__link--active{% endif %}">
-                    Standings
-                </a>
-            </li>
+    <nav aria-label="Tournament">
+        <ul class="tabs tabs--center">
+            <li><a href="{% url 'tourney:tourney-detail-matches' tournament.code %}{{ pod_query_string }}" class="tabs__link"{% if current_tab == 'matches' %} aria-current="page"{% endif %}>Matches</a></li>
+            <li><a href="{% url 'tourney:tourney-detail-standings' tournament.code %}{{ pod_query_string }}" class="tabs__link"{% if current_tab == 'standings' %} aria-current="page"{% endif %}>Standings</a></li>
             {% if is_admin %}
-            <li class="nav__item">
-                <a href="{% url 'tourney:tourney-tournament-detail-admin' tournament.code %}"
-                class="nav__link {% if current_tab == 'admin' %}nav__link--active{% endif %}">
-                    Admin
-                </a>
-            </li>
+            <li><a href="{% url 'tourney:tourney-tournament-detail-admin' tournament.code %}" class="tabs__link"{% if current_tab == 'admin' %} aria-current="page"{% endif %}>Admin</a></li>
             {% endif %}
         </ul>
     </nav>
+    </div>
 
     {% block tab_content %}
     {% endblock %}
 
     {% include 'tourney/partials/report-dialog.html' %}
 
-    <!-- Add Match Modal -->
-    <div id="addMatchModal" class="modal"
+    <dialog id="addMatchModal" class="dialog" aria-labelledby="addMatchModalTitle"
          data-add-match-url="{% url 'tourney:tourney-add-match' tournament.code %}"
          data-unmatched-players="{{ unmatched_players_json|default:"[]" }}"
          data-is-admin="{{ is_admin|yesno:"true,false" }}"
          data-current-user-id="{{ user.id|default:"null" }}">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="addMatchModalTitle" class="modal-title">Add Match</h3>
-                <button class="modal-close" onclick="closeAddMatchModal()"></button>
-            </div>
-
-            <p class="text-muted">You may only create matches for players not currently matched in the current round.{% if current_stage_has_pods %} Players can only be matched within their pod.{% endif %}</p>
-
-            <form id="addMatchForm" class="form-wide">
-                {% csrf_token %}
-                <div>
-                    <label for="addMatchPlayerOne">Player One:</label>
+        {% include "components/dialog-header.html" with title="Add Match" title_id="addMatchModalTitle" %}
+        <form id="addMatchForm">
+            {% csrf_token %}
+            <div class="dialog__body">
+                <p class="text-muted">You may only create matches for players not currently matched in the current round.{% if current_stage_has_pods %} Players can only be matched within their pod.{% endif %}</p>
+                <div class="field">
+                    <label class="field__label" for="addMatchPlayerOne">Player one</label>
                     <select id="addMatchPlayerOne" name="player_one" required>
                         <option value="">Select Player One</option>
                     </select>
                 </div>
-
-                <div>
-                    <label for="addMatchPlayerTwo">Player Two:</label>
+                <div class="field">
+                    <label class="field__label" for="addMatchPlayerTwo">Player two</label>
                     <select id="addMatchPlayerTwo" name="player_two">
                         <option value="">Select Player Two (Bye)</option>
                     </select>
                 </div>
-
-                <div class="modal-actions">
-                    <button type="submit" class="button button-primary">Create Match</button>
-                    <button type="button" class="button" onclick="closeAddMatchModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
+            </div>
+            <div class="dialog__footer">
+                <button type="button" class="button" data-dialog-close>Cancel</button>
+                <button type="submit" class="button button-primary">Create Match</button>
+            </div>
+        </form>
+    </dialog>
 
     {% if is_admin %}
-    <!-- Start Timer Modal -->
-    <div id="startTimerModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 class="modal-title">Start Timer</h3>
-                <button class="modal-close" onclick="closeStartTimerModal()"></button>
-            </div>
-
-            <form method="post" action="{% url 'tourney:tourney-create-timer' tournament.code %}" class="form-wide">
-                {% csrf_token %}
-                <div>
-                    <label for="timerMinutes">Timer Length (minutes):</label>
+    <dialog id="startTimerModal" class="dialog" aria-labelledby="startTimerModalTitle">
+        {% include "components/dialog-header.html" with title="Start Timer" title_id="startTimerModalTitle" %}
+        <form method="post" action="{% url 'tourney:tourney-create-timer' tournament.code %}">
+            {% csrf_token %}
+            <div class="dialog__body">
+                <div class="field">
+                    <label class="field__label" for="timerMinutes">Timer length (minutes)<span class="field__required" aria-hidden="true">*</span></label>
                     <input type="number" id="timerMinutes" name="minutes" min="1" required value="{{ default_timer_minutes }}">
                 </div>
-
-                <div>
-                    <label for="timerName">Timer Name (optional):</label>
+                <div class="field">
+                    <label class="field__label" for="timerName">Timer name</label>
                     <input type="text" id="timerName" name="name" placeholder="{{ default_timer_name }}" value="">
                 </div>
-
-                <div class="modal-actions">
-                    <button type="submit" class="button button-primary">Start Timer</button>
-                    <button type="button" class="button" onclick="closeStartTimerModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <script>
-        function openStartTimerModal() {
-            document.getElementById('startTimerModal').classList.add('modal--active');
-        }
-        function closeStartTimerModal() {
-            document.getElementById('startTimerModal').classList.remove('modal--active');
-        }
-        document.getElementById('startTimerModal').addEventListener('click', function(e) {
-            if (e.target === this) closeStartTimerModal();
-        });
-    </script>
+            </div>
+            <div class="dialog__footer">
+                <button type="button" class="button" data-dialog-close>Cancel</button>
+                <button type="submit" class="button button-primary">Start Timer</button>
+            </div>
+        </form>
+    </dialog>
     {% endif %}
 
     <script src="{% static 'tourney/tournament-modals.js' %}"></script>

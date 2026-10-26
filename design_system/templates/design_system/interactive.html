@@ -1,0 +1,84 @@
+{% extends "design_system/_base.html" %}
+{% load design_system_extras %}
+
+{% block gallery_content %}
+<section>
+  <h2>Switch</h2>
+  <p class="ds-lede">An on/off setting that applies immediately. It's a real checkbox, so it submits with forms and works with the keyboard.</p>
+  {% ds_example themed %}
+  <div class="stack stack--sm">
+    <label class="switch"><input type="checkbox" role="switch" checked><span class="switch__track"></span> Use strength of schedule</label>
+    <label class="switch"><input type="checkbox" role="switch"><span class="switch__track"></span> Allow late registration</label>
+    <label class="switch"><input type="checkbox" role="switch" disabled><span class="switch__track"></span> Locked setting</label>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Sortable list</h2>
+  <p>Drag-to-reorder items. Pair with Alpine's sort plugin (<code>x-sort</code>, <code>x-sort:item</code>, <code>x-sort:handle</code>) and set <code>ghostClass: 'is-dragging'</code>.</p>
+  {% ds_example themed %}
+  <ol class="sortable">
+    <li class="sortable__item"><span class="sortable__handle" aria-hidden="true">&#10303;</span><div class="sortable__content">Player A</div></li>
+    <li class="sortable__item is-dragging"><span class="sortable__handle" aria-hidden="true">&#10303;</span><div class="sortable__content">Player B (dragging)</div></li>
+    <li class="sortable__item"><span class="sortable__handle" aria-hidden="true">&#10303;</span><div class="sortable__content">Player C</div></li>
+  </ol>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Copy and share</h2>
+  <p>Load <code>js/copy.js</code>. A button with <code>data-copy-text</code> copies that text; <code>data-copy-from</code> copies the value of the matching input and reveals it if the clipboard is unavailable. Buttons with <code>data-share-url</code> start hidden and appear only where the Web Share API exists.</p>
+  {% ds_example %}
+  <div class="cluster">
+    <button type="button" class="button" data-copy-text="https://sloppylabwork.com/trade-secrets/ts_ABC123/">{% include "components/icon.html" with name="copy" %} <span data-copy-label>Copy invite link</span></button>
+    <button type="button" class="button" data-share-url="https://sloppylabwork.com/trade-secrets/ts_ABC123/" data-share-title="Join my match" hidden>{% include "components/icon.html" with name="share" %} Share</button>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Action menu</h2>
+  <p>A kebab button that reveals a short list of actions. Reach for it when a row or page header has three or more actions, or when actions share a line with a title that can grow. Keep one obvious primary action visible outside the menu when there is one.</p>
+  <p>It's a native <code>&lt;details&gt;</code>, so it opens without script. <code>js/action-menu.js</code> (loaded by <code>page.html</code>) closes it on an outside press, after an item is chosen, and on <kbd>Escape</kbd>; inside a dialog, <kbd>Escape</kbd> closes the menu before the dialog. Give the trigger an <code>aria-label</code> naming what the actions apply to. The trigger is <code>.action-menu__trigger</code>: borderless until hovered, focused or open. Items are links or submit buttons with <code>.action-menu__item</code>; add <code>--danger</code> for destructive ones and separate them with <code>.action-menu__divider</code>. The list opens below and right-aligned; use <code>.action-menu--start</code> to left-align and <code>.action-menu--up</code> to open upward (e.g. in a dialog footer). It can't escape an <code>overflow</code> container such as <code>.table-scroll</code>.</p>
+  {% ds_example themed %}
+  <div class="cluster cluster--between">
+    <strong>Fancy Pants Lineup</strong>
+    <details class="action-menu">
+      <summary class="action-menu__trigger" aria-label="Lineup actions">{% include "components/icon.html" with name="more" %}</summary>
+      <ul class="action-menu__list">
+        <li><a href="#" class="action-menu__item">Edit lineup</a></li>
+        <li><button type="button" class="action-menu__item">New version</button></li>
+        <li class="action-menu__divider" role="separator"></li>
+        <li><button type="button" class="action-menu__item action-menu__item--danger">Delete lineup</button></li>
+      </ul>
+    </details>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Action bar</h2>
+  <p>A sticky bar at the bottom of the viewport for the primary action of a multi-step flow.</p>
+  {% ds_example no_markup %}
+  <div class="action-bar">
+    <p class="action-bar__status">2 of 3 decks picked</p>
+    <button type="button" class="button button-primary">Lock in picks</button>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Icons</h2>
+  <p>Include <code>components/icon-sprite.html</code> once per page, then reference icons by name. Icons are decorative unless you pass a <code>label</code>.</p>
+  <pre><code>{% verbatim %}{% include "components/icon.html" with name="check" %}
+{% include "components/icon.html" with name="alert" label="Blocked" class_name="icon--lg" %}{% endverbatim %}</code></pre>
+  {% ds_example themed no_markup %}
+  <div class="cluster">
+    {% for name in "deck ban shield swap play lock check eye alert copy dash share close more"|split %}
+    <span class="cluster cluster--xs">{% include "components/icon.html" with name=name %}<span class="ds-token">{{ name }}</span></span>
+    {% endfor %}
+  </div>
+  {% end_ds_example %}
+</section>
+{% endblock %}

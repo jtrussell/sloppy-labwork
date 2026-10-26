@@ -6,12 +6,12 @@
 {% endblock %}
 
 {% block content %}
-<section>
-    {% include 'timekeeper/timer-with-controls.html' %}
-</section>
+<header class="page-header">
+    <a href="{% url 'timekeeper:timer_create' %}" class="back-link">My Timers</a>
+</header>
 
 <section>
-    <p><a href="{% url 'timekeeper:timer_create' %}">&larr; My Timers</a></p>
+    {% include 'timekeeper/timer-with-controls.html' %}
 </section>
 {% endblock %}
 

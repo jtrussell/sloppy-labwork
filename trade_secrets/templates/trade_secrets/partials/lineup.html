@@ -11,7 +11,7 @@
     {% if lineup.facedown_count %}
     <ul class="ts-lineup__list" role="list">
       {% for slot in lineup.facedown_slots %}
-      <li><div class="ts-deck ts-deck--facedown">{% include 'trade_secrets/partials/icon.html' with name='lock' class_name='ts-deck__lock' %}<span class="ts-deck__body"><span class="ts-deck__name">Hidden deck</span></span></div></li>
+      <li><div class="ts-deck ts-deck--facedown">{% include "components/icon.html" with name='lock' class_name='ts-deck__lock' %}<span class="ts-deck__body"><span class="ts-deck__name">Hidden deck</span></span></div></li>
       {% endfor %}
     </ul>
     {% else %}
@@ -25,7 +25,7 @@
     <li class="ts-lineup__empty">No decks submitted yet.</li>
     {% endfor %}
     {% for ghost in lineup.ghosts %}
-    <li class="ts-ghost">{% include 'trade_secrets/partials/icon.html' with name='swap' %}<span class="ts-ghost__name">{{ ghost.deck.name }}</span><span class="ts-ghost__by">stolen by {{ ghost.taken_by }}</span></li>
+    <li class="ts-ghost">{% include "components/icon.html" with name='swap' %}<span class="ts-ghost__name">{{ ghost.deck.name }}</span><span class="ts-ghost__by">stolen by {{ ghost.taken_by }}</span></li>
     {% endfor %}
   </ul>
   {% endif %}

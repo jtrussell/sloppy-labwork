@@ -1,5 +1,4 @@
 (function () {
-  const COPIED_LABEL_DURATION_MS = 2000
   const selectionOrderByForm = new WeakMap()
 
   function checkedPickInputs(form) {
@@ -83,46 +82,6 @@
     refreshPickForm(form)
   }
 
-  function flashCopied(button) {
-    const label = button.querySelector('[data-copy-label]') || button
-    const originalText = label.dataset.originalText || label.textContent
-    label.dataset.originalText = originalText
-    label.textContent = 'Copied!'
-    setTimeout(function () {
-      label.textContent = originalText
-    }, COPIED_LABEL_DURATION_MS)
-  }
-
-  function revealCopySource(button) {
-    const source = button.dataset.copyFrom && document.querySelector(button.dataset.copyFrom)
-    if (source) {
-      source.hidden = false
-      source.select()
-    }
-  }
-
-  function handleCopy(button) {
-    const source = button.dataset.copyFrom && document.querySelector(button.dataset.copyFrom)
-    const text = source ? source.value : button.dataset.copyText
-    if (!navigator.clipboard) {
-      revealCopySource(button)
-      return
-    }
-    navigator.clipboard.writeText(text)
-      .then(() => flashCopied(button))
-      .catch(() => revealCopySource(button))
-  }
-
-  function handleShare(button) {
-    navigator.share({ title: button.dataset.shareTitle, url: button.dataset.shareUrl }).catch(() => {})
-  }
-
-  function closeDialog() {
-    const dialog = document.getElementById('ts-dialog')
-    if (dialog && dialog.open) {
-      dialog.close()
-    }
-  }
 
   function readSeenRevealCount(key) {
     try {
@@ -158,56 +117,21 @@
   }
 
   function initialize(scope) {
-    scope.querySelectorAll('.ts-rail').forEach(centerCurrentRailStep)
+    scope.querySelectorAll('.step-rail').forEach(centerCurrentRailStep)
     scope.querySelectorAll('#ts-board').forEach(markFreshReveal)
     scope.querySelectorAll('.ts-pick-form').forEach(refreshPickForm)
-    if (navigator.share) {
-      scope.querySelectorAll('[data-share-url]').forEach(button => { button.hidden = false })
-    }
   }
 
   document.addEventListener('click', function (event) {
     const pickInput = event.target.closest('.ts-pick-input')
     if (pickInput && event.target === pickInput) {
       handlePickTap(pickInput, event)
-      return
-    }
-    const copyButton = event.target.closest('[data-copy-text], [data-copy-from]')
-    if (copyButton) {
-      handleCopy(copyButton)
-      return
-    }
-    const shareButton = event.target.closest('[data-share-url]')
-    if (shareButton && navigator.share) {
-      handleShare(shareButton)
-      return
-    }
-    if (event.target.closest('[data-close-dialog]') && event.target.closest('#ts-dialog')) {
-      event.preventDefault()
-      closeDialog()
-      return
-    }
-    if (event.target.id === 'ts-dialog') {
-      closeDialog()
     }
   })
 
   document.addEventListener('focusin', function (event) {
     if (event.target.matches('[data-select-on-focus]')) {
       event.target.select()
-    }
-  })
-
-  document.addEventListener('htmx:afterSwap', function (event) {
-    const target = event.detail.target
-    if (target.id === 'ts-dialog') {
-      if (!target.open) {
-        target.showModal()
-      }
-      return
-    }
-    if (event.detail.requestConfig && event.detail.requestConfig.elt.closest('#ts-dialog')) {
-      closeDialog()
     }
   })
 

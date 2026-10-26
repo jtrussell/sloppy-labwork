@@ -1,0 +1,58 @@
+{% extends "design_system/_base.html" %}
+{% load design_system_extras %}
+
+{% block gallery_content %}
+<section>
+  <h2>How themes are applied</h2>
+  <p>A player's theme is stored on their profile and rendered as <code>data-theme</code> on <code>&lt;html&gt;</code>. Each theme is a block in <code>tokens.css</code> that redefines the themeable tokens; everything else reads those tokens and follows along.</p>
+  <table class="ds-token-table">
+    <thead>
+      <tr><th><code>data-theme</code></th><th>Theme</th></tr>
+    </thead>
+    <tbody>
+      {% for value, label in themes %}
+      <tr><td class="ds-token">{{ value }}</td><td>{{ label }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p>Because theme blocks match <code>[data-theme]</code> on any element, a theme can be scoped to part of a page — that's how the side-by-side examples in this gallery work. A scoped region needs its own background; its text color follows the theme automatically.</p>
+  {% ds_example %}
+  <div data-theme="1" class="surface ds-demo-panel">
+    <p>This panel always renders in the Light theme.</p>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Rules</h2>
+  <ol class="ds-rules">
+    <li>Components reference semantic tokens only. No hex, rgb or named colors outside <code>tokens.css</code>.</li>
+    <li>Tints are mixed with <code>color-mix()</code> from a semantic token or <code>currentColor</code> using <code>--tint-subtle</code> / <code>--tint-strong</code>.</li>
+    <li>Every theme block defines the complete themeable set — color, tint, link and shadow tokens. A test in <code>design_system/tests.py</code> enforces this.</li>
+    <li>Tokens built from other themeable tokens go in the derived block at the end of <code>tokens.css</code>, so they recompute inside each theme scope.</li>
+    <li>Contrast themes underline links and drop tints to <code>0%</code>; state must be readable from borders and text alone.</li>
+    <li>Every page shell sets <code>data-theme</code> and loads <code>site.css</code>.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>Adding a theme</h2>
+  <ol class="ds-rules">
+    <li>Add a choice to <code>UserProfile.ThemeOptions</code>.</li>
+    <li>Copy an existing <code>[data-theme="N"]</code> block in <code>tokens.css</code> with the new number and set every value.</li>
+    <li>Check text, muted text and status colors against <code>--color-bg</code> and <code>--color-surface</code> (4.5:1 for text).</li>
+    <li>Run the design system tests and review every gallery page in the new theme.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>Derived tokens</h2>
+  <table class="ds-token-table">
+    <tbody>
+      {% for token in derived_tokens %}
+      <tr><td><span class="ds-token">{{ token.name }}</span></td><td class="ds-token">{{ token.value }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

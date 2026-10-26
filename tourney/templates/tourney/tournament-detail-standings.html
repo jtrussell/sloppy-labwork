@@ -4,7 +4,7 @@
 <div id="tournament-content">
     {% if not user.is_authenticated and not tournament.is_public %}
         <section>
-            <p class="text-muted" style="text-align: center; font-style: italic;">
+            <p class="text-muted text-center">
                 Please log in to view tournament standings and player details.
             </p>
         </section>
@@ -14,11 +14,11 @@
         <section>
             {% if standings %}
                 <h2>{% if selected_pod %}{{ selected_pod.name }} Standings{% else %}Tournament Standings{% endif %}</h2>
-                <div style="overflow-x: auto">
+                <div class="table-scroll">
                     <table class="standings-table">
                         <thead>
                             <tr>
-                                <th style="max-width: 35px; text-align: center;">#</th>
+                                <th class="text-center">#</th>
                                 <th>Player</th>
                                 {% if show_pod_column %}<th>Pod</th>{% endif %}
                                 <th>W-L (B)</th>
@@ -33,7 +33,7 @@
                         <tbody>
                             {% for standing in standings %}
                             <tr{% if standing.is_dropped %} class="text-muted"{% endif %}>
-                                <td style="text-align:center" class="text-muted"><strong>{{ standing.tournament_rank }}</strong></td>
+                                <td class="text-muted text-center"><strong>{{ standing.tournament_rank }}</strong></td>
                                 <td>
                                     {{ standing.player.get_display_name }}
                                     {% if standing.is_dropped %}

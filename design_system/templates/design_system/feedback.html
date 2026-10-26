@@ -1,0 +1,75 @@
+{% extends "design_system/_base.html" %}
+{% load design_system_extras %}
+
+{% block gallery_content %}
+<section>
+  <h2>Notes</h2>
+  <p class="ds-lede">Short, page-level feedback. Django messages render as notes through <code>components/messages.html</code>.</p>
+  {% ds_example themed %}
+  <div class="stack stack--sm">
+    <div class="note">Registration closes at noon.</div>
+    <div class="note note--info">Pairings for round 2 are posted.</div>
+    <div class="note note--success">Lineup saved.</div>
+    <div class="note note--warning">This deck is missing a house.</div>
+    <div class="note note--danger">We couldn't save your changes.</div>
+  </div>
+  {% end_ds_example %}
+  <p><code>.note-danger</code> is the original name of <code>.note--danger</code>; both render the same, prefer the new one.</p>
+</section>
+
+<section>
+  <h2>Callouts</h2>
+  <p>Longer guidance that sits within the page content, such as instructions for the current step.</p>
+  {% ds_example themed %}
+  <div class="stack stack--sm">
+    <div class="callout callout--accent">
+      <p class="callout__title">Step 2 of 5</p>
+      <p>Choose one deck for your opponent to ban.</p>
+    </div>
+    <div class="callout callout--danger">
+      <p class="callout__title">Blocked</p>
+      <p>Waiting for your opponent to submit their lineup.</p>
+    </div>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Badges</h2>
+  <p>Compact status labels. Badges take their border from the text color, so tones follow the theme. <code>.badge--subtle</code> is deliberately low-contrast; don't use it for information people need to read.</p>
+  {% ds_example themed %}
+  <div class="cluster cluster--xs">
+    <span class="badge">Draft</span>
+    <span class="badge badge--accent">Standard</span>
+    <span class="badge badge--success">Safe</span>
+    <span class="badge badge--warning">Pending</span>
+    <span class="badge badge--danger">Banned</span>
+    <span class="badge badge--highlight">Stolen</span>
+    <span class="badge badge--subtle">Ineligible</span>
+    <span class="badge badge--accent badge--dashed">Game</span>
+    <span class="badge badge--success badge--tinted">Tinted</span>
+    <span class="badge badge--small badge--info">{% include "components/icon.html" with name="eye" %} Public</span>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Empty states</h2>
+  <pre><code>{% verbatim %}{% include "components/empty-state.html" with message="No lineups yet." action_url=create_url action_label="Create a lineup" action_is_primary=True %}{% endverbatim %}</code></pre>
+  {% ds_example themed %}
+  {% include "components/empty-state.html" with message="No lineups yet." action_url="#" action_label="Create a lineup" action_is_primary=True %}
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Loading</h2>
+  <p>Pair <code>.loading-text</code> with htmx's <code>.htmx-indicator</code> class for request feedback, and use <code>.skeleton</code> blocks as placeholders for content that's on its way. Skeletons stop pulsing for people who prefer reduced motion.</p>
+  {% ds_example themed %}
+  <div class="stack stack--sm">
+    <span class="loading-text">Loading pairings…</span>
+    <span class="skeleton"></span>
+    <span class="skeleton ds-short"></span>
+  </div>
+  {% end_ds_example %}
+</section>
+{% endblock %}

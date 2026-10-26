@@ -8,41 +8,49 @@
 {% endblock %}
 
 {% block content %}
-{% include 'trade_secrets/partials/icons.html' %}
-<h1>Trade Secrets</h1>
-<div class="subheading">The most precious crumble recipe</div>
-<p class="ts-lede">Pick a format, share the link, and make your bans, safes, steals, and game picks in secret. Nothing is revealed until you have both locked in.</p>
+<header class="page-header">
+  <h1>Trade Secrets</h1>
+  <div class="subheading">The most precious crumble recipe</div>
+</header>
 
-<h2 class="ts-section-title">Start a session</h2>
-<ul class="ts-template-list" role="list">
-  {% for card in system_templates %}
-  <li>{% include 'trade_secrets/partials/template-card.html' %}</li>
-  {% endfor %}
-</ul>
+<div class="stack stack--xl">
+  <p class="ts-lede">Pick a format, share the link, and make your bans, safes, steals, and game picks in secret. Nothing is revealed until you have both locked in.</p>
 
-{% if user.is_authenticated %}
-<div class="ts-section-heading">
-  <h2 class="ts-section-title">Your templates</h2>
-  <a href="{% url 'trade_secrets:template-create' %}" class="button button-link button-link-bordered">New template</a>
+  <section class="stack stack--md">
+    <h2 class="ts-section-title">Start a session</h2>
+    <ul class="ts-template-list" role="list">
+      {% for card in system_templates %}
+      <li>{% include 'trade_secrets/partials/template-card.html' %}</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {% if user.is_authenticated %}
+  <section class="stack stack--md">
+    <div class="section-header">
+      <h2 class="ts-section-title">Your templates</h2>
+      <a href="{% url 'trade_secrets:template-create' %}" class="button button-small">New template</a>
+    </div>
+    {% if own_templates %}
+    <ul class="ts-template-list" role="list">
+      {% for card in own_templates %}
+      <li>{% include 'trade_secrets/partials/template-card.html' %}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted">Make your own format: mix bans, safes, steals and games.</p>
+    {% endif %}
+    {% if archived_templates %}
+    <details class="ts-archived">
+      <summary>Archived templates ({{ archived_templates|length }})</summary>
+      <ul class="flat-list">
+        {% for template in archived_templates %}
+        <li><a href="{% url 'trade_secrets:template-detail' template.code %}">{{ template.name }}</a></li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+  </section>
+  {% endif %}
 </div>
-{% if own_templates %}
-<ul class="ts-template-list" role="list">
-  {% for card in own_templates %}
-  <li>{% include 'trade_secrets/partials/template-card.html' %}</li>
-  {% endfor %}
-</ul>
-{% else %}
-<p class="text-muted">Make your own format: mix bans, safes, steals and games.</p>
-{% endif %}
-{% if archived_templates %}
-<details class="ts-archived">
-  <summary>Archived templates ({{ archived_templates|length }})</summary>
-  <ul class="flat-list">
-    {% for template in archived_templates %}
-    <li><a href="{% url 'trade_secrets:template-detail' template.code %}">{{ template.name }}</a></li>
-    {% endfor %}
-  </ul>
-</details>
-{% endif %}
-{% endif %}
 {% endblock %}

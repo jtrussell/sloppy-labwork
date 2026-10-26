@@ -30,14 +30,9 @@ jobs:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           SECRET_KEY: ci-only-not-a-real-secret
           SITE_ID: "1"
-          MAX_UPLOADS_PER_DAY: "0"
-          AWS_S3_BUCKET_VERIFICATION_PHOTOS_BUCKET: unused
           AWS_S3_BUCKET_MV_QRCODE: unused
           ACCOUNT_DEFAULT_HTTP_PROTOCOL: https
-          FT_USE_REGISTER: "False"
-          FT_USE_RATINGS: "False"
           FT_USE_POSTS: "False"
-          FT_USE_EVENTS: "False"
           FT_USE_TOURNEYS: "False"
         run: |
           if [ -n "${{ inputs.guild_id }}" ]; then

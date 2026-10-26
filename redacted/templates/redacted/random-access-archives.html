@@ -5,17 +5,18 @@
   
   <p>Grab a random deck from a public DoK account.</p>
   
-  <form method="POST" class="form-wide">
+  <div class="stack stack--lg">
+  <form method="POST" class="stack stack--lg readable">
     {% csrf_token %}
-    {{ form }}
-    <button type="submit">
-      Let's Go
-    </button>
+    {% include "components/form-fields.html" with form=form %}
+    <div class="form-actions">
+      <button type="submit" class="button button-primary">Let's Go</button>
+    </div>
   </form>
 
   {% if is_error %}
-    <div class="alert">
-      <h2>Oops!</h2>
+    <div class="callout callout--danger">
+      <h2 class="callout__title">Oops!</h2>
       <p>We hit a snag and didn't find any decks for you. Double check your
       username and the filters above. Contact us if this error doesn't go away.</p>
     </div>
@@ -25,4 +26,5 @@
     <p><a href="{{ deck_info.url }}">{{ deck_info.name }}</a>
       with a SAS rating of {{ deck_info.sasRating }}.</p>
   {% endif %}
+  </div>
 {% endblock %}

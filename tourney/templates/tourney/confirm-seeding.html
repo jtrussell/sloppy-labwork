@@ -1,70 +1,65 @@
 {% extends 'tourney/_base.html' %}
 {% load static %}
 
-{% block extra_head %}
-    <link rel="stylesheet" href="{% static 'css/drag-drop.css' %}">
-    {{ block.super }}
-{% endblock %}
-
-{% block title %}Confirm Seeding - {{ tournament.name }}{% endblock %}
+{% block head_title %}Confirm Seeding - {{ tournament.name }}{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="page-header">
-        <h1>{% if has_pods %}Confirm Pods{% else %}Confirm Seeding{% endif %}</h1>
-        <div class="subheading">{{ next_stage.name }}</div>
-        <p class="text-muted">
-            {% if has_pods %}
-                Players have been snaked into pods by seed. Move players between pods with the pod menu or by dragging. Players only play against others in their pod.
-            {% else %}
-                Drag and drop players to adjust seeding.
-            {% endif %}
-        </p>
+<header class="page-header">
+    <a href="{% url 'tourney:tourney-detail-matches' tournament.code %}" class="back-link">{{ tournament.name }}</a>
+    <h1>{% if has_pods %}Confirm Pods{% else %}Confirm Seeding{% endif %}</h1>
+    <div class="subheading">{{ next_stage.name }}</div>
+</header>
+
+<div class="seeding-confirmation{% if has_pods %} seeding-confirmation--pods{% endif %} stack stack--md">
+    <p class="text-muted">
+        {% if has_pods %}
+            Players have been snaked into pods by seed. Move players between pods with the pod menu or by dragging. Players only play against others in their pod.
+        {% else %}
+            Drag and drop players to adjust seeding.
+        {% endif %}
+    </p>
+
+    <div class="cluster">
+        {% if has_pods %}
+        <button
+            type="button"
+            class="button"
+            hx-post="{% url 'tourney:tourney-snake-pods-by-seed' tournament.code %}"
+            hx-target="#seeding-list"
+            hx-swap="innerHTML">
+            Re-snake by Seed
+        </button>
+        {% endif %}
+        <button
+            type="button"
+            class="button"
+            hx-post="{% url 'tourney:tourney-randomize-seeding' tournament.code %}"
+            hx-target="#seeding-list"
+            hx-swap="innerHTML">
+            Randomize Seeding
+        </button>
     </div>
 
-    <div class="seeding-confirmation{% if has_pods %} seeding-confirmation--pods{% endif %}">
-        <div class="seeding-controls">
-            {% if has_pods %}
-            <button
-                type="button"
-                class="button button-secondary"
-                hx-post="{% url 'tourney:tourney-snake-pods-by-seed' tournament.code %}"
-                hx-target="#seeding-list"
-                hx-swap="innerHTML">
-                Re-snake by Seed
-            </button>
-            {% endif %}
-            <button
-                type="button"
-                class="button button-secondary"
-                hx-post="{% url 'tourney:tourney-randomize-seeding' tournament.code %}"
-                hx-target="#seeding-list"
-                hx-swap="innerHTML">
-                Randomize Seeding
-            </button>
-        </div>
-
-        <div id="seeding-list">
-            {% if has_pods %}
-                {% include 'tourney/partials/pod-assignment-list.html' %}
-            {% else %}
-                {% include 'tourney/partials/seeding-list.html' %}
-            {% endif %}
-        </div>
-
-        {% if all_players_advance %}
-            <p class="text-muted">All {{ total_players }} players will advance to {{ next_stage.name }}.</p>
+    <div id="seeding-list" class="stack stack--md">
+        {% if has_pods %}
+            {% include 'tourney/partials/pod-assignment-list.html' %}
         {% else %}
-            <p class="text-muted">The top {{ players_advancing }} of {{ total_players }} players will advance to {{ next_stage.name }}.</p>
+            {% include 'tourney/partials/seeding-list.html' %}
         {% endif %}
+    </div>
 
-        <div class="seeding-actions">
-            <a href="{% url 'tourney:tourney-detail-matches' tournament.code %}" class="button button-secondary">Cancel</a>
-            <form method="post" action="{% url 'tourney:tourney-start-next-stage' tournament.code %}" style="display: inline;">
-                {% csrf_token %}
-                <button type="submit" class="button button-primary">Start {{ next_stage.name }}</button>
-            </form>
-        </div>
+    {% if all_players_advance %}
+        <p class="text-muted">All {{ total_players }} players will advance to {{ next_stage.name }}.</p>
+    {% else %}
+        <p class="text-muted">The top {{ players_advancing }} of {{ total_players }} players will advance to {{ next_stage.name }}.</p>
+    {% endif %}
+
+    <div class="form-actions">
+        <form method="post" action="{% url 'tourney:tourney-start-next-stage' tournament.code %}">
+            {% csrf_token %}
+            <button type="submit" class="button button-primary">Start {{ next_stage.name }}</button>
+        </form>
+        <a href="{% url 'tourney:tourney-detail-matches' tournament.code %}" class="button">Cancel</a>
     </div>
 </div>
 

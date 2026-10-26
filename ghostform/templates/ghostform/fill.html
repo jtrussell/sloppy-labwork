@@ -8,30 +8,32 @@
 {% endblock %}
 
 {% block content %}
-<div class="ghostform-fill">
+<header class="page-header">
+  {% if can_edit %}<a href="{% url 'ghostform:ghostform-detail' ghostform.code %}" class="back-link">Form details</a>{% endif %}
   <h1>{{ ghostform.title }}</h1>
-  {% if can_edit %}
-  <div class="subheading"><a href="{% url 'ghostform:ghostform-detail' ghostform.code %}">&larr; Back to form details</a></div>
-  {% endif %}
+</header>
 
+<div class="stack stack--lg readable">
   {% if ghostform.description %}
   <div class="ghostform-description">{{ ghostform.description|linebreaks }}</div>
   {% endif %}
 
   {% if is_preview %}
-  <div class="note"><p>Preview. Publish this form to start accepting responses.</p></div>
+  <div class="note note--info">Preview. Publish this form to start accepting responses.</div>
   {% elif not ghostform.is_accepting_responses %}
-  <div class="note"><p>This form is no longer accepting responses.</p></div>
+  <div class="note">This form is no longer accepting responses.</div>
   {% endif %}
 
   {% if ghostform.is_accepting_responses or is_preview %}
-  <form method="post" class="ghostform-response-form">
+  <form method="post" class="stack stack--lg ghostform-response-form">
     {% csrf_token %}
     {% if response_form.non_field_errors %}
-    <div class="ghostform-errors">{{ response_form.non_field_errors|join:" " }}</div>
+    <ul class="form-errors" role="alert">{% for error in response_form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
     {% endif %}
-    {% include 'ghostform/partials/response-fields.html' %}
-    <div class="ghostform-actions">
+    <div class="stack stack--md">
+      {% include 'ghostform/partials/response-fields.html' %}
+    </div>
+    <div class="form-actions">
       <button type="submit" class="button button-primary"{% if is_preview %} disabled{% endif %}>Submit</button>
     </div>
   </form>

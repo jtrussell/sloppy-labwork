@@ -8,122 +8,124 @@
 {% endblock %}
 
 {% block content %}
-<h1>{{ ghostform.title }}</h1>
-<div class="subheading">
-  {% if can_edit %}<a href="{% url 'ghostform:ghostform-list' %}">&larr; My Forms</a> • {% endif %}
-  <span class="ghostform-status ghostform-status--{{ ghostform.status }}">{{ ghostform.get_status_display }}</span>
-</div>
-
-{% if ghostform.description %}
-<div class="ghostform-description">{{ ghostform.description|linebreaks }}</div>
-{% endif %}
-
-<section>
-  <h2>Responses</h2>
-  <ul class="inline-list">
-    <li>{{ response_count }} response{{ response_count|pluralize }}</li>
-    {% if latest_response_on %}
-    <li>Latest response {{ latest_response_on|naturaltime }}</li>
-    {% endif %}
-  </ul>
-  <div class="ghostform-actions">
-    <a href="{% url 'ghostform:ghostform-responses-csv' ghostform.code %}" class="button button-primary">Download CSV</a>
+<header class="page-header">
+  {% if can_edit %}<a href="{% url 'ghostform:ghostform-list' %}" class="back-link">My Forms</a>{% endif %}
+  <div class="page-header__title-row">
+    <h1>{{ ghostform.title }}</h1>
+    {% include 'ghostform/partials/status-badge.html' %}
   </div>
-</section>
+</header>
 
-<section>
-  <h2>Share</h2>
-  {% if ghostform.status == 'published' %}
-  <p class="text-muted">Anyone with this link can fill out the form after signing in.</p>
-  {% elif ghostform.status == 'closed' %}
-  <p class="text-muted">This form is closed and is not accepting responses.</p>
-  {% else %}
-  <p class="text-muted">Publish this form to start accepting responses.</p>
+<div class="stack stack--xl">
+  {% if ghostform.description %}
+  <div class="ghostform-description">{{ ghostform.description|linebreaks }}</div>
   {% endif %}
-  <div class="ghostform-share">
-    <label for="ghostform-share-link">Link</label>
-    <input type="text" id="ghostform-share-link" readonly value="{% abs_url 'ghostform:ghostform-fill' ghostform.code %}">
-    {% if ghostform.status != 'draft' %}
-    <a href="{% url 'ghostform:ghostform-fill' ghostform.code %}" class="button">Open</a>
-    {% elif can_edit %}
-    <a href="{% url 'ghostform:ghostform-fill' ghostform.code %}" class="button">Preview</a>
-    {% endif %}
-  </div>
-</section>
 
-{% if can_edit %}
-<section>
-  <h2>Manage</h2>
-  <div class="ghostform-actions">
-    <a href="{% url 'ghostform:ghostform-edit' ghostform.code %}" class="button">Edit Form</a>
-    <form method="post" action="{% url 'ghostform:ghostform-update-status' ghostform.code %}">
-      {% csrf_token %}
-      {% if ghostform.status == 'published' %}
-      <input type="hidden" name="status" value="closed">
-      <button type="submit" class="button">Close Form</button>
-      {% elif ghostform.status == 'closed' %}
-      <input type="hidden" name="status" value="published">
-      <button type="submit" class="button button-primary">Reopen Form</button>
-      {% else %}
-      <input type="hidden" name="status" value="published">
-      <button type="submit" class="button button-primary">Publish Form</button>
+  <section class="stack stack--sm">
+    <h2>Responses</h2>
+    <ul class="inline-list">
+      <li>{{ response_count }} response{{ response_count|pluralize }}</li>
+      {% if latest_response_on %}
+      <li>Latest response {{ latest_response_on|naturaltime }}</li>
       {% endif %}
-    </form>
-  </div>
-</section>
+    </ul>
+    <div class="cluster">
+      <a href="{% url 'ghostform:ghostform-responses-csv' ghostform.code %}" class="button button-primary">Download CSV</a>
+    </div>
+  </section>
 
-<section>
-  <h2>Spreadsheet Links</h2>
-  {% if ghostform.feed_token %}
-  <p class="text-muted">Anyone with these links can read every response, no sign-in required. Use the CSV link with IMPORTDATA in Google Sheets to pull in a header row plus one row per response.</p>
-  <div class="ghostform-actions">
-    <button type="button" class="button" data-copy-link="{% abs_url 'ghostform:ghostform-responses-feed-csv' ghostform.feed_token %}">⚙️ CSV</button>
-    <button type="button" class="button" data-copy-link="{% abs_url 'ghostform:ghostform-responses-feed-xml' ghostform.feed_token %}">⚙️ XML</button>
-    <button type="button" class="button" data-copy-link="{% abs_url 'ghostform:ghostform-responses-feed-json' ghostform.feed_token %}">⚙️ JSON</button>
-    <div class="ghostform-feed-actions">
-      <form method="post" action="{% url 'ghostform:ghostform-update-feed' ghostform.code %}">
+  <section class="stack stack--sm">
+    <h2>Share</h2>
+    {% if ghostform.status == 'published' %}
+    <p class="text-muted">Anyone with this link can fill out the form after signing in.</p>
+    {% elif ghostform.status == 'closed' %}
+    <p class="text-muted">This form is closed and is not accepting responses.</p>
+    {% else %}
+    <p class="text-muted">Publish this form to start accepting responses.</p>
+    {% endif %}
+    <div class="field">
+      <label class="field__label" for="ghostform-share-link">Link</label>
+      <div class="input-with-button-group">
+        <input type="text" id="ghostform-share-link" readonly value="{% abs_url 'ghostform:ghostform-fill' ghostform.code %}">
+        {% if ghostform.status != 'draft' %}
+        <a href="{% url 'ghostform:ghostform-fill' ghostform.code %}" class="button">Open</a>
+        {% elif can_edit %}
+        <a href="{% url 'ghostform:ghostform-fill' ghostform.code %}" class="button">Preview</a>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  {% if can_edit %}
+  <section class="stack stack--sm">
+    <h2>Manage</h2>
+    <div class="cluster">
+      <a href="{% url 'ghostform:ghostform-edit' ghostform.code %}" class="button">Edit Form</a>
+      <form method="post" action="{% url 'ghostform:ghostform-update-status' ghostform.code %}">
         {% csrf_token %}
-        <input type="hidden" name="action" value="rotate">
-        <button type="submit" class="button" hx-post="{% url 'ghostform:ghostform-update-feed' ghostform.code %}" hx-confirm="Generate new links? The current links will stop working.">Rotate Links</button>
-      </form>
-      <form method="post" action="{% url 'ghostform:ghostform-update-feed' ghostform.code %}">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="disable">
-        <button type="submit" class="button" hx-post="{% url 'ghostform:ghostform-update-feed' ghostform.code %}" hx-confirm="Disable spreadsheet links? The current links will stop working.">Disable Links</button>
+        {% if ghostform.status == 'published' %}
+        <input type="hidden" name="status" value="closed">
+        <button type="submit" class="button">Close Form</button>
+        {% elif ghostform.status == 'closed' %}
+        <input type="hidden" name="status" value="published">
+        <button type="submit" class="button button-primary">Reopen Form</button>
+        {% else %}
+        <input type="hidden" name="status" value="published">
+        <button type="submit" class="button button-primary">Publish Form</button>
+        {% endif %}
       </form>
     </div>
-  </div>
-  {% else %}
-  <p class="text-muted">Generate links to pull responses into a spreadsheet. Anyone with the links can read every response, no sign-in required.</p>
-  <div class="ghostform-actions">
-    <form method="post" action="{% url 'ghostform:ghostform-update-feed' ghostform.code %}">
+  </section>
+
+  <section class="stack stack--sm">
+    <h2>Spreadsheet Links</h2>
+    {% if ghostform.feed_token %}
+    <p class="text-muted">Anyone with these links can read every response, no sign-in required. Use the CSV link with IMPORTDATA in Google Sheets to pull in a header row plus one row per response.</p>
+    <div class="cluster cluster--between">
+      <div class="cluster cluster--xs">
+        <button type="button" class="button" data-copy-text="{% abs_url 'ghostform:ghostform-responses-feed-csv' ghostform.feed_token %}"><span data-copy-label>⚙️ CSV</span></button>
+        <button type="button" class="button" data-copy-text="{% abs_url 'ghostform:ghostform-responses-feed-xml' ghostform.feed_token %}"><span data-copy-label>⚙️ XML</span></button>
+        <button type="button" class="button" data-copy-text="{% abs_url 'ghostform:ghostform-responses-feed-json' ghostform.feed_token %}"><span data-copy-label>⚙️ JSON</span></button>
+      </div>
+      <div class="cluster cluster--xs">
+        <form method="post" action="{% url 'ghostform:ghostform-update-feed' ghostform.code %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="rotate">
+          <button type="submit" class="button" hx-post="{% url 'ghostform:ghostform-update-feed' ghostform.code %}" hx-confirm="Generate new links? The current links will stop working.">Rotate Links</button>
+        </form>
+        <form method="post" action="{% url 'ghostform:ghostform-update-feed' ghostform.code %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="disable">
+          <button type="submit" class="button button-danger" hx-post="{% url 'ghostform:ghostform-update-feed' ghostform.code %}" hx-confirm="Disable spreadsheet links? The current links will stop working.">Disable Links</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted">Generate links to pull responses into a spreadsheet. Anyone with the links can read every response, no sign-in required.</p>
+    <form method="post" action="{% url 'ghostform:ghostform-update-feed' ghostform.code %}" class="cluster">
       {% csrf_token %}
       <input type="hidden" name="action" value="rotate">
       <button type="submit" class="button">Generate Links</button>
     </form>
-  </div>
+    {% endif %}
+  </section>
   {% endif %}
-</section>
-{% endif %}
 
-<section>
-  <h2>Questions</h2>
-  {% if questions %}
-  <ol class="ghostform-question-summary">
-    {% for question in questions %}
-    <li>
-      <strong>{{ question.label }}</strong>{% if question.is_required %} <span class="ghostform-required">*</span>{% endif %}
-      <span class="text-muted">· {{ question.get_answer_type_display }}{% if question.answer_type == 'multiple_choice' %} ({{ question.choices|length }} option{{ question.choices|length|pluralize }}{% if question.allows_multiple_answers %}, one or more answers{% endif %}){% endif %}</span>
-      {% if question.description %}<div class="ghostform-help">{{ question.description }}</div>{% endif %}
-    </li>
-    {% endfor %}
-  </ol>
-  {% else %}
-  <p class="ghostform-empty-message">No questions yet.</p>
-  {% endif %}
-</section>
-{% endblock %}
-
-{% block extra_body %}
-<script src="{% static 'ghostform/copy-link.js' %}"></script>
+  <section class="stack stack--sm">
+    <h2>Questions</h2>
+    {% if questions %}
+    <ol class="ghostform-question-summary">
+      {% for question in questions %}
+      <li>
+        <strong>{{ question.label }}</strong>{% if question.is_required %}<span class="field__required" aria-hidden="true">*</span><span class="sr-only"> (required)</span>{% endif %}
+        <span class="text-muted">· {{ question.get_answer_type_display }}{% if question.answer_type == 'multiple_choice' %} ({{ question.choices|length }} option{{ question.choices|length|pluralize }}{% if question.allows_multiple_answers %}, one or more answers{% endif %}){% endif %}</span>
+        {% if question.description %}<div class="field__help">{{ question.description }}</div>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <p class="text-muted">No questions yet.</p>
+    {% endif %}
+  </section>
+</div>
 {% endblock %}

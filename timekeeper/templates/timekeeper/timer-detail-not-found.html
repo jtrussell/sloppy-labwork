@@ -6,14 +6,14 @@
 {% endblock %}
 
 {% block content %}
+<header class="page-header">
+    <a href="{% url 'timekeeper:timer_create' %}" class="back-link">My Timers</a>
+</header>
+
 <section>
     <div class="timer timer--not-found">
         <div class="timer__countdown">--:--</div>
         <div class="timer__message">Timer not found or has been cancelled.</div>
     </div>
-</section>
-
-<section>
-    <p><a href="{% url 'timekeeper:timer_create' %}">&larr; My Timers</a></p>
 </section>
 {% endblock %}

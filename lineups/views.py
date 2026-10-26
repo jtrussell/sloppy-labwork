@@ -193,7 +193,7 @@ def lineup_note_edit(request, lineup_code, note_id):
         raise PermissionDenied
 
     if request.method == 'POST':
-        form = LineupNoteForm(request.POST, instance=note)
+        form = LineupNoteForm(request.POST, instance=note, auto_id=f'id_note_{note.id}_%s')
         if form.is_valid():
             form.save()
             if hasattr(request, 'htmx') and request.htmx:
@@ -211,7 +211,7 @@ def lineup_note_edit(request, lineup_code, note_id):
                 'is_owner': True,
                 'lineup': lineup,
             })
-        form = LineupNoteForm(instance=note)
+        form = LineupNoteForm(instance=note, auto_id=f'id_note_{note.id}_%s')
 
     if hasattr(request, 'htmx') and request.htmx:
         return render(request, 'lineups/partials/note-form.html', {
@@ -409,7 +409,7 @@ def version_note_edit(request, version_code, note_id):
         raise PermissionDenied
 
     if request.method == 'POST':
-        form = LineupVersionNoteForm(request.POST, instance=note)
+        form = LineupVersionNoteForm(request.POST, instance=note, auto_id=f'id_version_note_{note.id}_%s')
         if form.is_valid():
             form.save()
             if hasattr(request, 'htmx') and request.htmx:
@@ -429,7 +429,7 @@ def version_note_edit(request, version_code, note_id):
                 'lineup': lineup,
                 'version': version,
             })
-        form = LineupVersionNoteForm(instance=note)
+        form = LineupVersionNoteForm(instance=note, auto_id=f'id_version_note_{note.id}_%s')
 
     if hasattr(request, 'htmx') and request.htmx:
         return render(request, 'lineups/partials/version-note-form.html', {

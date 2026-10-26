@@ -1,40 +1,40 @@
 {% extends "page.html" %}
 
 {% block content %}
-  <h1>User Profile</h1>
+  <header class="page-header">
+    <div class="page-header__title-row">
+      <h1>User Profile</h1>
+      <form action="{% url 'account_logout' %}" method="POST" class="page-header__actions">
+        {% csrf_token %}
+        <button type="submit" class="button button-small">Sign Out</button>
+      </form>
+    </div>
+  </header>
   <p>Welcome, {{ user.get_username }}.</p>
   <p>Looking to <a href="{% url 'account_change_password' %}">change your password</a> or <a href="{% url 'socialaccount_connections' %}">manage your social connections</a>?</p>
-  <form action="{% url 'account_logout' %}" method="POST">
-    {% csrf_token %}
-    <button type="submit">
-      Sign Out
-    </button>
-  </form>
 
   <section>
     <h2>Account Details</h2>
-    <form method="POST" class="form-wide">
+    <form method="POST" class="stack stack--lg readable">
       {% csrf_token %}
-      {{ username_form }}
-      <label for="">Discord handle:</label>
-      <input type="text" value="{{ discord_handle }}" disabled=true />
-      <span class="helptext">This cannot be changed.</span>
-      {{ profile_form }}
-      <button type="submit" class="button-primary">
-        Submit
-      </button>
+      <div class="stack stack--md">
+        {% include "components/form-fields.html" with form=username_form %}
+        <div class="field">
+          <label class="field__label" for="discord-handle">Discord handle</label>
+          <div class="field__help" id="discord-handle-help">This cannot be changed.</div>
+          <input type="text" id="discord-handle" value="{{ discord_handle }}" aria-describedby="discord-handle-help" disabled>
+        </div>
+        {% include "components/form-fields.html" with form=profile_form %}
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="button button-primary">Save</button>
+      </div>
     </form>
   </section>
 
   <section>
     <h2>Danger Zone</h2>
-    <p>Deleting your account is a permanent action that cannot be undone.
-    Deleting your account will result in all associated registrations being
-    deleted as well.</p>
-    <form action="#">
-      <a href="javascript:alert('Not yet implemented')" class="button">
-        Delete Account
-      </a>
-    </form>
+    <p>Deleting your account is a permanent action that cannot be undone.</p>
+    <a href="javascript:alert('Not yet implemented')" class="button button-danger">Delete Account</a>
   </section>
 {% endblock %}

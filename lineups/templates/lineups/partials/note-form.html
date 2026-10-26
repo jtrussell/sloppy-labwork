@@ -1,10 +1,10 @@
-<div class="note-item note-item--editing surface surface--flat" id="note-{{ note.id }}">
-  <form method="post" action="{% url 'lineups-note-edit' lineup.code note.id %}" hx-post="{% url 'lineups-note-edit' lineup.code note.id %}" hx-target="#note-{{ note.id }}" hx-swap="outerHTML">
+<li class="card" id="note-{{ note.id }}">
+  <form method="post" action="{% url 'lineups-note-edit' lineup.code note.id %}" hx-post="{% url 'lineups-note-edit' lineup.code note.id %}" hx-target="#note-{{ note.id }}" hx-swap="outerHTML" class="stack stack--sm">
     {% csrf_token %}
-    {{ form.text }}
-    <div class="note-form-actions">
-      <button type="submit" class="button button-primary button-small">Save</button>
+    {% include "components/field.html" with field=form.text %}
+    <div class="form-actions form-actions--end">
       <button type="button" class="button button-small" hx-get="{% url 'lineups-note-edit' lineup.code note.id %}" hx-target="#note-{{ note.id }}" hx-swap="outerHTML" hx-vals='{"cancel": "true"}'>Cancel</button>
+      <button type="submit" class="button button-primary button-small">Save</button>
     </div>
   </form>
-</div>
+</li>

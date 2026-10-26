@@ -1,18 +1,6 @@
-.posts-detail__title {
-  margin-bottom: 0.3125rem;
-}
-
-.posts-detail__item-meta {
-  color: #ccc;
-}
-
-.posts-detail__content {
-  margin-top: 1.5625rem;
-}
-
 .posts-detail__content img:only-child {
+  display: block;
   max-width: 100%;
   max-height: 400px;
   margin: 0 auto;
-  display: block;
 }

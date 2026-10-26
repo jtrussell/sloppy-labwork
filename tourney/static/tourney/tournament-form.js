@@ -5,7 +5,7 @@ function setupPlayoffToggle(checkboxSelector, targetSelector) {
     if (!checkbox || !target) return;
 
     function updateVisibility() {
-        target.style.display = checkbox.checked ? 'block' : 'none';
+        target.hidden = !checkbox.checked;
     }
 
     updateVisibility();

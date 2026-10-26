@@ -1,0 +1,93 @@
+{% extends "design_system/_base.html" %}
+{% load design_system_extras %}
+
+{% block gallery_content %}
+<section>
+  <h2>List page</h2>
+  <p class="ds-lede">Page header with the create action, a search, the results as a card list, then pagination. Show an empty state instead of the list when there are no results.</p>
+  {% ds_example %}
+  <div class="stack stack--lg">
+    <header class="page-header">
+      <div class="page-header__title-row">
+        <h1>Lineups</h1>
+        <div class="page-header__actions"><a href="#" class="button button-primary">New lineup</a></div>
+      </div>
+    </header>
+    <form class="input-with-button-group" role="search">
+      <input type="search" placeholder="Search lineups" aria-label="Search lineups">
+      <button type="button" class="button">Search</button>
+    </form>
+    <ul class="card-list">
+      <li class="card card--interactive">
+        <h3 class="card__title"><a href="#">Spring Vault Tour</a></h3>
+        <p class="card__meta">Archon · 3 decks</p>
+      </li>
+      <li class="card card--interactive">
+        <h3 class="card__title"><a href="#">Casual night</a></h3>
+        <p class="card__meta">Sealed · 1 deck</p>
+      </li>
+    </ul>
+    {% include "components/pagination.html" with page_obj=demo_page %}
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Detail page</h2>
+  <p>Back link, title and actions, tabs for alternate views, key facts in a detail list, then sections with their own headers.</p>
+  {% ds_example %}
+  <div class="stack stack--lg">
+    <header class="page-header">
+      <a href="#" class="back-link">My tournaments</a>
+      <div class="page-header__title-row">
+        <h1>Spring Vault Tour</h1>
+        <div class="page-header__actions"><a href="#" class="button button-small">Edit</a></div>
+      </div>
+      <div class="subheading">Archon · Swiss</div>
+    </header>
+    <nav aria-label="Tournament">
+      <ul class="tabs">
+        <li><a href="#" class="tabs__link" aria-current="page">Matches</a></li>
+        <li><a href="#" class="tabs__link">Standings</a></li>
+      </ul>
+    </nav>
+    <dl class="detail-list">
+      <dt>Players</dt><dd>12</dd>
+      <dt>Round</dt><dd>2 of 4</dd>
+    </dl>
+    <section class="stack stack--sm">
+      <div class="section-header">
+        <h2>Round 2</h2>
+        <a href="#" class="button button-small">Start timer</a>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Table</th><th>Players</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Player A vs Player B</td><td><span class="badge badge--warning">Pending</span></td></tr>
+            <tr><td>2</td><td>Player C vs Player D</td><td><span class="badge badge--success">Reported</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Form page</h2>
+  <p>A page header, the fields via <code>components/form-fields.html</code>, and actions with the primary action first. Keep forms at a readable width.</p>
+  <pre><code>{% verbatim %}&lt;header class="page-header"&gt;
+  &lt;a href="…" class="back-link"&gt;Lineups&lt;/a&gt;
+  &lt;h1&gt;New lineup&lt;/h1&gt;
+&lt;/header&gt;
+&lt;form method="post" class="stack stack--lg readable"&gt;
+  {% csrf_token %}
+  {% include "components/form-fields.html" with form=form %}
+  &lt;div class="form-actions"&gt;
+    &lt;button type="submit" class="button button-primary"&gt;Create lineup&lt;/button&gt;
+    &lt;a href="…" class="button"&gt;Cancel&lt;/a&gt;
+  &lt;/div&gt;
+&lt;/form&gt;{% endverbatim %}</code></pre>
+</section>
+{% endblock %}

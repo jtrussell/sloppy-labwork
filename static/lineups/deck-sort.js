@@ -2,7 +2,7 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('deckList', (updateUrl, csrfToken) => ({
     handleSort() {
       const ids = Array.from(
-        this.$el.querySelectorAll('.drag-drop-item')
+        this.$el.querySelectorAll('.sortable__item')
       ).map((item) => item.dataset.key)
 
       const formData = new FormData()

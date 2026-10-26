@@ -1,34 +1,23 @@
 {% for field in response_form %}
-<div class="ghostform-field{% if field.widget_type == 'checkbox' %} ghostform-field--checkbox{% endif %}">
-    {% if field.widget_type == 'checkbox' %}
-    <label for="{{ field.id_for_label }}">{{ field }} <span>{{ field.label }}</span></label>
-    {% elif field.widget_type == 'checkboxselectmultiple' %}
-    <fieldset class="ghostform-choice-group" data-choice-group
-              data-maximum-selections="{{ field.field.maximum_selections|default_if_none:'' }}">
-        <legend>{{ field.label }}{% if field.field.required %} <span class="ghostform-required" aria-hidden="true">*</span>{% endif %}</legend>
-        {% if field.field.selection_limits_description %}
-        <span class="ghostform-help ghostform-choice-limits">{{ field.field.selection_limits_description }}</span>
-        {% endif %}
-        {% if field.field.has_many_choices %}
-        <input type="search" class="ghostform-choice-filter" placeholder="Filter options…"
-               aria-label="Filter {{ field.label }} options" data-choice-filter>
-        {% endif %}
-        <div class="ghostform-choice-options{% if field.field.has_many_choices %} ghostform-choice-options--scrollable{% endif %}">
-            {% for option in field %}
-            <label for="{{ option.id_for_label }}" data-choice-label="{{ option.choice_label }}">{{ option.tag }} <span>{{ option.choice_label }}</span></label>
-            {% endfor %}
-        </div>
-        <span class="ghostform-help" data-choice-count aria-live="polite">{{ field.value|length }}{% if field.field.maximum_selections %} of {{ field.field.maximum_selections }}{% endif %} selected</span>
-    </fieldset>
-    {% else %}
-    <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="ghostform-required" aria-hidden="true">*</span>{% endif %}</label>
-    {{ field }}
+{% if field.widget_type == 'checkboxselectmultiple' %}
+<fieldset class="field ghostform-choice-group{% if field.errors %} field--invalid{% endif %}" aria-describedby="{{ field.auto_id }}_count{% if field.field.selection_limits_description %} {{ field.auto_id }}_limits{% endif %}{% if field.help_text %} {{ field.auto_id }}_helptext{% endif %}{% if field.errors %} {{ field.auto_id }}_error{% endif %}" data-choice-group
+          data-maximum-selections="{{ field.field.maximum_selections|default_if_none:'' }}">
+    <legend class="field__label">{{ field.label }}{% if field.field.required %}<span class="field__required" aria-hidden="true">*</span>{% endif %}</legend>
+    {% if field.help_text %}<div class="field__help" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>{% endif %}
+    {% if field.field.selection_limits_description %}<div class="field__help" id="{{ field.auto_id }}_limits">{{ field.field.selection_limits_description }}</div>{% endif %}
+    {% if field.field.has_many_choices %}
+    <input type="search" class="ghostform-choice-filter" placeholder="Filter options…"
+           aria-label="Filter {{ field.label }} options" data-choice-filter>
     {% endif %}
-    {% if field.help_text %}
-    <span class="ghostform-help">{{ field.help_text }}</span>
-    {% endif %}
-    {% if field.errors %}
-    <div class="ghostform-errors">{{ field.errors|join:" " }}</div>
-    {% endif %}
-</div>
+    <div class="ghostform-choice-options{% if field.field.has_many_choices %} ghostform-choice-options--scrollable{% endif %}">
+        {% for option in field %}
+        <label for="{{ option.id_for_label }}" data-choice-label="{{ option.choice_label }}">{{ option.tag }} <span>{{ option.choice_label }}</span></label>
+        {% endfor %}
+    </div>
+    <div class="field__help" id="{{ field.auto_id }}_count" data-choice-count aria-live="polite">{{ field.value|length }}{% if field.field.maximum_selections %} of {{ field.field.maximum_selections }}{% endif %} selected</div>
+    {% if field.errors %}<ul class="field__errors" id="{{ field.auto_id }}_error">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+</fieldset>
+{% else %}
+{% include "components/field.html" with field=field %}
+{% endif %}
 {% endfor %}

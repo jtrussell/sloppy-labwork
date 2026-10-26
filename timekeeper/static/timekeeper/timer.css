@@ -1,11 +1,10 @@
 .timer {
     text-align: center;
-    font-family: 'Raleway', monospace;
 }
 
 .timer__countdown {
     font-size: 2.5rem;
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     font-variant-numeric: tabular-nums;
     line-height: 1;
 }
@@ -28,20 +27,7 @@
     overflow: hidden;
     position: relative;
     vertical-align: top;
-    -webkit-mask-image: linear-gradient(
-        to bottom,
-        transparent 0%,
-        black 15%,
-        black 85%,
-        transparent 100%
-    );
-    mask-image: linear-gradient(
-        to bottom,
-        transparent 0%,
-        black 15%,
-        black 85%,
-        transparent 100%
-    );
+    mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
 }
 
 .timer__digit-track {
@@ -62,34 +48,34 @@
 }
 
 .timer__name {
-    font-size: 1.25rem;
-    color: var(--color-text-muted, #888);
-    margin-bottom: 0.3125rem;
+    margin-bottom: var(--space-2);
+    color: var(--color-text-muted);
+    font-size: var(--text-xl);
 }
 
 .timer__code {
-    font-size: 0.78125rem;
-    color: var(--color-text-muted, #888);
-    font-family: monospace;
+    margin-top: var(--space-2);
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
     letter-spacing: 0.1em;
-    margin-top: 0.3125rem;
 }
 
 .timer__code a {
     color: inherit;
-    text-decoration: none;
 }
 
 .timer__code a:hover {
     text-decoration: underline;
 }
 
-.timer--expired .timer__countdown {
-    color: var(--color-text-muted, #888);
+.timer--expired .timer__countdown,
+.timer--not-found .timer__countdown {
+    color: var(--color-text-muted);
 }
 
 .timer--negative .timer__countdown {
-    color: var(--color-text-danger, #ff4444);
+    color: var(--color-danger);
 }
 
 .timer__negative-sign {
@@ -101,33 +87,47 @@
 }
 
 .timer__controls {
-    margin-top: 0.625rem;
     display: flex;
-    gap: 0.625rem;
-    justify-content: center;
     flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
 }
 
-.timer__control-link {
-    font-size: 0.9375rem;
-    color: var(--color-primary, #855cd6);
-    text-decoration: none;
-    cursor: pointer;
+.timer__control {
+    height: auto;
+    padding: var(--space-1) var(--space-2);
+    border: 0;
+    background: none;
+    color: var(--color-primary);
+    font-size: var(--text-md);
+    font-weight: var(--weight-regular);
+    line-height: var(--leading-normal);
+    letter-spacing: 0;
+    text-transform: none;
 }
 
-.timer__control-link:hover {
-    color: var(--color-primary-active, #7547d1);
+.timer__control:hover,
+.timer__control:focus {
+    border: 0;
+    color: var(--color-primary-hover);
     text-decoration: underline;
 }
 
+.timer__control--danger,
+.timer__control--danger:hover,
+.timer__control--danger:focus {
+    color: var(--color-danger);
+}
+
 .timer-full-page {
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: var(--color-bg, #1a1a1a);
-    color: var(--color-text-normal, #fff);
+    margin: 0;
+    background-color: var(--color-bg);
+    color: var(--color-text);
 }
 
 .timer-full-page .timer__countdown {
@@ -135,30 +135,21 @@
 }
 
 .timer-full-page .timer__name {
-    font-size: 1.25rem;
-    margin-bottom: 0.625rem;
-}
-
-.timer-full-page .timer__code {
-    font-size: 0.78125rem;
+    margin-bottom: var(--space-4);
 }
 
 .timer-deleted {
+    padding: var(--space-6);
+    color: var(--color-text-muted);
     text-align: center;
-    padding: 1.25rem;
-    color: var(--color-text-muted, #888);
-}
-
-.timer--not-found .timer__countdown {
-    color: var(--color-text-muted, #888);
 }
 
 .timer__message {
-    font-size: 0.78125rem;
-    color: var(--color-text-muted, #888);
-    margin-top: 0.625rem;
+    margin-top: var(--space-4);
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
 }
 
 .timer-full-page .timer__message {
-    font-size: 0.9375rem;
+    font-size: var(--text-md);
 }

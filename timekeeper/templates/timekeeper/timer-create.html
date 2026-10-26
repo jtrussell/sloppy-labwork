@@ -8,59 +8,43 @@
 {% block content %}
 <h1>Create Timer</h1>
 
-<section>
-    <form method="post" id="timer-create-form" class="form-wide" hx-post="{% url 'timekeeper:timer_create' %}" hx-target="#timer-result" hx-swap="innerHTML">
+<section class="stack stack--lg">
+    <form method="post" id="timer-create-form" class="stack stack--lg readable" hx-post="{% url 'timekeeper:timer_create' %}" hx-target="#timer-result" hx-swap="innerHTML">
         {% csrf_token %}
-        <p>
-            <label for="id_name">Timer Name</label>
-            {{ form.name }}
-        </p>
-        <p>
-            <label for="id_minutes">Duration (minutes)</label>
-            {{ form.minutes }}
-        </p>
-        <button type="submit" class="button button-primary">Create Timer</button>
+        {% include "components/form-fields.html" with form=form %}
+        <div class="form-actions">
+            <button type="submit" class="button button-primary">Create Timer</button>
+        </div>
     </form>
-</section>
 
-<section id="timer-result">
+    <div id="timer-result"></div>
 </section>
 
 {% if my_timers %}
 <section>
     <h2>My Timers</h2>
-    <table class="u-full-width">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Created</th>
-                <th>State</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for timer in my_timers %}
-            <tr>
-                <td><a href="{% url 'timekeeper:timer_detail' timer.code %}">{{ timer.name }}</a></td>
-                <td>{{ timer.created_on|date:"M j, Y g:i A" }}</td>
-                <td>{{ timer.get_state.value|capfirst }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Created</th>
+                    <th>State</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for timer in my_timers %}
+                <tr>
+                    <td><a href="{% url 'timekeeper:timer_detail' timer.code %}">{{ timer.name }}</a></td>
+                    <td>{{ timer.created_on|date:"M j, Y g:i A" }}</td>
+                    <td>{{ timer.get_state.value|capfirst }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-    {% if my_timers.has_other_pages %}
-    <nav class="pagination">
-        {% if my_timers.has_previous %}
-            <a href="?page={{ my_timers.previous_page_number }}">&laquo; Previous</a>
-        {% endif %}
-        <span class="text-muted">
-            Page {{ my_timers.number }} of {{ my_timers.paginator.num_pages }}
-        </span>
-        {% if my_timers.has_next %}
-            <a href="?page={{ my_timers.next_page_number }}">Next &raquo;</a>
-        {% endif %}
-    </nav>
-    {% endif %}
+    {% include "components/pagination.html" with page_obj=my_timers label="Timer pages" %}
 </section>
 {% endif %}
 {% endblock %}

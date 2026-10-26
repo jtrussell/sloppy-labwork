@@ -1,22 +1,18 @@
 {% extends "tourney/_base.html" %}
 
 {% block content %}
+<header class="page-header">
+    <a href="{% url 'tourney:tourney-tournament-detail-admin' tournament.code %}" class="back-link">{{ tournament.name }}</a>
     <h1>Export to KeyChain</h1>
-    <div class="subheading">{{ tournament.name }}</div>
+</header>
 
+<form method="post" class="form-wide stack stack--md">
+    {% csrf_token %}
     <p class="text-muted">Select a playgroup to export this tournament's standings to KeyChain.</p>
-
-    <form method="post" class="form-wide">
-        {% csrf_token %}
-        {{ form.as_p }}
-
-        <div class="hstack gap-1" style="margin-top: 0.9375rem;">
-            <button type="submit" class="button button-primary">
-                Continue
-            </button>
-            <a href="{% url 'tourney:tourney-tournament-detail-admin' tournament.code %}" class="button button-secondary">
-                Cancel
-            </a>
-        </div>
-    </form>
+    {% include "components/form-fields.html" %}
+    <div class="form-actions">
+        <button type="submit" class="button button-primary">Continue</button>
+        <a href="{% url 'tourney:tourney-tournament-detail-admin' tournament.code %}" class="button">Cancel</a>
+    </div>
+</form>
 {% endblock %}

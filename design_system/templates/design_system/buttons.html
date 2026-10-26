@@ -1,0 +1,81 @@
+{% extends "design_system/_base.html" %}
+{% load design_system_extras %}
+
+{% block gallery_content %}
+<section>
+  <h2>Variants</h2>
+  <p class="ds-lede">The default button is the secondary action. Use one primary button per view for the main action.</p>
+  {% ds_example themed %}
+  <div class="cluster">
+    <button type="button" class="button button-primary">Save</button>
+    <button type="button" class="button">Cancel</button>
+    <button type="button" class="button button-danger">Delete</button>
+    <button type="button" class="button button-primary button-danger">Delete forever</button>
+  </div>
+  {% end_ds_example %}
+  <table class="ds-token-table">
+    <thead><tr><th>Class</th><th>Use for</th></tr></thead>
+    <tbody>
+      <tr><td class="ds-token">.button</td><td>Secondary actions; also the look of a bare <code>&lt;button&gt;</code></td></tr>
+      <tr><td class="ds-token">.button-primary</td><td>The single main action in a view</td></tr>
+      <tr><td class="ds-token">.button-danger</td><td>Destructive actions</td></tr>
+      <tr><td class="ds-token">.button-primary.button-danger</td><td>Confirming a destructive action, e.g. inside a confirm dialog</td></tr>
+      <tr><td class="ds-token">.button-link</td><td>Low-emphasis actions inline with text</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Sizes</h2>
+  {% ds_example %}
+  <div class="cluster">
+    <button type="button" class="button button-small">Small</button>
+    <button type="button" class="button">Default</button>
+  </div>
+  {% end_ds_example %}
+  {% ds_example %}
+  <a href="#" class="button button-jumbo button-primary">Jumbo — full width</a>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Icon buttons</h2>
+  <p>Square buttons at <code>--tap-target</code> size. Always give them an accessible name.</p>
+  {% ds_example themed %}
+  <div class="cluster">
+    <button type="button" class="button button-icon" aria-label="Copy link">{% include "components/icon.html" with name="copy" %}</button>
+    <button type="button" class="button button-icon" aria-label="Share">{% include "components/icon.html" with name="share" %}</button>
+    <button type="button" class="button button-icon button-small" aria-label="Close">{% include "components/icon.html" with name="close" %}</button>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Link buttons</h2>
+  {% ds_example themed %}
+  <div class="cluster">
+    <button type="button" class="button-link">Edit</button>
+    <button type="button" class="button-link button-link-bordered">Edit player</button>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Disabled</h2>
+  {% ds_example themed %}
+  <div class="cluster">
+    <button type="button" class="button" disabled>Disabled</button>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Guidelines</h2>
+  <ul class="ds-rules">
+    <li>Label buttons with a verb: "Save lineup", not "OK".</li>
+    <li>Use <code>&lt;a class="button"&gt;</code> for navigation and <code>&lt;button&gt;</code> for actions.</li>
+    <li>Group buttons with <code>.cluster</code> or <code>.form-actions</code>; never rely on button margins for spacing.</li>
+    <li>Every button shows a focus ring on keyboard focus — don't remove it.</li>
+  </ul>
+</section>
+{% endblock %}

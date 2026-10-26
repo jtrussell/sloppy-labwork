@@ -28,18 +28,16 @@ Specific pages and app-features can make single-purpose files, e.g.:
 ./static/tourney/drag-drop.js
 ```
 
-In addition, this app lives within the larger Sloppy Labwork project. Global
-styles and other assets live here:
+In addition, this app lives within the larger Sloppy Labwork project and uses
+its design system. See "Design System (Sloppy Labwork)" in the root
+`CLAUDE.md` for the stylesheet layers, rules, includes and scripts, and browse
+`/design-system/` for live examples before building tourney UI.
 
-```
-# Skeleton Framework
-../static/css/vendor/skeleton-2.0.4/normalize.css
-../static/css/vendor/skeleton-2.0.4/skeleton.css
-
-# Base Project Styles
-../static/css/main.css
-```
+Tourney pages render inside `page.html` (KeyChain's host doesn't route
+tourney URLs), so global components, tokens and includes are always
+available here.
 
 We should always consider the appropriate level to introduce new styles and
-scripts. In general, we should NOT include inline scripts and styles in our
-templates.
+scripts: reusable UI belongs in the design system, tourney-specific styles in
+`./static/tourney/`. In general, we should NOT include inline scripts and
+styles in our templates.

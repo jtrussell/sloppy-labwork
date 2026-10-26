@@ -108,7 +108,7 @@ function resetResultFormFields(form, isHidden) {
       }
     })
   resultFormSection
-    .querySelectorAll('.ghostform-errors')
+    .querySelectorAll('.field__errors')
     .forEach((errorMessage) => errorMessage.remove())
 }
 
@@ -146,26 +146,16 @@ function setReportAction(form, actionUrl) {
   htmx.process(form)
 }
 
-let elementFocusedBeforeReportDialog = null
-
-function getFocusableReportDialogElements(dialog) {
-  return [...dialog.querySelectorAll(
-    'button, [href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])',
-  )].filter((element) => !element.disabled && element.offsetParent !== null)
-}
-
 function showReportDialog(elements) {
-  elementFocusedBeforeReportDialog = document.activeElement
   elements.feedback.innerHTML = ''
-  elements.modal.classList.add('modal--active')
-  document.body.classList.add('has-open-dialog')
+  if (!elements.modal.open) elements.modal.showModal()
   elements.body.scrollTop = 0
-  elements.modal.querySelector('.report-dialog').focus()
+  elements.title.focus()
 }
 
 function isReportDialogOpen() {
   const modal = document.getElementById('matchModal')
-  return Boolean(modal && modal.classList.contains('modal--active'))
+  return Boolean(modal && modal.open)
 }
 
 function openMatchModal(button) {
@@ -253,11 +243,7 @@ function openPlayerMatchReportModal() {
 }
 
 function closeMatchModal() {
-  if (!isReportDialogOpen()) return
-  document.getElementById('matchModal').classList.remove('modal--active')
-  document.body.classList.remove('has-open-dialog')
-  if (elementFocusedBeforeReportDialog) elementFocusedBeforeReportDialog.focus()
-  elementFocusedBeforeReportDialog = null
+  if (isReportDialogOpen()) document.getElementById('matchModal').close()
 }
 
 function confirmMatchAction(button, actionUrl, confirmationMessage) {
@@ -291,63 +277,10 @@ function deleteMatch() {
   )
 }
 
-let didPressStartOnReportBackdrop = false
-
-function closeAdminMenuWhenPressedOutside(event) {
-  const adminMenu = document.getElementById('reportAdminMenu')
-  if (adminMenu && adminMenu.open && !adminMenu.contains(event.target)) adminMenu.open = false
-}
-
-document.addEventListener('pointerdown', (event) => {
-  didPressStartOnReportBackdrop = event.target === document.getElementById('matchModal')
-  closeAdminMenuWhenPressedOutside(event)
-})
-
-document.addEventListener('click', (event) => {
-  const pressedAndReleasedOnBackdrop =
-    didPressStartOnReportBackdrop && event.target === document.getElementById('matchModal')
-  didPressStartOnReportBackdrop = false
-  if (pressedAndReleasedOnBackdrop) closeMatchModal()
-})
-
-function keepFocusInReportDialog(event) {
-  const dialog = document.querySelector('#matchModal .report-dialog')
-  const focusableElements = getFocusableReportDialogElements(dialog)
-  if (focusableElements.length === 0) return
-  const firstFocusableElement = focusableElements[0]
-  const lastFocusableElement = focusableElements[focusableElements.length - 1]
-  const isLeavingStart =
-    event.shiftKey &&
-    (document.activeElement === firstFocusableElement || document.activeElement === dialog)
-  const isLeavingEnd = !event.shiftKey && document.activeElement === lastFocusableElement
-  if (isLeavingStart) {
-    event.preventDefault()
-    lastFocusableElement.focus()
-  } else if (isLeavingEnd) {
-    event.preventDefault()
-    firstFocusableElement.focus()
-  }
-}
-
-document.addEventListener('keydown', (event) => {
-  if (!isReportDialogOpen()) return
-  if (event.key === 'Tab') {
-    keepFocusInReportDialog(event)
-    return
-  }
-  if (event.key !== 'Escape') return
-  const adminMenu = document.getElementById('reportAdminMenu')
-  if (adminMenu && adminMenu.open) {
-    adminMenu.open = false
-    return
-  }
-  closeMatchModal()
-})
-
 function revealResultFormErrors() {
   const resultFormSection = document.querySelector('#matchModal [data-result-form]')
   if (!resultFormSection) return
-  const hasErrors = resultFormSection.querySelector('.ghostform-errors') !== null
+  const hasErrors = resultFormSection.querySelector('.field__errors') !== null
   if (hasErrors && resultFormSection.tagName === 'DETAILS') resultFormSection.open = true
 }
 

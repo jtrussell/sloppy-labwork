@@ -1,0 +1,11 @@
+{% load design_system_extras %}{% if page_obj.has_other_pages %}{% with page_param=page_param|default:"page" %}{% preserved_query page_param as preserved_query_suffix %}{% with suffix=query_suffix|default:preserved_query_suffix %}
+<nav class="pagination" aria-label="{{ label|default:'Pagination' }}">
+  {% if page_obj.has_previous %}
+  <a href="?{{ page_param }}={{ page_obj.previous_page_number }}{{ suffix }}" class="button"{% if hx_target %} hx-get="?{{ page_param }}={{ page_obj.previous_page_number }}{{ suffix }}" hx-target="{{ hx_target }}" hx-swap="innerHTML" hx-push-url="true"{% endif %} rel="prev">&laquo; Prev</a>
+  {% endif %}
+  <span class="pagination__info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+  <a href="?{{ page_param }}={{ page_obj.next_page_number }}{{ suffix }}" class="button"{% if hx_target %} hx-get="?{{ page_param }}={{ page_obj.next_page_number }}{{ suffix }}" hx-target="{{ hx_target }}" hx-swap="innerHTML" hx-push-url="true"{% endif %} rel="next">Next &raquo;</a>
+  {% endif %}
+</nav>
+{% endwith %}{% endwith %}{% endif %}

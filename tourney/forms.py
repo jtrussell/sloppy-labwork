@@ -99,6 +99,9 @@ class TournamentForm(forms.ModelForm):
         from .pairing_strategies import get_strategy_choices
         self.fields['main_pairing_strategy'].choices = get_strategy_choices()
 
+        self.fields['is_accepting_registrations'].label = (
+            'Accept registrations' if is_edit_mode else 'Accept registrations immediately')
+
         if not is_edit_mode:
             self.fields['is_closed'].disabled = True
             self.fields['is_closed'].help_text = 'Tournament can only be closed after creation'
@@ -127,9 +130,13 @@ class TournamentForm(forms.ModelForm):
             'result_form': ResultFormChoiceField,
         }
         labels = {
+            'is_closed': 'Close tournament',
+            'is_public': 'Public tournament',
             'result_form': 'Result Form',
         }
         help_texts = {
+            'description': "Markdown formatted. Start with h3's (###) for section headers.",
+            'is_public': 'Allow anyone to view standings and matches without logging in',
             'result_form': "Players answer this form whenever they report a match result. The form's status only controls its share link.",
         }
         widgets = {

@@ -1,0 +1,8 @@
+<div id="message-list" class="message-list" role="status">
+  {% for message in messages %}
+  <div class="note{% if message.level_tag == 'error' %} note--danger{% elif message.level_tag == 'warning' %} note--warning{% endif %}">{{ message }}</div>
+  {% endfor %}
+  {% for message in error_messages %}
+  <div class="note note--danger">{{ message }}</div>
+  {% endfor %}
+</div>

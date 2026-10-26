@@ -1,0 +1,4 @@
+<header class="dialog__header">
+  <h2 id="{{ title_id }}" class="dialog__title" tabindex="-1"{% if focus_title %} autofocus{% endif %}>{{ title }}</h2>
+  <button type="button" class="dialog__close" aria-label="Close" data-dialog-close>{% include "components/icon.html" with name="close" %}</button>
+</header>

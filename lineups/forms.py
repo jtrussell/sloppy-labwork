@@ -11,6 +11,7 @@ class LineupForm(forms.ModelForm):
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
         }
+        help_texts = {'description': 'Markdown supported.'}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -26,6 +27,7 @@ class LineupNoteForm(forms.ModelForm):
         widgets = {
             'text': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Add a note...'}),
         }
+        labels = {'text': 'Note'}
 
 
 class LineupVersionForm(forms.ModelForm):
@@ -35,11 +37,13 @@ class LineupVersionForm(forms.ModelForm):
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
         }
+        help_texts = {'description': 'Markdown supported.'}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['visibility_override'].required = False
         self.fields['visibility_override'].empty_label = 'Inherit from lineup'
+        self.fields['visibility_override'].widget.attrs['aria-describedby'] = 'id_visibility_override_helptext'
 
 
 class LineupVersionNoteForm(forms.ModelForm):
@@ -49,6 +53,7 @@ class LineupVersionNoteForm(forms.ModelForm):
         widgets = {
             'text': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Add a note...'}),
         }
+        labels = {'text': 'Note'}
 
 
 class DeckAddForm(forms.Form):

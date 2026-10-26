@@ -11,10 +11,7 @@
 
   <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon-5.0.svg' %}">
 
-  <link rel="stylesheet" href="{% static 'css/vendor/skeleton-2.0.4/normalize.css' %}">
-  <link rel="stylesheet" href="{% static 'css/tokens.css' %}">
-  <link rel="stylesheet" href="{% static 'css/base.css' %}">
-  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
   
   <!--
   <meta name="theme-color" content="#fafafa">
@@ -25,36 +22,12 @@
 </head>
 
 <body class="preload" hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
+  {% include 'components/icon-sprite.html' %}
   {% block body %}
-  <!--[if IE]>
-    <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience and security.</p>
-  <![endif]-->
-
-  <!-- Add your site or application content here -->
   <main role="main" class="container stack">
     {% include 'nav-top.html' %}
 
-    <div id="message-list">
-      {% if messages %}
-      <div class="note">
-        <ul class="note__list">
-          {% for message in messages %}
-          <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{message}}</li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
-
-      {% if error_messages %}
-      <div class="note note-danger">
-        <ul class="note__list">
-          {% for message in error_messages %}
-          <li>{{message}}</li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
-    </div>
+    {% include 'components/messages.html' %}
 
     {% block content %}
       <!-- Silence is golden -->
@@ -67,10 +40,13 @@
     {% endblock %}
   </main>
 
-  <script id="dialog" type="text/template"></script>
+  {% include 'components/dialog-host.html' %}
+  {% include 'components/dialog-confirm.html' %}
 
   {% htmx_script %}
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"></script>
+  <script src="{% static 'js/dialog.js' %}"></script>
+  <script src="{% static 'js/copy.js' %}"></script>
+  <script src="{% static 'js/action-menu.js' %}"></script>
   <script type="text/javascript">
     // Used to avoid CSS animations on the initial load
     setTimeout(function () {
@@ -79,32 +55,19 @@
 
     window.sloppyShowMessages = window.sloppyShowMessages || function(messagesJson) {
       const messages = JSON.parse(messagesJson)?.messages ?? []
-      if (messages.length === 0) {
-        document.getElementById('message-list').innerHTML = ''
-        return
-      }
-      
-      const noteDiv = document.createElement('div')
-      noteDiv.className = 'note'
-      
-      const ul = document.createElement('ul')
-      ul.className = 'note__list'
-      
-      messages.forEach(message => {
-        const li = document.createElement('li')
-        if (message.tags) {
-          li.className = message.tags
-          if (message.tags.includes('error')) {
-            noteDiv.className = 'note note-danger'
-          }
+      const messageList = document.getElementById('message-list')
+      messageList.replaceChildren(...messages.map(function (message) {
+        const tags = message.tags || ''
+        const note = document.createElement('div')
+        note.className = 'note'
+        if (tags.includes('error')) {
+          note.classList.add('note--danger')
+        } else if (tags.includes('warning')) {
+          note.classList.add('note--warning')
         }
-        li.innerHTML = message.message
-        ul.appendChild(li)
-      })
-      
-      noteDiv.appendChild(ul)
-      document.getElementById('message-list').innerHTML = ''
-      document.getElementById('message-list').appendChild(noteDiv)
+        note.innerHTML = message.message
+        return note
+      }))
     }
 
     document.addEventListener('htmx:afterRequest', function(event) {
@@ -114,22 +77,6 @@
         window.localStorage.setItem('flashMessages', messagesJson)
       } else {
         window.sloppyShowMessages(messagesJson)
-      }
-
-      if (event.detail.target.id === 'dialog') {
-        const dialog = document.getElementById('dialog')
-        if (dialog) {
-          Swal.fire({
-            title: dialog.dataset.title || 'Dialog',
-            html: dialog.innerHTML,
-            showCloseButton: true,
-            showCancelButton: true,
-            customClass: {
-              confirmButton: 'button button-primary',
-              cancelButton: 'button'
-            }
-          })
-        }
       }
     });	
 
@@ -141,25 +88,6 @@
       window.localStorage.removeItem('flashMessages')
     });
 
-    document.addEventListener("htmx:confirm", function(e) {
-      if (!e.detail.question) { return }
-      e.preventDefault()
-      Swal.fire({
-        title: 'Please confirm',
-        html: e.detail.question,
-        showCloseButton: true,
-        showCancelButton: true,
-        theme: 'dark',
-        customClass: {
-          confirmButton: 'button button-primary',
-          cancelButton: 'button'
-        }
-      }).then(function(result) {
-        if (result.isConfirmed) {
-          e.detail.issueRequest(true)
-        }
-      })
-    })
   </script>
 
   {% block extra_body %}

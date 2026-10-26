@@ -8,11 +8,7 @@ from pmc.models import AwardBase
 REPOINTED_RELATIONS = {
     ('admin.LogEntry', 'user'),
     ('socialaccount.SocialAccount', 'user'),
-    ('register.DeckRegistration', 'user'),
-    ('register.DeckRegistration', 'verified_by'),
     ('posts.Post', 'author'),
-    ('tournaments.Tournament', 'owner'),
-    ('tournaments.TournamentRegistration', 'player'),
     ('pmc.PlaygroupJoinRequest', 'user'),
     ('pmc.Venue', 'created_by'),
     ('pmc.PlaygroupVenue', 'added_by'),

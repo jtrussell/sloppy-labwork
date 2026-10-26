@@ -1,7 +1,7 @@
 {% if is_admin %}
 <details class="ghostform-result-form" data-result-form>
     <summary>{{ active_result_form.title }} (optional)</summary>
-    <div id="reportResultFormFields">
+    <div id="reportResultFormFields" class="stack stack--md">
         {% include 'ghostform/partials/response-fields.html' %}
     </div>
 </details>
@@ -14,7 +14,7 @@
     {% if active_result_form.description %}
     <p class="text-muted">{{ active_result_form.description|linebreaksbr }}</p>
     {% endif %}
-    <div id="reportResultFormFields">
+    <div id="reportResultFormFields" class="stack stack--md">
         {% include 'ghostform/partials/response-fields.html' %}
     </div>
 </section>

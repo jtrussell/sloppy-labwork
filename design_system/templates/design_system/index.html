@@ -1,0 +1,40 @@
+{% extends "design_system/_base.html" %}
+
+{% block gallery_content %}
+<section>
+  <h2>Overview</h2>
+  <p class="ds-lede">The shared visual language for Sloppy Labwork: design tokens, element defaults, components, and the rules for combining them. KeyChain has its own styles and is not covered here.</p>
+  <p>Use the theme buttons above to preview any page in each of the four themes. Examples marked with theme frames render every theme side by side.</p>
+</section>
+
+<section>
+  <h2>Principles</h2>
+  <ol class="ds-rules">
+    <li><strong>Tokens, not values.</strong> Colors, spacing, type, radius, shadow and motion come from <code>tokens.css</code>. Hex, rgb and named colors never appear outside it.</li>
+    <li><strong>Semantic over literal.</strong> Use <code>--color-danger</code>, not "red"; <code>--color-surface</code>, not "a slightly lighter purple".</li>
+    <li><strong>Components own their insides, not their surroundings.</strong> A component sets its padding and internal gaps; the parent decides the space around it with <code>gap</code>.</li>
+    <li><strong>Every theme, every time.</strong> Anything new is checked in all four themes before it ships.</li>
+    <li><strong>Consistency over novelty.</strong> Reach for an existing component or token before inventing a new one; extend the system here when something is genuinely missing.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>Stylesheet architecture</h2>
+  <p>Pages load a single entry point, <code>static/css/site.css</code>, which assigns each global stylesheet to a cascade layer:</p>
+  <table class="ds-token-table">
+    <thead>
+      <tr><th>Layer</th><th>File</th><th>Contains</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>reset</code></td><td class="ds-token">vendor/…/normalize.css</td><td>Browser normalization</td></tr>
+      <tr><td><em>unlayered</em></td><td class="ds-token">fonts.css</td><td>Raleway @font-face rules</td></tr>
+      <tr><td><em>unlayered</em></td><td class="ds-token">tokens.css</td><td>Custom properties and themes</td></tr>
+      <tr><td><code>base</code></td><td class="ds-token">base.css</td><td>Element defaults and typography</td></tr>
+      <tr><td><code>components</code></td><td class="ds-token">components.css</td><td>Layout primitives and components</td></tr>
+      <tr><td><code>utilities</code></td><td class="ds-token">utilities.css</td><td>Single-purpose helpers</td></tr>
+      <tr><td><em>unlayered</em></td><td class="ds-token">&lt;app&gt;/main.css</td><td>App-specific layout and styles</td></tr>
+    </tbody>
+  </table>
+  <p>Later layers always win over earlier ones regardless of selector specificity, and unlayered app stylesheets win over every layer. An app can therefore adjust a component with a plain class selector — no <code>!important</code> or selector stacking.</p>
+</section>
+{% endblock %}

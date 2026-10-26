@@ -1,0 +1,99 @@
+{% extends "design_system/_base.html" %}
+{% load design_system_extras %}
+
+{% block gallery_content %}
+<section>
+  <h2>Page header</h2>
+  <p class="ds-lede">The top of a page: optional back link, title with actions, and subheadings. It replaces the page's <code>h1</code>, so it carries the same top and bottom margins as an <code>h1</code> in page flow (none inside a stack).</p>
+  <p>The page's main create action is a full-size <code>.button-primary</code> in <code>.page-header__actions</code>. Other actions on the thing the page is about go in an <a href="{% url 'design_system:section' 'interactive' %}">action menu</a>.</p>
+  {% ds_example %}
+  <header class="page-header">
+    <div class="page-header__title-row">
+      <h1>My Tournaments</h1>
+      <div class="page-header__actions">
+        <a href="#" class="button button-primary">Create Tournament</a>
+      </div>
+    </div>
+  </header>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Section header</h2>
+  <p>A heading with actions for a section within a page. Stacks on phones. A create action for the section is a small secondary button (<code>.button.button-small</code>), so it never competes with the page's primary action.</p>
+  {% ds_example %}
+  <div class="section-header">
+    <h2>Versions</h2>
+    <a href="#" class="button button-small">Add Version</a>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Breadcrumb</h2>
+  {% ds_example themed %}
+  <div class="breadcrumb"><a href="#">Lineups</a> / <a href="#">Spring Vault Tour</a> / Version 2</div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Tabs</h2>
+  <p>Switch between views of the same object. Mark the current tab with <code>aria-current="page"</code>.</p>
+  {% ds_example themed %}
+  <nav aria-label="Tournament">
+    <ul class="tabs tabs--center">
+      <li><a href="#" class="tabs__link" aria-current="page">Matches</a></li>
+      <li><a href="#" class="tabs__link">Standings</a></li>
+      <li><a href="#" class="tabs__link">Admin</a></li>
+    </ul>
+  </nav>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Segmented control</h2>
+  <p>Choose one of a few options. Use radio inputs inside <code>.segmented__option</code> labels for form values, or buttons with <code>aria-pressed</code> for in-page toggles.</p>
+  {% ds_example %}
+  <div class="segmented" role="radiogroup" aria-label="Deck source">
+    <label class="segmented__option"><input type="radio" name="source" checked> Deck links</label>
+    <label class="segmented__option"><input type="radio" name="source"> From a lineup</label>
+  </div>
+  {% end_ds_example %}
+  {% ds_example themed %}
+  <div class="segmented" role="group" aria-label="View">
+    <button type="button" aria-pressed="true">Board</button>
+    <button type="button" aria-pressed="false">History</button>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Pagination</h2>
+  <pre><code>{% verbatim %}{% include "components/pagination.html" with page_obj=page_obj query_suffix="&amp;q=archon" hx_target="#results" %}{% endverbatim %}</code></pre>
+  <table class="ds-token-table">
+    <thead><tr><th>Option</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td class="ds-token">page_obj</td><td>The Django page to paginate</td></tr>
+      <tr><td class="ds-token">page_param</td><td>Query parameter name; defaults to <code>page</code></td></tr>
+      <tr><td class="ds-token">query_suffix</td><td>Overrides the preserved query. By default every current query parameter except <code>page_param</code> is kept</td></tr>
+      <tr><td class="ds-token">hx_target</td><td>Swap results in place with htmx and update the URL</td></tr>
+      <tr><td class="ds-token">label</td><td>Accessible name; give each pagination on a page a distinct one</td></tr>
+    </tbody>
+  </table>
+  {% ds_example %}
+  {% include "components/pagination.html" with page_obj=demo_page %}
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Step rail</h2>
+  <p>Progress through an ordered flow. Pass a list of steps with <code>label</code>, optional <code>icon</code> and <code>detail</code>, and <code>is_done</code> / <code>is_current</code> / <code>is_blocked</code> flags.</p>
+  <pre><code>{% verbatim %}{% include "components/step-rail.html" with steps=steps label="Match steps" %}{% endverbatim %}</code></pre>
+  {% ds_example themed no_markup %}
+  {% include "components/step-rail.html" with steps=demo_steps label="Match steps" %}
+  {% end_ds_example %}
+  {% ds_example no_markup %}
+  {% include "components/step-rail.html" with steps=demo_steps mini=True label="Match steps" %}
+  {% end_ds_example %}
+</section>
+{% endblock %}

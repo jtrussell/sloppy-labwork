@@ -2,147 +2,52 @@
 {% load static %}
 
 {% block extra_head %}
-    <link rel="stylesheet" href="{% static 'css/drag-drop.css' %}">
     <link rel="stylesheet" href="{% static 'ghostform/main.css' %}">
     {{ block.super }}
 {% endblock %}
 
 {% block content %}
+<header class="page-header">
 {% if tournament %}
-    <h1>{{ tournament.name }}</h1>
-    <div class="subheading">
-        <a href="{% url 'tourney:tourney-detail-home' tournament.code %}">&larr; Back</a> • Edit Tournament
-    </div>
+    <a href="{% url 'tourney:tourney-detail-home' tournament.code %}" class="back-link">{{ tournament.name }}</a>
+    <h1>Edit Tournament</h1>
 {% elif source_event %}
     <h1>Create Tournament</h1>
-    <div class="subheading">From KeyChain event: {{ source_event.name }} • {{ source_event_playgroup.name }}</div>
+    <div class="subheading">From KeyChain event: {{ source_event.name }} · {{ source_event_playgroup.name }}</div>
 {% else %}
     <h1>Create Tournament</h1>
 {% endif %}
+</header>
 
-<form method="post" class="form-wide">
+<form method="post" class="stack stack--xl">
     {% csrf_token %}
+    {% if form.non_field_errors %}
+        <ul class="form-errors" role="alert">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+    {% endif %}
 
-    <section>
+    <section class="stack stack--md">
         <h2>Tournament Details</h2>
-
-        <div class="row">
-            <div class="twelve columns">
-                <label for="{{ form.name.id_for_label }}">Tournament Name</label>
-                {{ form.name }}
-                {% if form.name.errors %}
-                    <div class="form-error">{{ form.name.errors }}</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="twelve columns">
-                <label for="{{ form.description.id_for_label }}">Description</label>
-                {{ form.description }}
-                <span class="helptext">Markdown formatted. Start with h3's (###) for section headers.</span>
-                {% if form.description.errors %}
-                    <div class="form-error">{{ form.description.errors }}</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="twelve columns">
-                <label>
-                    {{ form.is_accepting_registrations }}
-                    {% if tournament %}Accept registrations{% else %}Accept registrations immediately{% endif %}
-                </label>
-                {% if form.is_accepting_registrations.errors %}
-                    <div class="form-error">{{ form.is_accepting_registrations.errors }}</div>
-                {% endif %}
-            </div>
-        </div>
-
+        {% include "components/field.html" with field=form.name %}
+        {% include "components/field.html" with field=form.description %}
+        {% include "components/field.html" with field=form.is_accepting_registrations %}
         {% if tournament %}
-        <div class="row">
-            <div class="twelve columns">
-                <label>
-                    {{ form.is_closed }}
-                    Close tournament
-                </label>
-                {% if form.is_closed.help_text %}
-                    <span class="helptext">{{ form.is_closed.help_text }}</span>
-                {% endif %}
-                {% if form.is_closed.errors %}
-                    <div class="form-error">{{ form.is_closed.errors }}</div>
-                {% endif %}
-            </div>
-        </div>
+            {% include "components/field.html" with field=form.is_closed %}
         {% endif %}
-
-        <div class="row">
-            <div class="twelve columns">
-                <label>
-                    {{ form.is_public }}
-                    Public tournament
-                </label>
-                <span class="helptext">Allow anyone to view standings and matches without logging in</span>
-                {% if form.is_public.errors %}
-                    <div class="form-error">{{ form.is_public.errors }}</div>
-                {% endif %}
-            </div>
-        </div>
+        {% include "components/field.html" with field=form.is_public %}
     </section>
 
-    <section>
+    <section class="stack stack--md">
         <h2>Main Stage</h2>
-
-        <div class="row">
-            <div class="twelve columns">
-                <label for="{{ form.main_pairing_strategy.id_for_label }}">{{ form.main_pairing_strategy.label }}</label>
-                {{ form.main_pairing_strategy }}
-                {% if form.main_pairing_strategy.errors %}
-                    <div class="form-error">{{ form.main_pairing_strategy.errors }}</div>
-                {% endif %}
-            </div>
-        </div>
-        <div class="row">
-            <div class="six columns">
-                <label for="{{ form.main_score_reporting.id_for_label }}">{{ form.main_score_reporting.label }}</label>
-                {{ form.main_score_reporting }}
-                {% if form.main_score_reporting.errors %}
-                    <div class="form-error">{{ form.main_score_reporting.errors }}</div>
-                {% endif %}
-            </div>
-            <div class="six columns">
-                <label for="{{ form.main_allow_ties.id_for_label }}">{{ form.main_allow_ties.label }}</label>
-                {{ form.main_allow_ties }}
-                {% if form.main_allow_ties.errors %}
-                    <div class="form-error">{{ form.main_allow_ties.errors }}</div>
-                {% endif %}
-            </div>
-        </div>
-        <div class="row">
-            <div class="six columns">
-                <label for="{{ form.main_max_players.id_for_label }}">{{ form.main_max_players.label }}</label>
-                {{ form.main_max_players }}
-                {% if form.main_max_players.help_text %}
-                    <span class="helptext">{{ form.main_max_players.help_text }}</span>
-                {% endif %}
-                {% if form.main_max_players.errors %}
-                    <div class="form-error">{{ form.main_max_players.errors }}</div>
-                {% endif %}
-            </div>
-            <div class="six columns">
-                <label for="{{ form.main_round_length.id_for_label }}">{{ form.main_round_length.label }}</label>
-                {{ form.main_round_length }}
-                {% if form.main_round_length.help_text %}
-                    <span class="helptext">{{ form.main_round_length.help_text }}</span>
-                {% endif %}
-                {% if form.main_round_length.errors %}
-                    <div class="form-error">{{ form.main_round_length.errors }}</div>
-                {% endif %}
-            </div>
+        {% include "components/field.html" with field=form.main_pairing_strategy %}
+        <div class="grid">
+            {% include "components/field.html" with field=form.main_score_reporting %}
+            {% include "components/field.html" with field=form.main_allow_ties %}
+            {% include "components/field.html" with field=form.main_max_players %}
+            {% include "components/field.html" with field=form.main_round_length %}
         </div>
     </section>
 
-    <section x-data="podList({{ pod_entries_json }}, {{ maximum_pods }})">
+    <section class="stack stack--md" x-data="podList({{ pod_entries_json }}, {{ maximum_pods }})">
         <h2>Main Stage Pods</h2>
         <p>
             Optionally split the main stage into pods. Players only play against others in their pod,
@@ -153,13 +58,9 @@
             <input type="hidden" name="pods_submitted" value="1">
         </template>
 
-        {% if form.non_field_errors %}
-            <div class="form-error">{{ form.non_field_errors }}</div>
-        {% endif %}
-
-        <div class="pod-name-list">
+        <div class="stack stack--xs">
             <template x-for="pod in pods" :key="pod.key">
-                <div class="pod-name-row">
+                <div class="input-with-button-group">
                     <input type="hidden" name="pod_id" :value="pod.id">
                     <input type="text"
                            name="pod_name"
@@ -173,11 +74,13 @@
             </template>
         </div>
 
-        <button type="button" class="button" @click="addPod()" :disabled="!canAddPod()">Add Pod</button>
-        <span class="helptext" x-show="!canAddPod()">A stage can have at most {{ maximum_pods }} pods.</span>
+        <div class="cluster">
+            <button type="button" class="button" @click="addPod()" :disabled="!canAddPod()">Add Pod</button>
+            <span class="field__help" x-show="!canAddPod()">A stage can have at most {{ maximum_pods }} pods.</span>
+        </div>
     </section>
 
-    <section x-data="rankingCriteria({{ ordered_criteria_json }})">
+    <section class="stack stack--md" x-data="rankingCriteria({{ ordered_criteria_json }})">
         <h2>Main Stage Ranking Criteria</h2>
         <p>Drag to reorder the criteria by importance. Toggle criteria on/off with the switches.</p>
 
@@ -188,112 +91,62 @@
             <input type="hidden" :name="'criterion_' + key + '_order'" :value="orderFor(key)">
         </template>
 
-        <div id="ranking-criteria-list"
-             class="drag-drop-container ranking-criteria-container"
-             x-sort="handleSort($item, $position)"
-             x-sort:config="{ ghostClass: 'dragging', animation: 150 }">
+        <ol id="ranking-criteria-list"
+            class="sortable"
+            x-sort="handleSort($item, $position)"
+            x-sort:config="{ ghostClass: 'is-dragging', animation: 150 }">
             {% for criterion in ordered_criteria_display %}
-                <div class="drag-drop-item ranking-criteria-item"
-                     x-sort:item="'{{ criterion.key }}'"
-                     data-key="{{ criterion.key }}"
-                     :class="{ disabled: !enabled['{{ criterion.key }}'] }">
-                    <div class="drag-handle" x-sort:handle>⋮⋮</div>
-                    <div class="drag-drop-content criteria-info">
-                        <div class="criteria-name">{{ criterion.name }}</div>
-                        <div class="criteria-description">{{ criterion.description }}</div>
+                <li class="sortable__item ranking-criteria-item"
+                    x-sort:item="'{{ criterion.key }}'"
+                    data-key="{{ criterion.key }}"
+                    :class="{ 'is-disabled': !enabled['{{ criterion.key }}'] }">
+                    <span class="sortable__handle" x-sort:handle aria-hidden="true">&#8942;&#8942;</span>
+                    <div class="sortable__content">
+                        <div class="ranking-criteria-item__name">{{ criterion.name }}</div>
+                        <div class="field__help">{{ criterion.description }}</div>
                     </div>
-                    <div class="drag-drop-actions criteria-toggle">
-                        <div class="toggle-switch"
-                             :class="{ enabled: enabled['{{ criterion.key }}'] }"
-                             @click="toggle('{{ criterion.key }}')">
-                            <div class="toggle-slider"></div>
-                        </div>
-                    </div>
-                </div>
+                    <label class="switch">
+                        <input type="checkbox" role="switch" :checked="enabled['{{ criterion.key }}']" @change="toggle('{{ criterion.key }}')">
+                        <span class="switch__track"></span>
+                        <span class="sr-only">Use {{ criterion.name }}</span>
+                    </label>
+                </li>
             {% endfor %}
-        </div>
+        </ol>
     </section>
 
-    <section>
+    <section class="stack stack--md">
         <h2>Playoff Stage</h2>
-
-        <div class="row">
-            <div class="twelve columns">
-                <label>
-                    {{ form.enable_playoffs }}
-                    {{ form.enable_playoffs.label }}
-                </label>
-                {% if form.enable_playoffs.errors %}
-                    <div class="form-error">{{ form.enable_playoffs.errors }}</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div id="playoff-options"{% if not tournament %} style="display: none;"{% endif %}>
-            <div class="row">
-                <div class="six columns">
-                    <label for="{{ form.playoff_score_reporting.id_for_label }}">{{ form.playoff_score_reporting.label }}</label>
-                    {{ form.playoff_score_reporting }}
-                    {% if form.playoff_score_reporting.help_text %}
-                        <span class="helptext">{{ form.playoff_score_reporting.help_text }}</span>
-                    {% endif %}
-                    {% if form.playoff_score_reporting.errors %}
-                        <div class="form-error">{{ form.playoff_score_reporting.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="six columns">
-                    <label for="{{ form.playoff_max_players.id_for_label }}">{{ form.playoff_max_players.label }}</label>
-                    {{ form.playoff_max_players }}
-                    {% if form.playoff_max_players.help_text %}
-                        <span class="helptext">{{ form.playoff_max_players.help_text }}</span>
-                    {% endif %}
-                    {% if form.playoff_max_players.errors %}
-                        <div class="form-error">{{ form.playoff_max_players.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="row">
-                <div class="six columns">
-                    <label for="{{ form.playoff_round_length.id_for_label }}">{{ form.playoff_round_length.label }}</label>
-                    {{ form.playoff_round_length }}
-                    {% if form.playoff_round_length.help_text %}
-                        <span class="helptext">{{ form.playoff_round_length.help_text }}</span>
-                    {% endif %}
-                    {% if form.playoff_round_length.errors %}
-                        <div class="form-error">{{ form.playoff_round_length.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
+        {% include "components/field.html" with field=form.enable_playoffs %}
+        <div id="playoff-options" class="grid"{% if not tournament %} hidden{% endif %}>
+            {% include "components/field.html" with field=form.playoff_score_reporting %}
+            {% include "components/field.html" with field=form.playoff_max_players %}
+            {% include "components/field.html" with field=form.playoff_round_length %}
         </div>
     </section>
 
-    <section>
+    <section class="stack stack--md">
         <h2>Result Form</h2>
         <p>
             Optionally collect extra details from players when they report a match result.
             Manage your forms in <a href="{% url 'ghostform:ghostform-list' %}" target="_blank" rel="noopener">Ghostform</a>.
         </p>
-
-        <div class="row">
-            <div class="twelve columns">
-                {% include 'ghostform/partials/form-picker.html' with picker=result_form_picker %}
-                <span class="helptext">{{ form.result_form.help_text }}</span>
-                {% if form.result_form.errors %}
-                    <div class="form-error">{{ form.result_form.errors }}</div>
-                {% endif %}
-            </div>
+        <div class="field{% if form.result_form.errors %} field--invalid{% endif %}">
+            {% include 'ghostform/partials/form-picker.html' with picker=result_form_picker %}
+            {% if form.result_form.help_text %}<div class="field__help">{{ form.result_form.help_text }}</div>{% endif %}
+            {% if form.result_form.errors %}<ul class="field__errors">{% for error in form.result_form.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
         </div>
     </section>
 
     {% if source_event %}
-    <section>
+    <section class="stack stack--sm">
         <h2>Players ({{ registered_players.count }})</h2>
         <p class="text-muted">
             The following registered players from this KeyChain event will be
             added to the tournament.
         </p>
-        <div class="table-responsive">
-            <table class="table">
+        <div class="table-scroll">
+            <table>
                 <thead>
                     <tr>
                         <th>Player</th>
@@ -311,7 +164,7 @@
     </section>
     {% endif %}
 
-    <section>
+    <div class="form-actions">
         {% if source_event %}
             <button type="submit" class="button button-primary">Create Tournament</button>
             <a href="{% url 'pmc-event-detail' source_event.pk %}" class="button">Cancel</a>
@@ -325,7 +178,7 @@
             <button type="submit" class="button button-primary">Create Tournament</button>
             <a href="{% url 'tourney:tourney-my-tournaments' %}" class="button">Cancel</a>
         {% endif %}
-    </section>
+    </div>
 </form>
 
 {% endblock %}

@@ -7,9 +7,12 @@
 {% endblock %}
 
 {% block content %}
-  <h1 class="posts-detail__title">{% block title %} {{ object.title }} {% endblock title %}</h1>
-  <div class="posts-detail__item-meta">By {{ post.author }} on {{ post.published_on | date:'M j, Y' }}</div>
-  <div class="posts-detail__content">
-    {{ object.content | markdown | safe }}
-  </div>
+<header class="page-header">
+  <a href="{% url 'posts-list' %}" class="back-link">Lab notes</a>
+  <h1>{% block title %}{{ object.title }}{% endblock title %}</h1>
+  <p class="text-muted">By {{ post.author }} on {{ post.published_on|date:'M j, Y' }}</p>
+</header>
+<div class="posts-detail__content">
+  {{ object.content|markdown|safe }}
+</div>
 {% endblock %}

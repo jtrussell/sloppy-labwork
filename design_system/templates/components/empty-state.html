@@ -1,0 +1,4 @@
+<div class="empty-state">
+  <p class="empty-state__message">{{ message }}</p>
+  {% if action_url %}<a href="{{ action_url }}" class="button{% if action_is_primary %} button-primary{% endif %}">{{ action_label }}</a>{% endif %}
+</div>

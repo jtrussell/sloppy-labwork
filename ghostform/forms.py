@@ -156,6 +156,7 @@ class FormDetailsForm(forms.ModelForm):
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
         }
+        help_texts = {'description': 'Optional. Shown above the questions.'}
 
 
 class QuestionsPayloadForm(forms.Form):

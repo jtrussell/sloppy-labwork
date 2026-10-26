@@ -40,7 +40,7 @@ function openAddMatchModal() {
   playerOneSelect.onchange = () =>
     populatePlayerTwoOptions(unmatchedPlayers, playerOneSelect.value)
 
-  modal.classList.add('modal--active')
+  modal.showModal()
 }
 
 function populatePlayerTwoOptions(unmatchedPlayers, playerOneId) {
@@ -64,27 +64,19 @@ function populatePlayerTwoOptions(unmatchedPlayers, playerOneId) {
 
 function closeAddMatchModal() {
   const modal = document.getElementById('addMatchModal')
-  const playerOneSelect = document.getElementById('addMatchPlayerOne')
-
-  if (playerOneSelect) {
-    playerOneSelect.disabled = false
+  if (modal && modal.open) {
+    modal.close()
   }
-
-  modal.classList.remove('modal--active')
 }
 
-document.addEventListener('click', function (e) {
-  const addMatchModal = document.getElementById('addMatchModal')
-  if (e.target === addMatchModal) {
-    closeAddMatchModal()
+document.addEventListener('close', function (e) {
+  if (e.target.id === 'addMatchModal') {
+    const playerOneSelect = document.getElementById('addMatchPlayerOne')
+    if (playerOneSelect) {
+      playerOneSelect.disabled = false
+    }
   }
-})
-
-document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') {
-    closeAddMatchModal()
-  }
-})
+}, true)
 
 document.addEventListener('htmx:afterRequest', function (e) {
   if (

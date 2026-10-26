@@ -1,0 +1,94 @@
+{% extends "design_system/_base.html" %}
+{% load design_system_extras %}
+
+{% block gallery_content %}
+<section>
+  <h2>Card</h2>
+  <p class="ds-lede">A bordered panel for one item: a deck, a lineup, a tournament. Cards own their padding and inner gaps.</p>
+  {% ds_example themed %}
+  <article class="card">
+    <header class="card__header">
+      <h3 class="card__title">Ironside Hammerer of the Wilds</h3>
+      <span class="badge badge--accent">Archon</span>
+    </header>
+    <p class="card__meta">Brobnar · Dis · Logos</p>
+    <footer class="card__footer">
+      <a href="#" class="button button-small">View</a>
+      <button type="button" class="button-link">Remove</button>
+    </footer>
+  </article>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Card list</h2>
+  <p><code>.card--interactive</code> makes the whole card clickable through its title link while keeping footer controls usable.</p>
+  {% ds_example %}
+  <ul class="card-list">
+    <li class="card card--interactive">
+      <h3 class="card__title"><a href="#">Spring Vault Tour lineup</a></h3>
+      <p class="card__meta">3 decks · updated 2 days ago</p>
+    </li>
+    <li class="card card--interactive">
+      <h3 class="card__title"><a href="#">Casual night</a></h3>
+      <p class="card__meta">1 deck · updated last week</p>
+    </li>
+  </ul>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Surface</h2>
+  <p>The underlying primitive for panels that need custom layout. See <a href="{% url 'design_system:section' 'shape' %}">Shape &amp; elevation</a>.</p>
+</section>
+
+<section>
+  <h2>Table</h2>
+  <p>Tables are styled by default. Wrap wide tables in <code>.table-scroll</code>, use <code>.table--compact</code> for dense data and <code>.table__numeric</code> for figures.</p>
+  {% ds_example themed %}
+  <div class="table-scroll">
+    <table class="table--compact">
+      <thead>
+        <tr><th>Player</th><th class="table__numeric">Wins</th><th class="table__numeric">SoS</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Player A</td><td class="table__numeric">3</td><td class="table__numeric">5</td></tr>
+        <tr><td>Player B</td><td class="table__numeric">2</td><td class="table__numeric">6</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% end_ds_example %}
+  <p>An empty table body gets a full-width message row:</p>
+  <pre><code>{% verbatim %}{% include "components/table-empty-row.html" with colspan=3 message="No players registered yet." %}{% endverbatim %}</code></pre>
+  {% ds_example %}
+  <table>
+    <thead><tr><th>Player</th><th>Deck</th><th>Status</th></tr></thead>
+    <tbody>{% include "components/table-empty-row.html" with colspan=3 message="No players registered yet." %}</tbody>
+  </table>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Detail list</h2>
+  <p>Key–value pairs. Stacks on phones, two columns from 550px.</p>
+  {% ds_example %}
+  <dl class="detail-list">
+    <dt>Format</dt><dd>Archon</dd>
+    <dt>Players</dt><dd>12</dd>
+    <dt>Organizer</dt><dd>Sloppy Labwork</dd>
+  </dl>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Disclosure</h2>
+  {% ds_example %}
+  <details class="disclosure">
+    <summary>Tiebreakers</summary>
+    <div class="disclosure__body">
+      <p>Strength of schedule, then head-to-head.</p>
+    </div>
+  </details>
+  {% end_ds_example %}
+</section>
+{% endblock %}

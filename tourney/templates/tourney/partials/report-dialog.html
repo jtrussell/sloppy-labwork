@@ -1,21 +1,20 @@
-<div id="matchModal" class="modal"
+<dialog id="matchModal" class="dialog report-dialog" aria-labelledby="modalTitle"
      data-player-report-url="{% url 'tourney:tourney-player-add-match-result' tournament.code %}"
      data-opponents="{{ player_report_opponents_json|default:"[]" }}"
      data-viewer-name="{% if player %}{{ player.get_display_name }}{% endif %}"
      data-current-round-label="{% if current_round %}{{ current_round.stage.name }} · Round {{ current_round.order }}{% endif %}"
      data-stage-allow-ties="{{ selected_stage.are_ties_allowed|yesno:"true,false"|default:"false" }}"
      data-stage-score-reporting="{{ selected_stage.report_full_scores|default:"0" }}">
-    <div class="modal-content report-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle" tabindex="-1">
-        <div class="report-dialog__header">
+        <div class="dialog__header">
             <div class="report-dialog__heading">
-                <h3 id="modalTitle">Report Match Result</h3>
+                <h2 id="modalTitle" class="dialog__title" tabindex="-1">Report Match Result</h2>
                 <div id="reportRoundLabel" class="report-dialog__round"></div>
             </div>
-            <button type="button" class="modal-close" aria-label="Close" onclick="closeMatchModal()"></button>
+            <button type="button" class="dialog__close" aria-label="Close" data-dialog-close>{% include "components/icon.html" with name="close" %}</button>
         </div>
 
         <form id="matchForm" class="report-dialog__form" hx-disabled-elt="#reportSubmitButton">
-            <div class="report-dialog__body scroll-area">
+            <div class="dialog__body report-dialog__body scroll-area">
                 <div id="reportFeedback" aria-live="polite"></div>
 
                 <div id="reportOpponentField" class="report-dialog__opponent" hidden>
@@ -63,19 +62,18 @@
                 {% endif %}
             </div>
 
-            <div class="report-dialog__footer">
-                <button type="submit" id="reportSubmitButton" class="button button-primary">Submit result</button>
-                <button type="button" class="button-link report-dialog__cancel" onclick="closeMatchModal()">Cancel</button>
+            <div class="dialog__footer report-dialog__footer">
                 {% if is_admin %}
-                <details id="reportAdminMenu" class="report-dialog__admin-menu" hidden>
+                <details id="reportAdminMenu" class="action-menu action-menu--up action-menu--start report-dialog__admin-menu" hidden>
                     <summary class="button-link">More</summary>
-                    <div class="report-dialog__admin-actions">
-                        <button type="button" id="resetMatchBtn" class="button" onclick="resetMatch()">Reset match</button>
-                        <button type="button" id="deleteMatchBtn" class="button button-danger" onclick="deleteMatch()">Delete match</button>
-                    </div>
+                    <ul class="action-menu__list">
+                        <li><button type="button" id="resetMatchBtn" class="action-menu__item" onclick="resetMatch()">Reset match</button></li>
+                        <li><button type="button" id="deleteMatchBtn" class="action-menu__item action-menu__item--danger" onclick="deleteMatch()">Delete match</button></li>
+                    </ul>
                 </details>
                 {% endif %}
+                <button type="button" class="button" data-dialog-close>Cancel</button>
+                <button type="submit" id="reportSubmitButton" class="button button-primary">Submit result</button>
             </div>
         </form>
-    </div>
-</div>
+</dialog>

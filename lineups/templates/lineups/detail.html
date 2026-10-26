@@ -9,102 +9,93 @@
 {% endblock %}
 
 {% block content %}
-<nav class="breadcrumb">
-  <a href="{% url 'lineups-list' %}">Lineups</a> &raquo;
-  {{ lineup.name }}
-</nav>
+<header class="page-header">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'lineups-list' %}">Lineups</a> &raquo;
+    {{ lineup.name }}
+  </nav>
+  <div class="page-header__title-row">
+    <h1>{{ lineup.name }}</h1>
+    {% if is_owner %}
+    <details class="action-menu">
+      <summary class="action-menu__trigger" aria-label="Lineup actions">{% include "components/icon.html" with name="more" %}</summary>
+      <ul class="action-menu__list">
+        <li><a href="{% url 'lineups-edit' lineup.code %}" class="action-menu__item">Edit lineup</a></li>
+        <li>
+          <form method="post" action="{% url 'lineups-delete' lineup.code %}">
+            {% csrf_token %}
+            <button type="submit" class="action-menu__item action-menu__item--danger" hx-post="{% url 'lineups-delete' lineup.code %}" hx-confirm="Are you sure you want to delete this lineup?">Delete lineup</button>
+          </form>
+        </li>
+      </ul>
+    </details>
+    {% endif %}
+  </div>
+  <ul class="subheading inline-list">
+    {% if lineup.format %}<li>{{ lineup.format.name }}</li>{% endif %}
+    <li>{{ lineup.get_visibility_display }}</li>
+  </ul>
+</header>
 
-<h1>{{ lineup.name }}</h1>
-<ul class="subheading inline-list">
-  {% if lineup.format %}<li>{{ lineup.format.name }}</li>{% endif %}
-  <li>{{ lineup.get_visibility_display }}</li>
-</ul>
+<div class="stack stack--xl">
+  {% if lineup.description %}
+  <div class="card card--flat lineup-markdown">
+    {{ lineup.description|markdown|safe }}
+  </div>
+  {% endif %}
 
-{% if is_owner %}
-<ul class="subheading inline-list">
-  <li><a href="{% url 'lineups-edit' lineup.code %}" class="button button-link button-link-bordered">Edit</a></li>
-  <li>
-    <form method="post" action="{% url 'lineups-delete' lineup.code %}" class="form-inline">
-      {% csrf_token %}
-      <button type="submit" class="button button-link button-link-bordered" hx-post="{% url 'lineups-delete' lineup.code %}" hx-confirm="Are you sure you want to delete this lineup?">Delete</button>
-    </form>
-  </li>
-</ul>
-{% endif %}
+  <section class="stack stack--md">
+    <div class="section-header">
+      <h2>Versions</h2>
+      {% if is_owner %}
+      <a href="{% url 'lineups-version-create' lineup.code %}" class="button button-small">Add Version</a>
+      {% endif %}
+    </div>
 
-{% if lineup.description %}
-<div class="lineup-description surface surface--flat">
-  {{ lineup.description|markdown|safe }}
-</div>
-{% endif %}
-
-<h2>Versions</h2>
-{% if is_owner %}
-<ul class="subheading inline-list">
-  <li><a href="{% url 'lineups-version-create' lineup.code %}" class="button button-link button-link-bordered">Add Version</a></li>
-</ul>
-{% endif %}
-
-{% if versions %}
-<div class="version-list">
-  {% for version in versions %}
-  <div class="version-card surface surface--flat">
-    <h3 class="version-card__title"><a href="{% url 'lineups-version-detail' version.code %}">{{ version.name }}</a></h3>
-    <ul class="version-card__meta inline-list">
-      <li>{{ version.version_decks.count }} Deck{{ version.version_decks.count|pluralize }}</li>
-      <li>{{ version.notes.count }} Note{{ version.notes.count|pluralize }}</li>
-      <li>{{ version.get_effective_visibility|capfirst }}</li>
+    {% if versions %}
+    <ul class="card-list">
+      {% for version in versions %}
+      <li class="card">
+        <h3 class="card__title"><a href="{% url 'lineups-version-detail' version.code %}">{{ version.name }}</a></h3>
+        <ul class="card__meta inline-list">
+          <li>{{ version.version_decks.count }} Deck{{ version.version_decks.count|pluralize }}</li>
+          <li>{{ version.notes.count }} Note{{ version.notes.count|pluralize }}</li>
+          <li>{{ version.get_effective_visibility|capfirst }}</li>
+        </ul>
+      </li>
+      {% endfor %}
     </ul>
-  </div>
-  {% endfor %}
-</div>
-
-{% if versions.paginator.num_pages > 1 %}
-<div class="pagination">
-  {% if versions.has_previous %}
-  <a href="?vp={{ versions.previous_page_number }}{% if notes.number != 1 %}&np={{ notes.number }}{% endif %}" class="button">&laquo; Prev</a>
-  {% endif %}
-  <span class="pagination-info">Page {{ versions.number }} of {{ versions.paginator.num_pages }}</span>
-  {% if versions.has_next %}
-  <a href="?vp={{ versions.next_page_number }}{% if notes.number != 1 %}&np={{ notes.number }}{% endif %}" class="button">Next &raquo;</a>
-  {% endif %}
-</div>
-{% endif %}
-{% else %}
-<p class="empty-message">No versions yet.</p>
-{% endif %}
-
-{% if is_owner %}
-<section class="lineup-section">
-  <div class="section-header">
-    <h2>Lineup Notes</h2>
-  </div>
-
-  <form method="post" action="{% url 'lineups-note-add' lineup.code %}" class="note-form">
-    {% csrf_token %}
-    {{ note_form.text }}
-    <button type="submit" class="button button-primary">Add Note</button>
-  </form>
-
-  <div id="notes-list">
-    {% for note in notes %}
-    {% include 'lineups/partials/note-item.html' %}
-    {% empty %}
-    <p class="empty-message">No notes yet.</p>
-    {% endfor %}
-  </div>
-
-  {% if notes.paginator.num_pages > 1 %}
-  <div class="pagination">
-    {% if notes.has_previous %}
-    <a href="?np={{ notes.previous_page_number }}{% if versions.number != 1 %}&vp={{ versions.number }}{% endif %}" class="button">&laquo; Prev</a>
+    {% include "components/pagination.html" with page_obj=versions page_param="vp" label="Version pages" %}
+    {% else %}
+    <p class="text-muted">No versions yet.</p>
     {% endif %}
-    <span class="pagination-info">Page {{ notes.number }} of {{ notes.paginator.num_pages }}</span>
-    {% if notes.has_next %}
-    <a href="?np={{ notes.next_page_number }}{% if versions.number != 1 %}&vp={{ versions.number }}{% endif %}" class="button">Next &raquo;</a>
+  </section>
+
+  {% if is_owner %}
+  <section class="stack stack--md">
+    <div class="section-header">
+      <h2>Lineup Notes</h2>
+    </div>
+
+    <form method="post" action="{% url 'lineups-note-add' lineup.code %}" class="stack stack--sm">
+      {% csrf_token %}
+      {% include "components/field.html" with field=note_form.text %}
+      <div class="form-actions">
+        <button type="submit" class="button button-primary">Add Note</button>
+      </div>
+    </form>
+
+    {% if notes %}
+    <ul class="card-list" id="notes-list">
+      {% for note in notes %}
+      {% include 'lineups/partials/note-item.html' %}
+      {% endfor %}
+    </ul>
+    {% include "components/pagination.html" with page_obj=notes page_param="np" label="Note pages" %}
+    {% else %}
+    <p class="text-muted">No notes yet.</p>
     {% endif %}
-  </div>
+  </section>
   {% endif %}
-</section>
-{% endif %}
+</div>
 {% endblock %}

@@ -1,47 +1,41 @@
 <div class="pod-assignment-grid"
      x-data="podAssignment('{% url 'tourney:tourney-update-pod-assignments' tournament.code %}')">
     {% for column in pod_columns %}
-        <div class="pod-assignment-column">
+        <div class="stack stack--sm">
             <h3 class="pod-assignment-title">
                 {{ column.pod.name }}
                 <span class="text-muted">({{ column.stage_players|length }})</span>
             </h3>
-            <div class="drag-drop-container pod-assignment-list"
-                 data-pod-id="{{ column.pod.id }}"
-                 x-sort="handleSort()"
-                 x-sort:group="pods"
-                 x-sort:config="{ ghostClass: 'dragging', animation: 150, sort: false }">
+            <ul class="sortable pod-assignment-list"
+                data-pod-id="{{ column.pod.id }}"
+                x-sort="handleSort()"
+                x-sort:group="pods"
+                x-sort:config="{ ghostClass: 'is-dragging', animation: 150, sort: false }">
                 {% for stage_player in column.stage_players %}
-                    <div class="drag-drop-item seeding-item"
-                         x-sort:item="{{ stage_player.id }}"
-                         data-stage-player-id="{{ stage_player.id }}">
-                        <div class="drag-handle" x-sort:handle>⋮⋮</div>
+                    <li class="sortable__item seeding-item"
+                        x-sort:item="{{ stage_player.id }}"
+                        data-stage-player-id="{{ stage_player.id }}">
+                        <span class="sortable__handle" x-sort:handle aria-hidden="true">&#8942;&#8942;</span>
                         <span class="seed-number">{{ stage_player.seed }}</span>
-                        <div class="drag-drop-content player-info">
-                            <div>
-                                <span class="player-name">{{ stage_player.player.get_display_name }}</span>
-                                {% if stage_player.player.is_guest %}
-                                    <span class="player-guest-badge"></span>
-                                {% endif %}
-                            </div>
+                        <div class="sortable__content seeding-item__name">
+                            {{ stage_player.player.get_display_name }}
+                            {% if stage_player.player.is_guest %}<span class="player-guest-badge"></span>{% endif %}
                         </div>
-                        <div class="drag-drop-actions">
-                            <select name="pod_id"
-                                    id="pod-select-{{ stage_player.id }}"
-                                    class="pod-select"
-                                    aria-label="Pod for {{ stage_player.player.get_display_name }}"
-                                    hx-post="{% url 'tourney:tourney-update-pod-assignments' tournament.code %}"
-                                    hx-vals='{"stage_player_id": "{{ stage_player.id }}"}'
-                                    hx-target="#seeding-list"
-                                    hx-swap="innerHTML">
-                                {% for pod in pods %}
-                                    <option value="{{ pod.id }}"{% if pod.id == column.pod.id %} selected{% endif %}>{{ pod.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
+                        <select name="pod_id"
+                                id="pod-select-{{ stage_player.id }}"
+                                class="pod-select input-small"
+                                aria-label="Pod for {{ stage_player.player.get_display_name }}"
+                                hx-post="{% url 'tourney:tourney-update-pod-assignments' tournament.code %}"
+                                hx-vals='{"stage_player_id": "{{ stage_player.id }}"}'
+                                hx-target="#seeding-list"
+                                hx-swap="innerHTML">
+                            {% for pod in pods %}
+                                <option value="{{ pod.id }}"{% if pod.id == column.pod.id %} selected{% endif %}>{{ pod.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </li>
                 {% endfor %}
-            </div>
+            </ul>
         </div>
     {% endfor %}
 </div>

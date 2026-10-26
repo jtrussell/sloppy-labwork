@@ -1,5 +1,5 @@
 {# Mobile nav: hamburger toggle + slide-in drawer (CSS-only, no JS) #}
-<input type="checkbox" id="mobile-nav-toggle" class="mobile-nav-toggle" hidden>
+<input type="checkbox" id="mobile-nav-toggle" class="mobile-nav-toggle" aria-label="Menu" aria-controls="mobile-nav-drawer">
 
 <div class="d-md-none mobile-nav">
   <label for="mobile-nav-toggle" class="mobile-nav__button" aria-label="Open menu" aria-controls="mobile-nav-drawer">
@@ -10,97 +10,60 @@
 
   <label for="mobile-nav-toggle" class="mobile-nav__overlay" aria-hidden="true"></label>
 
-  <aside id="mobile-nav-drawer" class="mobile-nav__drawer">
+  <nav id="mobile-nav-drawer" class="mobile-nav__drawer" aria-label="Main">
     <label for="mobile-nav-toggle" class="mobile-nav__close" aria-label="Close menu">
       <svg class="mobile-nav__icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
         <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
       </svg>
     </label>
     <ul class="mobile-nav__list">
-      <li><a href="{% url 'home' %}" class="mobile-nav__link">Home</a></li>
-      {% if ft_use_events %}<li><a href="{% url 'tournaments-registartion-list' %}" class="mobile-nav__link">Events</a></li>{% endif %}
-      {% if ft_use_posts %}<li><a href="{% url 'posts-list' %}" class="mobile-nav__link">Notes</a></li>{% endif %}
-      {% if ft_use_register %}<li><a href="{% url 'register-home' %}" class="mobile-nav__link">Register</a></li>{% endif %}
-      {% if ft_use_ratings %}<li><a href="{% url 'home-ratings' %}" class="mobile-nav__link">Ratings</a></li>{% endif %}
-      {% if ft_use_tourneys %}<li><a href="{% url 'tourney:tourney-my-tournaments' %}" class="mobile-nav__link">Tournaments</a></li>{% endif %}
-      <li><a href="{% url 'redacted-list' %}" class="mobile-nav__link">Gizmos</a></li>
+      <li><a href="{% url 'home' %}" class="mobile-nav__link{% if nav_section == 'home' %} mobile-nav__link--active" aria-current="page{% endif %}">Home</a></li>
+      {% if ft_use_posts %}<li><a href="{% url 'posts-list' %}" class="mobile-nav__link{% if nav_section == 'posts' %} mobile-nav__link--active" aria-current="page{% endif %}">Notes</a></li>{% endif %}
+      {% if ft_use_tourneys %}<li><a href="{% url 'tourney:tourney-my-tournaments' %}" class="mobile-nav__link{% if nav_section == 'tourney' %} mobile-nav__link--active" aria-current="page{% endif %}">Tournaments</a></li>{% endif %}
+      <li><a href="{% url 'redacted-list' %}" class="mobile-nav__link{% if nav_section == 'gizmos' %} mobile-nav__link--active" aria-current="page{% endif %}">Gizmos</a></li>
       <li>
         {% if request.user.is_authenticated %}
-        <a href="{% url 'profile' %}" class="mobile-nav__link">Profile</a>
+        <a href="{% url 'profile' %}" class="mobile-nav__link{% if nav_section == 'profile' %} mobile-nav__link--active" aria-current="page{% endif %}">Profile</a>
         {% else %}
-        <a href="{% url 'account_login' %}" class="mobile-nav__link">Sign In</a>
+        <a href="{% url 'account_login' %}" class="mobile-nav__link{% if nav_section == 'profile' %} mobile-nav__link--active" aria-current="page{% endif %}">Sign In</a>
         {% endif %}
       </li>
     </ul>
-  </aside>
+  </nav>
 </div>
 
-<div class="d-none d-md-block">
+<nav class="d-none d-md-block" aria-label="Main">
   <ul class="nav nav-top">
     <li class="nav__item">
-      <a href="{% url 'home' %}" class="nav__link">
-        Home
-      </a>
+      <a href="{% url 'home' %}" class="nav__link{% if nav_section == 'home' %} nav__link--active" aria-current="page{% endif %}">Home</a>
     </li>
-
-    {% if ft_use_events %}
-    <li class="nav__item">
-      <a href="{%url 'tournaments-registartion-list' %}" class="nav__link">
-        Events
-      </a>
-    </li>
-    {% endif %}
 
     {% if ft_use_posts %}
     <li class="nav__item">
-      <a href="{%url 'posts-list' %}" class="nav__link">
-        Notes
-      </a>
-    </li>
-    {% endif %}
-
-    {% if ft_use_register %}
-    <li class="nav__item">
-      <a href="{% url 'register-home' %}" class="nav__link">
-        Register
-      </a>
-    </li>
-    {% endif %}
-
-    {% if ft_use_ratings %}
-    <li class="nav__item">
-      <a href="{% url 'home-ratings' %}" class="nav__link">
-        Ratings
-      </a>
+      <a href="{% url 'posts-list' %}" class="nav__link{% if nav_section == 'posts' %} nav__link--active" aria-current="page{% endif %}">Notes</a>
     </li>
     {% endif %}
 
     {% if ft_use_tourneys %}
     <li class="nav__item">
-      <a href="{% url 'tourney:tourney-my-tournaments' %}" class="nav__link">
+      <a href="{% url 'tourney:tourney-my-tournaments' %}" class="nav__link{% if nav_section == 'tourney' %} nav__link--active" aria-current="page{% endif %}">
         {% if request.user.username == 'DRSheep' %}Hookups{% else %}Tournaments{% endif %}
       </a>
     </li>
     {% endif %}
 
     <li class="nav__item">
-      <a href="{% url 'redacted-list' %}" class="nav__link">
-        Gizmos
-      </a>
+      <a href="{% url 'redacted-list' %}" class="nav__link{% if nav_section == 'gizmos' %} nav__link--active" aria-current="page{% endif %}">Gizmos</a>
     </li>
 
     <li class="nav__spacer">&nbsp;</li>
 
     <li class="nav__item">
       {% if request.user.is_authenticated %}
-      <a href="{% url 'profile' %}" class="nav__link">
-        Profile
-      </a>
+      <a href="{% url 'profile' %}" class="nav__link{% if nav_section == 'profile' %} nav__link--active" aria-current="page{% endif %}">Profile</a>
       {% else %}
-      <a href="{% url 'account_login' %}" class="nav__link">
-        Sign In
-      </a>
+      <a href="{% url 'account_login' %}" class="nav__link{% if nav_section == 'profile' %} nav__link--active" aria-current="page{% endif %}">Sign In</a>
       {% endif %}
     </li>
   </ul>
-</div>
+</nav>

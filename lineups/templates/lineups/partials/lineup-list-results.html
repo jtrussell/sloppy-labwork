@@ -1,46 +1,30 @@
 {% if lineups %}
-<div class="lineup-list">
+<ul class="card-list">
   {% for lineup in lineups %}
   {% with latest=lineup.latest_version %}
-  <div class="lineup-card surface surface--flat">
+  <li class="card">
     {% if latest %}
-    <h3 class="lineup-card__title"><a href="{% url 'lineups-version-detail' latest.code %}">{{ lineup.name }}</a></h3>
-    <ul class="lineup-card__meta inline-list">
+    <h3 class="card__title"><a href="{% url 'lineups-version-detail' latest.code %}">{{ lineup.name }}</a></h3>
+    <ul class="card__meta inline-list">
       <li>{{ latest.deck_count }} Deck{{ latest.deck_count|pluralize }}</li>
       <li><a href="{% url 'lineups-detail' lineup.code %}">{{ lineup.versions.count }} Version{{ lineup.versions.count|pluralize }}</a></li>
     </ul>
     {% else %}
-    <h3 class="lineup-card__title"><a href="{% url 'lineups-detail' lineup.code %}">{{ lineup.name }}</a></h3>
-    <ul class="lineup-card__meta inline-list">
+    <h3 class="card__title"><a href="{% url 'lineups-detail' lineup.code %}">{{ lineup.name }}</a></h3>
+    <ul class="card__meta inline-list">
       <li>No versions</li>
     </ul>
     {% endif %}
-  </div>
+  </li>
   {% endwith %}
   {% endfor %}
-</div>
+</ul>
 
-{% if lineups.paginator.num_pages > 1 %}
-<div class="pagination">
-  {% if lineups.has_previous %}
-  <a href="?page={{ lineups.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if format_filter %}&format={{ format_filter }}{% endif %}" class="button" hx-get="?page={{ lineups.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if format_filter %}&format={{ format_filter }}{% endif %}" hx-target="#lineup-results" hx-swap="innerHTML">&laquo; Prev</a>
-  {% endif %}
+{% include "components/pagination.html" with page_obj=lineups hx_target="#lineup-results" label="Lineup pages" %}
 
-  <span class="pagination-info">Page {{ lineups.number }} of {{ lineups.paginator.num_pages }}</span>
-
-  {% if lineups.has_next %}
-  <a href="?page={{ lineups.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if format_filter %}&format={{ format_filter }}{% endif %}" class="button" hx-get="?page={{ lineups.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if format_filter %}&format={{ format_filter }}{% endif %}" hx-target="#lineup-results" hx-swap="innerHTML">Next &raquo;</a>
-  {% endif %}
-</div>
-{% endif %}
-
+{% elif search_query or format_filter %}
+{% include "components/empty-state.html" with message="No lineups match your search." %}
 {% else %}
-<div class="empty-state surface surface--flat">
-  {% if search_query or format_filter %}
-  <p>No lineups match your search.</p>
-  {% else %}
-  <p>You don't have any lineups yet.</p>
-  <a href="{% url 'lineups-create' %}" class="button button-primary">Create Your First Lineup</a>
-  {% endif %}
-</div>
+{% url 'lineups-create' as create_url %}
+{% include "components/empty-state.html" with message="You don't have any lineups yet." action_url=create_url action_label="Create Your First Lineup" action_is_primary=True %}
 {% endif %}

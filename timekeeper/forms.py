@@ -7,12 +7,13 @@ class TimerCreateForm(forms.ModelForm):
         min_value=0,
         max_value=999,
         initial=50,
-        help_text='Duration in minutes'
+        label='Duration (minutes)'
     )
 
     class Meta:
         model = CountdownTimer
         fields = ['name']
+        labels = {'name': 'Timer name'}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

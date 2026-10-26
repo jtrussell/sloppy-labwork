@@ -1028,7 +1028,7 @@ class GhostformViewsTestCase(GhostformTestMixin, TestCase):
         self.client.post(self._url('ghostform-fill', ghostform), self._field_data(question, 'x'))
 
         self.assertContains(get_response, 'no longer accepting responses')
-        self.assertNotContains(get_response, 'type="submit"')
+        self.assertNotContains(get_response, 'ghostform-response-form')
         self.assertFalse(ghostform.responses.exists())
 
     def test_thanks_page(self):

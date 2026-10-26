@@ -13,10 +13,8 @@
         </span>
     </div>
     <div class="player-line-2">
-        <span class="player-status player-status--{% if player.status == 'active' %}active{% else %}dropped{% endif %}">
-            {{ player.get_status_display }}
-        </span>
-        <div class="player-actions">
+        <span class="badge badge--small {% if player.status == 'active' %}badge--success{% else %}badge--danger{% endif %}">{{ player.get_status_display }}</span>
+        <div class="player-actions cluster cluster--xs cluster--end">
             {% if pods %}
                 <form
                     method="post"
@@ -28,7 +26,7 @@
                 >
                     <input type="hidden" name="action" value="move_player">
                     <input type="hidden" name="player_id" value="{{ player.id }}">
-                    <select name="pod_id" id="player-pod-{{ player.id }}" aria-label="Pod for {{ player.get_display_name }}">
+                    <select name="pod_id" id="player-pod-{{ player.id }}" class="input-small" aria-label="Pod for {{ player.get_display_name }}">
                         {% if not player.current_pod_id %}
                             <option value="" selected disabled>Choose pod</option>
                         {% endif %}
@@ -38,49 +36,58 @@
                     </select>
                 </form>
             {% endif %}
-            <a href="{% url 'tourney:tourney-edit-player' tournament.code player.id %}" class="button button-small">Edit</a>
-            {% if player.status == 'active' %}
-                <form
-                    method="post"
-                    hx-confirm="Are you sure you want to drop this player?"
-                    hx-post="{% url 'tourney:tourney-manage-players' tournament.code %}"
-                    hx-target="closest .player-item"
-                    hx-swap="outerHTML"
-                    style="display: inline-block;"
-                >
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="drop_player">
-                    <input type="hidden" name="player_id" value="{{ player.id }}">
-                    <button type="submit" class="button button-small">Drop Player</button>
-                </form>
-            {% else %}
-                <form
-                    method="post"
-                    hx-post="{% url 'tourney:tourney-manage-players' tournament.code %}"
-                    hx-confirm="Are you sure you want to undrop this player?"
-                    hx-target="closest .player-item"
-                    hx-swap="outerHTML"
-                    style="display: inline-block;"
-                >
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="undrop_player">
-                    <input type="hidden" name="player_id" value="{{ player.id }}">
-                    <button type="submit" class="button button-small">Undrop Player</button>
-                </form>
-                <form
-                    method="post"
-                    hx-post="{% url 'tourney:tourney-manage-players' tournament.code %}"
-                    hx-confirm="Are you sure you want to remove this player? This action cannot be undone."
-                    hx-target="closest .player-item"
-                    hx-swap="outerHTML"
-                    style="display: inline-block;"
-                >
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="remove_player">
-                    <input type="hidden" name="player_id" value="{{ player.id }}">
-                    <button type="submit" class="button button-small">Remove</button>
-                </form>
-            {% endif %}
+            <details class="action-menu">
+                <summary class="action-menu__trigger" aria-label="Actions for {{ player.get_display_name }}">{% include "components/icon.html" with name="more" %}</summary>
+                <ul class="action-menu__list">
+                    <li><a href="{% url 'tourney:tourney-edit-player' tournament.code player.id %}" class="action-menu__item">Edit player</a></li>
+                    {% if player.status == 'active' %}
+                    <li>
+                        <form
+                            method="post"
+                            hx-confirm="Are you sure you want to drop this player?"
+                            hx-post="{% url 'tourney:tourney-manage-players' tournament.code %}"
+                            hx-target="closest .player-item"
+                            hx-swap="outerHTML"
+                        >
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="drop_player">
+                            <input type="hidden" name="player_id" value="{{ player.id }}">
+                            <button type="submit" class="action-menu__item">Drop player</button>
+                        </form>
+                    </li>
+                    {% else %}
+                    <li>
+                        <form
+                            method="post"
+                            hx-post="{% url 'tourney:tourney-manage-players' tournament.code %}"
+                            hx-confirm="Are you sure you want to undrop this player?"
+                            hx-target="closest .player-item"
+                            hx-swap="outerHTML"
+                        >
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="undrop_player">
+                            <input type="hidden" name="player_id" value="{{ player.id }}">
+                            <button type="submit" class="action-menu__item">Undrop player</button>
+                        </form>
+                    </li>
+                    <li class="action-menu__divider" role="separator"></li>
+                    <li>
+                        <form
+                            method="post"
+                            hx-post="{% url 'tourney:tourney-manage-players' tournament.code %}"
+                            hx-confirm="Are you sure you want to remove this player? This action cannot be undone."
+                            hx-target="closest .player-item"
+                            hx-swap="outerHTML"
+                        >
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="remove_player">
+                            <input type="hidden" name="player_id" value="{{ player.id }}">
+                            <button type="submit" class="action-menu__item action-menu__item--danger">Remove player</button>
+                        </form>
+                    </li>
+                    {% endif %}
+                </ul>
+            </details>
         </div>
     </div>
 </li>
@@ -95,56 +102,35 @@
 {% endpartialdef %}
 
 {% block content %}
-<h1>{{ tournament.name }}</h1>
-<div class="subheading">
-    <a href="{% url 'tourney:tourney-detail-matches' tournament.code %}">&larr; Back</a> • Manage Players
+<header class="page-header">
+    <a href="{% url 'tourney:tourney-detail-matches' tournament.code %}" class="back-link">{{ tournament.name }}</a>
+    <h1>Manage Players</h1>
+</header>
+
+<div class="stack stack--xl">
+    <section class="stack stack--md">
+        <h2>Add Player</h2>
+        <form method="post" class="form-wide stack stack--md" autocomplete="off">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_player">
+            {% include "tourney/partials/player-fields.html" with nickname_help="Required for guest players, optional for registered users" %}
+            <div class="form-actions">
+                <button type="submit" class="button button-primary">Add Player</button>
+                <a href="{% url 'tourney:tourney-detail-matches' tournament.code %}" class="button">Back</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="stack stack--sm">
+        <h2>Registered Players ({{ players | length }})</h2>
+        {% if pods %}
+            <p class="text-muted">Use the pod menu to move a player between pods. Their existing matches stay as they are.</p>
+        {% endif %}
+        {% if players %}
+            {% partial players-list %}
+        {% else %}
+            {% include "components/empty-state.html" with message="No players registered yet." %}
+        {% endif %}
+    </section>
 </div>
-
-<section>
-    <h2>Add Player</h2>
-    <form method="post" class="form-wide" autocomplete="off">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="add_player">
-
-        <div class="form-group">
-            <label for="{{ form.username.id_for_label }}">Username</label>
-            <input type="text" name="username" id="{{ form.username.id_for_label }}" list="usernames-list" class="form-control" value="{{ form.username.value|default:'' }}">
-            <datalist id="usernames-list">
-                {% for username in playgroup_usernames %}
-                    <option value="{{ username }}"></option>
-                {% endfor %}
-            </datalist>
-            {% if form.username.help_text %}
-                <span class="helptext">{{ form.username.help_text }}</span>
-            {% endif %}
-            {% if form.username.errors %}
-                <div class="error">{{ form.username.errors }}</div>
-            {% endif %}
-        </div>
-
-        <div class="form-group">
-            <label for="{{ form.nickname.id_for_label }}">Nickname</label>
-            {{ form.nickname }}
-            <span class="helptext">Required for guest players, optional for registered users</span>
-            {% if form.nickname.errors %}
-                <div class="error">{{ form.nickname.errors }}</div>
-            {% endif %}
-        </div>
-
-        <button type="submit" class="button button-primary">Add Player</button>
-        <a href="{% url 'tourney:tourney-detail-matches' tournament.code %}" class="button">Back</a>
-    </form>
-</section>
-
-<section>
-    <h2>Registered Players ({{ players | length }})</h2>
-    {% if pods %}
-        <p class="text-muted">Use the pod menu to move a player between pods. Their existing matches stay as they are.</p>
-    {% endif %}
-    {% if players %}
-        {% partial players-list %}
-    {% else %}
-        <p>No players registered yet.</p>
-    {% endif %}
-</section>
 {% endblock %}

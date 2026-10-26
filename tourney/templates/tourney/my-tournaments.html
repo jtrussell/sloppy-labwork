@@ -1,77 +1,70 @@
 {% extends "tourney/_base.html" %}
 
 {% block content %}
-<h1>My Tournaments</h1>
-
-<section>
-    <h2>Tournaments I Admin</h2>
-    
-    <div style="margin-bottom: 1.25rem;">
-        <a href="{% url 'tourney:tourney-create-tournament' %}" class="button button-primary">Create Tournament</a>
+<header class="page-header">
+    <div class="page-header__title-row">
+        <h1>My Tournaments</h1>
+        <div class="page-header__actions">
+            <a href="{% url 'tourney:tourney-create-tournament' %}" class="button button-primary">Create Tournament</a>
+        </div>
     </div>
-    
+</header>
+
+<div class="stack stack--xl">
+<section class="stack stack--sm">
+    <h2>Tournaments I Admin</h2>
+
     {% if admin_tournaments %}
-        <table>
+        <table class="tournament-table">
             <thead>
                 <tr>
                     <th>Tournament</th>
-                    <th>Created</th>
+                    <th class="tournament-table__created">Created</th>
                     <th>Status</th>
+                    <th><span class="sr-only">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 {% for tournament in admin_tournaments %}
-                <tr class="with-actions">
+                <tr>
                     <td>
-                        <a href="{% url 'tourney:tourney-detail-home' tournament.code %}">
-                            {{ tournament.name }}
-                        </a>
+                        <a href="{% url 'tourney:tourney-detail-home' tournament.code %}">{{ tournament.name }}</a>
                     </td>
-                    <td>{{ tournament.created_on|date:"M d, Y" }}</td>
+                    <td class="tournament-table__created">{{ tournament.created_on|date:"M d, Y" }}</td>
                     <td>
                         {% if tournament.is_closed %}
-                            <span class="badge danger">Closed</span>
+                            <span class="badge badge--danger">Closed</span>
                         {% elif tournament.is_accepting_registrations %}
-                            <span class="badge success">Open Registration</span>
+                            <span class="badge badge--success">Open Registration</span>
                         {% else %}
                             <span class="badge">In Progress</span>
                         {% endif %}
                     </td>
-                </tr>
-                <tr>
-                    <td colspan="3" class="actions-column">
-                        <ul class="actions-list">
-                            <li><a class="button button-small" href="{% url 'tourney:tourney-edit-tournament' tournament.code %}">Edit</a></li>
-                            <li><a class="button button-small" href="{% url 'tourney:tourney-copy-tournament' tournament.code %}">Copy</a></li>
-                            <li><a class="button button-small" href="{% url 'tourney:tourney-manage-players' tournament.code %}">Manage Players</a></li>
-                        </ul>
+                    <td class="tournament-table__actions">
+                        <details class="action-menu">
+                            <summary class="action-menu__trigger" aria-label="Actions for {{ tournament.name }}">{% include "components/icon.html" with name="more" %}</summary>
+                            <ul class="action-menu__list">
+                                <li><a class="action-menu__item" href="{% url 'tourney:tourney-edit-tournament' tournament.code %}">Edit tournament</a></li>
+                                <li><a class="action-menu__item" href="{% url 'tourney:tourney-copy-tournament' tournament.code %}">Copy tournament</a></li>
+                                <li><a class="action-menu__item" href="{% url 'tourney:tourney-manage-players' tournament.code %}">Manage players</a></li>
+                            </ul>
+                        </details>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-        
-        {% if admin_tournaments.has_other_pages %}
-            <div class="pagination">
-                {% if admin_tournaments.has_previous %}
-                    <a href="?admin_page={{ admin_tournaments.previous_page_number }}">&laquo; previous</a>
-                {% endif %}
-                
-                <span>Page {{ admin_tournaments.number }} of {{ admin_tournaments.paginator.num_pages }}</span>
-                
-                {% if admin_tournaments.has_next %}
-                    <a href="?admin_page={{ admin_tournaments.next_page_number }}">next &raquo;</a>
-                {% endif %}
-            </div>
-        {% endif %}
+        {% include "components/pagination.html" with page_obj=admin_tournaments page_param="admin_page" label="Tournaments I admin pages" %}
     {% else %}
-        <p>You haven't created any tournaments yet.</p>
+        {% url 'tourney:tourney-create-tournament' as create_tournament_url %}
+        {% include "components/empty-state.html" with message="You haven't created any tournaments yet." action_url=create_tournament_url action_label="Create Tournament" action_is_primary=True %}
     {% endif %}
 </section>
 
-<section>
+<section class="stack stack--sm">
     <h2>Tournaments I'm Playing In</h2>
     {% if player_tournaments %}
+        <div class="table-scroll">
         <table>
             <thead>
                 <tr>
@@ -84,16 +77,14 @@
                 {% for tournament in player_tournaments %}
                 <tr>
                     <td>
-                        <a href="{% url 'tourney:tourney-detail-home' tournament.code %}">
-                            {{ tournament.name }}
-                        </a>
+                        <a href="{% url 'tourney:tourney-detail-home' tournament.code %}">{{ tournament.name }}</a>
                     </td>
                     <td>{{ tournament.created_on|date:"M d, Y" }}</td>
                     <td>
                         {% if tournament.is_closed %}
-                            <span class="badge danger">Closed</span>
+                            <span class="badge badge--danger">Closed</span>
                         {% elif tournament.is_accepting_registrations %}
-                            <span class="badge success">Open Registration</span>
+                            <span class="badge badge--success">Open Registration</span>
                         {% else %}
                             <span class="badge">In Progress</span>
                         {% endif %}
@@ -102,22 +93,11 @@
                 {% endfor %}
             </tbody>
         </table>
-        
-        {% if player_tournaments.has_other_pages %}
-            <div class="pagination">
-                {% if player_tournaments.has_previous %}
-                    <a href="?player_page={{ player_tournaments.previous_page_number }}">&laquo; previous</a>
-                {% endif %}
-                
-                <span>Page {{ player_tournaments.number }} of {{ player_tournaments.paginator.num_pages }}</span>
-                
-                {% if player_tournaments.has_next %}
-                    <a href="?player_page={{ player_tournaments.next_page_number }}">next &raquo;</a>
-                {% endif %}
-            </div>
-        {% endif %}
+        </div>
+        {% include "components/pagination.html" with page_obj=player_tournaments page_param="player_page" label="Tournaments I'm playing in pages" %}
     {% else %}
-        <p>You're not registered for any tournaments.</p>
+        {% include "components/empty-state.html" with message="You're not registered for any tournaments." %}
     {% endif %}
 </section>
+</div>
 {% endblock %}

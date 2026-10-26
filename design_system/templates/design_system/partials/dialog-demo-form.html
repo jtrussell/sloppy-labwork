@@ -1,0 +1,11 @@
+{% include "components/dialog-header.html" with title="Rename deck" title_id="dialog-title" %}
+<form novalidate hx-post="{% url 'design_system:dialog-demo' %}" hx-target="#dialog-demo-result" hx-swap="innerHTML" hx-disabled-elt="find button[type=submit]">
+  {% csrf_token %}
+  <div class="dialog__body">
+    {% include "components/form-fields.html" with form=form %}
+  </div>
+  <div class="dialog__footer">
+    <button type="button" class="button" data-dialog-close>Cancel</button>
+    <button type="submit" class="button button-primary">Save</button>
+  </div>
+</form>

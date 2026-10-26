@@ -1,0 +1,38 @@
+{% extends "design_system/_base.html" %}
+{% load design_system_extras %}
+
+{% block gallery_content %}
+<section>
+  <h2>Scale</h2>
+  <p class="ds-lede">All margin, padding and gap values come from this scale.</p>
+  <div class="ds-scale">
+    {% for token in tokens_by_group.space %}
+    <div class="ds-scale__row">
+      <span class="ds-token">{{ token.name }}</span>
+      <span class="ds-token text-muted">{{ token.value }}</span>
+      <span class="ds-scale__bar" style="width: {{ token.name|token_reference }}"></span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section>
+  <h2>Rules</h2>
+  <ol class="ds-rules">
+    <li>Use only <code>--space-*</code> tokens for margin, padding and gap.</li>
+    <li>Components have no outer margin. The parent spaces its children with <code>gap</code> (see <a href="{% url 'design_system:section' 'layout' %}">Layout &amp; alignment</a>).</li>
+    <li>Prefer <code>gap</code> between siblings; reserve margins for prose rhythm.</li>
+    <li>Pick the step by relationship, not by eye: tight groups (an icon and its label) use 1–2, related items 3–4, separate blocks 5–6, sections 7–8.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>Relationship steps</h2>
+  <div class="ds-scale">
+    <div class="ds-scale__row"><span>Tight</span><span class="ds-token text-muted">--space-1 – 2</span><span class="ds-scale__bar" style="width: var(--space-2)"></span></div>
+    <div class="ds-scale__row"><span>Related</span><span class="ds-token text-muted">--space-3 – 4</span><span class="ds-scale__bar" style="width: var(--space-4)"></span></div>
+    <div class="ds-scale__row"><span>Separate</span><span class="ds-token text-muted">--space-5 – 6</span><span class="ds-scale__bar" style="width: var(--space-6)"></span></div>
+    <div class="ds-scale__row"><span>Sections</span><span class="ds-token text-muted">--space-7 – 8</span><span class="ds-scale__bar" style="width: var(--space-8)"></span></div>
+  </div>
+</section>
+{% endblock %}

@@ -3,7 +3,7 @@
 
 {% block tab_content %}
 <div id="tournament-content">
-    <section>
+    <section class="stack stack--sm">
         <h2>Tournament Admins</h2>
         <p class="text-muted">Manage who can administer this tournament.</p>
 
@@ -16,30 +16,31 @@
             <span class="admin-username">{% if admin.user %}{{ admin.user.username }}{% else %}(deleted user){% endif %}</span>
             <form method="post" action="{% url 'tourney:tourney-remove-admin' tournament.code admin.id %}" class="form-inline">
                 {% csrf_token %}
-                <button type="submit" class="button button-small" hx-confirm="Remove {{ admin.user.username }} as admin?">Remove</button>
+                <button type="submit" class="button button-small button-danger" hx-post="{% url 'tourney:tourney-remove-admin' tournament.code admin.id %}" hx-confirm="Remove {{ admin.user.username }} as admin?">Remove</button>
             </form>
         </div>
         {% endfor %}
 
         <form method="post" action="{% url 'tourney:tourney-add-admin' tournament.code %}">
             {% csrf_token %}
-            <div class="admin-add-row">
-                <input type="text" name="username" placeholder="Enter username" required>
+            <label class="sr-only" for="add-admin-username">Username</label>
+            <div class="input-with-button-group">
+                <input type="text" id="add-admin-username" name="username" placeholder="Enter username" required>
                 <button type="submit" class="button button-primary">Add Admin</button>
             </div>
         </form>
     </section>
 
-    <section>
+    <section class="stack stack--sm">
         <h2>Admin Actions</h2>
         <p class="text-muted">Manage tournament settings and configuration.</p>
 
-        <div class="hstack gap-1">
+        <div class="cluster">
             <a href="{% url 'tourney:tourney-edit-tournament' tournament.code %}" class="button button-primary">
                 Edit Tournament
             </a>
 
-            <form style="display: inline-block">
+            <form class="form-inline">
                 <button type="button"
                         class="button button-danger sm-w100"
                         hx-post="{% url 'tourney:tourney-delete-tournament' tournament.code %}"
@@ -50,14 +51,14 @@
         </div>
     </section>
 
-    <section>
+    <section class="stack stack--sm">
         <h2>Result Form</h2>
         {% if tournament.result_form %}
         <p class="text-muted">
             Players answer <strong>{{ tournament.result_form.title }}</strong> whenever they report a match result.
             Its status ({{ tournament.result_form.get_status_display|lower }}) only controls the form's share link.
         </p>
-        <div class="hstack gap-1">
+        <div class="cluster">
             <a href="{% url 'ghostform:ghostform-detail' tournament.result_form.code %}" class="button button-primary">View Form</a>
             <a href="{% url 'ghostform:ghostform-responses-csv' tournament.result_form.code %}" class="button">Download Responses (CSV)</a>
         </div>
@@ -71,16 +72,18 @@
     </section>
 
     {% if tournament.pmc_event %}
-    <section>
+    <section class="stack stack--sm">
         <h2>Sync to KeyChain</h2>
         <p class="text-muted">Sync tournament standings to the linked KeyChain event.</p>
 
-        <a href="{% url 'tourney:tourney-sync-to-keychain' tournament.code %}" class="button button-primary">
-            Sync Results to KeyChain
-        </a>
+        <div class="cluster">
+            <a href="{% url 'tourney:tourney-sync-to-keychain' tournament.code %}" class="button button-primary">
+                Sync Results to KeyChain
+            </a>
+        </div>
     </section>
     {% elif user_has_playgroup_staff_access %}
-    <section>
+    <section class="stack stack--sm">
         <h2>Export to KeyChain</h2>
         <p class="text-muted">Export tournament standings as a KeyChain event.</p>
 
@@ -92,9 +95,10 @@
     </section>
     {% endif %}
 
-    <section>
+    <section class="stack stack--sm">
         <h2>Tournament Log</h2>
         <p class="text-muted">Recent admin and player actions for this tournament.</p>
+        <div class="cluster">
         <button type="button"
                 id="copyLogsBtn"
                 class="button button-primary sm-w100"
@@ -103,18 +107,19 @@
                 data-log-entries='{{ tournament_logs_json|safe }}'>
             Copy Logs to Clipboard
         </button>
+        </div>
 
         {% if tournament_logs %}
             <div class="tournament-logs">
                 {% for log in tournament_logs %}
                     <div class="log-entry">
-                        {{ log.created_on|date:"M d, Y g:i A" }}<span style="white-space: pre;">	</span>{% if log.user %}{{ log.user.username }}{% else %}System{% endif %}<span style="white-space: pre;">	</span>{{ log.get_action_type_display }}{% if log.description %}: {{ log.description }}{% endif %}
+                        {{ log.created_on|date:"M d, Y g:i A" }}<span aria-hidden="true">&emsp;</span>{% if log.user %}{{ log.user.username }}{% else %}System{% endif %}<span aria-hidden="true">&emsp;</span>{{ log.get_action_type_display }}{% if log.description %}: {{ log.description }}{% endif %}
                     </div>
                 {% endfor %}
             </div>
         {% else %}
-            <div style="margin-top: 1.25rem;">
-                <p class="text-muted" style="text-align: center;">No tournament log entries found.</p>
+            <div>
+                <p class="text-muted text-center">No tournament log entries found.</p>
             </div>
         {% endif %}
     </section>

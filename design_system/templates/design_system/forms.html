@@ -1,0 +1,85 @@
+{% extends "design_system/_base.html" %}
+{% load design_system_extras %}
+
+{% block gallery_content %}
+<section>
+  <h2>Field</h2>
+  <p class="ds-lede">Render each Django form field with <code>components/field.html</code>. It outputs the label, required marker, help text, widget, then errors below the widget, and keeps Django's <code>aria-describedby</code> and <code>aria-invalid</code> wiring.</p>
+  <pre><code>{% verbatim %}{% include "components/field.html" with field=form.deck_name %}{% endverbatim %}</code></pre>
+  {% ds_example no_markup %}
+  {% include "components/field.html" with field=demo_form.deck_name %}
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Whole forms</h2>
+  <p>For straightforward forms, <code>components/form-fields.html</code> renders non-field and hidden-field errors, hidden fields and every visible field in a <code>.stack.stack--md</code>. Follow it with <code>.form-actions</code>.</p>
+  <pre><code>{% verbatim %}&lt;form method="post"&gt;
+  {% csrf_token %}
+  {% include "components/form-fields.html" with form=form %}
+  &lt;div class="form-actions"&gt;
+    &lt;button type="submit" class="button button-primary"&gt;Save&lt;/button&gt;
+    &lt;a href="…" class="button"&gt;Cancel&lt;/a&gt;
+  &lt;/div&gt;
+&lt;/form&gt;{% endverbatim %}</code></pre>
+  {% ds_example no_markup %}
+  <form class="stack stack--lg">
+    {% include "components/form-fields.html" with form=demo_form %}
+    <div class="form-actions">
+      <button type="button" class="button button-primary">Save</button>
+      <button type="button" class="button">Cancel</button>
+    </div>
+  </form>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Validation errors</h2>
+  <p>Field errors appear under the widget and the widget border turns danger. Errors not tied to a field appear first, in <code>.form-errors</code>.</p>
+  {% ds_example no_markup %}
+  {% include "components/form-fields.html" with form=invalid_demo_form %}
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Input with button</h2>
+  {% ds_example %}
+  <div class="input-with-button-group">
+    <input type="search" placeholder="Search lineups" aria-label="Search lineups">
+    <button type="submit" class="button">Search</button>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Small controls</h2>
+  <p>Add <code>.input-small</code> to an input or select that sits beside <code>.button-small</code> buttons so their heights match.</p>
+  {% ds_example %}
+  <div class="cluster cluster--xs">
+    <select class="input-small" aria-label="Pod for Alpha"><option>Pod 1</option><option>Pod 2</option></select>
+    <button type="button" class="button button-small">Edit</button>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Form actions</h2>
+  <p><code>.form-actions</code> lays out submit and cancel controls; add <code>.form-actions--end</code> to right-align them.</p>
+  {% ds_example %}
+  <div class="form-actions form-actions--end">
+    <a href="#" class="button">Cancel</a>
+    <button type="button" class="button button-primary">Create tournament</button>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Guidelines</h2>
+  <ul class="ds-rules">
+    <li>Every input has a visible label. Placeholders are examples, not labels.</li>
+    <li>Put explanatory text in the form field's <code>help_text</code> so it's announced with the input.</li>
+    <li>Space fields with the stack gap; fields carry no margins.</li>
+    <li>Mark only required fields; don't mark optional ones.</li>
+  </ul>
+</section>
+{% endblock %}

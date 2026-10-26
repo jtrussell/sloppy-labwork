@@ -1,0 +1,42 @@
+{% extends "page.html" %}
+{% load static %}
+
+{% block head_title %}Sloppy Labwork | Design System{% if section_title %} | {{ section_title }}{% endif %}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'design_system/gallery.css' %}">
+{% endblock %}
+
+{% block content %}
+<header class="ds-header">
+  <div>
+    <h1>{% if section_title %}{{ section_title }}{% else %}Design System{% endif %}</h1>
+    <div class="subheading">Sloppy Labwork design system</div>
+  </div>
+  <div class="segmented" role="group" aria-label="Preview theme">
+    {% for value, label in themes %}
+    <button type="button" data-ds-theme="{{ value }}" aria-pressed="{% if value|stringformat:'s' == request.user.profile.theme|stringformat:'s' %}true{% else %}false{% endif %}">{{ label }}</button>
+    {% endfor %}
+  </div>
+</header>
+
+<nav class="ds-nav" aria-label="Design system sections">
+  <div class="ds-nav__group">
+    <a href="{% url 'design_system:index' %}" class="ds-nav__link"{% if not current_section %} aria-current="page"{% endif %}>Overview</a>
+  </div>
+  {% for group_label, sections in section_groups %}
+  <div class="ds-nav__group">
+    <span class="ds-nav__label">{{ group_label }}</span>
+    {% for slug, title in sections %}
+    <a href="{% url 'design_system:section' slug %}" class="ds-nav__link"{% if slug == current_section %} aria-current="page"{% endif %}>{{ title }}</a>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</nav>
+
+{% block gallery_content %}{% endblock %}
+{% endblock %}
+
+{% block extra_body %}
+<script src="{% static 'design_system/gallery.js' %}"></script>
+{% endblock %}

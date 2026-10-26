@@ -1,9 +1,9 @@
 <article class="ts-template-card surface">
   <div class="ts-template-card__header">
     <h3 class="ts-template-card__name"><a href="{% url 'trade_secrets:template-detail' card.template.code %}">{{ card.template.name }}</a></h3>
-    {% if card.template.is_system %}<span class="ts-status ts-status--standard">Standard</span>{% endif %}
+    {% if card.template.is_system %}<span class="badge ts-status--standard">Standard</span>{% endif %}
   </div>
-  {% include 'trade_secrets/partials/step-rail.html' with rail=card.rail mini=True %}
+  {% include "components/step-rail.html" with steps=card.rail mini=True label="Steps" %}
   <p class="ts-template-card__summary">{{ card.summary }}</p>
   {% if user.is_authenticated %}
   <form method="post" action="{% url 'trade_secrets:session-create' %}">

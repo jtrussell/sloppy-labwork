@@ -12,25 +12,25 @@
     <div class="timer__code"><a href="{% url 'timekeeper:timer_full_page' code %}">{{ code }}</a></div>
     <div class="timer__controls">
         {% if state == 'paused' %}
-        <a class="timer__control-link"
+        <button type="button" class="timer__control"
            hx-post="{% url 'timekeeper:timer_start' code %}"
            hx-target="#timer-{{ code }}"
-           hx-swap="outerHTML">Start</a>
+           hx-swap="outerHTML">Start</button>
         {% else %}
-        <a class="timer__control-link"
+        <button type="button" class="timer__control"
            hx-post="{% url 'timekeeper:timer_pause' code %}"
            hx-target="#timer-{{ code }}"
-           hx-swap="outerHTML">Pause</a>
+           hx-swap="outerHTML">Pause</button>
         {% endif %}
-        <a class="timer__control-link"
+        <button type="button" class="timer__control"
            hx-post="{% url 'timekeeper:timer_reset' code %}"
            hx-target="#timer-{{ code }}"
            hx-swap="outerHTML"
-           hx-confirm="Are you sure you want to reset this timer?">Reset</a>
-        <a class="timer__control-link timer__control-link--danger"
+           hx-confirm="Are you sure you want to reset this timer?">Reset</button>
+        <button type="button" class="timer__control timer__control--danger"
            hx-post="{% url 'timekeeper:timer_delete' code %}"
            hx-target="#timer-{{ code }}"
            hx-swap="outerHTML"
-           hx-confirm="Are you sure you want to delete this timer?">Cancel</a>
+           hx-confirm="Are you sure you want to delete this timer?">Cancel</button>
     </div>
 </div>

@@ -1,16 +1,17 @@
 {% load posts_extras %}
-<div class="note-item surface surface--flat" id="note-{{ note.id }}">
-  <div class="note-content">
+<li class="card" id="note-{{ note.id }}">
+  <div class="lineup-note__content">
     {{ note.text|markdown|safe }}
   </div>
-  <div class="note-meta">
-    <span>{{ note.created_on|date:"M j, Y g:i A" }}</span>
+  <div class="card__footer">
+    <span class="card__meta">{{ note.created_on|date:"M j, Y g:i A" }}</span>
     {% if is_owner %}
-    <button class="button button-small" hx-get="{% url 'lineups-note-edit' lineup.code note.id %}" hx-target="#note-{{ note.id }}" hx-swap="outerHTML">Edit</button>
-    <form method="post" action="{% url 'lineups-note-delete' lineup.code note.id %}" class="form-inline">
+    <span class="spacer"></span>
+    <button type="button" class="button button-small" hx-get="{% url 'lineups-note-edit' lineup.code note.id %}" hx-target="#note-{{ note.id }}" hx-swap="outerHTML">Edit</button>
+    <form method="post" action="{% url 'lineups-note-delete' lineup.code note.id %}">
       {% csrf_token %}
-      <button type="submit" class="button button-small" hx-target="#note-{{ note.id }}" hx-swap="outerHTML" hx-confirm="Delete this note?">Delete</button>
+      <button type="submit" class="button button-small button-danger" hx-post="{% url 'lineups-note-delete' lineup.code note.id %}" hx-target="#note-{{ note.id }}" hx-swap="outerHTML" hx-confirm="Delete this note?">Delete</button>
     </form>
     {% endif %}
   </div>
-</div>
+</li>

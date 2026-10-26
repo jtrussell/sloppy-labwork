@@ -1,0 +1,12 @@
+{% if field.is_hidden %}{{ field }}{% else %}
+{% if field.use_fieldset %}<fieldset class="field{% if field.errors %} field--invalid{% endif %}"{% if field.aria_describedby %} aria-describedby="{{ field.aria_describedby }}"{% endif %}>
+  {% if field.label %}<legend class="field__label">{{ field.label }}{% if field.field.required %}<span class="field__required" aria-hidden="true">*</span>{% endif %}</legend>{% endif %}
+{% else %}<div class="field{% if field.errors %} field--invalid{% endif %}{% if field.widget_type == 'checkbox' %} field--check{% endif %}">
+  {% if field.widget_type == 'checkbox' %}{{ field }}{% endif %}
+  {% if field.label %}<label class="field__label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="field__required" aria-hidden="true">*</span>{% endif %}</label>{% endif %}
+{% endif %}
+  {% if field.help_text %}<div class="field__help"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text }}</div>{% endif %}
+  {% if field.use_fieldset %}<div class="field__choices">{{ field }}</div>{% elif field.widget_type != 'checkbox' %}{{ field }}{% endif %}
+  {% if field.errors %}<ul class="field__errors"{% if field.auto_id %} id="{{ field.auto_id }}_error"{% endif %}>{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+{% if field.use_fieldset %}</fieldset>{% else %}</div>{% endif %}
+{% endif %}

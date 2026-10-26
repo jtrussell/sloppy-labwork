@@ -1,0 +1,79 @@
+{% extends "design_system/_base.html" %}
+{% load design_system_extras %}
+
+{% block gallery_content %}
+<section>
+  <h2>Color tokens</h2>
+  <p class="ds-lede">Every themeable token, shown in each theme. Values come straight from <code>tokens.css</code>.</p>
+  <table class="ds-token-table">
+    <thead>
+      <tr>
+        <th>Token</th>
+        <th>
+          <div class="ds-swatch-legend">
+            {% for value, label in themes %}<span>{{ label }}</span>{% endfor %}
+          </div>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in themeable_token_rows %}
+      {% if row.token.group_key == 'color' %}
+      <tr>
+        <td><span class="ds-token">{{ row.token.name }}</span></td>
+        <td>
+          <div class="ds-swatch-set">
+            {% for theme_number, token_value in row.values %}
+            <span class="ds-swatch" data-theme="{{ theme_number }}" style="background-color: {{ row.token.name|token_reference }}" title="{{ token_value|default_if_none:'missing' }}"></span>
+            {% endfor %}
+          </div>
+        </td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Roles</h2>
+  <table class="ds-token-table">
+    <thead>
+      <tr><th>Role</th><th>Tokens</th><th>Use for</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Canvas</td><td class="ds-token">bg, surface, surface-raised</td><td>Page background, panels, raised panels</td></tr>
+      <tr><td>Text</td><td class="ds-token">text, text-muted, text-subtle</td><td>Body copy, secondary copy, de-emphasized labels</td></tr>
+      <tr><td>Lines</td><td class="ds-token">border, border-strong</td><td>Dividers and outlines; strong for hover and emphasis</td></tr>
+      <tr><td>Action</td><td class="ds-token">primary, primary-hover, on-primary</td><td>Primary buttons and selected states</td></tr>
+      <tr><td>Link</td><td class="ds-token">accent, accent-hover, on-accent</td><td>Links, active navigation, focus</td></tr>
+      <tr><td>Status</td><td class="ds-token">success, warning, danger, info</td><td>Feedback, validation, badges</td></tr>
+      <tr><td>On-color</td><td class="ds-token">on-primary, on-accent, on-danger, on-success</td><td>Text placed on a filled background of that color</td></tr>
+      <tr><td>Overlay</td><td class="ds-token">overlay</td><td>Backdrops behind drawers and dialogs</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Text on canvas</h2>
+  {% ds_example themed %}
+  <div class="surface ds-demo-panel">
+    <p class="text-normal">Body text on surface</p>
+    <p class="text-muted">Muted text on surface</p>
+    <p class="text-success">Success text</p>
+    <p class="text-danger">Danger text</p>
+    <a href="#">An accent link</a>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Tints</h2>
+  <p>Tinted backgrounds are mixed from a semantic color and the <code>--tint-subtle</code> / <code>--tint-strong</code> percentages, never hard-coded. Contrast themes set both to <code>0%</code>, so tinted elements fall back to their border and text color.</p>
+  <pre><code>color: var(--color-danger);
+background-color: color-mix(in srgb, currentColor var(--tint-subtle), transparent);</code></pre>
+  {% ds_example themed %}
+  <div class="ds-tint-demo">Tinted with currentColor at --tint-subtle</div>
+  {% end_ds_example %}
+</section>
+{% endblock %}

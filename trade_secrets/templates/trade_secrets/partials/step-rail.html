@@ -1,9 +1,0 @@
-<ol class="ts-rail{% if mini %} ts-rail--mini{% endif %}" role="list"{% if mini %} aria-label="Steps"{% endif %}>
-  {% for step in rail %}
-  <li class="ts-rail__step{% if step.is_done %} is-done{% endif %}{% if step.is_current %} is-current{% endif %}{% if step.is_blocked %} is-blocked{% endif %}"{% if step.is_current %} aria-current="step"{% endif %}>
-    <span class="ts-rail__marker">{% if step.is_done %}{% include 'trade_secrets/partials/icon.html' with name='check' %}{% elif step.is_blocked %}{% include 'trade_secrets/partials/icon.html' with name='alert' %}{% else %}{% include 'trade_secrets/partials/icon.html' with name=step.icon %}{% endif %}</span>
-    <span class="ts-rail__label{% if mini %} ts-sr-only{% endif %}">{{ step.label }}</span>
-    {% if step.detail and not mini %}<span class="ts-rail__detail">{{ step.detail }}</span>{% endif %}
-  </li>
-  {% endfor %}
-</ol>

@@ -1,0 +1,96 @@
+{% extends "design_system/_base.html" %}
+{% load design_system_extras %}
+
+{% block gallery_content %}
+<section>
+  <h2>Page shell</h2>
+  <p><code>page.html</code> renders the navigation, messages, page content and footer inside <code>main.container.stack</code>. The container is capped at <code>--container-max</code> ({{ tokens_by_group.container.0.value }}) and takes 85–80% of narrower viewports. From 550px up the page is framed by the surface color on either side.</p>
+</section>
+
+<section>
+  <h2>Breakpoints</h2>
+  <p>Custom properties can't be used inside media queries, so breakpoints are a fixed set. Write mobile-first <code>min-width</code> queries.</p>
+  <table class="ds-token-table">
+    <thead>
+      <tr><th>Name</th><th>Query</th><th>Display utilities</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>xs</td><td class="ds-token">(min-width: 400px)</td><td class="ds-token">.d-xs-none .d-xs-inline .d-xs-block</td></tr>
+      <tr><td>md</td><td class="ds-token">(min-width: 550px)</td><td class="ds-token">.d-md-none .d-md-inline .d-md-block</td></tr>
+      <tr><td>lg</td><td class="ds-token">(min-width: 750px)</td><td class="ds-token">.d-lg-none .d-lg-inline .d-lg-block</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Stack</h2>
+  <p>Vertical flow with a consistent gap. Combine <code>.stack</code> with a size modifier; stacked children lose their own block margins so the gap is the only spacing.</p>
+  <table class="ds-token-table">
+    <thead><tr><th>Class</th><th>Gap</th></tr></thead>
+    <tbody>
+      <tr><td class="ds-token">.stack.stack--xs</td><td class="ds-token">--space-2</td></tr>
+      <tr><td class="ds-token">.stack.stack--sm</td><td class="ds-token">--space-4</td></tr>
+      <tr><td class="ds-token">.stack.stack--md</td><td class="ds-token">--space-5</td></tr>
+      <tr><td class="ds-token">.stack.stack--lg</td><td class="ds-token">--space-6</td></tr>
+      <tr><td class="ds-token">.stack.stack--xl</td><td class="ds-token">--space-8</td></tr>
+    </tbody>
+  </table>
+  {% ds_example %}
+  <div class="stack stack--sm">
+    <div class="ds-demo-box">First</div>
+    <div class="ds-demo-box">Second</div>
+    <div class="ds-demo-box">Third</div>
+  </div>
+  {% end_ds_example %}
+  <p><code>.stack</code> on its own has no gap; the older <code>.gap-1</code> / <code>.gap-2</code> helpers are legacy, prefer the size modifiers.</p>
+</section>
+
+<section>
+  <h2>Cluster</h2>
+  <p>A wrapping row for groups of buttons, badges or metadata. Defaults to <code>--space-4</code>; <code>.cluster--xs</code> and <code>.cluster--lg</code> tighten or loosen it, <code>.cluster--between</code> and <code>.cluster--end</code> distribute items.</p>
+  {% ds_example %}
+  <div class="cluster cluster--between">
+    <div class="cluster cluster--xs">
+      <span class="badge badge--accent">Archon</span>
+      <span class="badge">12 players</span>
+    </div>
+    <button type="button" class="button button-small">Register</button>
+  </div>
+  {% end_ds_example %}
+  <p><code>.hstack</code> is the older row primitive: it never wraps and collapses to a column at 550px and narrower.</p>
+</section>
+
+<section>
+  <h2>Grid</h2>
+  <p>Auto-filling columns with a minimum width: <code>.grid</code> (14rem), <code>.grid--narrow</code> (9rem) or <code>.grid--wide</code> (20rem).</p>
+  {% ds_example %}
+  <div class="grid grid--narrow">
+    <div class="ds-demo-box">One</div>
+    <div class="ds-demo-box">Two</div>
+    <div class="ds-demo-box">Three</div>
+    <div class="ds-demo-box">Four</div>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
+  <h2>Readable width</h2>
+  <p><code>.readable</code> caps a block at 65 characters per line, for long prose and forms.</p>
+</section>
+
+<section>
+  <h2>Alignment</h2>
+  <ol class="ds-rules">
+    <li>Buttons and text inputs share <code>--control-height</code>, so a button placed beside an input lines up without adjustment.</li>
+    <li>Interactive targets on touch layouts are at least <code>--tap-target</code> square.</li>
+    <li>Align to the content edge of the container; avoid one-off horizontal offsets.</li>
+    <li>Within a row, align items to the center unless they're text of different sizes, which align to the baseline.</li>
+  </ol>
+  {% ds_example %}
+  <div class="input-with-button-group">
+    <input type="search" placeholder="Search decks" aria-label="Search decks">
+    <button type="button" class="button">Search</button>
+  </div>
+  {% end_ds_example %}
+</section>
+{% endblock %}

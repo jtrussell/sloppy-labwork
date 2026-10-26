@@ -1,0 +1,9 @@
+<ol class="step-rail{% if mini %} step-rail--mini{% endif %}" role="list"{% if label %} aria-label="{{ label }}"{% endif %}>
+  {% for step in steps %}
+  <li class="step-rail__step{% if step.is_done %} is-done{% endif %}{% if step.is_current %} is-current{% endif %}{% if step.is_blocked %} is-blocked{% endif %}"{% if step.is_current %} aria-current="step"{% endif %}>
+    <span class="step-rail__marker">{% if step.is_done %}{% include "components/icon.html" with name="check" label=None %}{% elif step.is_blocked %}{% include "components/icon.html" with name="alert" label=None %}{% elif step.icon %}{% include "components/icon.html" with name=step.icon label=None %}{% else %}{{ forloop.counter }}{% endif %}</span>
+    <span class="step-rail__label{% if mini %} sr-only{% endif %}">{{ step.label }}{% if step.is_done %}<span class="sr-only"> (done)</span>{% elif step.is_blocked %}<span class="sr-only"> (blocked)</span>{% endif %}</span>
+    {% if step.detail and not mini %}<span class="step-rail__detail">{{ step.detail }}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ol>

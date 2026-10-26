@@ -3,51 +3,39 @@
 
 {% block head_title %}My Forms - Ghostform{% endblock %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'ghostform/main.css' %}">
-{% endblock %}
-
 {% block content %}
-<h1>My Forms</h1>
-<ul class="subheading inline-list">
-  <li><a href="{% url 'ghostform:ghostform-create' %}" class="button button-link button-link-bordered">New Form</a></li>
-</ul>
+<header class="page-header">
+  <div class="page-header__title-row">
+    <h1>My Forms</h1>
+    <div class="page-header__actions">
+      <a href="{% url 'ghostform:ghostform-create' %}" class="button button-primary">New Form</a>
+    </div>
+  </div>
+</header>
 
 {% if forms_page %}
-<div class="ghostform-list">
-  {% for ghostform in forms_page %}
-  <div class="ghostform-card surface surface--flat">
-    <h3 class="ghostform-card__title">
-      <a href="{% url 'ghostform:ghostform-detail' ghostform.code %}">{{ ghostform.title }}</a>
-      <span class="ghostform-status ghostform-status--{{ ghostform.status }}">{{ ghostform.get_status_display }}</span>
-    </h3>
-    <ul class="ghostform-card__meta inline-list">
-      <li>{{ ghostform.question_count }} question{{ ghostform.question_count|pluralize }}</li>
-      <li>{{ ghostform.response_count }} response{{ ghostform.response_count|pluralize }}</li>
-      {% if ghostform.latest_response_on %}
-      <li>Latest response {{ ghostform.latest_response_on|naturaltime }}</li>
-      {% endif %}
-    </ul>
-  </div>
-  {% endfor %}
+<div class="stack stack--lg">
+  <ul class="card-list">
+    {% for ghostform in forms_page %}
+    <li class="card">
+      <div class="card__header">
+        <h3 class="card__title"><a href="{% url 'ghostform:ghostform-detail' ghostform.code %}">{{ ghostform.title }}</a></h3>
+        {% include 'ghostform/partials/status-badge.html' %}
+      </div>
+      <ul class="card__meta inline-list">
+        <li>{{ ghostform.question_count }} question{{ ghostform.question_count|pluralize }}</li>
+        <li>{{ ghostform.response_count }} response{{ ghostform.response_count|pluralize }}</li>
+        {% if ghostform.latest_response_on %}
+        <li>Latest response {{ ghostform.latest_response_on|naturaltime }}</li>
+        {% endif %}
+      </ul>
+    </li>
+    {% endfor %}
+  </ul>
+  {% include "components/pagination.html" with page_obj=forms_page label="Form pages" %}
 </div>
-
-{% if forms_page.paginator.num_pages > 1 %}
-<div class="ghostform-pagination">
-  {% if forms_page.has_previous %}
-  <a href="?page={{ forms_page.previous_page_number }}" class="button">&laquo; Prev</a>
-  {% endif %}
-  <span class="ghostform-pagination__info">Page {{ forms_page.number }} of {{ forms_page.paginator.num_pages }}</span>
-  {% if forms_page.has_next %}
-  <a href="?page={{ forms_page.next_page_number }}" class="button">Next &raquo;</a>
-  {% endif %}
-</div>
-{% endif %}
-
 {% else %}
-<div class="ghostform-empty surface surface--flat">
-  <p>You don't have any forms yet.</p>
-  <a href="{% url 'ghostform:ghostform-create' %}" class="button button-primary">Create Your First Form</a>
-</div>
+{% url 'ghostform:ghostform-create' as create_url %}
+{% include "components/empty-state.html" with message="You don't have any forms yet." action_url=create_url action_label="Create Your First Form" action_is_primary=True %}
 {% endif %}
 {% endblock %}
