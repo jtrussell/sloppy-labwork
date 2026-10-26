@@ -22,6 +22,7 @@ from pmc.models import (
 )
 from tourney.models import Player, Tournament, TournamentAdmin
 from trade_secrets.models import Session as TradeSecretsSession, SessionTemplate
+from user_profile import account_removal
 from user_profile.management.commands import merge_users
 from .forms import EditUsernameForm
 
@@ -436,3 +437,114 @@ class MergeUsersCommandTests(TestCase):
         self.assertEqual(
             merge_users.find_unhandled_user_relations(handled_relations),
             [('pmc.EventResult', 'user')])
+
+
+class AccountRemovalTests(TestCase):
+    def setUp(self):
+        self.user = create_user_with_verified_email('Leaver', 'leaver@example.com')
+        self.opponent = create_user_with_verified_email('Opponent', 'opponent@example.com')
+        self.playgroup = Playgroup.objects.create(name='Removal Group', slug='removal-group')
+
+    def create_event_result(self, user, **fields):
+        event = Event.objects.create(
+            name='Event', start_date=date(2025, 1, 1), player_count=2)
+        return EventResult.objects.create(user=user, event=event, **fields)
+
+    def test_every_user_relation_has_a_removal_rule(self):
+        self.assertEqual(account_removal.find_unhandled_user_relations(), [])
+
+    def test_detects_relations_without_a_removal_rule(self):
+        handled_relations = account_removal.HANDLED_RELATIONS - {('pmc.EventResult', 'user')}
+        self.assertEqual(
+            account_removal.find_unhandled_user_relations(handled_relations),
+            [('pmc.EventResult', 'user')])
+
+    def test_blocks_team_accounts(self):
+        self.user.is_staff = True
+        self.user.save()
+        with self.assertRaises(account_removal.AccountRemovalBlocked):
+            account_removal.remove_user_account(self.user)
+
+    def test_blocks_sole_playgroup_admin(self):
+        PlaygroupMember.objects.create(playgroup=self.playgroup, user=self.user, is_staff=True)
+        with self.assertRaises(account_removal.AccountRemovalBlocked) as blocked:
+            account_removal.remove_user_account(self.user)
+        self.assertIn('Removal Group', blocked.exception.reasons[0])
+
+    def test_allows_playgroup_admin_when_another_admin_remains(self):
+        PlaygroupMember.objects.create(playgroup=self.playgroup, user=self.user, is_staff=True)
+        PlaygroupMember.objects.create(playgroup=self.playgroup, user=self.opponent, is_staff=True)
+        self.assertEqual(account_removal.find_account_removal_blockers(self.user), [])
+
+    def test_anonymizes_identity(self):
+        account_removal.remove_user_account(self.user)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.username.startswith(account_removal.REMOVED_USERNAME_PREFIX))
+        self.assertEqual(self.user.email, '')
+        self.assertFalse(self.user.is_active)
+        self.assertFalse(self.user.has_usable_password())
+
+    def test_deletes_personal_records(self):
+        social_app = SocialApp.objects.create(
+            provider='discord', name='Discord', client_id='id', secret='secret')
+        social_account = SocialAccount.objects.create(
+            user=self.user, provider='discord', uid='12345')
+        SocialToken.objects.create(app=social_app, account=social_account, token='token')
+        TournamentAdmin.objects.create(
+            user=self.user, tournament=Tournament.objects.create(name='Cup'))
+        account_removal.remove_user_account(self.user)
+        self.assertFalse(EmailAddress.objects.filter(user=self.user).exists())
+        self.assertFalse(SocialAccount.objects.filter(user=self.user).exists())
+        self.assertFalse(SocialToken.objects.exists())
+        self.assertFalse(TournamentAdmin.objects.filter(user=self.user).exists())
+
+    def test_replaces_profiles_with_blank_ones(self):
+        self.user.profile.tco_handle = 'leaver-tco'
+        self.user.profile.save()
+        self.user.pmc_profile.tagline = 'Hello'
+        self.user.pmc_profile.save()
+        account_removal.remove_user_account(self.user)
+        user = User.objects.get(pk=self.user.pk)
+        self.assertIsNone(user.profile.tco_handle)
+        self.assertIsNone(user.pmc_profile.tagline)
+
+    def test_keeps_shared_history_without_identifying_details(self):
+        membership = PlaygroupMember.objects.create(
+            playgroup=self.playgroup, user=self.user, nickname='Leaves')
+        result = self.create_event_result(
+            self.user, finishing_position=2, uploaded_deck_link='https://example.com/deck')
+        tournament_player = Player.objects.create(
+            user=self.user, tournament=Tournament.objects.create(name='Cup'), nickname='Leaves')
+        account_removal.remove_user_account(self.user)
+        membership.refresh_from_db()
+        result.refresh_from_db()
+        tournament_player.refresh_from_db()
+        self.assertIsNone(membership.nickname)
+        self.assertEqual(result.finishing_position, 2)
+        self.assertIsNone(result.uploaded_deck_link)
+        self.assertIsNone(tournament_player.nickname)
+
+
+class DeleteAccountViewTests(TestCase):
+    def setUp(self):
+        self.user = create_user_with_verified_email('Leaver', 'leaver@example.com')
+        self.client.force_login(self.user)
+
+    def test_rejects_mismatched_confirmation(self):
+        response = self.client.post(
+            reverse('delete_account'), {'confirm_username': 'someone-else'})
+        self.assertRedirects(response, reverse('profile'), fetch_redirect_response=False)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_active)
+
+    def test_removes_account_and_signs_out(self):
+        response = self.client.post(
+            reverse('delete_account'), {'confirm_username': 'leaver'})
+        self.assertRedirects(response, reverse('home'), fetch_redirect_response=False)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_active)
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    def test_rejects_get(self):
+        response = self.client.get(reverse('delete_account'))
+        self.assertEqual(response.status_code, 405)

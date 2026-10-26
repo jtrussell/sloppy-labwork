@@ -35,6 +35,29 @@
   <section>
     <h2>Danger Zone</h2>
     <p>Deleting your account is a permanent action that cannot be undone.</p>
-    <a href="javascript:alert('Not yet implemented')" class="button button-danger">Delete Account</a>
+    {% if account_removal_blockers %}
+      <div class="note note--danger">
+        {% for reason in account_removal_blockers %}<p>{{ reason }}</p>{% endfor %}
+      </div>
+    {% else %}
+      <button type="button" class="button button-danger" data-dialog-open="delete-account-dialog">Delete Account</button>
+    {% endif %}
   </section>
+
+  {% if not account_removal_blockers %}
+    <dialog id="delete-account-dialog" class="dialog" aria-labelledby="delete-account-dialog-title">
+      {% include "components/dialog-header.html" with title="Delete your account?" title_id="delete-account-dialog-title" %}
+      <form method="POST" action="{% url 'delete_account' %}">
+        {% csrf_token %}
+        <div class="dialog__body stack stack--md">
+          <p>Your sign-in, email, social connections and profile details will be removed and you will be signed out. Your event results and match history stay on record for other players, shown under an anonymous name.</p>
+          {% include "components/form-fields.html" with form=delete_account_form %}
+        </div>
+        <div class="dialog__footer">
+          <button type="button" class="button" data-dialog-close autofocus>Cancel</button>
+          <button type="submit" class="button button-danger">Delete Account</button>
+        </div>
+      </form>
+    </dialog>
+  {% endif %}
 {% endblock %}

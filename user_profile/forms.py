@@ -42,3 +42,19 @@ class EditUserProfileForm(forms.ModelForm):
     class Meta:
         model = UserProfile
         fields = ['challonge_handle', 'tco_handle', 'dok_handle', 'theme']
+
+
+class DeleteAccountForm(forms.Form):
+    confirm_username = forms.CharField(
+        label=_('Type your username to confirm'))
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean_confirm_username(self):
+        confirm_username = self.cleaned_data['confirm_username']
+        if confirm_username.strip().lower() != self.user.username.lower():
+            raise forms.ValidationError(
+                _('That does not match your username.'))
+        return confirm_username
