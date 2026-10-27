@@ -1,0 +1,6 @@
+{% load posts_extras %}
+{% if markdown_source.strip %}
+{{ markdown_source|markdown|safe }}
+{% else %}
+<p class="text-muted">Nothing to preview.</p>
+{% endif %}

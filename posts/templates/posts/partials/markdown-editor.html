@@ -1,0 +1,8 @@
+<div class="markdown-editor stack stack--sm" data-markdown-editor data-preview-url="{% url 'posts-preview' %}">
+  <div class="segmented markdown-editor__modes" role="group" aria-label="{{ field.label }} view">
+    <button type="button" aria-pressed="true" data-markdown-mode="write">Write</button>
+    <button type="button" aria-pressed="false" data-markdown-mode="preview">Preview</button>
+  </div>
+  {% include "components/field.html" with field=field %}
+  <div class="markdown-editor__preview posts-detail__content" data-markdown-preview aria-live="polite" hidden></div>
+</div>

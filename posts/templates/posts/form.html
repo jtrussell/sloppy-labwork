@@ -1,0 +1,43 @@
+{% extends "page.html" %}
+{% load static %}
+
+{% block head_title %}{% if object %}Edit{% else %}New{% endif %} Post - Sloppy Labwork{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'posts/detail.css' %}">
+<link rel="stylesheet" href="{% static 'posts/main.css' %}">
+{% endblock %}
+
+{% block content %}
+<header class="page-header">
+  <a href="{% if object %}{% url 'posts-detail' object.slug %}{% else %}{% url 'posts-list' %}{% endif %}" class="back-link">{% if object %}{{ object.title }}{% else %}Lab notes{% endif %}</a>
+  <h1>{% if object %}Edit Post{% else %}New Post{% endif %}</h1>
+</header>
+
+<form method="post" class="stack stack--lg">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="note note--danger">{{ form.non_field_errors }}</div>
+  {% endif %}
+  <div class="stack stack--md readable">
+    {% include "components/field.html" with field=form.title %}
+    {% include "components/field.html" with field=form.slug %}
+    {% include "components/field.html" with field=form.status %}
+    {% include "components/field.html" with field=form.published_on %}
+    {% include "components/field.html" with field=form.featured_image_url %}
+    {% include "components/field.html" with field=form.featured_image_alt %}
+  </div>
+
+  {% include "posts/partials/markdown-editor.html" with field=form.summary %}
+  {% include "posts/partials/markdown-editor.html" with field=form.content %}
+
+  <div class="form-actions">
+    <button type="submit" class="button button-primary">{% if object %}Save Changes{% else %}Create Post{% endif %}</button>
+    <a href="{% if object %}{% url 'posts-detail' object.slug %}{% else %}{% url 'posts-list' %}{% endif %}" class="button">Cancel</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{% static 'posts/markdown-editor.js' %}"></script>
+{% endblock %}
