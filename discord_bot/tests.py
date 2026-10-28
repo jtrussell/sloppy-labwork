@@ -138,7 +138,7 @@ class DispatchTest(SimpleTestCase):
         self.assertEqual(response['data']['flags'], MESSAGE_FLAG_EPHEMERAL)
 
 
-@mock.patch.object(random_access_archives, 'get_random_deck_from_dok', return_value={'url': DECK_URL})
+@mock.patch.object(random_access_archives, 'get_random_deck_with_fallback', return_value=({'url': DECK_URL}, None))
 class RandomAccessArchivesTest(SimpleTestCase):
     def test_returns_deck_url_for_given_dok_user(self, get_random_deck):
         options = [
@@ -160,6 +160,23 @@ class RandomAccessArchivesTest(SimpleTestCase):
         response = dispatch(Interaction(command_payload('random-access-archives', options)))
         self.assertEqual(response['data']['content'], random_access_archives.NO_DECK_FOUND_MESSAGE)
         self.assertEqual(response['data']['flags'], MESSAGE_FLAG_EPHEMERAL)
+
+    def test_no_deck_in_any_collection_is_an_ephemeral_message(self, get_random_deck):
+        get_random_deck.return_value = (None, None)
+        options = [{'name': 'dok', 'value': 'someone'}]
+        response = dispatch(Interaction(command_payload('random-access-archives', options)))
+        self.assertEqual(response['data']['content'], random_access_archives.NO_DECK_FOUND_MESSAGE)
+        self.assertEqual(response['data']['flags'], MESSAGE_FLAG_EPHEMERAL)
+
+    def test_deck_from_fallback_collection_names_the_collection(self, get_random_deck):
+        get_random_deck.return_value = ({'url': DECK_URL}, 'vault-keeper')
+        options = [{'name': 'dok', 'value': 'someone'}]
+        response = dispatch(Interaction(command_payload('random-access-archives', options)))
+        self.assertEqual(response, {
+            'type': RESPONSE_TYPE_CHANNEL_MESSAGE,
+            'data': {'content': random_access_archives.fallback_deck_message('vault-keeper', DECK_URL)},
+        })
+        self.assertIn('vault-keeper', response['data']['content'])
 
 
 class RandomAccessArchivesAccountLookupTest(TestCase):

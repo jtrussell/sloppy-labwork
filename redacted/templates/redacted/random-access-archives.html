@@ -22,6 +22,10 @@
     </div>
 
   {% elif deck_info %}
+    {% if fallback_collection %}
+      <p>We found no matching decks in your collection, so we pulled this one
+      from <strong>{{ fallback_collection }}</strong>'s collection.</p>
+    {% endif %}
     <h2>You picked...</h2>
     <p><a href="{{ deck_info.url }}">{{ deck_info.name }}</a>
       with a SAS rating of {{ deck_info.sasRating }}.</p>

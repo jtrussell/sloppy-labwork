@@ -1,6 +1,6 @@
 from allauth.socialaccount.models import SocialAccount
 from requests import RequestException
-from redacted.views import get_random_deck_from_dok, get_filters, get_expansions_from_form
+from redacted.views import get_random_deck_with_fallback, get_filters, get_expansions_from_form
 from ..registry import Command, COMMAND_TYPE_CHAT_INPUT, OPTION_TYPE_STRING, OPTION_TYPE_INTEGER, choice
 from ..responses import message, ephemeral_message
 
@@ -105,6 +105,10 @@ definition = {
 }
 
 
+def fallback_deck_message(fallback_collection, deck_url):
+    return f'We found no matching decks, so we pulled this one from {fallback_collection}\'s collection.\n{deck_url}'
+
+
 def get_dok_handle_for_discord_user(discord_user_id):
     account = SocialAccount.objects.filter(
         provider='discord', uid=discord_user_id).select_related('user__profile').first()
@@ -126,9 +130,13 @@ def handle(interaction):
         expansions,
     )
     try:
-        deck_info = get_random_deck_from_dok(filters)
+        deck_info, fallback_collection = get_random_deck_with_fallback(filters)
     except (ValueError, KeyError, IndexError, RequestException):
         return ephemeral_message(NO_DECK_FOUND_MESSAGE)
+    if deck_info is None:
+        return ephemeral_message(NO_DECK_FOUND_MESSAGE)
+    if fallback_collection:
+        return message(fallback_deck_message(fallback_collection, deck_info['url']))
     return message(deck_info['url'])
 
 

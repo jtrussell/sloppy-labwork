@@ -2,6 +2,7 @@ from random import randrange
 from django.shortcuts import render
 from requests import post
 from .forms import RandomDecksFromDokForm
+from .models import FallbackCollection
 from decks.models import Set
 
 DOK_PAGE_SIZE = 20
@@ -41,6 +42,8 @@ def get_random_deck_from_dok(filters={}):
         'https://decksofkeyforge.com/api/decks/filter-count',
         json=filter_payload)
     json_filter_count = req_filter_count.json()
+    if json_filter_count['count'] == 0:
+        return None
     ix_random_deck = randrange(0, json_filter_count['count'])
     page = ix_random_deck // DOK_PAGE_SIZE
     req_filter = post(
@@ -56,6 +59,19 @@ def get_random_deck_from_dok(filters={}):
         'sasRating': json_the_deck['sasRating'],
     }
     return deck_info
+
+
+def get_random_deck_with_fallback(filters):
+    deck_info = get_random_deck_from_dok(filters)
+    if deck_info is not None:
+        return deck_info, None
+    fallback_collection = FallbackCollection.objects.filter(is_active=True).order_by('?').first()
+    if fallback_collection is None:
+        return None, None
+    deck_info = get_random_deck_from_dok(filters | {'owner': fallback_collection.dok_username})
+    if deck_info is None:
+        return None, None
+    return deck_info, fallback_collection.dok_username
 
 
 def get_filters(owner, min_sas=None, max_sas=None, expansions=None):
@@ -96,6 +112,7 @@ def get_expansions_from_form(expansion_value):
 def random_access_archives(request):
     is_error = False
     deck_info = None
+    fallback_collection = None
     if request.method == 'POST':
         form = RandomDecksFromDokForm(request.POST)
         if form.is_valid():
@@ -111,8 +128,10 @@ def random_access_archives(request):
                 expansions=expansions,
             )
             try:
-                deck_info = get_random_deck_from_dok(filters=filters)
+                deck_info, fallback_collection = get_random_deck_with_fallback(filters)
             except:
+                is_error = True
+            if deck_info is None:
                 is_error = True
 
     else:
@@ -121,6 +140,7 @@ def random_access_archives(request):
     return render(request, 'redacted/random-access-archives.html', {
         'form': form,
         'deck_info': deck_info,
+        'fallback_collection': fallback_collection,
         'is_error': is_error,
     })
 
