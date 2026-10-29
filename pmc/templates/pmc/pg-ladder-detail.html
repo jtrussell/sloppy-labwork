@@ -168,7 +168,13 @@
             <div class="name-with-avatar">
               <img class="avatar" src="{{ standing.entry.member.user.pmc_profile.get_avatar.src }}" alt="">
               <div>
-                <a href="{% url 'pmc-pg-member-detail' playgroup.slug standing.entry.member.user.username %}">{{ standing.entry.member }}</a>
+                <a class="username" href="{% url 'pmc-pg-member-detail' playgroup.slug standing.entry.member.user.username %}">{{ standing.entry.member }}</a>
+                {% if standing.top_spot_description %}
+                  <div class="text-smaller text-muted">{{ standing.top_spot_description }}</div>
+                {% endif %}
+                {% if standing.has_most_challenge_wins %}
+                  <div class="text-smaller text-muted">Most challenge wins ({{ standing.challenge_wins }})</div>
+                {% endif %}
                 {% if standing.has_open_challenge %}
                   <div class="text-smaller text-muted">In a challenge</div>
                 {% endif %}
@@ -176,7 +182,7 @@
             </div>
           </td>
           {% if challengeable_standings %}
-            <td class="text-right">
+            <td class="text-right challenge-cell">
               {% if standing.can_be_challenged %}
                 <button
                   type="button"

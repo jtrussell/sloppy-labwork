@@ -2,6 +2,11 @@
   background-color: var(--color-gray);
 }
 
+.ladder-standings .challenge-cell {
+  width: 1%;
+  white-space: nowrap;
+}
+
 .ladder-standings tr.is-viewer>td:first-child {
   box-shadow: inset var(--border-size) 0 0 var(--color-primary);
 }

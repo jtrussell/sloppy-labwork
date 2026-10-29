@@ -13,7 +13,7 @@ from .models import (
     PlaygroupQuerySet, PlaygroupVenue, Venue, PlaygroupMember, Avatar,
     get_activity_level
 )
-from .models import Ladder, LadderChallenge, LadderRuleViolation
+from .models import Ladder, LadderChallenge, LadderEntry, LadderRuleViolation, describe_top_spot
 from .models import Feature, PlaygroupFeature
 from django.contrib.messages import get_messages
 from django.core.exceptions import PermissionDenied
@@ -2182,6 +2182,59 @@ class LadderWithdrawAndVoidTests(LadderTestBase):
         self.ladder.withdraw_challenge(challenge, self.player(4).user)
         with self.assertRaisesMessage(LadderRuleViolation, 'already been withdrawn or voided'):
             self.ladder.void_challenge(challenge, self.organizer.user)
+
+
+class LadderStandingHighlightTests(LadderTestBase):
+    def hold_position_for(self, member, held_for):
+        LadderEntry.objects.filter(ladder=self.ladder, member=member).update(
+            position_since=timezone.now() - held_for)
+
+    def top_spot_description(self):
+        return self.ladder.get_standings_for(None)[0].top_spot_description
+
+    def test_top_spot_is_described_after_one_full_day(self):
+        self.hold_position_for(self.player(1), timedelta(hours=23))
+        self.assertIsNone(self.top_spot_description())
+
+        self.hold_position_for(self.player(1), timedelta(days=1, minutes=1))
+        self.assertIn('1 day', self.top_spot_description())
+
+    def test_only_the_top_spot_is_described(self):
+        for player in self.players:
+            self.hold_position_for(player, timedelta(days=3))
+        descriptions = [standing.top_spot_description for standing in self.ladder.get_standings_for(None)]
+        self.assertIsNotNone(descriptions[0])
+        self.assertEqual(descriptions[1:], [None] * 5)
+
+    def test_taking_the_top_spot_restarts_the_count(self):
+        for player in self.players:
+            self.hold_position_for(player, timedelta(days=3))
+        challenge = self.ladder.issue_challenge(self.player(2), self.player(1))
+        self.ladder.record_result(challenge, self.player(2), self.player(2).user)
+        self.assertEqual(self.ranked_usernames()[0], 'player2')
+        self.assertIsNone(self.top_spot_description())
+
+    def test_top_spot_description_rotates_by_days_held(self):
+        self.assertEqual(describe_top_spot(self.playgroup, 6), 'Champion for 6 days')
+        self.assertEqual(describe_top_spot(self.playgroup, 7), 'Terrorizing Ladder Group for 7 days')
+
+    def test_most_challenge_wins_marks_every_tied_leader(self):
+        self.allow_open_challenges(2)
+        first_challenge = self.ladder.issue_challenge(self.player(2), self.player(1))
+        self.ladder.record_result(first_challenge, self.player(2), self.player(2).user)
+        second_challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.record_result(second_challenge, self.player(4), self.player(4).user)
+        self.ladder.record_played_result(self.player(5), self.player(6), None, self.player(5).user)
+
+        leaders = [
+            standing.entry.member for standing in self.ladder.get_standings_for(None)
+            if standing.has_most_challenge_wins
+        ]
+        self.assertEqual(leaders, [self.player(2), self.player(4)])
+
+    def test_nobody_has_most_challenge_wins_before_any_are_won(self):
+        self.assertFalse(any(
+            standing.has_most_challenge_wins for standing in self.ladder.get_standings_for(None)))
 
 
 @override_settings(STORAGES={

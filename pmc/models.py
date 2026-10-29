@@ -5,6 +5,7 @@ from django.db.models import Q, UniqueConstraint, OuterRef, Subquery, Exists
 from datetime import date
 from datetime import timedelta
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import ngettext
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
@@ -573,7 +574,8 @@ class EventResult(models.Model):
     uploaded_deck_lookup_attempts = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
-        ordering = ('finishing_position', '-num_wins', 'num_losses', 'num_ties')
+        ordering = ('finishing_position', '-num_wins',
+                    'num_losses', 'num_ties')
         unique_together = ('event', 'user',)
 
     @property
@@ -1606,12 +1608,17 @@ class PinnedAward(models.Model):
         if not pins:
             return []
 
-        badge_ids = [p.award_id for p in pins if p.award_type == PinnedAward.AwardTypeOptions.BADGE]
-        achievement_ids = [p.award_id for p in pins if p.award_type == PinnedAward.AwardTypeOptions.ACHIEVEMENT]
-        trophy_ids = [p.award_id for p in pins if p.award_type == PinnedAward.AwardTypeOptions.TROPHY]
+        badge_ids = [p.award_id for p in pins if p.award_type ==
+                     PinnedAward.AwardTypeOptions.BADGE]
+        achievement_ids = [p.award_id for p in pins if p.award_type ==
+                           PinnedAward.AwardTypeOptions.ACHIEVEMENT]
+        trophy_ids = [p.award_id for p in pins if p.award_type ==
+                      PinnedAward.AwardTypeOptions.TROPHY]
 
-        badges = {b.pk: b for b in Badge.objects.filter(pk__in=badge_ids)} if badge_ids else {}
-        trophies = {t.pk: t for t in Trophy.objects.filter(pk__in=trophy_ids)} if trophy_ids else {}
+        badges = {b.pk: b for b in Badge.objects.filter(
+            pk__in=badge_ids)} if badge_ids else {}
+        trophies = {t.pk: t for t in Trophy.objects.filter(
+            pk__in=trophy_ids)} if trophy_ids else {}
 
         achievement_tiers = {}
         if achievement_ids:
@@ -1664,7 +1671,8 @@ class PinnedAward(models.Model):
 
     @staticmethod
     def next_position(user):
-        last = PinnedAward.objects.filter(user=user).order_by('-position').first()
+        last = PinnedAward.objects.filter(
+            user=user).order_by('-position').first()
         if not last:
             return 1
         return last.position + 1 if last.position < 5 else None
@@ -2226,7 +2234,29 @@ class MatchResult(models.Model):
 
 
 LadderStanding = namedtuple('LadderStanding', [
-    'rank', 'entry', 'is_viewer', 'can_be_challenged', 'challenge_block_reason', 'has_open_challenge'])
+    'rank', 'entry', 'is_viewer', 'can_be_challenged', 'challenge_block_reason', 'has_open_challenge',
+    'top_spot_description', 'challenge_wins', 'has_most_challenge_wins'])
+
+TOP_SPOT_DESCRIPTIONS = (
+    _('Champion for %(duration)s'),
+    _('Terrorizing %(playgroup)s for %(duration)s'),
+    _('Holding the crown for %(duration)s'),
+    _('Keeping %(playgroup)s humble for %(duration)s'),
+    _('Top of the ladder for %(duration)s'),
+    _('Lording over %(playgroup)s for %(duration)s'),
+    _('Collecting tears in %(playgroup)s for %(duration)s'),
+)
+
+
+def describe_top_spot(playgroup, full_days_held):
+    if full_days_held < 1:
+        return None
+    description = TOP_SPOT_DESCRIPTIONS[full_days_held % len(
+        TOP_SPOT_DESCRIPTIONS)]
+    return description % {
+        'playgroup': playgroup.name,
+        'duration': ngettext('%(count)s day', '%(count)s days', full_days_held) % {'count': full_days_held},
+    }
 
 
 class Ladder(models.Model):
@@ -2273,7 +2303,8 @@ class Ladder(models.Model):
             'member__user__pmc_profile__avatar').order_by('position', 'pk'))
 
     def get_rank_of(self, member):
-        ranked_member_ids = [entry.member_id for entry in self.get_ordered_entries()]
+        ranked_member_ids = [
+            entry.member_id for entry in self.get_ordered_entries()]
         if member is None or member.pk not in ranked_member_ids:
             return None
         return ranked_member_ids.index(member.pk) + 1
@@ -2291,6 +2322,14 @@ class Ladder(models.Model):
         ).select_related(
             'match__result__winner__user', 'match__player_one__user', 'match__player_two__user'
         ).order_by('-resolved_on', '-pk')[:limit]
+
+    def get_challenge_wins_by_member_id(self):
+        return dict(
+            self.challenges.filter(
+                status__in=[LadderChallenge.ChallengeStatuses.COMPLETED,
+                            LadderChallenge.ChallengeStatuses.FORFEITED],
+                match__result__winner__isnull=False,
+            ).order_by().values('match__result__winner').annotate(wins=Count('pk')).values_list('match__result__winner', 'wins'))
 
     def get_challenge_ineligibility_reason(self, challenger, defender):
         return self._challenge_ineligibility_reason(
@@ -2312,6 +2351,9 @@ class Ladder(models.Model):
         viewer_index = None
         if viewer_member is not None and viewer_member.pk in ranked_member_ids:
             viewer_index = ranked_member_ids.index(viewer_member.pk)
+        challenge_wins_by_member_id = self.get_challenge_wins_by_member_id()
+        most_challenge_wins = max(
+            (challenge_wins_by_member_id.get(member_id, 0) for member_id in ranked_member_ids), default=0)
 
         standings = []
         for index, entry in enumerate(entries):
@@ -2331,6 +2373,12 @@ class Ladder(models.Model):
                 can_be_challenged=is_within_viewer_reach and challenge_block_reason is None,
                 challenge_block_reason=challenge_block_reason,
                 has_open_challenge=entry.member_id in members_with_open_challenges,
+                top_spot_description=describe_top_spot(
+                    self.playgroup, entry.get_full_days_in_position()) if index == 0 else None,
+                challenge_wins=challenge_wins_by_member_id.get(
+                    entry.member_id, 0),
+                has_most_challenge_wins=most_challenge_wins > 0 and challenge_wins_by_member_id.get(
+                    entry.member_id, 0) == most_challenge_wins,
             ))
         return standings
 
@@ -2396,7 +2444,8 @@ class Ladder(models.Model):
             raise PermissionDenied
         with self._ordered_entries_for_update() as entries:
             ranked_member_ids = [entry.member_id for entry in entries]
-            reason = self._played_result_ineligibility_reason(ranked_member_ids, first_player, second_player)
+            reason = self._played_result_ineligibility_reason(
+                ranked_member_ids, first_player, second_player)
             if reason:
                 raise LadderRuleViolation(reason)
             lower_ranked, higher_ranked = sorted(
@@ -2416,7 +2465,8 @@ class Ladder(models.Model):
                     playgroup_id=self.playgroup_id, player_one=lower_ranked, player_two=higher_ranked)
                 open_challenge = LadderChallenge.objects.create(
                     ladder=self, match=match, respond_by=timezone.now(), was_issued=False)
-            self._complete_challenge(entries, open_challenge, winner, recorded_by)
+            self._complete_challenge(
+                entries, open_challenge, winner, recorded_by)
             return open_challenge
 
     def get_played_result_opponents(self, member):
@@ -2434,7 +2484,8 @@ class Ladder(models.Model):
             return _('Both players must be on this ladder.')
         if first_player.pk == second_player.pk:
             return _('Choose an opponent other than yourself.')
-        places_apart = abs(ranked_member_ids.index(first_player.pk) - ranked_member_ids.index(second_player.pk))
+        places_apart = abs(ranked_member_ids.index(
+            first_player.pk) - ranked_member_ids.index(second_player.pk))
         if places_apart > self.challenge_range:
             return _('Games can only be recorded between players up to %(range)s places apart.') % {
                 'range': self.challenge_range}
@@ -2449,7 +2500,8 @@ class Ladder(models.Model):
         challenge.mark_resolved(LadderChallenge.ChallengeStatuses.COMPLETED)
         challenger_new_rank = None
         if winner is not None and winner.pk == challenge.match.player_one_id:
-            challenger_new_rank = self._move_challenger_ahead_of_defender(entries, challenge.match)
+            challenger_new_rank = self._move_challenger_ahead_of_defender(
+                entries, challenge.match)
         ladder_notifications.notify_after_commit(
             ladder_notifications.notify_result_recorded, challenge.pk, challenger_new_rank)
 
@@ -2459,7 +2511,8 @@ class Ladder(models.Model):
             raise PermissionDenied
         with self._ordered_entries_for_update():
             challenge = self._reload_pending_challenge(challenge)
-            challenge.mark_resolved(LadderChallenge.ChallengeStatuses.WITHDRAWN)
+            challenge.mark_resolved(
+                LadderChallenge.ChallengeStatuses.WITHDRAWN)
 
     def void_challenge(self, challenge, acting_user):
         if not self.is_organizer(acting_user):
@@ -2506,11 +2559,14 @@ class Ladder(models.Model):
 
     def _save_positions(self, entries):
         repositioned_entries = []
+        now = timezone.now()
         for position, entry in enumerate(entries, start=1):
             if entry.position != position:
                 entry.position = position
+                entry.position_since = now
                 repositioned_entries.append(entry)
-        LadderEntry.objects.bulk_update(repositioned_entries, ['position'])
+        LadderEntry.objects.bulk_update(
+            repositioned_entries, ['position', 'position_since'])
 
     def _get_overdue_challenges(self):
         return self.challenges.filter(
@@ -2523,7 +2579,8 @@ class Ladder(models.Model):
             match=challenge.match, winner_id=challenge.match.player_one_id, is_forfeit=True)
         challenge.mark_resolved(
             LadderChallenge.ChallengeStatuses.FORFEITED, resolved_on=challenge.respond_by)
-        challenger_new_rank = self._move_challenger_ahead_of_defender(entries, challenge.match)
+        challenger_new_rank = self._move_challenger_ahead_of_defender(
+            entries, challenge.match)
         ladder_notifications.notify_after_commit(
             ladder_notifications.notify_result_recorded, challenge.pk, challenger_new_rank)
 
@@ -2624,6 +2681,7 @@ class LadderEntry(models.Model):
     member = models.ForeignKey(
         PlaygroupMember, on_delete=models.CASCADE, related_name='ladder_entries')
     position = models.PositiveIntegerField()
+    position_since = models.DateTimeField(default=timezone.now)
     joined_on = models.DateTimeField(auto_now_add=True)
     email_on_challenge = models.BooleanField(default=False)
 
@@ -2637,6 +2695,9 @@ class LadderEntry(models.Model):
 
     def __str__(self):
         return f'{self.ladder} - #{self.position} {self.member}'
+
+    def get_full_days_in_position(self):
+        return (timezone.now() - self.position_since).days
 
 
 class LadderChallenge(models.Model):
@@ -2803,7 +2864,8 @@ class BoxLeague(models.Model):
             BoxLeagueMember.objects.create(league=self, member=member)
             proposal = self.get_proposed_session()
             if proposal:
-                BoxSessionConfirmation.objects.get_or_create(session=proposal, member=member)
+                BoxSessionConfirmation.objects.get_or_create(
+                    session=proposal, member=member)
                 self._place_in_smallest_bottom_box(proposal, member)
 
     def leave(self, member):
@@ -2831,9 +2893,11 @@ class BoxLeague(models.Model):
                 assignment.box = box
                 assignment.save(update_fields=['box'])
             else:
-                BoxAssignment.objects.create(session=session, box=box, member=member)
+                BoxAssignment.objects.create(
+                    session=session, box=box, member=member)
             if session.is_proposed():
-                BoxSessionConfirmation.objects.get_or_create(session=session, member=member)
+                BoxSessionConfirmation.objects.get_or_create(
+                    session=session, member=member)
             if session.is_active():
                 self._create_missing_matches(session, box, member)
 
@@ -2850,7 +2914,8 @@ class BoxLeague(models.Model):
     def plan_next_session(self):
         with self._locked():
             if self.get_proposed_session():
-                raise BoxLeagueRuleViolation(_('A session is already proposed.'))
+                raise BoxLeagueRuleViolation(
+                    _('A session is already proposed.'))
             active_session = self.get_active_session()
             proposal = BoxLeagueSession.objects.create(
                 league=self,
@@ -2858,7 +2923,8 @@ class BoxLeague(models.Model):
                 status=BoxLeagueSession.SessionStatuses.PROPOSED,
                 result_fingerprint=active_session.get_result_fingerprint() if active_session else '',
             )
-            self._fill_proposal(proposal, active_session, self.get_roster_member_ids())
+            self._fill_proposal(proposal, active_session,
+                                self.get_roster_member_ids())
             return proposal
 
     def rebalance_proposal(self):
@@ -2872,16 +2938,20 @@ class BoxLeague(models.Model):
                 if member_id in confirmed_member_ids
             ]
             proposal.boxes.all().delete()
-            proposal.result_fingerprint = active_session.get_result_fingerprint() if active_session else ''
+            proposal.result_fingerprint = active_session.get_result_fingerprint(
+            ) if active_session else ''
             proposal.save(update_fields=['result_fingerprint'])
-            self._fill_proposal(proposal, active_session, participating_member_ids)
+            self._fill_proposal(proposal, active_session,
+                                participating_member_ids)
 
     def resize_proposal(self, box_count):
         if box_count < 1:
-            raise BoxLeagueRuleViolation(_('A session needs at least one box.'))
+            raise BoxLeagueRuleViolation(
+                _('A session needs at least one box.'))
         with self._locked():
             proposal = self._require_proposal()
-            assigned_member_ids = set(proposal.assignments.values_list('member_id', flat=True))
+            assigned_member_ids = set(
+                proposal.assignments.values_list('member_id', flat=True))
             placed_member_ids = [
                 member_id for member_id in self.get_roster_member_ids()
                 if member_id in assigned_member_ids
@@ -2889,14 +2959,17 @@ class BoxLeague(models.Model):
             proposal.boxes.all().delete()
             proposal.box_count = box_count
             proposal.save(update_fields=['box_count'])
-            self._fill_proposal(proposal, self.get_active_session(), placed_member_ids)
+            self._fill_proposal(
+                proposal, self.get_active_session(), placed_member_ids)
 
     def add_box(self, session, level):
         with self._locked():
             session = self._require_open_session(session)
-            bottom_level = session.boxes.aggregate(bottom=models.Max('level'))['bottom'] or 0
+            bottom_level = session.boxes.aggregate(
+                bottom=models.Max('level'))['bottom'] or 0
             if not 1 <= level <= bottom_level + 1:
-                raise BoxLeagueRuleViolation(_('Choose an existing tier or a new bottom tier.'))
+                raise BoxLeagueRuleViolation(
+                    _('Choose an existing tier or a new bottom tier.'))
             last_ordinal = session.boxes.filter(level=level).aggregate(
                 last=models.Max('ordinal'))['last'] or 0
             return Box.objects.create(session=session, level=level, ordinal=last_ordinal + 1)
@@ -2905,9 +2978,11 @@ class BoxLeague(models.Model):
         with self._locked():
             self._require_open_session(box.session)
             if box.assignments.exists():
-                raise BoxLeagueRuleViolation(_('Move everyone out of this box before removing it.'))
+                raise BoxLeagueRuleViolation(
+                    _('Move everyone out of this box before removing it.'))
             if box.box_matches.filter(match__result__isnull=False).exists():
-                raise BoxLeagueRuleViolation(_('This box has recorded results, so it cannot be removed.'))
+                raise BoxLeagueRuleViolation(
+                    _('This box has recorded results, so it cannot be removed.'))
             box.delete()
 
     def discard_proposal(self):
@@ -2941,7 +3016,8 @@ class BoxLeague(models.Model):
             proposal = self._require_proposal()
             if not self.roster.filter(member=member).exists():
                 raise BoxLeagueRuleViolation(_('Join the league first.'))
-            BoxSessionConfirmation.objects.get_or_create(session=proposal, member=member)
+            BoxSessionConfirmation.objects.get_or_create(
+                session=proposal, member=member)
 
     def withdraw_confirmation(self, member):
         with self._locked():
@@ -2952,7 +3028,8 @@ class BoxLeague(models.Model):
         with self._locked():
             box_match = self._reload_box_match_in_active_session(box_match)
             if box_match.match.has_result():
-                raise BoxLeagueRuleViolation(_('This match already has a result.'))
+                raise BoxLeagueRuleViolation(
+                    _('This match already has a result.'))
             self._ensure_winner_in_match(box_match.match, winner)
             MatchResult.objects.create(
                 match=box_match.match, winner=winner, recorded_by=recorded_by)
@@ -2974,7 +3051,8 @@ class BoxLeague(models.Model):
         with self._locked():
             box_match = self._reload_box_match_in_active_session(box_match)
             if not box_match.match.has_result():
-                raise BoxLeagueRuleViolation(_('This match has no result to clear.'))
+                raise BoxLeagueRuleViolation(
+                    _('This match has no result to clear.'))
             box_match.match.result.delete()
 
     @contextmanager
@@ -3004,7 +3082,8 @@ class BoxLeague(models.Model):
             departing_member_ids,
             participating_member_ids,
         )
-        box_count = proposal.box_count or self.suggested_box_count(len(ordered_member_ids))
+        box_count = proposal.box_count or self.suggested_box_count(
+            len(ordered_member_ids))
         tier_box_counts = self.tier_box_counts_for(box_count)
         for proposed_box in place_into_boxes(ordered_member_ids, tier_box_counts):
             box = Box.objects.create(
@@ -3015,7 +3094,8 @@ class BoxLeague(models.Model):
             ])
 
     def _create_round_robin(self, box):
-        member_ids = list(box.assignments.order_by('pk').values_list('member_id', flat=True))
+        member_ids = list(box.assignments.order_by(
+            'pk').values_list('member_id', flat=True))
         for player_one_id, player_two_id in combinations(member_ids, 2):
             self._create_box_match(box, player_one_id, player_two_id)
 
@@ -3024,9 +3104,11 @@ class BoxLeague(models.Model):
             member=member).order_by('pk').values_list('member_id', flat=True)
         session_matches = Match.objects.filter(box_match__box__session=session)
         already_paired_ids = set(
-            session_matches.filter(player_one=member).values_list('player_two_id', flat=True)
+            session_matches.filter(player_one=member).values_list(
+                'player_two_id', flat=True)
         ) | set(
-            session_matches.filter(player_two=member).values_list('player_one_id', flat=True)
+            session_matches.filter(player_two=member).values_list(
+                'player_one_id', flat=True)
         )
         for opponent_id in opponent_ids:
             if opponent_id not in already_paired_ids:
@@ -3044,10 +3126,12 @@ class BoxLeague(models.Model):
         smallest_bottom_box = bottom_level_boxes.first()
         if smallest_bottom_box is None or proposal.assignments.filter(member=member).exists():
             return
-        BoxAssignment.objects.create(session=proposal, box=smallest_bottom_box, member=member)
+        BoxAssignment.objects.create(
+            session=proposal, box=smallest_bottom_box, member=member)
 
     def _remove_from_session(self, session, member):
-        assignment = session.assignments.filter(member=member).select_related('box').first()
+        assignment = session.assignments.filter(
+            member=member).select_related('box').first()
         if assignment is None:
             return
         self._delete_unplayed_matches(assignment.box, member)
@@ -3068,10 +3152,12 @@ class BoxLeague(models.Model):
 
     def _require_open_session(self, session):
         if session.league_id != self.pk:
-            raise BoxLeagueRuleViolation(_('That session belongs to another league.'))
+            raise BoxLeagueRuleViolation(
+                _('That session belongs to another league.'))
         session.refresh_from_db()
         if session.is_completed():
-            raise BoxLeagueRuleViolation(_('Completed sessions cannot be changed.'))
+            raise BoxLeagueRuleViolation(
+                _('Completed sessions cannot be changed.'))
         return session
 
     def _reload_box_match_in_active_session(self, box_match):
@@ -3088,7 +3174,8 @@ class BoxLeague(models.Model):
                 _('%(name)s is not a member of this playgroup.') % {'name': member})
 
     def _ensure_participant_or_organizer(self, match, user):
-        participant_user_ids = (match.player_one.user_id, match.player_two.user_id)
+        participant_user_ids = (match.player_one.user_id,
+                                match.player_two.user_id)
         if user.pk not in participant_user_ids and not self.is_organizer(user):
             raise PermissionDenied
 
@@ -3153,7 +3240,8 @@ class BoxLeagueSession(models.Model):
     ends_on = models.DateField(default=None, null=True, blank=True)
     planned_on = models.DateTimeField(auto_now_add=True)
     started_on = models.DateTimeField(default=None, null=True, blank=True)
-    result_fingerprint = models.CharField(max_length=64, default='', blank=True)
+    result_fingerprint = models.CharField(
+        max_length=64, default='', blank=True)
     box_count = models.PositiveSmallIntegerField(
         default=None, null=True, blank=True,
         help_text=_('Set when an organizer chooses the number of boxes; otherwise it follows the target box size.'))
@@ -3194,7 +3282,8 @@ class BoxLeagueSession(models.Model):
         results = sorted(MatchResult.objects.filter(
             match__box_match__box__session=self
         ).values_list('match_id', 'winner_id'))
-        assignments = sorted(self.assignments.values_list('box_id', 'member_id'))
+        assignments = sorted(
+            self.assignments.values_list('box_id', 'member_id'))
         return hashlib.sha256(repr((results, assignments)).encode()).hexdigest()
 
     def is_stale_proposal(self):
@@ -3206,7 +3295,8 @@ class BoxLeagueSession(models.Model):
 
     def get_completed_boxes(self):
         return [
-            CompletedBox(box.level, box.ordinal, [player.member_id for player in ranked_players])
+            CompletedBox(box.level, box.ordinal, [
+                         player.member_id for player in ranked_players])
             for box, ranked_players, _box_matches in self._rank_boxes()
         ]
 
@@ -3214,7 +3304,8 @@ class BoxLeagueSession(models.Model):
         tier_names_by_level = self.league.get_tier_names_by_level()
         ranked_boxes = self._rank_boxes()
         boxes_per_level = boxes_per_level_of(
-            [CompletedBox(box.level, box.ordinal, []) for box, _ranked, _matches in ranked_boxes]
+            [CompletedBox(box.level, box.ordinal, [])
+             for box, _ranked, _matches in ranked_boxes]
         ) if ranked_boxes else []
         members_by_id = {
             assignment.member_id: assignment.member
@@ -3236,7 +3327,8 @@ class BoxLeagueSession(models.Model):
                     losses=player.losses,
                     points=player.points,
                     is_promoted=show_zones and player.rank <= promoted_count,
-                    is_relegated=show_zones and player.rank > len(ranked_players) - relegated_count,
+                    is_relegated=show_zones and player.rank > len(
+                        ranked_players) - relegated_count,
                 )
                 for player in ranked_players
             ]
@@ -3268,7 +3360,8 @@ class BoxLeagueSession(models.Model):
             box_matches_by_box_id[box_match.box_id].append(box_match)
 
         session_results = [
-            (box_match.match.player_one_id, box_match.match.player_two_id, box_match.match.result.winner_id)
+            (box_match.match.player_one_id, box_match.match.player_two_id,
+             box_match.match.result.winner_id)
             for box_matches in box_matches_by_box_id.values()
             for box_match in box_matches
             if box_match.match.has_result()
@@ -3280,8 +3373,10 @@ class BoxLeagueSession(models.Model):
             if self.is_proposed():
                 ranked_players = rank_box(member_ids, [], member_ids.index)
             else:
-                ranked_players = rank_box(member_ids, session_results, box.tiebreak_key)
-            ranked_boxes.append((box, ranked_players, box_matches_by_box_id[box.pk]))
+                ranked_players = rank_box(
+                    member_ids, session_results, box.tiebreak_key)
+            ranked_boxes.append(
+                (box, ranked_players, box_matches_by_box_id[box.pk]))
         return ranked_boxes
 
 
