@@ -358,7 +358,7 @@ class LadderForm(UniqueNameInPlaygroupForm):
         model = Ladder
         fields = ('name', 'description', 'challenges_enabled', 'challenge_range',
                   'open_challenge_limit', 'response_window_days', 'rematch_cooldown_days',
-                  'discord_webhook_url')
+                  'allow_ties', 'discord_webhook_url')
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
         }
@@ -383,6 +383,9 @@ class LadderPlayedResultForm(forms.Form):
         self.fields['opponent'].queryset = PlaygroupMember.objects.filter(
             pk__in=[opponent.pk for opponent in ladder.get_played_result_opponents(member)]
         ).select_related('user').order_by('user__username')
+        if not ladder.allow_ties:
+            self.fields['outcome'].choices = [
+                (value, label) for value, label in self.fields['outcome'].choices if value != self.TIE]
 
     def get_winner(self):
         return {
@@ -418,14 +421,15 @@ class MatchOutcomeForm(forms.Form):
 
     outcome = forms.ChoiceField(widget=forms.RadioSelect, label=_('Result'))
 
-    def __init__(self, *args, match, player_one_won_label=PLAYER_WON_LABEL, **kwargs):
+    def __init__(self, *args, match, player_one_won_label=PLAYER_WON_LABEL, allow_tie=True, **kwargs):
         super().__init__(*args, **kwargs)
         self.match = match
         self.fields['outcome'].choices = [
             (self.PLAYER_ONE_WON, player_one_won_label % {'name': match.player_one}),
             (self.PLAYER_TWO_WON, self.PLAYER_WON_LABEL % {'name': match.player_two}),
-            (self.TIE, _('Tie')),
         ]
+        if allow_tie:
+            self.fields['outcome'].choices += [(self.TIE, _('Tie'))]
 
     @classmethod
     def initial_for(cls, result):

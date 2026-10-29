@@ -26,7 +26,8 @@ PUBLIC_MESSAGE_FIELDS = ('content', 'embeds', 'allowed_mentions')
 LADDER_NOT_FOUND_MESSAGE = 'I couldn\'t find that ladder. Pick one of your ladders from the list.'
 OPPONENT_NOT_FOUND_MESSAGE = 'I couldn\'t find that player. Pick an opponent from the list.'
 CHALLENGE_NOT_FOUND_MESSAGE = 'I couldn\'t find that open challenge. Pick one of yours from the list.'
-NOT_ALLOWED_MESSAGE = 'You aren\'t allowed to record that result.'
+OUTCOME_NOT_FOUND_MESSAGE = 'Pick how the game went from the list.'
+NOT_ALLOWED_MESSAGE ='You aren\'t allowed to record that result.'
 CHALLENGE_ISSUED_MESSAGE = 'Challenge issued to {defender} on {ladder}. The result is due {respond_by}.'
 RESULT_RECORDED_MESSAGE = 'Result recorded on {ladder}.'
 
@@ -83,11 +84,7 @@ definition = {
                     'description': 'How did it go?',
                     'type': OPTION_TYPE_STRING,
                     'required': True,
-                    'choices': [
-                        choice('I won', OUTCOME_WON),
-                        choice('My opponent won', OUTCOME_LOST),
-                        choice('Tie', OUTCOME_TIE),
-                    ],
+                    'autocomplete': True,
                 },
             ],
         },
@@ -180,6 +177,13 @@ def issue_challenge(user, ladder, opponent_value):
     ))
 
 
+def outcome_labels_for(ladder):
+    labels = {OUTCOME_WON: 'I won', OUTCOME_LOST: 'My opponent won'}
+    if ladder.allow_ties:
+        labels[OUTCOME_TIE] = 'Tie'
+    return labels
+
+
 def winner_for(outcome, member, opponent):
     return {
         OUTCOME_WON: member,
@@ -197,6 +201,8 @@ def record_result(user, ladder, challenge_value, outcome):
     )
     if challenge is None:
         return ephemeral_message(CHALLENGE_NOT_FOUND_MESSAGE)
+    if outcome not in outcome_labels_for(ladder):
+        return ephemeral_message(OUTCOME_NOT_FOUND_MESSAGE)
     winner = winner_for(outcome, member, get_opponent(challenge, member))
     try:
         challenger_new_rank = ladder.record_result(challenge, winner, user)
@@ -267,6 +273,12 @@ def autocomplete(interaction):
         return autocomplete_choices([])
     if focused_name == OPTION_CHALLENGE:
         return autocomplete_choices(open_challenge_choices(user, ladder, query)[:MAX_CHOICES])
+    if focused_name == OPTION_OUTCOME:
+        return autocomplete_choices([
+            choice(outcome_label, outcome)
+            for outcome, outcome_label in outcome_labels_for(ladder).items()
+            if matches_query(outcome_label, query)
+        ])
     return autocomplete_choices(opponent_choices(user, ladder, query)[:MAX_CHOICES])
 
 

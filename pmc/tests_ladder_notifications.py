@@ -35,6 +35,7 @@ class LadderPlayedResultTests(LadderTestBase):
         self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 3, 4, 5, 6))
 
     def test_tie_keeps_positions(self):
+        self.allow_ties()
         challenge = self.ladder.record_played_result(
             self.player(5), self.player(3), None, self.player(5).user)
         self.assertTrue(challenge.match.result.is_tie())
@@ -83,6 +84,17 @@ class LadderPlayedResultViewTests(LadderTestBase):
             {self.player(2), self.player(3), self.player(4), self.player(6)})
         self.client.post(url, {'opponent': self.player(3).pk, 'outcome': 'won'})
         self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 5, 3, 4, 6))
+
+    def test_played_game_form_offers_a_tie_only_when_allowed(self):
+        self.client.force_login(self.player(5).user)
+        url = reverse('pmc-pg-ladder-played-result', args=[self.playgroup.slug, self.ladder.pk])
+
+        def outcome_values():
+            return [value for value, _ in self.client.get(url).context['form'].fields['outcome'].choices]
+
+        self.assertNotIn('tie', outcome_values())
+        self.allow_ties()
+        self.assertIn('tie', outcome_values())
 
     def test_players_not_on_the_ladder_are_sent_back(self):
         newcomer = self.create_member('newcomer')
@@ -259,6 +271,7 @@ class LadderDiscordWebhookTests(LadderTestBase):
             self.with_ladder_link('**player5** won by forfeit over **player3**'))
 
     def test_played_game_message(self):
+        self.allow_ties()
         with self.captureOnCommitCallbacks(execute=True):
             self.ladder.record_played_result(
                 self.player(5), self.player(3), None, self.player(5).user)

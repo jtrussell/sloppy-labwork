@@ -637,6 +637,7 @@ def record_ladder_challenge_result(request, slug, ladder_id, challenge_id):
         request.POST or None,
         match=challenge.match,
         player_one_won_label=_('%(name)s won and moves ahead'),
+        allow_tie=ladder.allow_ties,
     )
     if request.method == 'POST' and form.is_valid():
         return run_competition_action(

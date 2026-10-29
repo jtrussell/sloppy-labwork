@@ -2279,6 +2279,9 @@ class Ladder(models.Model):
     rematch_cooldown_days = models.PositiveSmallIntegerField(
         default=1,
         help_text=_('Days before the same two players can challenge each other again after a challenge between them is issued, withdrawn or completed.'))
+    allow_ties = models.BooleanField(
+        default=False,
+        help_text=_('When enabled, players can report a game as a tie.'))
     description = models.TextField(
         default=None, null=True, blank=True,
         help_text=_('Optional. Instructions or other info for players. Markdown supported.'))
@@ -2520,6 +2523,8 @@ class Ladder(models.Model):
         return None
 
     def _complete_challenge(self, entries, challenge, winner, recorded_by):
+        if winner is None and not self.allow_ties:
+            raise LadderRuleViolation(_('Ties are not allowed on this ladder.'))
         if winner is not None and not challenge.match.involves(winner):
             raise LadderRuleViolation(
                 _('The winner must be one of the players in this challenge.'))

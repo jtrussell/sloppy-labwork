@@ -682,8 +682,25 @@ class LadderCommandTest(TestCase):
         self.assertIn('moves up to #3', embed['fields'][0]['value'])
         self.assertEqual(self.ladder.get_rank_of(self.player(4)), 3)
 
+    def test_outcome_suggestions_offer_a_tie_only_when_the_ladder_allows_ties(self):
+        self.ladder.issue_challenge(self.player(4), self.player(3))
+        outcome_options = [self.ladder_option(), {'name': 'outcome', 'type': 3, 'value': '', 'focused': True}]
+        self.assertEqual(self.suggest('result', outcome_options, '3'), ['I won', 'My opponent won'])
+        self.ladder.allow_ties = True
+        self.ladder.save()
+        self.assertEqual(self.suggest('result', outcome_options, '3'), ['I won', 'My opponent won', 'Tie'])
+
+    def test_tie_is_rejected_when_the_ladder_does_not_allow_ties(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        response = self.record(challenge, 'tie', '3')
+        self.assertEqual(response['data']['content'], ladder_command.OUTCOME_NOT_FOUND_MESSAGE)
+        challenge.refresh_from_db()
+        self.assertTrue(challenge.is_pending())
+
     def test_defender_can_record_a_tie_and_is_confirmed_privately_with_a_webhook(self):
         self.use_webhook()
+        self.ladder.allow_ties = True
+        self.ladder.save()
         challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
         response = self.record(challenge, 'tie', '3')
         self.assertTrue(self.is_ephemeral(response))

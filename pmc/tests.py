@@ -1863,6 +1863,10 @@ class LadderTestBase(TestCase):
         self.ladder.open_challenge_limit = limit
         self.ladder.save()
 
+    def allow_ties(self):
+        self.ladder.allow_ties = True
+        self.ladder.save()
+
 
 class LadderMembershipTests(LadderTestBase):
     def test_joining_places_member_at_the_bottom(self):
@@ -2096,6 +2100,19 @@ class LadderChallengeEligibilityTests(LadderTestBase):
 
 
 class LadderResultTests(LadderTestBase):
+    def test_ties_are_rejected_unless_the_ladder_allows_them(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        with self.assertRaisesMessage(LadderRuleViolation, 'Ties are not allowed'):
+            self.ladder.record_result(challenge, None, self.player(5).user)
+        challenge.refresh_from_db()
+        self.assertTrue(challenge.is_pending())
+
+    def test_played_result_ties_are_rejected_unless_the_ladder_allows_them(self):
+        with self.assertRaisesMessage(LadderRuleViolation, 'Ties are not allowed'):
+            self.ladder.record_played_result(
+                self.player(5), self.player(3), None, self.player(5).user)
+        self.assertFalse(self.ladder.challenges.exists())
+
     def test_challenger_win_moves_challenger_directly_ahead_of_defender(self):
         challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
         self.ladder.record_result(challenge, self.player(5), self.player(5).user)
@@ -2113,6 +2130,7 @@ class LadderResultTests(LadderTestBase):
         self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 3, 4, 5, 6))
 
     def test_tie_keeps_positions(self):
+        self.allow_ties()
         challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
         self.ladder.record_result(challenge, None, self.player(5).user)
         challenge.refresh_from_db()
@@ -2233,7 +2251,7 @@ class LadderWithdrawAndVoidTests(LadderTestBase):
 
     def test_resolved_challenge_cannot_be_withdrawn(self):
         challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
-        self.ladder.record_result(challenge, None, self.player(4).user)
+        self.ladder.record_result(challenge, self.player(3), self.player(4).user)
         with self.assertRaisesMessage(LadderRuleViolation, 'already been resolved'):
             self.ladder.withdraw_challenge(challenge, self.player(4).user)
 
@@ -2305,6 +2323,7 @@ class LadderStandingHighlightTests(LadderTestBase):
 
     def test_most_challenge_wins_marks_every_tied_leader(self):
         self.allow_open_challenges(2)
+        self.allow_ties()
         first_challenge = self.ladder.issue_challenge(self.player(2), self.player(1))
         self.ladder.record_result(first_challenge, self.player(2), self.player(2).user)
         second_challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
@@ -2469,6 +2488,18 @@ class LadderViewTests(LadderTestBase):
         self.assertIn('You can only challenge players up to 3 places above you.',
                       self.message_texts(response))
         self.assertFalse(self.ladder.challenges.exists())
+
+    def test_record_result_view_offers_a_tie_only_when_allowed(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        self.client.force_login(self.player(3).user)
+        result_url = self.ladder_url('pmc-pg-ladder-challenge-result', challenge.pk)
+
+        def outcome_values():
+            return [value for value, _ in self.client.get(result_url).context['form'].fields['outcome'].choices]
+
+        self.assertNotIn('tie', outcome_values())
+        self.allow_ties()
+        self.assertIn('tie', outcome_values())
 
     def test_record_result_view(self):
         challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
