@@ -434,6 +434,7 @@ form button,
   line-height: inherit;
   color: var(--color-text-primary);
   cursor: pointer;
+  text-transform: uppercase;
   text-decoration: none;
   vertical-align: baseline;
 }

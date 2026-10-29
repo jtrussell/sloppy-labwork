@@ -2199,11 +2199,26 @@ class LadderViewTests(LadderTestBase):
         response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
         self.assertEqual(response.status_code, 302)
 
-    def test_detail_forbidden_for_non_members(self):
+    def test_non_members_are_redirected_to_the_playgroup(self):
         outsider = User.objects.create_user(username='outsider')
         self.client.force_login(outsider)
+        playgroup_url = reverse('pmc-pg-detail', args=[self.playgroup.slug])
+        for ladder_page_url in (
+                self.ladder_url('pmc-pg-ladder-detail'),
+                reverse('pmc-pg-ladders', args=[self.playgroup.slug])):
+            response = self.client.get(ladder_page_url)
+            self.assertRedirects(response, playgroup_url)
+            self.assertIn('Ladders are only available to playgroup members.',
+                          self.message_texts(response))
+
+    def test_standings_offer_a_challenge_button_for_challengeable_players(self):
+        self.client.force_login(self.player(5).user)
         response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
-        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, 'hx-vals=\'{"defender_id"', count=3)
+
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertNotContains(response, 'hx-vals=\'{"defender_id"')
 
     def test_detail_lists_standings_and_challenge_options(self):
         self.client.force_login(self.player(5).user)

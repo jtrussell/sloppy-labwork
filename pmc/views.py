@@ -55,21 +55,35 @@ from .models import Ladder, LadderChallenge, LadderRuleViolation
 from .models import Feature
 from .models import Box, BoxLeague, BoxLeagueSession, BoxLeagueRuleViolation, BoxMatch
 
+LADDERS_NON_MEMBER_MESSAGE = _('Ladders are only available to playgroup members.')
+BOX_LEAGUES_NON_MEMBER_MESSAGE = _('Box leagues are only available to playgroup members.')
+
+def can_access_member_pages(user, slug):
+    playgroup = Playgroup.objects.filter(slug=slug).first()
+    if playgroup and playgroup.is_global:
+        return True
+    return PlaygroupMember.objects.filter(user=user, playgroup__slug=slug).exists()
+
 
 def is_pg_member(view):
     def decorator(view_func):
         def wrapper(request, *args, **kwargs):
-            playgroup = Playgroup.objects.filter(slug=kwargs['slug']).first()
-            if playgroup and playgroup.is_global:
-                return view_func(request, *args, **kwargs)
-
-            is_member = PlaygroupMember.objects.filter(
-                user=request.user, playgroup__slug=kwargs['slug']).exists()
-            if is_member:
+            if can_access_member_pages(request.user, kwargs['slug']):
                 return view_func(request, *args, **kwargs)
             raise PermissionDenied
         return wrapper
     return decorator(view)
+
+
+def is_pg_member_or_redirect_to_playgroup(non_member_message):
+    def decorator(view_func):
+        def wrapper(request, *args, **kwargs):
+            if can_access_member_pages(request.user, kwargs['slug']):
+                return view_func(request, *args, **kwargs)
+            messages.info(request, non_member_message)
+            return redirect_to(request, reverse('pmc-pg-detail', kwargs={'slug': kwargs['slug']}))
+        return wrapper
+    return decorator
 
 
 def is_pg_staff(view):
@@ -398,7 +412,7 @@ def report_invalid_form(request, form):
 
 @login_required
 @requires_pg_feature(Feature.Keys.LADDERS)
-@is_pg_member
+@is_pg_member_or_redirect_to_playgroup(LADDERS_NON_MEMBER_MESSAGE)
 def playgroup_ladders(request, slug):
     playgroup = get_object_or_404(Playgroup, slug=slug, is_global=False)
     return render(request, 'pmc/pg-ladders.html', {
@@ -444,7 +458,7 @@ def edit_playgroup_ladder(request, slug, ladder_id):
 
 @login_required
 @requires_pg_feature(Feature.Keys.LADDERS)
-@is_pg_member
+@is_pg_member_or_redirect_to_playgroup(LADDERS_NON_MEMBER_MESSAGE)
 def playgroup_ladder_detail(request, slug, ladder_id):
     ladder = get_ladder_or_404(slug, ladder_id)
     ladder.resolve_overdue_challenges()
@@ -770,7 +784,7 @@ def box_league_session_url(session):
 
 @login_required
 @requires_pg_feature(Feature.Keys.BOX_LEAGUES)
-@is_pg_member
+@is_pg_member_or_redirect_to_playgroup(BOX_LEAGUES_NON_MEMBER_MESSAGE)
 def playgroup_box_leagues(request, slug):
     playgroup = get_object_or_404(Playgroup, slug=slug, is_global=False)
     return render(request, 'pmc/pg-box-leagues.html', {
@@ -824,7 +838,7 @@ def edit_playgroup_box_league(request, slug, league_id):
 
 @login_required
 @requires_pg_feature(Feature.Keys.BOX_LEAGUES)
-@is_pg_member
+@is_pg_member_or_redirect_to_playgroup(BOX_LEAGUES_NON_MEMBER_MESSAGE)
 def playgroup_box_league_detail(request, slug, league_id):
     league = get_box_league_or_404(slug, league_id)
     session = league.get_current_session()
@@ -835,7 +849,7 @@ def playgroup_box_league_detail(request, slug, league_id):
 
 @login_required
 @requires_pg_feature(Feature.Keys.BOX_LEAGUES)
-@is_pg_member
+@is_pg_member_or_redirect_to_playgroup(BOX_LEAGUES_NON_MEMBER_MESSAGE)
 def playgroup_box_league_session(request, slug, league_id, number):
     league = get_box_league_or_404(slug, league_id)
     return render_box_league_session(

@@ -136,17 +136,24 @@ def ladder_embed(ladder, title, description, color, fields=()):
     return embed
 
 
+def with_ladder_link(description, ladder):
+    url = ladder_url(ladder)
+    if not url:
+        return description
+    return '%s\n\n[%s](%s)' % (description, _('View the ladder'), url)
+
+
 def challenge_issued_message(challenge, challenger_rank, defender_rank):
     escape = discord_webhooks.escape_markdown
     embed = ladder_embed(
         challenge.ladder,
         title=_('⚔️ New challenge on %(ladder)s') % {'ladder': challenge.ladder.name},
-        description=_('**%(challenger)s** (#%(challenger_rank)s) challenged **%(defender)s** (#%(defender_rank)s)') % {
+        description=with_ladder_link(_('**%(challenger)s** (#%(challenger_rank)s) challenged **%(defender)s** (#%(defender_rank)s)') % {
             'challenger': escape(challenge.challenger),
             'challenger_rank': challenger_rank,
             'defender': escape(challenge.defender),
             'defender_rank': defender_rank,
-        },
+        }, challenge.ladder),
         color=CHALLENGE_ISSUED_COLOR,
         fields=[(_('Result due'), discord_webhooks.discord_timestamp(challenge.respond_by))],
     )
@@ -175,7 +182,7 @@ def result_recorded_message(challenge, challenger_new_rank):
     embed = ladder_embed(
         challenge.ladder,
         title=_('🏁 Result on %(ladder)s') % {'ladder': challenge.ladder.name},
-        description=result_description(challenge),
+        description=with_ladder_link(result_description(challenge), challenge.ladder),
         color=RESULT_RECORDED_COLOR,
         fields=fields,
     )

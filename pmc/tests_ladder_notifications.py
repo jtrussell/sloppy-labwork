@@ -217,6 +217,10 @@ class LadderDiscordWebhookTests(LadderTestBase):
     def posted_messages(self):
         return [call.kwargs['json'] for call in self.post.call_args_list]
 
+    def with_ladder_link(self, description):
+        ladder_url = f'https://keychain.example.com/pg/ladder-group/ladders/{self.ladder.pk}/'
+        return f'{description}\n\n[View the ladder]({ladder_url})'
+
     def test_challenge_issued_message(self):
         self.player(3).user.profile.discord_id = 987654321
         self.player(3).user.profile.save()
@@ -229,7 +233,7 @@ class LadderDiscordWebhookTests(LadderTestBase):
         self.assertEqual(self.post.call_args.kwargs['timeout'], discord_webhooks.DISCORD_REQUEST_TIMEOUT_SECONDS)
         self.assertEqual(message['username'], 'KeyChain')
         self.assertIn('New challenge on Main Ladder', embed['title'])
-        self.assertEqual(embed['description'], '**player5** (#5) challenged **player3** (#3)')
+        self.assertEqual(embed['description'], self.with_ladder_link('**player5** (#5) challenged **player3** (#3)'))
         self.assertTrue(embed['fields'][0]['value'].startswith('<t:'))
         self.assertTrue(embed['url'].startswith('https://keychain.example.com/pg/ladder-group/ladders/'))
         self.assertEqual(embed['footer']['text'], 'Ladder Group')
@@ -242,7 +246,7 @@ class LadderDiscordWebhookTests(LadderTestBase):
             self.ladder.record_result(challenge, self.player(5), self.player(5).user)
         embed = self.posted_messages()[-1]['embeds'][0]
         self.assertIn('Result on Main Ladder', embed['title'])
-        self.assertEqual(embed['description'], '**player5** beat **player3**')
+        self.assertEqual(embed['description'], self.with_ladder_link('**player5** beat **player3**'))
         self.assertEqual(embed['fields'][0]['value'], 'player5 moves up to #3')
 
     def test_forfeit_message(self):
@@ -252,14 +256,14 @@ class LadderDiscordWebhookTests(LadderTestBase):
             self.ladder.resolve_overdue_challenges()
         self.assertEqual(
             self.posted_messages()[-1]['embeds'][0]['description'],
-            '**player5** won by forfeit over **player3**')
+            self.with_ladder_link('**player5** won by forfeit over **player3**'))
 
     def test_played_game_message(self):
         with self.captureOnCommitCallbacks(execute=True):
             self.ladder.record_played_result(
                 self.player(5), self.player(3), None, self.player(5).user)
         embed = self.posted_messages()[-1]['embeds'][0]
-        self.assertEqual(embed['description'], '**player5** and **player3** tied')
+        self.assertEqual(embed['description'], self.with_ladder_link('**player5** and **player3** tied'))
         self.assertIn('Played without a challenge', [field['value'] for field in embed['fields']])
 
     def test_names_are_markdown_escaped_and_mentions_disabled(self):

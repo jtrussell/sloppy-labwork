@@ -486,6 +486,18 @@ class BoxLeagueViewTests(BoxLeagueTestBase):
         self.assertRedirects(
             self.client.get(reverse('pmc-pg-play', args=[self.playgroup.slug])), playgroup_url)
 
+    def test_non_members_are_redirected_to_the_playgroup(self):
+        outsider = User.objects.create_user(username='outsider')
+        self.client.force_login(outsider)
+        playgroup_url = reverse('pmc-pg-detail', args=[self.playgroup.slug])
+        for box_league_page_url in (
+                reverse('pmc-pg-box-leagues', args=[self.playgroup.slug]),
+                self.league_url('pmc-pg-box-league-detail')):
+            response = self.client.get(box_league_page_url)
+            self.assertRedirects(response, playgroup_url)
+            self.assertIn('Box leagues are only available to playgroup members.',
+                          self.message_texts(response))
+
     def test_nav_and_playgroup_page_show_box_leagues_when_enabled(self):
         self.client.force_login(self.player(1).user)
         response = self.client.get(reverse('pmc-pg-detail', args=[self.playgroup.slug]))

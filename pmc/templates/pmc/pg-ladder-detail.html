@@ -155,6 +155,9 @@
       <tr>
         <th class="col-sm">#</th>
         <th class="text-left">Player</th>
+        {% if challengeable_standings %}
+          <th></th>
+        {% endif %}
       </tr>
     </thead>
     <tbody>
@@ -168,12 +171,23 @@
                 <a href="{% url 'pmc-pg-member-detail' playgroup.slug standing.entry.member.user.username %}">{{ standing.entry.member }}</a>
                 {% if standing.has_open_challenge %}
                   <div class="text-smaller text-muted">In a challenge</div>
-                {% elif standing.can_be_challenged %}
-                  <div class="text-smaller text-muted">You can challenge</div>
                 {% endif %}
               </div>
             </div>
           </td>
+          {% if challengeable_standings %}
+            <td class="text-right">
+              {% if standing.can_be_challenged %}
+                <button
+                  type="button"
+                  class="btn-link"
+                  hx-post="{% url 'pmc-pg-ladder-challenge-new' playgroup.slug ladder.pk %}"
+                  hx-vals='{"defender_id": "{{ standing.entry.member_id }}"}'
+                  hx-confirm="Challenge {{ standing.entry.member }}? Results are due within {{ ladder.response_window_days }} day{{ ladder.response_window_days|pluralize }}. If none is recorded, you win by forfeit."
+                >Challenge</button>
+              {% endif %}
+            </td>
+          {% endif %}
         </tr>
       {% empty %}
         <tr>
