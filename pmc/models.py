@@ -2464,7 +2464,7 @@ class Ladder(models.Model):
         self._ensure_participant_or_organizer(challenge, recorded_by)
         with self._ordered_entries_for_update() as entries:
             challenge = self._reload_pending_challenge(challenge)
-            self._complete_challenge(entries, challenge, winner, recorded_by)
+            return self._complete_challenge(entries, challenge, winner, recorded_by)
 
     def record_played_result(self, first_player, second_player, winner, recorded_by):
         participant_user_ids = (first_player.user_id, second_player.user_id)
@@ -2532,6 +2532,7 @@ class Ladder(models.Model):
                 entries, challenge.match)
         ladder_notifications.notify_after_commit(
             ladder_notifications.notify_result_recorded, challenge.pk, challenger_new_rank)
+        return challenger_new_rank
 
     def withdraw_challenge(self, challenge, acting_user):
         is_challenger = challenge.match.player_one.user_id == acting_user.pk

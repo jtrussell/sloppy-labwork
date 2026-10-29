@@ -21,7 +21,8 @@ from .responses import (
     RESPONSE_TYPE_MODAL,
 )
 from .views import dispatch, UNKNOWN_COMMAND_MESSAGE, UNSUPPORTED_INTERACTION_MESSAGE, COMMAND_FAILED_MESSAGE
-from .commands import help as help_command, lineup, random_access_archives, tourney
+from .commands import help as help_command, ladder as ladder_command, lineup, random_access_archives, tourney
+from pmc.models import Feature, Ladder, LadderChallenge, Playgroup, PlaygroupFeature, PlaygroupMember
 
 DECK_URL = 'https://decksofkeyforge.com/decks/abc'
 
@@ -560,6 +561,143 @@ class TourneyReportCommandTest(TestCase):
         ])
         self.assertEqual(
             posted['data']['content'], '**Spring Open** · Swiss · Round 2 · North — Comet beat Anvil 3–1')
+
+
+class LadderCommandTest(TestCase):
+    def setUp(self):
+        self.playgroup = Playgroup.objects.create(name='Ladder Group', slug='ladder-group')
+        PlaygroupFeature.objects.create(
+            playgroup=self.playgroup, feature=Feature.objects.get(key=Feature.Keys.LADDERS))
+        self.ladder = Ladder.objects.create(playgroup=self.playgroup, name='Main Ladder')
+        self.players = []
+        for discord_id in ['1', '2', '3', '4', '5']:
+            user = User.objects.create_user(f'player{discord_id}')
+            SocialAccount.objects.create(user=user, provider='discord', uid=discord_id)
+            member = PlaygroupMember.objects.create(playgroup=self.playgroup, user=user)
+            self.ladder.add_member(member)
+            self.players.append(member)
+
+    def player(self, number):
+        return self.players[number - 1]
+
+    def run_subcommand(self, subcommand, options, user_id):
+        return dispatch(Interaction(command_payload(
+            'ladder', [{'name': subcommand, 'type': 1, 'options': options}], user_id)))
+
+    def suggest(self, subcommand, options, user_id):
+        response = dispatch(Interaction(autocomplete_payload(
+            'ladder', [{'name': subcommand, 'type': 1, 'options': options}], user_id)))
+        return [suggestion['name'] for suggestion in response['data']['choices']]
+
+    def ladder_option(self, ladder=None, focused=False):
+        option = {'name': 'ladder', 'type': 3, 'value': str((ladder or self.ladder).pk)}
+        if focused:
+            option.update(value='', focused=True)
+        return option
+
+    def challenge(self, challenger_number, defender_number):
+        return self.run_subcommand('challenge', [
+            self.ladder_option(),
+            {'name': 'opponent', 'type': 3, 'value': str(self.player(defender_number).pk)},
+        ], str(challenger_number))
+
+    def record(self, challenge, outcome, user_id):
+        return self.run_subcommand('result', [
+            self.ladder_option(),
+            {'name': 'challenge', 'type': 3, 'value': str(challenge.pk)},
+            {'name': 'outcome', 'type': 3, 'value': outcome},
+        ], user_id)
+
+    def use_webhook(self):
+        self.ladder.discord_webhook_url = 'https://discord.com/api/webhooks/123456/secret-token'
+        self.ladder.save()
+
+    def is_ephemeral(self, response):
+        return response['data'].get('flags') == MESSAGE_FLAG_EPHEMERAL
+
+    def test_unlinked_user_is_asked_to_link(self):
+        response = self.challenge(404, 1)
+        self.assertIn('Link your Discord account', response['data']['content'])
+
+    def test_ladder_suggestions_include_only_the_users_ladders_with_challenges_enabled(self):
+        Ladder.objects.create(playgroup=self.playgroup, name='Side Ladder')
+        disabled_ladder = Ladder.objects.create(
+            playgroup=self.playgroup, name='Paused Ladder', challenges_enabled=False)
+        disabled_ladder.add_member(self.player(4))
+        suggestions = self.suggest('challenge', [self.ladder_option(focused=True)], '4')
+        self.assertEqual(suggestions, ['Main Ladder · Ladder Group'])
+
+    def test_ladders_without_the_feature_are_not_suggested(self):
+        PlaygroupFeature.objects.filter(playgroup=self.playgroup).update(is_enabled=False)
+        self.assertEqual(self.suggest('challenge', [self.ladder_option(focused=True)], '4'), [])
+
+    def test_opponent_suggestions_include_only_challengeable_players(self):
+        suggestions = self.suggest('challenge', [
+            self.ladder_option(), {'name': 'opponent', 'type': 3, 'value': '', 'focused': True}], '5')
+        self.assertEqual(suggestions, ['#2 player2', '#3 player3', '#4 player4'])
+
+    def test_challenge_is_posted_publicly_when_the_ladder_has_no_webhook(self):
+        response = self.challenge(4, 3)
+        self.assertEqual(response['type'], RESPONSE_TYPE_CHANNEL_MESSAGE)
+        self.assertFalse(self.is_ephemeral(response))
+        self.assertIn('New challenge on Main Ladder', response['data']['embeds'][0]['title'])
+        self.assertTrue(LadderChallenge.objects.filter(
+            ladder=self.ladder, match__player_one=self.player(4), match__player_two=self.player(3)).exists())
+
+    def test_challenge_is_confirmed_privately_when_the_ladder_has_a_webhook(self):
+        self.use_webhook()
+        response = self.challenge(4, 3)
+        self.assertTrue(self.is_ephemeral(response))
+        self.assertIn('Challenge issued to player3 on Main Ladder', response['data']['content'])
+
+    def test_challenge_rule_violations_are_explained_privately(self):
+        response = self.challenge(3, 4)
+        self.assertTrue(self.is_ephemeral(response))
+        self.assertIn('ranked above you', response['data']['content'])
+
+    def test_unknown_ladder_is_rejected(self):
+        other_ladder = Ladder.objects.create(playgroup=self.playgroup, name='Side Ladder')
+        response = self.run_subcommand('challenge', [
+            self.ladder_option(other_ladder),
+            {'name': 'opponent', 'type': 3, 'value': str(self.player(3).pk)},
+        ], '4')
+        self.assertEqual(response['data']['content'], ladder_command.LADDER_NOT_FOUND_MESSAGE)
+
+    def test_result_suggestions_list_only_ladders_and_challenges_with_open_challenges(self):
+        self.assertEqual(self.suggest('result', [self.ladder_option(focused=True)], '3'), [])
+        self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.assertEqual(
+            self.suggest('result', [self.ladder_option(focused=True)], '3'), ['Main Ladder · Ladder Group'])
+        suggestions = self.suggest('result', [
+            self.ladder_option(), {'name': 'challenge', 'type': 3, 'value': '', 'focused': True}], '3')
+        self.assertEqual(len(suggestions), 1)
+        self.assertTrue(suggestions[0].startswith('vs player4 · due '))
+
+    def test_recording_a_challenger_win_moves_them_up_and_posts_publicly(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        response = self.record(challenge, 'won', '4')
+        self.assertFalse(self.is_ephemeral(response))
+        embed = response['data']['embeds'][0]
+        self.assertIn('Result on Main Ladder', embed['title'])
+        self.assertIn('moves up to #3', embed['fields'][0]['value'])
+        self.assertEqual(self.ladder.get_rank_of(self.player(4)), 3)
+
+    def test_defender_can_record_a_tie_and_is_confirmed_privately_with_a_webhook(self):
+        self.use_webhook()
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        response = self.record(challenge, 'tie', '3')
+        self.assertTrue(self.is_ephemeral(response))
+        self.assertEqual(response['data']['content'], 'Result recorded on Main Ladder.')
+        challenge.refresh_from_db()
+        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.COMPLETED)
+        self.assertIsNone(challenge.match.result.winner)
+
+    def test_only_participants_can_record_a_challenge_result(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        response = self.record(challenge, 'won', '5')
+        self.assertEqual(response['data']['content'], ladder_command.CHALLENGE_NOT_FOUND_MESSAGE)
+        challenge.refresh_from_db()
+        self.assertTrue(challenge.is_pending())
 
 
 class InteractionsEndpointTest(SimpleTestCase):

@@ -31,9 +31,10 @@ class Command:
 
 
 def get_commands():
-    from .commands import help as help_command, lineup, random_access_archives, tourney
+    from .commands import help as help_command, ladder, lineup, random_access_archives, tourney
     return [
         help_command.command,
+        ladder.command,
         lineup.command,
         random_access_archives.command,
         tourney.command,
