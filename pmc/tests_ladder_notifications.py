@@ -301,6 +301,7 @@ class LadderDiscordWebhookTests(LadderTestBase):
                 'challenge_range': 3,
                 'open_challenge_limit': 1,
                 'response_window_days': 7,
+                'rematch_cooldown_days': 1,
                 'discord_webhook_url': 'https://evil.example/hook',
             })
         self.assertContains(response, 'Enter a Discord webhook URL')

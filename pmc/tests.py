@@ -13,7 +13,7 @@ from .models import (
     PlaygroupQuerySet, PlaygroupVenue, Venue, PlaygroupMember, Avatar,
     get_activity_level
 )
-from .models import Ladder, LadderChallenge, LadderEntry, LadderRuleViolation, describe_top_spot
+from .models import Ladder, LadderChallenge, LadderEntry, LadderRuleViolation, describe_top_spot, TOP_SPOT_DESCRIPTIONS
 from .models import Feature, PlaygroupFeature
 from django.contrib.messages import get_messages
 from django.core.exceptions import PermissionDenied
@@ -2017,6 +2017,83 @@ class LadderChallengeEligibilityTests(LadderTestBase):
         self.assertIn('reached their limit', str(standings[1].challenge_block_reason))
         self.assertTrue(standings[1].has_open_challenge)
 
+    def backdate_resolution(self, challenge, days_ago):
+        LadderChallenge.objects.filter(pk=challenge.pk).update(
+            resolved_on=timezone.now() - timedelta(days=days_ago))
+
+    def test_rematch_after_a_result_is_rejected_during_cooldown(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.record_result(challenge, self.player(3), self.player(3).user)
+        self.assert_challenge_rejected(
+            self.player(4), self.player(3), 'You can challenge player3 again in')
+
+    def test_rematch_cooldown_applies_in_both_directions(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.record_result(challenge, self.player(4), self.player(4).user)
+        self.assert_challenge_rejected(
+            self.player(3), self.player(4), 'You can challenge player4 again in')
+
+    def test_withdrawing_a_challenge_starts_the_cooldown(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.withdraw_challenge(challenge, self.player(4).user)
+        self.assert_challenge_rejected(
+            self.player(4), self.player(3), 'You can challenge player3 again in')
+
+    def test_forfeited_challenge_starts_the_cooldown(self):
+        self.ladder.rematch_cooldown_days = 3
+        self.ladder.save()
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.make_overdue(challenge, days_overdue=1)
+        self.ladder.resolve_overdue_challenges()
+        self.assert_challenge_rejected(
+            self.player(3), self.player(4), 'You can challenge player4 again in')
+
+    def test_played_result_starts_the_cooldown(self):
+        self.ladder.record_played_result(
+            self.player(4), self.player(3), self.player(3), self.player(4).user)
+        self.assert_challenge_rejected(
+            self.player(4), self.player(3), 'You can challenge player3 again in')
+
+    def test_voided_challenge_does_not_start_the_cooldown(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.void_challenge(challenge, self.organizer.user)
+        self.assertIsNone(self.ladder.get_challenge_ineligibility_reason(
+            self.player(4), self.player(3)))
+
+    def test_rematch_is_allowed_once_the_cooldown_passes(self):
+        self.ladder.rematch_cooldown_days = 3
+        self.ladder.save()
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.withdraw_challenge(challenge, self.player(4).user)
+        self.backdate_resolution(challenge, days_ago=1)
+        self.assert_challenge_rejected(
+            self.player(4), self.player(3), 'You can challenge player3 again in 1\xa0day')
+        self.backdate_resolution(challenge, days_ago=3)
+        self.assertIsNone(self.ladder.get_challenge_ineligibility_reason(
+            self.player(4), self.player(3)))
+
+    def test_zero_cooldown_allows_an_immediate_rematch(self):
+        self.ladder.rematch_cooldown_days = 0
+        self.ladder.save()
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.withdraw_challenge(challenge, self.player(4).user)
+        self.assertIsNone(self.ladder.get_challenge_ineligibility_reason(
+            self.player(4), self.player(3)))
+
+    def test_cooldown_does_not_affect_other_opponents(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.withdraw_challenge(challenge, self.player(4).user)
+        self.assertIsNone(self.ladder.get_challenge_ineligibility_reason(
+            self.player(4), self.player(2)))
+
+    def test_standings_explain_an_active_rematch_cooldown(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.ladder.withdraw_challenge(challenge, self.player(4).user)
+        standings = self.ladder.get_standings_for(self.player(4))
+        self.assertFalse(standings[2].can_be_challenged)
+        self.assertIn('again in', str(standings[2].challenge_block_reason))
+        self.assertTrue(standings[1].can_be_challenged)
+
 
 class LadderResultTests(LadderTestBase):
     def test_challenger_win_moves_challenger_directly_ahead_of_defender(self):
@@ -2215,8 +2292,16 @@ class LadderStandingHighlightTests(LadderTestBase):
         self.assertIsNone(self.top_spot_description())
 
     def test_top_spot_description_rotates_by_days_held(self):
-        self.assertEqual(describe_top_spot(self.playgroup, 6), 'Champion for 6 days')
-        self.assertEqual(describe_top_spot(self.playgroup, 7), 'Terrorizing Ladder Group for 7 days')
+        def phrase_without_duration(full_days_held):
+            return describe_top_spot(self.playgroup, full_days_held).replace(f'{full_days_held} days', '')
+
+        rotation_length = len(TOP_SPOT_DESCRIPTIONS)
+        one_full_rotation = range(rotation_length, rotation_length * 2)
+        self.assertEqual(
+            len({phrase_without_duration(days) for days in one_full_rotation}), rotation_length)
+        for days in one_full_rotation:
+            self.assertEqual(phrase_without_duration(days),
+                             phrase_without_duration(days + rotation_length))
 
     def test_most_challenge_wins_marks_every_tied_leader(self):
         self.allow_open_challenges(2)
@@ -2272,6 +2357,23 @@ class LadderViewTests(LadderTestBase):
         self.client.force_login(self.player(1).user)
         response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
         self.assertNotContains(response, 'hx-vals=\'{"defender_id"')
+
+    def test_detail_renders_the_description_as_markdown(self):
+        self.ladder.description = '**Play at the shop.**'
+        self.ladder.save()
+        self.client.force_login(self.player(5).user)
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertContains(response, '<strong>Play at the shop.</strong>')
+
+    def test_detail_lists_the_rematch_cooldown_only_when_set(self):
+        self.client.force_login(self.player(5).user)
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertContains(response, '1-day cooldown')
+
+        self.ladder.rematch_cooldown_days = 0
+        self.ladder.save()
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertNotContains(response, 'cooldown')
 
     def test_detail_lists_standings_and_challenge_options(self):
         self.client.force_login(self.player(5).user)
@@ -2393,6 +2495,7 @@ class LadderViewTests(LadderTestBase):
             'challenge_range': 3,
             'open_challenge_limit': 1,
             'response_window_days': 7,
+            'rematch_cooldown_days': 1,
         })
         ladder = Ladder.objects.get(name='Second Ladder')
         self.assertRedirects(response, reverse(
@@ -2407,6 +2510,7 @@ class LadderViewTests(LadderTestBase):
             'challenge_range': 3,
             'open_challenge_limit': 1,
             'response_window_days': 7,
+            'rematch_cooldown_days': 1,
         })
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'already has a ladder with that name')
@@ -2443,6 +2547,7 @@ class LadderViewTests(LadderTestBase):
             'challenge_range': 3,
             'open_challenge_limit': 1,
             'response_window_days': 7,
+            'rematch_cooldown_days': 1,
         })
         challenge.refresh_from_db()
         self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.VOIDED)

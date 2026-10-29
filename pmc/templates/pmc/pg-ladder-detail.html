@@ -1,5 +1,6 @@
 {% extends "pmc/_base.html" %}
 {% load static %}
+{% load posts_extras %}
 
 {% block extra_head %}
   <link rel="stylesheet" href="{% static 'pmc/css/ladders.css' %}">
@@ -11,15 +12,24 @@
     <h1>{{ ladder.name }}</h1>
     <a class="staff-only" href="{% url 'pmc-pg-ladder-manage' playgroup.slug ladder.pk %}">Manage</a>
   </div>
-  <ul class="subheading inline-list">
+  <ul class="subheading inline-list lg-only">
     <li>{{ standings|length }} player{{ standings|length|pluralize }}</li>
     {% if ladder.challenges_enabled %}
       <li>Challenge {{ ladder.challenge_range }} up</li>
       <li>{{ ladder.response_window_days }} day{{ ladder.response_window_days|pluralize }} to play</li>
+      {% if ladder.rematch_cooldown_days %}
+        <li>{{ ladder.rematch_cooldown_days }}-day cooldown</li>
+      {% endif %}
     {% else %}
       <li>Set by organizers</li>
     {% endif %}
   </ul>
+
+  {% if ladder.description %}
+    <div class="card no-top-margin markdown">
+      {{ ladder.description | markdown | safe }}
+    </div>
+  {% endif %}
 
   {% if playgroup_member %}
     <div class="card next-step">

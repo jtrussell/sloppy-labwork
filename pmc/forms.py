@@ -356,8 +356,12 @@ class LadderForm(UniqueNameInPlaygroupForm):
 
     class Meta:
         model = Ladder
-        fields = ('name', 'challenges_enabled', 'challenge_range',
-                  'open_challenge_limit', 'response_window_days', 'discord_webhook_url')
+        fields = ('name', 'description', 'challenges_enabled', 'challenge_range',
+                  'open_challenge_limit', 'response_window_days', 'rematch_cooldown_days',
+                  'discord_webhook_url')
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+        }
 
 
 class LadderPlayedResultForm(forms.Form):

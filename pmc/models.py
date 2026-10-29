@@ -9,6 +9,7 @@ from django.utils.translation import ngettext
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
+from django.utils.timesince import timeuntil
 from contextlib import contextmanager
 from itertools import combinations
 from . import ladder_notifications
@@ -2275,6 +2276,12 @@ class Ladder(models.Model):
     response_window_days = models.PositiveSmallIntegerField(
         default=7, validators=[MinValueValidator(1)],
         help_text=_('Days to record a result before the challenger wins by forfeit.'))
+    rematch_cooldown_days = models.PositiveSmallIntegerField(
+        default=1,
+        help_text=_('Days before the same two players can challenge each other again after a challenge between them is issued, withdrawn or completed.'))
+    description = models.TextField(
+        default=None, null=True, blank=True,
+        help_text=_('Optional. Instructions or other info for players. Markdown supported.'))
     discord_webhook_url = models.URLField(
         max_length=300, default='', blank=True,
         validators=[validate_discord_webhook_url],
@@ -2335,9 +2342,26 @@ class Ladder(models.Model):
         return self._challenge_ineligibility_reason(
             [entry.member_id for entry in self.get_ordered_entries()],
             list(self.get_open_challenges()),
+            self._get_last_contact_on_by_opponent_id(challenger),
             challenger,
             defender,
         )
+
+    def _get_last_contact_on_by_opponent_id(self, member):
+        if member is None or self.rematch_cooldown_days == 0:
+            return {}
+        cooldown_starting_challenges = self.challenges.filter(
+            Q(match__player_one=member) | Q(match__player_two=member),
+            status__in=[LadderChallenge.ChallengeStatuses.COMPLETED,
+                        LadderChallenge.ChallengeStatuses.FORFEITED,
+                        LadderChallenge.ChallengeStatuses.WITHDRAWN],
+        ).values_list('match__player_one_id', 'match__player_two_id', 'resolved_on')
+        last_contact_on_by_opponent_id = {}
+        for player_one_id, player_two_id, resolved_on in cooldown_starting_challenges:
+            opponent_id = player_two_id if player_one_id == member.pk else player_one_id
+            last_contact_on_by_opponent_id[opponent_id] = max(
+                last_contact_on_by_opponent_id.get(opponent_id, resolved_on), resolved_on)
+        return last_contact_on_by_opponent_id
 
     def get_standings_for(self, viewer_member):
         entries = self.get_ordered_entries()
@@ -2352,6 +2376,8 @@ class Ladder(models.Model):
         if viewer_member is not None and viewer_member.pk in ranked_member_ids:
             viewer_index = ranked_member_ids.index(viewer_member.pk)
         challenge_wins_by_member_id = self.get_challenge_wins_by_member_id()
+        viewer_last_contact_on_by_opponent_id = self._get_last_contact_on_by_opponent_id(
+            viewer_member) if viewer_index is not None else {}
         most_challenge_wins = max(
             (challenge_wins_by_member_id.get(member_id, 0) for member_id in ranked_member_ids), default=0)
 
@@ -2365,7 +2391,8 @@ class Ladder(models.Model):
             challenge_block_reason = None
             if is_within_viewer_reach:
                 challenge_block_reason = self._challenge_ineligibility_reason(
-                    ranked_member_ids, open_challenges, viewer_member, entry.member)
+                    ranked_member_ids, open_challenges, viewer_last_contact_on_by_opponent_id,
+                    viewer_member, entry.member)
             standings.append(LadderStanding(
                 rank=index + 1,
                 entry=entry,
@@ -2411,6 +2438,7 @@ class Ladder(models.Model):
             reason = self._challenge_ineligibility_reason(
                 [entry.member_id for entry in entries],
                 list(self.get_open_challenges()),
+                self._get_last_contact_on_by_opponent_id(challenger),
                 challenger,
                 defender,
             )
@@ -2634,6 +2662,11 @@ class Ladder(models.Model):
                 _('%(name)s is not on this ladder.') % {'name': member})
         return entry
 
+    def _get_rematch_available_on(self, last_contact_on):
+        if last_contact_on is None or self.rematch_cooldown_days == 0:
+            return None
+        return last_contact_on + timedelta(days=self.rematch_cooldown_days)
+
     @staticmethod
     def _find_entry(entries, member):
         return next((entry for entry in entries if entry.member_id == member.pk), None)
@@ -2644,7 +2677,7 @@ class Ladder(models.Model):
             return len(entries)
         return min(max(rank, 1), len(entries) + 1) - 1
 
-    def _challenge_ineligibility_reason(self, ranked_member_ids, open_challenges, challenger, defender):
+    def _challenge_ineligibility_reason(self, ranked_member_ids, open_challenges, last_contact_on_by_opponent_id, challenger, defender):
         if not self.challenges_enabled:
             return _('Challenges are disabled on this ladder.')
         if challenger.pk not in ranked_member_ids:
@@ -2664,6 +2697,12 @@ class Ladder(models.Model):
 
         if any(challenge.match.involves(challenger) and challenge.match.involves(defender) for challenge in open_challenges):
             return _('You already have an open challenge with %(name)s.') % {'name': defender}
+
+        rematch_available_on = self._get_rematch_available_on(
+            last_contact_on_by_opponent_id.get(defender.pk))
+        if rematch_available_on is not None and rematch_available_on > timezone.now():
+            return _('You can challenge %(name)s again in %(time)s.') % {
+                'name': defender, 'time': timeuntil(rematch_available_on, depth=1)}
 
         def count_open_challenges_involving(member):
             return sum(1 for challenge in open_challenges if challenge.match.involves(member))
