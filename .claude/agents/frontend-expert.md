@@ -21,7 +21,7 @@ Note that you have access to the following tools:
 
 - htmx
 - django-htmx
-- django-template-partials
+- Django template partials (built into Django 6: `partialdef`, `partial`)
 
 When given a task involving HTMX:
 

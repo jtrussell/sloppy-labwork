@@ -75,7 +75,6 @@ INSTALLED_APPS = [
     'common',
     'django_hosts',
     'django_htmx',
-    'template_partials',
 ]
 
 MIDDLEWARE = [
