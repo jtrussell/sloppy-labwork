@@ -199,6 +199,14 @@ select:focus {
   outline: 0;
 }
 
+input:is(:autofill, :-webkit-autofill),
+textarea:is(:autofill, :-webkit-autofill),
+select:is(:autofill, :-webkit-autofill) {
+  box-shadow: inset 0 0 0 100vmax var(--color-surface);
+  -webkit-text-fill-color: var(--color-text);
+  caret-color: var(--color-text);
+}
+
 label,
 legend {
   display: block;
