@@ -6,17 +6,50 @@
   <ul class="card-list">
     <li class="card card--interactive">
       <div class="card__header">
+        <h2 class="card__title"><a href="{% url 'trade_secrets:home' %}">Trade Secrets</a></h2>
+        <span class="badge badge--accent">Beta</span>
+      </div>
+      <p>Secret picks, revealed together. Run Triad,
+      Hexad, or your own ban/safe/steal formats with a friend from a single
+      shared link.</p>
+    </li>
+    <li class="card card--interactive">
+      <div class="card__header">
+        <h2 class="card__title"><a href="{% url 'lineups-list' %}">Lineup Manager</a></h2>
+        <span class="badge badge--accent">Beta</span>
+      </div>
+      <p>A lineup manager that copies to formats
+      expected by our triad, hexad, and tetrad tools. Includes versioning and support
+      for Google Sheets integrations.</p>
+    </li>
+    <li class="card card--interactive">
+      <div class="card__header">
+        <h2 class="card__title"><a href="{% url 'redacted-random' %}">Random Access Archives</a></h2>
+        <span class="badge badge--success">Stable</span>
+      </div>
+      <p>This gizmo (very strange indeed) grabs random decks from DoK accounts. Use with caution!</p>
+    </li>
+    <li class="card card--interactive">
+      <div class="card__header">
+        <h2 class="card__title"><a href="{% url 'tourney:tourney-my-tournaments' %}">Sloppy Tourneys</a></h2>
+        <span class="badge badge--accent">Beta</span>
+      </div>
+      <p>Simple tournaments that export to KeyChain.</p>
+    </li>
+    <li class="card card--interactive">
+      <div class="card__header">
+        <h2 class="card__title"><a href="{% url 'ghostform:ghostform-list' %}">Ghostform</a></h2>
+        <span class="badge badge--warning">Alpha</span>
+      </div>
+      <p>Lightweight forms for collecting answers from
+      players, on their own or attached to tourney result reporting.</p>
+    </li>
+    <li class="card card--interactive">
+      <div class="card__header">
         <h2 class="card__title"><a href="https://triad.sloppylabwork.com/">Sloppy Triad</a></h2>
         <span class="badge badge--success">Stable</span>
       </div>
       <p>A fancy pants tool for your triad matches.</p>
-    </li>
-    <li class="card card--interactive">
-      <div class="card__header">
-        <h2 class="card__title"><a href="https://jtrussell.me/swindle-tetrad-client/">Swindle Tetrad</a></h2>
-        <span class="badge badge--success">Stable</span>
-      </div>
-      <p>An awesome collab between our lab and the fine Swindle peeps.</p>
     </li>
     <li class="card card--interactive">
       <div class="card__header">
@@ -38,46 +71,6 @@
         <span class="badge badge--success">Stable</span>
       </div>
       <p>Submit your own questions and topic ideas to the Lab!</p>
-    </li>
-    <li class="card card--interactive">
-      <div class="card__header">
-        <h2 class="card__title"><a href="{% url 'redacted-random' %}">Random Access Archives</a></h2>
-        <span class="badge badge--success">Stable</span>
-      </div>
-      <p>This gizmo (very strange indeed) grabs random decks from DoK accounts. Use with caution!</p>
-    </li>
-    <li class="card card--interactive">
-      <div class="card__header">
-        <h2 class="card__title"><a href="{% url 'tourney:tourney-my-tournaments' %}">Sloppy Tourneys</a></h2>
-        <span class="badge badge--accent">Beta</span>
-      </div>
-      <p>Simple tournaments that export to KeyChain.</p>
-    </li>
-    <li class="card card--interactive">
-      <div class="card__header">
-        <h2 class="card__title"><a href="{% url 'lineups-list' %}">Lineup Manager</a></h2>
-        <span class="badge badge--warning">Alpha</span>
-      </div>
-      <p>A lineup manager that copies to formats
-      expected by our triad, hexad, and tetrad tools. Includes versioning and support
-      for Google Sheets integrations.</p>
-    </li>
-    <li class="card card--interactive">
-      <div class="card__header">
-        <h2 class="card__title"><a href="{% url 'ghostform:ghostform-list' %}">Ghostform</a></h2>
-        <span class="badge badge--warning">Alpha</span>
-      </div>
-      <p>Lightweight forms for collecting answers from
-      players, on their own or attached to tourney result reporting.</p>
-    </li>
-    <li class="card card--interactive">
-      <div class="card__header">
-        <h2 class="card__title"><a href="{% url 'trade_secrets:home' %}">Trade Secrets</a></h2>
-        <span class="badge badge--warning">Alpha</span>
-      </div>
-      <p>Secret picks, revealed together. Run Triad,
-      Hexad, or your own ban/safe/steal formats with a friend from a single
-      shared link.</p>
     </li>
   </ul>
 {% endblock %}
