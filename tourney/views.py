@@ -675,7 +675,8 @@ def get_player_report_opponents(stage, user):
     ).exclude(id=user_stage_player.id).select_related('player__user')
     if stage.has_pods():
         opponents = opponents.filter(pod_id=user_stage_player.pod_id)
-    return list(opponents)
+    return sorted(
+        opponents, key=lambda stage_player: stage_player.player.get_display_name().casefold())
 
 
 def tournament_detail_standings(request, tournament_code):

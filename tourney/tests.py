@@ -3923,6 +3923,46 @@ class PodMatchViewsTestCase(PodTestMixin, TestCase):
 
 
 @override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class FreeForAllReportOpponentsTestCase(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        self.tournament = Tournament.objects.create(
+            name='FFA', owner=self.owner, is_accepting_registrations=True)
+        self.stage = Stage.objects.create(
+            tournament=self.tournament, name='Main Stage', order=1,
+            pairing_strategy='round_robin')
+        self.stage.set_ranking_criteria([
+            {'key': 'wins', 'enabled': True},
+            {'key': 'seed', 'enabled': True},
+        ])
+        reporter = User.objects.create_user('reporter', 'reporter@test.com', 'password')
+        reporter_player = Player.objects.create(user=reporter, tournament=self.tournament)
+        StagePlayer.objects.create(player=reporter_player, stage=self.stage, seed=1)
+        zed = User.objects.create_user('zed', 'zed@test.com', 'password')
+        amber = User.objects.create_user('amber', 'amber@test.com', 'password')
+        seeded_players = [
+            Player.objects.create(user=zed, tournament=self.tournament),
+            Player.objects.create(tournament=self.tournament, nickname='mallory'),
+            Player.objects.create(user=amber, tournament=self.tournament, nickname='Bianca'),
+            Player.objects.create(tournament=self.tournament, nickname='Carl'),
+        ]
+        for seed, player in enumerate(seeded_players, start=2):
+            StagePlayer.objects.create(player=player, stage=self.stage, seed=seed)
+        Round.objects.create(stage=self.stage, order=1)
+
+    def test_report_opponents_are_sorted_alphabetically_ignoring_case(self):
+        self.client.login(username='reporter', password='password')
+
+        response = self.client.get(
+            reverse('tourney:tourney-detail-matches', args=[self.tournament.code]))
+
+        opponents = json.loads(response.context['player_report_opponents_json'])
+        self.assertEqual(
+            [opponent['name'] for opponent in opponents],
+            ['Bianca', 'Carl', 'mallory', 'zed'])
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
 class TournamentCopyTestCase(PodTestMixin, TestCase):
     def setUp(self):
         self.owner = User.objects.create_user('owner', 'owner@test.com', 'password')
