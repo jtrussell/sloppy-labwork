@@ -18,12 +18,13 @@ def register_form_usage_describer(describe_usage):
 
 
 def get_response_form(form, data=None, *, questions=None, all_optional=False,
-                      prefix=DEFAULT_RESPONSE_FORM_PREFIX, auto_id='id_%s'):
+                      deck_owner=None, prefix=DEFAULT_RESPONSE_FORM_PREFIX, auto_id='id_%s'):
     return ResponseForm(
         data,
         ghostform=form,
         questions=questions,
         all_optional=all_optional,
+        deck_owner=deck_owner,
         prefix=prefix,
         auto_id=auto_id,
     )

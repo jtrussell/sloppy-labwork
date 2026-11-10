@@ -3,8 +3,11 @@ import re
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.urls import reverse
+from django.utils.http import urlencode
 
 from decks.models import Deck
+from lineups.deck_suggestions import find_lineup_deck_named, looks_like_deck_link
 from .models import (
     Form, Question, MAXIMUM_QUESTIONS_PER_FORM, MAXIMUM_CHOICES_PER_QUESTION,
     QUESTION_LABEL_MAX_LENGTH, QUESTION_DESCRIPTION_MAX_LENGTH, CHOICE_MAX_LENGTH,
@@ -19,6 +22,12 @@ DECK_LINK_PATTERN = (
     + UUID_PATTERN + r'([\/?#].*)?'
 )
 DECK_LINK_ERROR_MESSAGE = 'Enter a Master Vault or Decks of KeyForge deck link.'
+DECK_NAME_NOT_FOUND_ERROR_MESSAGE = (
+    'No deck with that name in your lineups. Paste a Master Vault or Decks of KeyForge deck link instead.')
+DECK_LINK_PLACEHOLDER = 'https://www.keyforgegame.com/deck-details/...'
+DECK_NAME_OR_LINK_PLACEHOLDER = 'Search your lineup decks or paste a link'
+DECK_SUGGESTIONS_URL_NAME = 'ghostform:ghostform-deck-suggestions'
+DECK_SUGGESTIONS_FIELD_PARAMETER = 'field'
 NUMBER_ANSWER_MAX_DIGITS = 20
 NUMBER_ANSWER_DECIMAL_PLACES = 6
 FILTERABLE_CHOICE_COUNT = 12
@@ -27,29 +36,50 @@ FORBIDDEN_CHOICE_CHARACTERS = (CSV_SELECTION_DELIMITER, ANSWER_SELECTION_SEPARAT
 
 
 class DeckLinkField(forms.CharField):
-    widget = forms.URLInput
-
-    def __init__(self, **kwargs):
+    def __init__(self, *, deck_owner=None, **kwargs):
+        self.deck_owner = deck_owner
+        self.suggestions_list_id = None
         super().__init__(max_length=TEXT_ANSWER_MAX_LENGTH, **kwargs)
+
+    @property
+    def offers_deck_names(self):
+        return self.deck_owner is not None and self.deck_owner.is_authenticated
 
     def widget_attrs(self, widget):
         attrs = super().widget_attrs(widget)
-        attrs.update({
-            'pattern': DECK_LINK_PATTERN,
-            'title': DECK_LINK_ERROR_MESSAGE,
-            'placeholder': 'https://www.keyforgegame.com/deck-details/...',
-        })
+        attrs['placeholder'] = (
+            DECK_NAME_OR_LINK_PLACEHOLDER if self.offers_deck_names else DECK_LINK_PLACEHOLDER)
         return attrs
 
+    def suggest_deck_names(self, suggestions_list_id, suggestions_url):
+        self.suggestions_list_id = suggestions_list_id
+        self.widget.attrs.update({
+            'list': suggestions_list_id,
+            'autocomplete': 'off',
+            'hx-get': suggestions_url,
+            'hx-trigger': 'input changed delay:300ms',
+            'hx-target': f'#{suggestions_list_id}',
+            'hx-swap': 'innerHTML',
+            'hx-disabled-elt': 'unset',
+        })
+
     def clean(self, value):
-        deck_link = super().clean(value)
-        if not deck_link:
+        deck_input = super().clean(value)
+        if not deck_input:
             return None
-        if not re.fullmatch(DECK_LINK_PATTERN, deck_link, flags=re.IGNORECASE):
+        if re.fullmatch(DECK_LINK_PATTERN, deck_input, flags=re.IGNORECASE):
+            return {
+                'url': deck_input,
+                'deck_id': Deck.get_id_from_master_vault_url(deck_input).lower(),
+            }
+        if not self.offers_deck_names or looks_like_deck_link(deck_input):
             raise ValidationError(DECK_LINK_ERROR_MESSAGE)
+        named_deck = find_lineup_deck_named(self.deck_owner, deck_input)
+        if named_deck is None:
+            raise ValidationError(DECK_NAME_NOT_FOUND_ERROR_MESSAGE)
         return {
-            'url': deck_link,
-            'deck_id': Deck.get_id_from_master_vault_url(deck_link).lower(),
+            'url': named_deck.get_mv_url(),
+            'deck_id': str(named_deck.id).lower(),
         }
 
 
@@ -80,7 +110,7 @@ class MultipleAnswerField(forms.MultipleChoiceField):
         return is_above_minimum and is_below_maximum
 
 
-def build_question_field(question, is_required):
+def build_question_field(question, is_required, deck_owner=None):
     common_options = {
         'label': question.label,
         'help_text': question.description,
@@ -94,7 +124,7 @@ def build_question_field(question, is_required):
             widget=forms.NumberInput(attrs={'step': 'any'}),
             **common_options)
     if answer_type == Question.AnswerType.DECK_LINK:
-        return DeckLinkField(**common_options)
+        return DeckLinkField(deck_owner=deck_owner, **common_options)
     if answer_type == Question.AnswerType.MULTIPLE_CHOICE and question.allows_multiple_answers:
         return MultipleAnswerField(
             choices=[(choice, choice) for choice in question.choices],
@@ -111,15 +141,26 @@ def build_question_field(question, is_required):
 
 
 class ResponseForm(forms.Form):
-    def __init__(self, *args, ghostform, questions=None, all_optional=False, **kwargs):
+    def __init__(self, *args, ghostform, questions=None, all_optional=False, deck_owner=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.ghostform = ghostform
         self.questions = list(
             ghostform.get_active_questions() if questions is None else questions)
         for question in self.questions:
             is_required = question.is_required and not all_optional
-            self.fields[question.get_field_name()] = build_question_field(
-                question, is_required)
+            field_name = question.get_field_name()
+            question_field = build_question_field(question, is_required, deck_owner)
+            self.fields[field_name] = question_field
+            if isinstance(question_field, DeckLinkField) and question_field.offers_deck_names:
+                self._suggest_deck_names_for(field_name)
+
+    def _suggest_deck_names_for(self, field_name):
+        bound_field = self[field_name]
+        suggestions_query = urlencode({DECK_SUGGESTIONS_FIELD_PARAMETER: bound_field.html_name})
+        bound_field.field.suggest_deck_names(
+            suggestions_list_id=f'{bound_field.auto_id}_suggestions',
+            suggestions_url=f'{reverse(DECK_SUGGESTIONS_URL_NAME)}?{suggestions_query}',
+        )
 
     def save_response(self, user, context=(), context_key=''):
         return self.ghostform.record_response(self, user, context, context_key)

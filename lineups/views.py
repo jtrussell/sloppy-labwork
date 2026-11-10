@@ -9,6 +9,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_POST, require_http_methods
 from xml.etree.ElementTree import Element, SubElement, tostring
 
+from .deck_suggestions import (
+    DECK_NAME_OPTIONS_TEMPLATE, DECK_SUGGESTION_LIMIT, find_lineup_decks_matching_name
+)
 from .models import Lineup, LineupNote, LineupVersion, LineupVersionNote, LineupVersionDeck
 from .forms import LineupForm, LineupNoteForm, LineupVersionForm, LineupVersionNoteForm
 from pmc.models import EventFormat
@@ -475,22 +478,10 @@ def version_deck_search(request, version_code):
         raise PermissionDenied
 
     query = request.GET.get('deck_input', '').strip()
-
-    if not query or len(query) < 2:
-        return HttpResponse('')
-
-    if '/' in query or 'http' in query.lower():
-        return HttpResponse('')
-
-    matching_decks = Deck.objects.filter(
-        lineup_versions__version__lineup__owner=request.user,
-        name__icontains=query
-    ).exclude(
+    matching_decks = find_lineup_decks_matching_name(request.user, query).exclude(
         lineup_versions__version=version
-    ).distinct().order_by('name')[:5]
-
-    options = ''.join(f'<option value="{deck.name}">' for deck in matching_decks)
-    return HttpResponse(options)
+    )[:DECK_SUGGESTION_LIMIT]
+    return render(request, DECK_NAME_OPTIONS_TEMPLATE, {'decks': matching_decks})
 
 
 @login_required

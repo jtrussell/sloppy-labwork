@@ -14,7 +14,10 @@ from django.views.decorators.http import require_GET, require_POST
 
 from decks.models import House, Set
 from .exports import build_responses_feed, render_responses_feed_xml, write_responses_csv
-from .forms import FormDetailsForm, QuestionsPayloadForm
+from lineups.deck_suggestions import (
+    DECK_NAME_OPTIONS_TEMPLATE, DECK_SUGGESTION_LIMIT, find_lineup_decks_matching_name
+)
+from .forms import DECK_SUGGESTIONS_FIELD_PARAMETER, FormDetailsForm, QuestionsPayloadForm
 from .hooks import get_response_form
 from .models import Form, Question, MAXIMUM_QUESTIONS_PER_FORM
 from .picker import search_pickable_forms
@@ -232,6 +235,15 @@ def form_picker_preview(request, form_code):
 
 
 @login_required
+@require_GET
+def deck_suggestions(request):
+    searched_field_name = request.GET.get(DECK_SUGGESTIONS_FIELD_PARAMETER, '')
+    name_query = request.GET.get(searched_field_name, '').strip()
+    matching_decks = find_lineup_decks_matching_name(request.user, name_query)[:DECK_SUGGESTION_LIMIT]
+    return render(request, DECK_NAME_OPTIONS_TEMPLATE, {'decks': matching_decks})
+
+
+@login_required
 def form_fill(request, form_code):
     ghostform = get_object_or_404(Form, code=form_code)
     is_preview = ghostform.status == Form.Status.DRAFT
@@ -239,7 +251,7 @@ def form_fill(request, form_code):
         raise Http404
 
     if request.method == 'POST' and ghostform.is_accepting_responses():
-        response_form = get_response_form(ghostform, request.POST)
+        response_form = get_response_form(ghostform, request.POST, deck_owner=request.user)
         if response_form.is_valid():
             ghostform.record_response(response_form, request.user)
             return redirect('ghostform:ghostform-fill-thanks', form_code=ghostform.code)
@@ -247,7 +259,7 @@ def form_fill(request, form_code):
         messages.error(request, 'This form is not accepting responses.')
         return redirect('ghostform:ghostform-fill', form_code=ghostform.code)
     else:
-        response_form = get_response_form(ghostform)
+        response_form = get_response_form(ghostform, deck_owner=request.user)
 
     return render(request, 'ghostform/fill.html', {
         'ghostform': ghostform,

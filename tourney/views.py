@@ -537,7 +537,7 @@ def get_tournament_base_context(request, tournament):
         'pod_query_string': pod_query_string,
         'all_pods_filter': ALL_PODS_FILTER,
         **build_report_dialog_context(
-            tournament, is_admin, can_report_results=is_admin or is_player),
+            tournament, request.user, is_admin, can_report_results=is_admin or is_player),
     }
 
 

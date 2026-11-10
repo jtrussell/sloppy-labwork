@@ -45,20 +45,18 @@ def build_result_context(result):
     ]
 
 
-def build_result_response_form(tournament, is_admin, data=None, auto_id=REPORT_DIALOG_FIELD_ID_FORMAT):
+def build_result_response_form(tournament, user, is_admin, data=None, auto_id=REPORT_DIALOG_FIELD_ID_FORMAT):
     result_form = get_active_result_form(tournament)
     if result_form is None:
         return None
-    return get_response_form(result_form, data, all_optional=is_admin, auto_id=auto_id)
+    return get_response_form(result_form, data, all_optional=is_admin, deck_owner=user, auto_id=auto_id)
 
 
-def build_report_dialog_context(tournament, is_admin, can_report_results):
-    result_form = get_active_result_form(tournament) if can_report_results else None
+def build_report_dialog_context(tournament, user, is_admin, can_report_results):
     return {
-        'active_result_form': result_form,
-        'report_response_form': get_response_form(
-            result_form, all_optional=is_admin,
-            auto_id=REPORT_DIALOG_FIELD_ID_FORMAT) if result_form else None,
+        'active_result_form': get_active_result_form(tournament) if can_report_results else None,
+        'report_response_form': build_result_response_form(
+            tournament, user, is_admin) if can_report_results else None,
     }
 
 

@@ -22,9 +22,12 @@ from .reporting import (
     ReportError, describe_winner, report_paired_match_result, report_self_scheduled_match_result,
     MATCH_ALREADY_REPORTED_MESSAGE, INVALID_WINNER_MESSAGE
 )
+from decks.models import Deck
 from ghostform.models import (
-    Form as GhostformForm, Question as GhostformQuestion, Response as GhostformResponse
+    Answer as GhostformAnswer, Form as GhostformForm, Question as GhostformQuestion,
+    Response as GhostformResponse
 )
+from lineups.models import Lineup, LineupVersion, LineupVersionDeck
 
 logger = logging.getLogger(__name__)
 
@@ -4298,6 +4301,40 @@ class TournamentResultFormTestCase(TestCase):
 
         self.assertFalse(MatchResult.objects.filter(match=self.match).exists())
         self.assertFalse(GhostformResponse.objects.exists())
+
+    def _add_lineup_deck(self, username, deck_name, deck_id):
+        lineup = Lineup.objects.create(owner=User.objects.get(username=username), name='Lineup')
+        version = LineupVersion.objects.create(lineup=lineup, name='First version')
+        deck = Deck.objects.create(id=deck_id, name=deck_name)
+        LineupVersionDeck.objects.create(version=version, deck=deck)
+        return deck
+
+    def test_player_report_accepts_name_of_deck_in_own_lineup(self):
+        deck = self._add_lineup_deck('user1', 'Bumblebird', '2dea0ea6-e371-4b9a-826c-28f6620ef550')
+
+        self._report('user1', {'winner': self.anvil.id, **self._answers('Bumblebird')})
+
+        self.assertTrue(MatchResult.objects.filter(match=self.match).exists())
+        deck_answer = GhostformAnswer.objects.get(question=self.deck_question)
+        self.assertEqual(deck_answer.value, MASTER_VAULT_TEST_DECK_LINK)
+        self.assertEqual(str(deck_answer.deck_id), str(deck.id))
+
+    def test_player_report_rejects_name_of_deck_in_opponents_lineup(self):
+        self._add_lineup_deck('user2', 'Bumblebird', '2dea0ea6-e371-4b9a-826c-28f6620ef550')
+
+        self._report('user1', {'winner': self.anvil.id, **self._answers('Bumblebird')})
+
+        self.assertFalse(MatchResult.objects.filter(match=self.match).exists())
+        self.assertFalse(GhostformResponse.objects.exists())
+
+    def test_matches_page_offers_deck_suggestions_in_report_dialog(self):
+        self.client.login(username='user1', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        suggestions_list_id = f'report-form-ghostform-{self.deck_question.get_field_name()}_suggestions'
+        self.assertContains(response, f'<datalist id="{suggestions_list_id}"></datalist>', count=1)
+        self.assertContains(response, f'list="{suggestions_list_id}"', count=1)
 
     def test_player_report_records_result_and_response_together(self):
         self._report('user1', {

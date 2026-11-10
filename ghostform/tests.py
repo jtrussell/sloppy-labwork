@@ -10,7 +10,12 @@ from django.template.loader import render_to_string
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from .forms import FILTERABLE_CHOICE_COUNT, QuestionsPayloadForm
+from decks.models import Deck
+from lineups.models import Lineup, LineupVersion, LineupVersionDeck
+from .forms import (
+    DECK_LINK_ERROR_MESSAGE, DECK_NAME_NOT_FOUND_ERROR_MESSAGE, FILTERABLE_CHOICE_COUNT,
+    QuestionsPayloadForm
+)
 from .hooks import (
     get_response_form, has_linked_responses, mark_responses_context_removed,
     register_response_access_check, update_response_context
@@ -64,6 +69,13 @@ class GhostformTestMixin:
             'minimum_selections': minimum_selections,
             'maximum_selections': maximum_selections,
         }
+
+    def _add_lineup_deck(self, owner, deck_name, deck_id=None):
+        lineup = Lineup.objects.create(owner=owner, name='Lineup')
+        version = LineupVersion.objects.create(lineup=lineup, name='First version')
+        deck = Deck.objects.create(id=deck_id or uuid.uuid4(), name=deck_name)
+        LineupVersionDeck.objects.create(version=version, deck=deck)
+        return deck
 
     def _submit_response(self, ghostform, user, data):
         response_form = get_response_form(ghostform, data)
@@ -209,14 +221,71 @@ class ResponseFormTestCase(GhostformTestMixin, TestCase):
             response_form = self._build_form(self._field_data(question, link))
             self.assertFalse(response_form.is_valid(), link)
 
-    def test_deck_link_field_has_browser_pattern(self):
+    def test_deck_link_field_without_deck_owner_offers_no_suggestions(self):
         question = self._add_question(
             self.ghostform, 'Deck', answer_type=Question.AnswerType.DECK_LINK)
 
-        rendered_field = str(self._build_form()[question.get_field_name()])
+        rendered_fields = render_to_string(
+            'ghostform/partials/response-fields.html', {'response_form': self._build_form()})
 
-        self.assertIn('pattern=', rendered_field)
-        self.assertIn('type="url"', rendered_field)
+        self.assertIn(f'name="ghostform-{question.get_field_name()}"', rendered_fields)
+        self.assertNotIn('hx-get', rendered_fields)
+        self.assertNotIn('<datalist', rendered_fields)
+
+    def test_deck_link_field_with_deck_owner_searches_deck_names(self):
+        question = self._add_question(
+            self.ghostform, 'Deck', answer_type=Question.AnswerType.DECK_LINK)
+        response_form = get_response_form(self.ghostform, deck_owner=self.owner)
+        suggestions_list_id = f'id_ghostform-{question.get_field_name()}_suggestions'
+
+        rendered_fields = render_to_string(
+            'ghostform/partials/response-fields.html', {'response_form': response_form})
+
+        self.assertIn(f'list="{suggestions_list_id}"', rendered_fields)
+        self.assertIn(f'hx-target="#{suggestions_list_id}"', rendered_fields)
+        self.assertIn(f'<datalist id="{suggestions_list_id}"></datalist>', rendered_fields)
+        self.assertIn(
+            f'hx-get="{reverse("ghostform:ghostform-deck-suggestions")}'
+            f'?field=ghostform-{question.get_field_name()}"',
+            rendered_fields)
+
+    def test_deck_link_accepts_name_of_deck_in_own_lineup(self):
+        question = self._add_question(
+            self.ghostform, 'Deck', answer_type=Question.AnswerType.DECK_LINK)
+        self._add_lineup_deck(self.owner, 'Bumblebird, the Vault\'s "Finest"', deck_id=DECK_UUID)
+
+        response_form = get_response_form(
+            self.ghostform, self._field_data(question, 'bumblebird, the vault\'s "finest"'),
+            deck_owner=self.owner)
+
+        self.assertTrue(response_form.is_valid(), response_form.errors)
+        answer_fields = response_form.get_answer_fields()[0]
+        self.assertEqual(answer_fields['value'], MASTER_VAULT_DECK_LINK)
+        self.assertEqual(answer_fields['deck_id'], DECK_UUID)
+
+    def test_deck_link_rejects_name_of_deck_in_another_users_lineup(self):
+        question = self._add_question(
+            self.ghostform, 'Deck', answer_type=Question.AnswerType.DECK_LINK)
+        other_user = User.objects.create_user('other', 'other@test.com', 'password')
+        self._add_lineup_deck(other_user, 'Bumblebird')
+
+        response_form = get_response_form(
+            self.ghostform, self._field_data(question, 'Bumblebird'), deck_owner=self.owner)
+
+        self.assertFalse(response_form.is_valid())
+        self.assertEqual(
+            response_form.errors[question.get_field_name()], [DECK_NAME_NOT_FOUND_ERROR_MESSAGE])
+
+    def test_deck_link_rejects_deck_name_without_deck_owner(self):
+        question = self._add_question(
+            self.ghostform, 'Deck', answer_type=Question.AnswerType.DECK_LINK)
+        self._add_lineup_deck(self.owner, 'Bumblebird')
+
+        response_form = self._build_form(self._field_data(question, 'Bumblebird'))
+
+        self.assertFalse(response_form.is_valid())
+        self.assertEqual(
+            response_form.errors[question.get_field_name()], [DECK_LINK_ERROR_MESSAGE])
 
     def test_multiple_choice_renders_select_with_blank_option(self):
         question = self._add_question(
@@ -999,11 +1068,96 @@ class GhostformViewsTestCase(GhostformTestMixin, TestCase):
             ghostform, 'Deck', answer_type=Question.AnswerType.DECK_LINK, is_required=True)
 
         response = self.client.post(
-            self._url('ghostform-fill', ghostform), self._field_data(question, 'nope'))
+            self._url('ghostform-fill', ghostform), self._field_data(question, 'https://example.com/nope'))
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(ghostform.responses.exists())
-        self.assertContains(response, 'Enter a Master Vault or Decks of KeyForge deck link.')
+        self.assertContains(response, DECK_LINK_ERROR_MESSAGE)
+
+    def test_fill_with_unknown_deck_name_shows_error(self):
+        ghostform = self._create_form(self.owner)
+        question = self._add_question(
+            ghostform, 'Deck', answer_type=Question.AnswerType.DECK_LINK, is_required=True)
+
+        response = self.client.post(
+            self._url('ghostform-fill', ghostform), self._field_data(question, 'nope'))
+
+        self.assertFalse(ghostform.responses.exists())
+        self.assertContains(response, DECK_NAME_NOT_FOUND_ERROR_MESSAGE)
+
+    def test_fill_records_deck_chosen_by_name(self):
+        ghostform = self._create_form(self.owner)
+        question = self._add_question(
+            ghostform, 'Deck', answer_type=Question.AnswerType.DECK_LINK, is_required=True)
+        self._add_lineup_deck(self.owner, 'Bumblebird', deck_id=DECK_UUID)
+
+        response = self.client.post(
+            self._url('ghostform-fill', ghostform), self._field_data(question, 'Bumblebird'))
+
+        self.assertRedirects(response, self._url('ghostform-fill-thanks', ghostform))
+        answer = Answer.objects.get()
+        self.assertEqual(answer.value, MASTER_VAULT_DECK_LINK)
+        self.assertEqual(str(answer.deck_id), DECK_UUID)
+
+    def test_fill_page_offers_deck_suggestions(self):
+        ghostform = self._create_form(self.owner)
+        self._add_question(ghostform, 'Deck', answer_type=Question.AnswerType.DECK_LINK)
+
+        response = self.client.get(self._url('ghostform-fill', ghostform))
+
+        self.assertContains(response, '<datalist id="id_ghostform-question_', count=1)
+
+    def _search_deck_suggestions(self, name_query, field_name='ghostform-question_1'):
+        return self.client.get(
+            self._url('ghostform-deck-suggestions'), {'field': field_name, field_name: name_query})
+
+    def test_deck_suggestions_require_login(self):
+        self.client.logout()
+
+        response = self._search_deck_suggestions('bumble')
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_deck_suggestions_list_matching_decks_from_own_lineups(self):
+        self._add_lineup_deck(self.owner, 'Bumblebird the Bold')
+        self._add_lineup_deck(self.owner, 'Quiet Archivist')
+        self._add_lineup_deck(self.stranger, 'Bumblebird the Stranger')
+
+        response = self._search_deck_suggestions('BUMBLE')
+
+        self.assertContains(response, '<option value="Bumblebird the Bold"></option>', html=True)
+        self.assertNotContains(response, 'Quiet Archivist')
+        self.assertNotContains(response, 'Bumblebird the Stranger')
+
+    def test_deck_suggestions_escape_deck_names(self):
+        self._add_lineup_deck(self.owner, 'Bumble"><script>alert(1)</script> & "Sons"')
+
+        response = self._search_deck_suggestions('bumble')
+
+        self.assertNotContains(response, '<script>')
+        self.assertContains(
+            response,
+            'value="Bumble&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt; &amp; &quot;Sons&quot;"')
+
+    def test_deck_suggestions_are_empty_for_short_queries_and_links(self):
+        self._add_lineup_deck(self.owner, 'Bumblebird')
+
+        for name_query in ['b', '', MASTER_VAULT_DECK_LINK]:
+            response = self._search_deck_suggestions(name_query)
+            self.assertNotContains(response, '<option')
+
+    def test_deck_suggestions_list_a_deck_once_and_stop_at_the_limit(self):
+        repeated_deck = self._add_lineup_deck(self.owner, 'Bumblebird 0')
+        second_version = LineupVersion.objects.create(
+            lineup=Lineup.objects.create(owner=self.owner, name='Second lineup'), name='First version')
+        LineupVersionDeck.objects.create(version=second_version, deck=repeated_deck)
+        for deck_number in range(1, 7):
+            self._add_lineup_deck(self.owner, f'Bumblebird {deck_number}')
+
+        response = self._search_deck_suggestions('bumblebird')
+
+        self.assertContains(response, '<option', count=5)
+        self.assertContains(response, 'value="Bumblebird 0"', count=1)
 
     def test_draft_form_is_hidden_from_others_and_previewable_by_owner(self):
         ghostform = self._create_form(self.owner, status=Form.Status.DRAFT)

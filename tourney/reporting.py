@@ -90,7 +90,7 @@ def report_paired_match_result(match, user, result_data):
         raise ReportError([BYE_CANNOT_BE_REPORTED_MESSAGE])
 
     form = MatchResultForm(result_data, match=match)
-    response_form = build_result_response_form(tournament, is_admin, result_data)
+    response_form = build_result_response_form(tournament, user, is_admin, result_data)
     is_result_valid = form.is_valid()
     is_response_valid = is_result_response_form_valid(response_form)
     if not (is_result_valid and is_response_valid):
@@ -196,7 +196,7 @@ def report_self_scheduled_match_result(tournament, user, result_data):
         player_two_score = parse_self_reported_score(result_data.get('their_score', '').strip())
 
     is_reporter_admin = tournament.is_user_admin(user)
-    response_form = build_result_response_form(tournament, is_reporter_admin, result_data)
+    response_form = build_result_response_form(tournament, user, is_reporter_admin, result_data)
     if not is_result_response_form_valid(response_form):
         raise ReportError([], response_form)
 

@@ -10,6 +10,8 @@ urlpatterns = [
          name='ghostform-picker-results'),
     path('picker/preview/<str:form_code>/', views.form_picker_preview,
          name='ghostform-picker-preview'),
+    path('decks/suggestions/', views.deck_suggestions,
+         name='ghostform-deck-suggestions'),
     path('feed/<uuid:feed_token>.csv', views.form_responses_feed_csv,
          name='ghostform-responses-feed-csv'),
     path('feed/<uuid:feed_token>.json', views.form_responses_feed_json,

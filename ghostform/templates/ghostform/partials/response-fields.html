@@ -19,5 +19,6 @@
 </fieldset>
 {% else %}
 {% include "components/field.html" with field=field %}
+{% if field.field.suggestions_list_id %}<datalist id="{{ field.field.suggestions_list_id }}"></datalist>{% endif %}
 {% endif %}
 {% endfor %}
