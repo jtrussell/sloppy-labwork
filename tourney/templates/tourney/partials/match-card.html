@@ -129,12 +129,15 @@
                     data-stage-score-reporting="{{ match.round.stage.report_full_scores }}"
                     onclick="openMatchModal(this)">
                 </button>
+            {% elif match.player_one.player.user == user %}
+                {% include 'tourney/partials/match-own-marker.html' %}
             {% endif %}
         {% else %}
             {% comment %} For regular matches, check normal edit permissions {% endcomment %}
             {% if is_admin or match.player_one.player.user == user or match.player_two.player.user == user %}
-                {% if is_admin or not tournament.is_closed %}
-                {% if is_admin or not match.has_result or match.round_id == current_round.id or active_result_form %}
+                {% if not is_admin and tournament.is_closed %}
+                    {% include 'tourney/partials/match-own-marker.html' %}
+                {% elif is_admin or not match.has_result or match.round_id == current_round.id or active_result_form %}
                     <button class="match-edit-btn"
                         data-match-id="{{ match.id }}"
                         data-round-label="{{ match.round.stage.name }} · Round {{ match.round.order }}"
@@ -160,7 +163,8 @@
                         data-stage-score-reporting="{{ match.round.stage.report_full_scores }}"
                         onclick="openMatchModal(this)">
                     </button>
-                {% endif %}
+                {% else %}
+                    {% include 'tourney/partials/match-own-marker.html' %}
                 {% endif %}
             {% endif %}
         {% endif %}

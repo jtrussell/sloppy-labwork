@@ -3758,6 +3758,85 @@ class PodMatchViewsTestCase(PodTestMixin, TestCase):
         self.assertEqual([match.player_one_id for match in round_group['matches']],
                          [self.beacon.id])
 
+    def test_my_matches_filter_shows_only_the_viewers_matches(self):
+        self._play_in_round(self.beacon, self.comet)
+        self._play_in_round(self.anvil, self.dynamo)
+        self.client.login(username='user1', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches', '?pod=all&mine=1'))
+
+        round_group = response.context['grouped_matches'][0]['rounds'][0]
+        self.assertEqual([match.player_one_id for match in round_group['matches']],
+                         [self.anvil.id])
+        self.assertEqual([group['pod'] for group in round_group['pod_groups']], [self.pod_a])
+
+    def test_my_matches_filter_keeps_original_match_numbers(self):
+        self._play_in_round(self.beacon, self.comet)
+        self._play_in_round(self.anvil, self.dynamo)
+        self.client.login(username='user2', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches', '?pod=all&mine=1'))
+
+        pod_groups = response.context['grouped_matches'][0]['rounds'][0]['pod_groups']
+        numbers = [numbered['number'] for group in pod_groups
+                   for numbered in group['numbered_matches']]
+        self.assertEqual(numbers, [2])
+
+    def test_my_matches_toggle_is_offered_to_players_only(self):
+        self._play_in_round(self.anvil, self.dynamo)
+
+        self.client.login(username='user1', password='password')
+        player_response = self.client.get(self._url('tourney-detail-matches'))
+        self.client.login(username='owner', password='password')
+        admin_response = self.client.get(self._url('tourney-detail-matches', '?mine=1'))
+
+        self.assertContains(player_response, 'name="mine"')
+        self.assertNotContains(admin_response, 'name="mine"')
+        self.assertFalse(admin_response.context['only_my_matches'])
+        self.assertEqual(len(admin_response.context['grouped_matches'][0]['rounds'][0]['matches']), 1)
+
+    def test_my_matches_filter_with_no_matches_says_so(self):
+        self._play_in_round(self.beacon, self.comet)
+        self.client.login(username='user1', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches', '?pod=all&mine=1'))
+
+        self.assertEqual(response.context['grouped_matches'], [])
+        self.assertContains(response, "You don't have any matches yet.")
+
+    def test_own_match_is_marked_when_it_cannot_be_edited(self):
+        self._play_in_round(self.anvil, self.dynamo)
+        self._play_in_round(self.beacon, self.comet)
+        self.tournament.is_closed = True
+        self.tournament.save()
+        self.client.login(username='user1', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches', '?pod=all'))
+
+        self.assertContains(response, 'match-own-marker', count=1)
+        self.assertNotContains(response, 'match-edit-btn')
+
+    def test_own_editable_match_shows_the_edit_button_instead_of_the_marker(self):
+        self._play_in_round(self.anvil, self.dynamo)
+        self.client.login(username='user1', password='password')
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertContains(response, 'match-edit-btn')
+        self.assertNotContains(response, 'match-own-marker')
+
+    def test_redirect_after_htmx_action_keeps_my_matches_filter(self):
+        self.client.login(username='owner', password='password')
+        current_url = 'http://testserver' + self._url(
+            'tourney-detail-matches', f'?pod={self.pod_a.slug}&mine=1')
+
+        response = self.client.post(
+            self._url('tourney-add-match'),
+            {'player_one': self.anvil.id, 'player_two': self.dynamo.id},
+            HTTP_HX_REQUEST='true', HTTP_HX_CURRENT_URL=current_url)
+
+        self.assertTrue(response['HX-Redirect'].endswith(f'?pod={self.pod_a.slug}&mine=1'))
+
     def test_matches_all_view_numbers_matches_across_pods(self):
         self._play_in_round(self.beacon, self.comet)
         self._play_in_round(self.anvil, self.dynamo)

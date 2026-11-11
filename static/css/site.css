@@ -6,3 +6,9 @@
 @import url("base.css") layer(base);
 @import url("components.css") layer(components);
 @import url("utilities.css") layer(utilities);
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}

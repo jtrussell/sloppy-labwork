@@ -43,10 +43,10 @@
 
     <nav aria-label="Tournament">
         <ul class="tabs tabs--center">
-            <li><a href="{% url 'tourney:tourney-detail-matches' tournament.code %}{{ pod_query_string }}" class="tabs__link"{% if current_tab == 'matches' %} aria-current="page"{% endif %}>Matches</a></li>
-            <li><a href="{% url 'tourney:tourney-detail-standings' tournament.code %}{{ pod_query_string }}" class="tabs__link"{% if current_tab == 'standings' %} aria-current="page"{% endif %}>Standings</a></li>
+            <li><a href="{% url 'tourney:tourney-detail-matches' tournament.code %}{{ pod_query_string }}" class="tabs__link" data-preserve-scroll{% if current_tab == 'matches' %} aria-current="page"{% endif %}>Matches</a></li>
+            <li><a href="{% url 'tourney:tourney-detail-standings' tournament.code %}{{ pod_query_string }}" class="tabs__link" data-preserve-scroll{% if current_tab == 'standings' %} aria-current="page"{% endif %}>Standings</a></li>
             {% if is_admin %}
-            <li><a href="{% url 'tourney:tourney-tournament-detail-admin' tournament.code %}" class="tabs__link"{% if current_tab == 'admin' %} aria-current="page"{% endif %}>Admin</a></li>
+            <li><a href="{% url 'tourney:tourney-tournament-detail-admin' tournament.code %}" class="tabs__link" data-preserve-scroll{% if current_tab == 'admin' %} aria-current="page"{% endif %}>Admin</a></li>
             {% endif %}
         </ul>
     </nav>

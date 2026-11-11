@@ -38,7 +38,7 @@
 
 <section>
   <h2>Tabs</h2>
-  <p>Switch between views of the same object. Mark the current tab with <code>aria-current="page"</code>.</p>
+  <p>Switch between views of the same object. Mark the current tab with <code>aria-current="page"</code>. When each tab is its own page, add <code>data-preserve-scroll</code> to the links so switching tabs <a href="{% url 'design_system:section' 'interactive' %}">keeps the scroll position</a>.</p>
   {% ds_example themed %}
   <nav aria-label="Tournament">
     <ul class="tabs tabs--center">

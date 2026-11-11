@@ -1,4 +1,4 @@
 document.addEventListener('change', (event) => {
-  const podSelect = event.target.closest('[data-pod-switcher] select')
-  if (podSelect) podSelect.form.submit()
+  const filterControl = event.target.closest('[data-pod-switcher] select, [data-pod-switcher] input')
+  if (filterControl) filterControl.form.submit()
 })

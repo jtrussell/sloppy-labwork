@@ -74,6 +74,12 @@ def redirect_to(request, url):
     return HttpResponseRedirect(url)
 
 
+POD_PARAMETER = 'pod'
+MY_MATCHES_PARAMETER = 'mine'
+MY_MATCHES_FILTER = '1'
+MATCH_FILTER_PARAMETERS = (POD_PARAMETER, MY_MATCHES_PARAMETER)
+
+
 def get_matches_url(request, tournament):
     matches_url = reverse('tourney:tourney-detail-matches',
                           kwargs={'tournament_code': tournament.code})
@@ -81,10 +87,42 @@ def get_matches_url(request, tournament):
     if not current_url:
         return matches_url
 
-    requested_pods = parse_qs(urlparse(current_url).query).get('pod', [])
-    if requested_pods:
-        return f'{matches_url}?{urlencode({"pod": requested_pods[0]})}'
+    current_query = parse_qs(urlparse(current_url).query)
+    kept_filters = {
+        parameter: current_query[parameter][0]
+        for parameter in MATCH_FILTER_PARAMETERS if current_query.get(parameter)
+    }
+    if kept_filters:
+        return f'{matches_url}?{urlencode(kept_filters)}'
     return matches_url
+
+
+def is_showing_only_my_matches(request, player):
+    return player is not None and request.GET.get(MY_MATCHES_PARAMETER) == MY_MATCHES_FILTER
+
+
+def is_match_played_by(match, player):
+    return (match.player_one.player_id == player.id or
+            (match.player_two is not None and match.player_two.player_id == player.id))
+
+
+def number_matches(matches):
+    return [{'match': match, 'number': number} for number, match in enumerate(matches, start=1)]
+
+
+def keep_numbered_matches_played_by(numbered_matches, player):
+    return [
+        numbered_match for numbered_match in numbered_matches
+        if is_match_played_by(numbered_match['match'], player)]
+
+
+def keep_pod_groups_played_by(pod_groups, player):
+    pod_groups_of_player = []
+    for pod_group in pod_groups:
+        numbered_matches = keep_numbered_matches_played_by(pod_group['numbered_matches'], player)
+        if numbered_matches:
+            pod_groups_of_player.append({**pod_group, 'numbered_matches': numbered_matches})
+    return pod_groups_of_player
 
 
 def get_selected_pod(request, stage, default_pod=None):
@@ -548,6 +586,8 @@ def tournament_detail_matches(request, tournament_code):
 
     current_stage = context['current_stage']
     selected_pod = get_selected_pod(request, current_stage, context['default_pod'])
+    player = context['player']
+    only_my_matches = is_showing_only_my_matches(request, player)
 
     stages = tournament.stages.order_by('-created_on')
 
@@ -575,12 +615,22 @@ def tournament_detail_matches(request, tournament_code):
                 if not round_matches:
                     continue
 
+            numbered_matches = number_matches(round_matches)
+            pod_groups = (
+                group_matches_by_pod(round_matches, stage_pods)
+                if stage_pods and not is_filtered_stage else [])
+
+            if only_my_matches:
+                numbered_matches = keep_numbered_matches_played_by(numbered_matches, player)
+                pod_groups = keep_pod_groups_played_by(pod_groups, player)
+                if not numbered_matches:
+                    continue
+
             stage_rounds.append({
                 'round': round_obj,
-                'matches': round_matches,
-                'pod_groups': (
-                    group_matches_by_pod(round_matches, stage_pods)
-                    if stage_pods and not is_filtered_stage else []),
+                'matches': [numbered_match['match'] for numbered_match in numbered_matches],
+                'numbered_matches': numbered_matches,
+                'pod_groups': pod_groups,
             })
 
         if stage_rounds:
@@ -658,6 +708,10 @@ def tournament_detail_matches(request, tournament_code):
         'selected_stage': current_stage,
         'selected_pod': selected_pod,
         'pod_switcher_url': reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}),
+        'show_my_matches_toggle': player is not None,
+        'only_my_matches': only_my_matches,
+        'my_matches_parameter': MY_MATCHES_PARAMETER,
+        'my_matches_filter': MY_MATCHES_FILTER,
     })
 
     if request.htmx:

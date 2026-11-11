@@ -50,10 +50,10 @@
                                         </div>
                                     </div>
                                 {% endfor %}
-                            {% elif round_group.matches %}
+                            {% elif round_group.numbered_matches %}
                                 <div class="match-grid">
-                                    {% for match in round_group.matches %}
-                                        {% include 'tourney/partials/match-card.html' with match=match is_admin=is_admin show_match_number=True match_number=forloop.counter %}
+                                    {% for numbered_match in round_group.numbered_matches %}
+                                        {% include 'tourney/partials/match-card.html' with match=numbered_match.match is_admin=is_admin show_match_number=True match_number=numbered_match.number %}
                                     {% endfor %}
                                 </div>
                             {% endif %}
@@ -85,7 +85,7 @@
         {% else %}
             <section>
                 <div class="empty-state">
-                    <p class="empty-state__message">{% if selected_pod %}No matches have been created in {{ selected_pod.name }} yet.{% else %}No matches have been created yet.{% endif %}</p>
+                    <p class="empty-state__message">{% if only_my_matches %}You don't have any matches yet.{% elif selected_pod %}No matches have been created in {{ selected_pod.name }} yet.{% else %}No matches have been created yet.{% endif %}</p>
                 </div>
             </section>
         {% endif %}

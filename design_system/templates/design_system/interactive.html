@@ -58,6 +58,17 @@
 </section>
 
 <section>
+  <h2>Preserve scroll</h2>
+  <p>Some actions reload the page without being a true navigation: filters, toggles, sort controls and switching between tabs of the same view. Keep the user where they were. Add <code>data-preserve-scroll</code> to the link or form and <code>js/preserve-scroll.js</code> (loaded by <code>page.html</code>) restores the scroll position on the next page load. On a form it covers a submit and a change to any control inside it. Leave it off links that go somewhere new; those should start at the top.</p>
+  {% ds_example %}
+  <div class="cluster">
+    <a href="?reloaded=1" class="button" data-preserve-scroll>Reload and stay here</a>
+    <a href="?reloaded=1" class="button">Reload from the top</a>
+  </div>
+  {% end_ds_example %}
+</section>
+
+<section>
   <h2>Action bar</h2>
   <p>A sticky bar at the bottom of the viewport for the primary action of a multi-step flow.</p>
   {% ds_example no_markup %}

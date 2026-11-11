@@ -103,6 +103,10 @@ selector stacking.
 9. Check new or changed UI in all four themes and at phone width. The gallery
    theme switcher and themed examples make this quick.
 10. Don't remove focus outlines; keyboard focus is visible by design.
+11. Preserve the scroll position for actions that reload the page without
+    being a true navigation: filters, toggles, sort controls and switching
+    between tabs of the same view. The user should stay where they were.
+    Add `data-preserve-scroll` to the link or form.
 
 ### Includes
 
@@ -123,6 +127,8 @@ In `design_system/templates/components/`:
   through the confirm dialog.
 - `static/js/copy.js` - `data-copy-text`, `data-copy-from` and
   `data-share-url` buttons.
+- `static/js/preserve-scroll.js` - `data-preserve-scroll` on a link or form
+  restores the scroll position after the page load it causes.
 - `static/js/action-menu.js` - closing behaviour for `details.action-menu`
   (outside press, item chosen, Escape). Use an action menu for 3+ actions or
   actions beside a title that can grow.
