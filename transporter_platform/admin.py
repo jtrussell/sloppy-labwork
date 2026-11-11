@@ -6,19 +6,19 @@ from transporter_platform.models import MatchRequest, PastMatch, PodPlayer
 class PodPlayerAdmin(admin.ModelAdmin):
     list_display = ('user', 'user_handle', 'pod')
     list_filter = ('pod',)
-    search_fields = ['user', 'user_handle']
+    search_fields = ['user__username', 'user_handle']
     ordering = ('pod', 'user_handle')
 
 
 class PastMatchAdmin(admin.ModelAdmin):
     list_display = ('player', 'opponent')
-    search_fields = ['player', 'opponent']
+    search_fields = ['player__user_handle', 'opponent__user_handle']
     ordering = ('player', 'opponent')
 
 
 class MatchRequestAdmin(admin.ModelAdmin):
     list_display = ('player', 'created_on', 'completed_by', 'is_cancelled')
-    search_fields = ['player']
+    search_fields = ['player__user_handle']
     ordering = ('created_on', 'player')
 
 

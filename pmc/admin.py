@@ -43,7 +43,7 @@ class PlaygroupAdmin(admin.ModelAdmin):
 
 class PlaygroupMemberAdmin(admin.ModelAdmin):
     list_display = ('playgroup', 'user', 'nickname', 'joined_on', 'is_staff')
-    search_fields = ['playgroup', 'user', 'nickname']
+    search_fields = ['playgroup__name', 'user__username', 'nickname']
     list_filter = ('is_staff',)
 
 
@@ -64,7 +64,7 @@ class EventAdmin(admin.ModelAdmin):
 class EventResultAdmin(admin.ModelAdmin):
     list_display = ('event', 'user', 'finishing_position',
                     'num_wins', 'num_losses', 'num_ties')
-    search_fields = ['event', 'user']
+    search_fields = ['event__name', 'user__username']
     list_filter = ('event',)
 
 
@@ -82,7 +82,7 @@ class RankingPointsMapAdmin(admin.ModelAdmin):
 
 class RankingPointsAdmin(admin.ModelAdmin):
     list_display = ('result', 'points')
-    search_fields = ['result__event']
+    search_fields = ['result__event__name', 'result__user__username']
     list_filter = ('result__event',)
 
 
@@ -99,7 +99,7 @@ class LeaderboardSeasonAdmin(admin.ModelAdmin):
 
 class LeaderboardSeasonPeriodAdmin(admin.ModelAdmin):
     list_display = ('name', 'season', 'start_date', 'is_locked')
-    search_fields = ['season']
+    search_fields = ['name', 'season__name']
     list_filter = ('season', 'is_locked')
     readonly_fields = ('is_locked',)
 
@@ -113,19 +113,19 @@ class LeaderboardAdmin(admin.ModelAdmin):
 class PlayerRankAdmin(admin.ModelAdmin):
     list_display = ('leaderboard', 'playgroup',
                     'user', 'rank', 'total_points', 'num_results')
-    search_fields = ['leaderboard', 'playgroup', 'user']
+    search_fields = ['leaderboard__name', 'playgroup__name', 'user__username']
     list_filter = ('leaderboard',)
 
 
 class LeaderboardLogAdmin(admin.ModelAdmin):
     list_display = ('leaderboard', 'action', 'action_date')
-    search_fields = ['leaderboard']
+    search_fields = ['leaderboard__name']
     list_filter = ('leaderboard',)
 
 
 class PlaygroupEventAdmin(admin.ModelAdmin):
     list_display = ('playgroup', 'event',)
-    search_fields = ['playgroup', 'event']
+    search_fields = ['playgroup__name', 'event__name']
     list_filter = ()
 
 
@@ -167,7 +167,7 @@ class BackgroundCategoryAdmin(admin.ModelAdmin):
 
 class PlaygroupJoinRequestAdmin(admin.ModelAdmin):
     list_display = ('playgroup', 'user', 'created_on', 'status')
-    search_fields = ['playgroup', 'user']
+    search_fields = ['playgroup__name', 'user__username']
     list_filter = ('playgroup',)
 
 
@@ -212,7 +212,7 @@ class BadgeAdmin(admin.ModelAdmin):
 
 class UserBadgeAdmin(admin.ModelAdmin):
     list_display = ('user', 'badge', 'date_awarded')
-    search_fields = ['user__username', 'badge']
+    search_fields = ['user__username', 'badge__name']
     list_filter = ()
 
 
@@ -224,7 +224,7 @@ class TrophyAdmin(admin.ModelAdmin):
 
 class UserTrophyAdmin(admin.ModelAdmin):
     list_display = ('user', 'trophy')
-    search_fields = ['user__username', 'trophy']
+    search_fields = ['user__username', 'trophy__name']
     list_filter = ()
 
 
