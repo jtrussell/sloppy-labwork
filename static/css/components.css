@@ -1820,6 +1820,9 @@ html:has(dialog.dialog:modal) {
 }
 
 .dialog {
+  position: fixed;
+  inset-block: 0;
+  flex-direction: column;
   width: min(28rem, calc(100vw - 2 * var(--space-4)));
   max-width: none;
   max-height: min(90dvh, 52rem);
@@ -1845,7 +1848,6 @@ html:has(dialog.dialog:modal) {
 
 .dialog[open] {
   display: flex;
-  flex-direction: column;
   opacity: 1;
   transform: none;
   transition:
