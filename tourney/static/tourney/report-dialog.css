@@ -2,6 +2,11 @@
   display: none !important;
 }
 
+html:has(.report-dialog:modal) {
+  overflow: visible;
+  overscroll-behavior-y: contain;
+}
+
 .dialog.report-dialog {
   --dialog-hidden-transform: translateY(var(--space-8));
   width: 100%;
@@ -22,6 +27,7 @@
 
 .report-dialog__body {
   display: block;
+  overscroll-behavior: auto;
 }
 
 .report-dialog__footer {
@@ -240,6 +246,15 @@
 }
 
 @media (min-width: 550px) {
+  html:has(.report-dialog:modal) {
+    overflow: hidden;
+    overscroll-behavior-y: auto;
+  }
+
+  .report-dialog__body {
+    overscroll-behavior: contain;
+  }
+
   .dialog.report-dialog {
     --dialog-hidden-transform: translateY(var(--space-3)) scale(0.96);
     width: min(28.75rem, calc(100vw - 2 * var(--space-4)));
