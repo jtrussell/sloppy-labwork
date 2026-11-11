@@ -1,7 +1,7 @@
 from django.db.models import Q
 from django.utils import timezone
 
-from ghostform.hooks import get_response_form
+from ghostform.hooks import find_latest_linked_response, get_response_form
 from ghostform.picker import FORM_PICKER_META_SEPARATOR, build_form_option_for, build_form_picker_context
 from .forms import COPY_SOURCE_RESULT_FORM
 from .models import Tournament
@@ -91,11 +91,28 @@ def get_result_report_error_message(response_form):
     return 'Error reporting match result. Please check the form.'
 
 
+def find_saved_result_response(result_form, match):
+    return find_latest_linked_response(result_form, get_result_context_key(match.id))
+
+
+def build_saved_result_response_form(tournament, user, is_admin, match):
+    response_form = build_result_response_form(tournament, user, is_admin)
+    if response_form is None:
+        return None
+    saved_response = find_saved_result_response(response_form.ghostform, match)
+    if saved_response is not None:
+        response_form.prefill_from(saved_response)
+    return response_form
+
+
 def record_result_response(response_form, user, result, is_admin):
     if response_form is None:
         return None
     if is_admin and not response_form.has_any_answer():
         return None
+    saved_response = find_saved_result_response(response_form.ghostform, result.match)
+    if saved_response is not None:
+        return response_form.save_answers_to(saved_response)
     return response_form.save_response(
         user,
         context=build_result_context(result),

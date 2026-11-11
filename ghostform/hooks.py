@@ -30,6 +30,12 @@ def get_response_form(form, data=None, *, questions=None, all_optional=False,
     )
 
 
+def find_latest_linked_response(form, context_key):
+    return Response.objects.filter(
+        form=form, context_key=context_key, is_context_removed=False
+    ).order_by('-submitted_on', '-id').first()
+
+
 def has_linked_responses(context_key):
     return Response.objects.filter(
         context_key=context_key, is_context_removed=False).exists()

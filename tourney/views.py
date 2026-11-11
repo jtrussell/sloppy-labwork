@@ -6,7 +6,7 @@ from django.core.paginator import Paginator
 from django.db import transaction, IntegrityError
 from django.db import models
 from django.db.models import Q, F, Case, When, Value, IntegerField
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views.decorators.http import require_POST, require_GET
@@ -27,11 +27,11 @@ from .forms import (
     PlayerRegistrationForm, AddMatchForm, SelectPlaygroupForm, TournamentExportForm
 )
 from .result_forms import (
-    build_report_dialog_context, build_result_form_picker_context, copy_result_form_for_tournament,
-    RESULT_FORM_INLINE_ERROR_MESSAGE, get_result_report_error_message
+    build_report_dialog_context, build_result_form_picker_context, build_saved_result_response_form,
+    copy_result_form_for_tournament, RESULT_FORM_INLINE_ERROR_MESSAGE, get_result_report_error_message
 )
 from .reporting import (
-    ReportError, can_user_add_match, describe_winner, report_paired_match_result,
+    ReportError, can_user_add_match, can_user_edit_match, describe_winner, report_paired_match_result,
     report_self_scheduled_match_result
 )
 from pmc.models import Playgroup, Event, EventResult, PlaygroupEvent, RankingPointsService
@@ -1057,6 +1057,22 @@ def report_match_result(request, tournament_code, match_id):
     messages.success(
         request, f'Match result {"updated" if outcome.was_update else "reported"} successfully!')
     return redirect_to(request, get_matches_url(request, tournament))
+
+
+@login_required
+@require_GET
+def saved_result_form_fields(request, tournament_code, match_id):
+    tournament = get_object_or_404(Tournament, code=tournament_code)
+    match = get_object_or_404(
+        Match, id=match_id, round__stage__tournament=tournament)
+    if not can_user_edit_match(match, request.user):
+        raise PermissionDenied
+
+    response_form = build_saved_result_response_form(
+        tournament, request.user, tournament.is_user_admin(request.user), match)
+    if response_form is None:
+        raise Http404
+    return render(request, 'ghostform/partials/response-fields.html', {'response_form': response_form})
 
 
 @login_required

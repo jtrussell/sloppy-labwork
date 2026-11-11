@@ -134,6 +134,7 @@
             {% comment %} For regular matches, check normal edit permissions {% endcomment %}
             {% if is_admin or match.player_one.player.user == user or match.player_two.player.user == user %}
                 {% if is_admin or not tournament.is_closed %}
+                {% if is_admin or not match.has_result or match.round_id == current_round.id or active_result_form %}
                     <button class="match-edit-btn"
                         data-match-id="{{ match.id }}"
                         data-round-label="{{ match.round.stage.name }} · Round {{ match.round.order }}"
@@ -151,12 +152,15 @@
                         data-match-winner-id="{% if match.result.winner %}{{ match.result.winner.id }}{% endif %}"
                         data-match-player-one-score="{% if match.result.player_one_score is not None %}{{ match.result.player_one_score }}{% endif %}"
                         data-match-player-two-score="{% if match.result.player_two_score is not None %}{{ match.result.player_two_score }}{% endif %}"
+                        {% if active_result_form %}data-saved-result-form-url="{% url 'tourney:tourney-saved-result-form-fields' tournament.code match.id %}"{% endif %}
+                        {% if not is_admin and match.round_id != current_round.id %}data-result-is-locked="true"{% endif %}
                         {% endif %}
                         data-is-admin="{{ is_admin|yesno:'true,false' }}"
                         data-stage-allow-ties="{{ match.round.stage.are_ties_allowed|yesno:'true,false' }}"
                         data-stage-score-reporting="{{ match.round.stage.report_full_scores }}"
                         onclick="openMatchModal(this)">
                     </button>
+                {% endif %}
                 {% endif %}
             {% endif %}
         {% endif %}

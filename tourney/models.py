@@ -1141,6 +1141,13 @@ class Match(models.Model):
     def is_bye(self):
         return self.player_two is None
 
+    def is_in_current_round(self):
+        stage = self.round.stage
+        return (
+            stage.tournament.get_current_stage() == stage
+            and stage.get_current_round() == self.round
+        )
+
 
 class MatchResult(models.Model):
     match = models.OneToOneField(

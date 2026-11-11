@@ -165,6 +165,16 @@ class ResponseForm(forms.Form):
     def save_response(self, user, context=(), context_key=''):
         return self.ghostform.record_response(self, user, context, context_key)
 
+    def save_answers_to(self, response):
+        return self.ghostform.replace_response_answers(response, self)
+
+    def prefill_from(self, response):
+        answers_by_question_id = {answer.question_id: answer for answer in response.answers.all()}
+        for question in self.questions:
+            answer = answers_by_question_id.get(question.id)
+            if answer is not None:
+                self.initial[question.get_field_name()] = question.get_initial_value(answer)
+
     def get_answer_fields(self):
         answer_fields = []
         for question in self.questions:

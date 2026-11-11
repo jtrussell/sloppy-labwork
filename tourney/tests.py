@@ -20,7 +20,7 @@ from .models import (
 from pmc.models import Event, EventResult, Playgroup, PlaygroupEvent, PlaygroupMember
 from .reporting import (
     ReportError, describe_winner, report_paired_match_result, report_self_scheduled_match_result,
-    MATCH_ALREADY_REPORTED_MESSAGE, INVALID_WINNER_MESSAGE
+    RESULT_LOCKED_MESSAGE, INVALID_WINNER_MESSAGE
 )
 from decks.models import Deck
 from ghostform.models import (
@@ -4456,6 +4456,128 @@ class TournamentResultFormTestCase(TestCase):
         self.assertEqual(context_values['Player two score'], 3)
         self.assertFalse(response.is_context_removed)
 
+    def test_admin_edit_without_answers_keeps_saved_answers(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers(notes='Close game')})
+
+        self._report('owner', {'winner': self.beacon.id})
+
+        response = GhostformResponse.objects.get()
+        self.assertEqual(response.answers.count(), 2)
+
+    def test_admin_edit_with_answers_updates_the_saved_response(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers(notes='Close game')})
+
+        self._report('owner', {'winner': self.anvil.id, **self._answers(deck_link='', notes='Judge call')})
+
+        response = GhostformResponse.objects.get()
+        self.assertEqual(response.user.username, 'user1')
+        self.assertEqual(list(response.answers.values_list('value', flat=True)), ['Judge call'])
+
+    def test_opponent_edit_updates_result_and_shared_answers_during_current_round(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers(notes='Close game')})
+
+        self._report('user2', {'winner': self.beacon.id, **self._answers(notes='Actually I won')})
+
+        self.assertEqual(MatchResult.objects.get(match=self.match).winner, self.beacon)
+        response = GhostformResponse.objects.get()
+        self.assertEqual(response.user.username, 'user1')
+        self.assertEqual(self._context_values(response)['Winner'], 'Beacon')
+        self.assertEqual(
+            GhostformAnswer.objects.get(response=response, question=self.notes_question).value,
+            'Actually I won')
+
+    def test_player_edit_still_requires_required_answers(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers(notes='Close game')})
+
+        self._report('user2', {'winner': self.beacon.id, **self._answers(deck_link='', notes='Oops')})
+
+        self.assertEqual(MatchResult.objects.get(match=self.match).winner, self.anvil)
+        self.assertEqual(
+            GhostformAnswer.objects.get(question=self.notes_question).value, 'Close game')
+
+    def test_player_edit_after_round_updates_answers_but_not_result(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers(notes='Close game')})
+        Round.objects.create(stage=self.stage, order=2)
+
+        self._report('user2', {'winner': self.beacon.id, **self._answers(notes='Great game')})
+
+        self.assertEqual(MatchResult.objects.get(match=self.match).winner, self.anvil)
+        response = GhostformResponse.objects.get()
+        self.assertEqual(
+            GhostformAnswer.objects.get(response=response, question=self.notes_question).value,
+            'Great game')
+
+    def test_player_edit_is_blocked_once_tournament_is_closed(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers(notes='Close game')})
+        self.tournament.is_closed = True
+        self.tournament.save()
+
+        self._report('user2', {'winner': self.beacon.id, **self._answers(notes='Great game')})
+
+        self.assertEqual(
+            GhostformAnswer.objects.get(question=self.notes_question).value, 'Close game')
+
+    def _saved_result_form_fields(self, username):
+        self.client.login(username=username, password='password')
+        return self.client.get(self._url('tourney-saved-result-form-fields', self.match.id))
+
+    def test_saved_result_form_fields_are_prefilled_for_both_players_and_admins(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers(notes='Close game')})
+
+        for username in ['user1', 'user2', 'owner']:
+            response = self._saved_result_form_fields(username)
+            self.assertContains(response, f'value="{MASTER_VAULT_TEST_DECK_LINK}"')
+            self.assertContains(response, 'value="Close game"')
+            self.assertContains(response, 'id="report-form-ghostform-')
+
+    def test_saved_result_form_fields_are_blank_without_a_saved_response(self):
+        response = self._saved_result_form_fields('user1')
+
+        self.assertContains(response, f'name="ghostform-{self.notes_question.get_field_name()}"')
+        self.assertNotContains(response, 'value="')
+
+    def test_saved_result_form_fields_are_forbidden_for_players_outside_the_match(self):
+        response = self._saved_result_form_fields('user3')
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_saved_result_form_fields_are_forbidden_for_players_once_closed(self):
+        self.tournament.is_closed = True
+        self.tournament.save()
+
+        self.assertEqual(self._saved_result_form_fields('user1').status_code, 403)
+        self.assertEqual(self._saved_result_form_fields('owner').status_code, 200)
+
+    def test_match_card_marks_result_locked_for_players_after_its_round(self):
+        self._report('user1', {'winner': self.anvil.id, **self._answers()})
+        Round.objects.create(stage=self.stage, order=2)
+        saved_fields_url = self._url('tourney-saved-result-form-fields', self.match.id)
+
+        self.client.login(username='user1', password='password')
+        player_page = self.client.get(self._url('tourney-detail-matches'))
+        self.client.login(username='owner', password='password')
+        admin_page = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertContains(player_page, 'data-result-is-locked="true"')
+        self.assertContains(player_page, f'data-saved-result-form-url="{saved_fields_url}"')
+        self.assertNotContains(admin_page, 'data-result-is-locked')
+        self.assertContains(admin_page, f'data-saved-result-form-url="{saved_fields_url}"')
+
+    def test_match_card_hides_edit_from_players_when_result_is_locked_and_there_is_no_form(self):
+        self.tournament.result_form = None
+        self.tournament.save()
+        self._report('user1', {'winner': self.anvil.id})
+        Round.objects.create(stage=self.stage, order=2)
+        report_url = self._url('tourney-report-result', self.match.id)
+
+        self.client.login(username='user1', password='password')
+        player_page = self.client.get(self._url('tourney-detail-matches'))
+        self.client.login(username='owner', password='password')
+        admin_page = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertNotContains(player_page, report_url)
+        self.assertContains(admin_page, report_url)
+
     def test_reset_match_marks_response_removed(self):
         self._report('user1', {'winner': self.anvil.id, **self._answers()})
 
@@ -4912,14 +5034,32 @@ class ReportingServiceTest(TestCase):
         with self.assertRaises(PermissionDenied):
             report_paired_match_result(self.match, self.users[2], {'winner': self.anvil.id})
 
-    def test_paired_report_on_reported_match_is_final(self):
+    def test_player_can_update_result_during_current_round(self):
         MatchResult.objects.create(match=self.match, winner=self.beacon)
+
+        outcome = report_paired_match_result(self.match, self.users[1], {'winner': self.anvil.id})
+
+        self.assertTrue(outcome.was_update)
+        self.assertEqual(MatchResult.objects.get(match=self.match).winner, self.anvil)
+
+    def test_player_cannot_update_result_after_its_round(self):
+        MatchResult.objects.create(match=self.match, winner=self.beacon)
+        Round.objects.create(stage=self.stage, order=2)
 
         with self.assertRaises(ReportError) as raised:
             report_paired_match_result(self.match, self.users[0], {'winner': self.anvil.id})
 
         self.assertTrue(raised.exception.is_final)
-        self.assertEqual(raised.exception.error_messages, [MATCH_ALREADY_REPORTED_MESSAGE])
+        self.assertEqual(raised.exception.error_messages, [RESULT_LOCKED_MESSAGE])
+        self.assertEqual(MatchResult.objects.get(match=self.match).winner, self.beacon)
+
+    def test_admin_can_update_result_after_its_round(self):
+        MatchResult.objects.create(match=self.match, winner=self.beacon)
+        Round.objects.create(stage=self.stage, order=2)
+
+        report_paired_match_result(self.match, self.owner, {'winner': self.anvil.id})
+
+        self.assertEqual(MatchResult.objects.get(match=self.match).winner, self.anvil)
 
     def test_paired_report_with_invalid_result_lists_form_errors(self):
         with self.assertRaises(ReportError) as raised:

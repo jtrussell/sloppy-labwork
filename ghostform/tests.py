@@ -469,6 +469,59 @@ class ResponseFormTestCase(GhostformTestMixin, TestCase):
         self.assertEqual(answer.deck_id, uuid.UUID(DECK_UUID))
         self.assertEqual(answer.value, MASTER_VAULT_DECK_LINK)
 
+    def test_prefill_from_response_restores_every_answer_type(self):
+        text_question = self._add_question(self.ghostform, 'Notes')
+        number_question = self._add_question(
+            self.ghostform, 'Chains', answer_type=Question.AnswerType.NUMBER)
+        deck_question = self._add_question(
+            self.ghostform, 'Deck', answer_type=Question.AnswerType.DECK_LINK)
+        checkbox_question = self._add_question(
+            self.ghostform, 'First event?', answer_type=Question.AnswerType.CHECKBOX)
+        houses_question = self._add_question(
+            self.ghostform, 'Houses', answer_type=Question.AnswerType.MULTIPLE_CHOICE,
+            choices=['Brobnar', 'Dis', 'Mars'], allows_multiple_answers=True)
+        unanswered_question = self._add_question(self.ghostform, 'Unanswered')
+        saved_response = self._submit_response(self.ghostform, self.owner, {
+            **self._field_data(text_question, 'Close game'),
+            **self._field_data(number_question, '3'),
+            **self._field_data(deck_question, MASTER_VAULT_DECK_LINK),
+            **self._field_data(checkbox_question, 'on'),
+            **self._field_data(houses_question, ['Brobnar', 'Mars']),
+        })
+
+        response_form = self._build_form()
+        response_form.prefill_from(saved_response)
+
+        self.assertEqual(response_form[text_question.get_field_name()].value(), 'Close game')
+        self.assertEqual(response_form[number_question.get_field_name()].value(), '3')
+        self.assertEqual(response_form[deck_question.get_field_name()].value(), MASTER_VAULT_DECK_LINK)
+        self.assertIs(response_form[checkbox_question.get_field_name()].value(), True)
+        self.assertEqual(response_form[houses_question.get_field_name()].value(), ['Brobnar', 'Mars'])
+        self.assertIsNone(response_form[unanswered_question.get_field_name()].value())
+
+    def test_save_answers_to_replaces_answers_on_the_same_response(self):
+        notes_question = self._add_question(self.ghostform, 'Notes')
+        deck_question = self._add_question(
+            self.ghostform, 'Deck', answer_type=Question.AnswerType.DECK_LINK)
+        archived_question = self._add_question(self.ghostform, 'Old question')
+        saved_response = self._submit_response(self.ghostform, self.owner, {
+            **self._field_data(notes_question, 'Close game'),
+            **self._field_data(archived_question, 'Keep me'),
+        })
+        archived_question.archive()
+
+        response_form = self._build_form({
+            **self._field_data(notes_question, ''),
+            **self._field_data(deck_question, DOK_DECK_LINK),
+        })
+        self.assertTrue(response_form.is_valid(), response_form.errors)
+        response_form.save_answers_to(saved_response)
+
+        self.assertEqual(Response.objects.count(), 1)
+        self.assertEqual(
+            sorted(saved_response.answers.values_list('question__label', 'value')),
+            [('Deck', DOK_DECK_LINK), ('Old question', 'Keep me')])
+
     def test_field_names_are_prefixed(self):
         question = self._add_question(self.ghostform, 'Name')
 

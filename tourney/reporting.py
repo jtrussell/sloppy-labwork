@@ -11,6 +11,7 @@ from .result_forms import build_result_response_form, is_result_response_form_va
 
 TOURNAMENT_CLOSED_MESSAGE = 'This tournament is closed. Match results can no longer be submitted by players.'
 MATCH_ALREADY_REPORTED_MESSAGE = 'This match already has a result.'
+RESULT_LOCKED_MESSAGE = 'This result can only be changed during its round. Ask an organizer to update it.'
 BYE_CANNOT_BE_REPORTED_MESSAGE = 'Bye results are recorded automatically and cannot be reported.'
 NO_ACTIVE_STAGE_MESSAGE = 'No active stage found.'
 NO_ACTIVE_ROUND_MESSAGE = 'No active round found. Please create a round first.'
@@ -76,6 +77,41 @@ def describe_winner(result):
     return result.winner.player.get_display_name() if result.winner else 'Tie'
 
 
+def is_result_locked_for(match, is_admin):
+    return match.has_result() and not is_admin and not match.is_in_current_round()
+
+
+def can_user_edit_match(match, user):
+    tournament = match.round.stage.tournament
+    if tournament.is_user_admin(user):
+        return True
+    return is_user_in_match(user, match) and not tournament.is_closed
+
+
+def update_result_form_answers(match, user, result_data):
+    tournament = match.round.stage.tournament
+    response_form = build_result_response_form(tournament, user, False, result_data)
+    if response_form is None:
+        raise ReportError([RESULT_LOCKED_MESSAGE], is_final=True)
+    if not response_form.is_valid():
+        raise ReportError([], response_form)
+
+    with transaction.atomic():
+        record_result_response(response_form, user, match.result, False)
+        TournamentActionLog.objects.create(
+            tournament=tournament,
+            user=user,
+            action_type=TournamentActionLog.ActionType.UPDATE_RESULT,
+            description=f'Match result form answers updated: {describe_match_players(match)}'
+        )
+
+    return ReportOutcome(result=match.result, was_update=True)
+
+
+def describe_match_players(match):
+    return f'{match.player_one.player.get_display_name()} vs {match.player_two.player.get_display_name()}'
+
+
 def report_paired_match_result(match, user, result_data):
     tournament = match.round.stage.tournament
     is_admin = tournament.is_user_admin(user)
@@ -84,10 +120,10 @@ def report_paired_match_result(match, user, result_data):
         raise PermissionDenied
     if tournament.is_closed and not is_admin:
         raise ReportError([TOURNAMENT_CLOSED_MESSAGE], is_final=True)
-    if match.has_result() and not is_admin:
-        raise ReportError([MATCH_ALREADY_REPORTED_MESSAGE], is_final=True)
     if match.is_bye():
         raise ReportError([BYE_CANNOT_BE_REPORTED_MESSAGE])
+    if is_result_locked_for(match, is_admin):
+        return update_result_form_answers(match, user, result_data)
 
     form = MatchResultForm(result_data, match=match)
     response_form = build_result_response_form(tournament, user, is_admin, result_data)

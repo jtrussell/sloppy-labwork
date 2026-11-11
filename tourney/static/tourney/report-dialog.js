@@ -21,6 +21,8 @@ function getReportDialogElements() {
     playerOneScore: document.getElementById('reportPlayerOneScore'),
     playerTwoScore: document.getElementById('reportPlayerTwoScore'),
     byeNotice: document.getElementById('reportByeNotice'),
+    lockedNotice: document.getElementById('reportLockedNotice'),
+    resultFormFields: document.getElementById('reportResultFormFields'),
     submitButton: document.getElementById('reportSubmitButton'),
     adminMenu: document.getElementById('reportAdminMenu'),
     resetButton: document.getElementById('resetMatchBtn'),
@@ -53,9 +55,9 @@ function configureWinnerOptions(
 
   getWinnerOptions(elements).forEach((winnerOption) => {
     winnerOption.checked =
-      !winnerOption.disabled &&
       selectedWinnerValue !== null &&
-      winnerOption.value === selectedWinnerValue
+      winnerOption.value === selectedWinnerValue &&
+      (allowsTie || winnerOption !== elements.tieWinner)
   })
 }
 
@@ -70,7 +72,13 @@ function suggestWinnerFromScores(elements) {
   if (scoreDifference < 0) elements.playerTwoWinner.checked = true
 }
 
-function configureScoreInputs(elements, scoreReporting, scoreFieldNames, scoreValues) {
+function configureScoreInputs(
+  elements,
+  scoreReporting,
+  scoreFieldNames,
+  scoreValues,
+  isLocked = false,
+) {
   const showsScores = scoreReporting !== SCORE_REPORTING_DISABLED
   elements.form
     .querySelectorAll('[data-score-field]')
@@ -83,7 +91,7 @@ function configureScoreInputs(elements, scoreReporting, scoreFieldNames, scoreVa
   scoreInputs.forEach((scoreInput, index) => {
     scoreInput.name = scoreFieldNames[index]
     scoreInput.setAttribute('aria-label', `Score for ${playerNames[index] || 'player'}`)
-    scoreInput.disabled = !showsScores
+    scoreInput.disabled = !showsScores || isLocked
     scoreInput.required = scoreReporting === SCORE_REPORTING_REQUIRED
     scoreInput.value = scoreValues[index] || ''
     scoreInput.oninput = () => suggestWinnerFromScores(elements)
@@ -110,6 +118,35 @@ function resetResultFormFields(form, isHidden) {
   resultFormSection
     .querySelectorAll('.field__errors')
     .forEach((errorMessage) => errorMessage.remove())
+}
+
+let latestSavedAnswersRequest = null
+
+function forgetSavedResultFormAnswers(elements) {
+  latestSavedAnswersRequest = null
+  elements.submitButton.disabled = false
+}
+
+function loadSavedResultFormAnswers(elements, savedResultFormUrl) {
+  forgetSavedResultFormAnswers(elements)
+  if (!savedResultFormUrl || !elements.resultFormFields) return
+
+  const savedAnswersRequest = fetch(savedResultFormUrl, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+  })
+  latestSavedAnswersRequest = savedAnswersRequest
+  elements.submitButton.disabled = true
+  savedAnswersRequest
+    .then((response) => (response.ok ? response.text() : null))
+    .catch(() => null)
+    .then((savedFieldsHtml) => {
+      if (latestSavedAnswersRequest !== savedAnswersRequest) return
+      if (savedFieldsHtml !== null) {
+        elements.resultFormFields.innerHTML = savedFieldsHtml
+        htmx.process(elements.resultFormFields)
+      }
+      forgetSavedResultFormAnswers(elements)
+    })
 }
 
 function configureAdminMenu(elements, isAdmin, canReset) {
@@ -164,6 +201,7 @@ function openMatchModal(button) {
   const hasResult = button.dataset.matchHasResult === 'true'
   const playerOne = button.dataset.matchPlayerOne
   const playerTwo = button.dataset.matchPlayerTwo || ''
+  const isResultLocked = button.dataset.resultIsLocked === 'true'
 
   window.currentDeleteAction = button.dataset.deleteAction
   window.currentResetAction = button.dataset.resetAction
@@ -173,9 +211,11 @@ function openMatchModal(button) {
   setReportAction(elements.form, button.dataset.updateAction)
   elements.title.textContent = isBye
     ? 'Bye'
-    : hasResult
-      ? 'Update Match Result'
-      : 'Report Match Result'
+    : isResultLocked
+      ? 'Update Match Answers'
+      : hasResult
+        ? 'Update Match Result'
+        : 'Report Match Result'
   elements.roundLabel.textContent = button.dataset.roundLabel || ''
 
   configureOpponentField(elements, null)
@@ -184,6 +224,7 @@ function openMatchModal(button) {
   elements.outcome.hidden = isBye
   elements.byeNotice.hidden = !isBye
   elements.byeNotice.textContent = `${playerOne} has a bye this round.`
+  elements.lockedNotice.hidden = !isResultLocked
   elements.submitButton.hidden = isBye
 
   configureWinnerOptions(
@@ -195,15 +236,17 @@ function openMatchModal(button) {
     },
     button.dataset.stageAllowTies === 'true',
     hasResult && !isBye ? button.dataset.matchWinnerId || '' : null,
-    isBye,
+    isBye || isResultLocked,
   )
   configureScoreInputs(
     elements,
     isBye ? SCORE_REPORTING_DISABLED : parseInt(button.dataset.stageScoreReporting, 10),
     ['player_one_score', 'player_two_score'],
     [button.dataset.matchPlayerOneScore, button.dataset.matchPlayerTwoScore],
+    isResultLocked,
   )
   resetResultFormFields(elements.form, isBye)
+  loadSavedResultFormAnswers(elements, button.dataset.savedResultFormUrl)
   configureAdminMenu(elements, button.dataset.isAdmin === 'true', hasResult && !isBye)
 
   showReportDialog(elements)
@@ -222,6 +265,7 @@ function openPlayerMatchReportModal() {
   setReportPlayerName(elements.playerTwoName, 'Opponent')
   elements.outcome.hidden = false
   elements.byeNotice.hidden = true
+  elements.lockedNotice.hidden = true
   elements.submitButton.hidden = false
 
   configureWinnerOptions(
@@ -237,6 +281,7 @@ function openPlayerMatchReportModal() {
     ['', ''],
   )
   resetResultFormFields(elements.form, false)
+  forgetSavedResultFormAnswers(elements)
   configureAdminMenu(elements, false, false)
 
   showReportDialog(elements)

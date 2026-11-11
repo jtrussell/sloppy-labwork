@@ -56,6 +56,7 @@
                 </fieldset>
 
                 <p id="reportByeNotice" class="report-dialog__bye-notice" hidden>This player has a bye this round.</p>
+                <p id="reportLockedNotice" class="report-dialog__bye-notice" hidden>The result can only be changed during its round. Ask an organizer if it needs fixing.</p>
 
                 {% if report_response_form %}
                 {% include 'tourney/partials/result-form-fields.html' with response_form=report_response_form %}

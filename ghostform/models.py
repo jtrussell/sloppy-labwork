@@ -154,6 +154,14 @@ class Form(models.Model):
         ])
         return response
 
+    def replace_response_answers(self, response, response_form):
+        response.answers.filter(question__in=response_form.questions).delete()
+        Answer.objects.bulk_create([
+            Answer(response=response, **answer_fields)
+            for answer_fields in response_form.get_answer_fields()
+        ])
+        return response
+
 
 def build_response_context(context):
     return [{'label': label, 'value': value} for label, value in context]
@@ -212,6 +220,13 @@ class Question(models.Model):
         if self.answer_type == self.AnswerType.DECK_LINK:
             return {'value': cleaned_value['url'], 'deck_id': cleaned_value['deck_id']}
         return {'value': cleaned_value}
+
+    def get_initial_value(self, answer):
+        if self.answer_type == self.AnswerType.CHECKBOX:
+            return answer.value == 'Yes'
+        if self.allows_multiple_answers:
+            return answer.value.split(ANSWER_SELECTION_SEPARATOR)
+        return answer.value
 
     def to_builder_entry(self):
         return {
