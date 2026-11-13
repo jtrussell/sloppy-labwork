@@ -138,6 +138,25 @@
         </div>
     </section>
 
+    <section class="stack stack--md" x-data="lineupSettings({{ lineup_settings_json }})">
+        <h2>Lineups &amp; Trade Secrets</h2>
+        <p>
+            Optionally have players register their decks and play their matches with a Trade Secrets template.
+            Manage your templates in <a href="{% url 'trade_secrets:home' %}" target="_blank" rel="noopener">Trade Secrets</a>.
+        </p>
+        {% include "components/field.html" with field=form.trade_secrets_template %}
+        {% include "components/field.html" with field=form.is_lineup_required %}
+        <div x-show="needsDeckCount">
+            {% include "components/field.html" with field=form.lineup_deck_count %}
+        </div>
+        <p class="note" role="status" x-show="usesTemplateDeckCount" x-cloak>
+            Players register <strong x-text="templateDeckCount"></strong> decks, set by the template. Their match sessions start with both lineups already submitted.
+        </p>
+        <p class="note" role="status" x-show="submitsDecksInSession" x-cloak>
+            Players submit their decks inside each match's Trade Secrets session.
+        </p>
+    </section>
+
     {% if source_event %}
     <section class="stack stack--sm">
         <h2>Players ({{ registered_players.count }})</h2>

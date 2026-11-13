@@ -9,8 +9,9 @@ from django.db.models import Q, F, Case, When, Value, IntegerField
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
-from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.http import require_POST, require_GET, require_http_methods
 from django.utils.html import format_html
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 import json
 import re
@@ -31,10 +32,14 @@ from .result_forms import (
     copy_result_form_for_tournament, RESULT_FORM_INLINE_ERROR_MESSAGE, get_result_report_error_message
 )
 from .reporting import (
-    ReportError, can_user_add_match, can_user_edit_match, describe_winner, report_paired_match_result,
-    report_self_scheduled_match_result
+    ReportError, can_user_add_match, can_user_edit_match, describe_winner, is_user_in_match,
+    report_paired_match_result, report_self_scheduled_match_result
 )
+from .exports import write_matches_csv
+from .lineups import build_registration_lineup_context
+from .match_sessions import get_or_create_match_session
 from pmc.models import Playgroup, Event, EventResult, PlaygroupEvent, RankingPointsService
+from trade_secrets.deck_sources import build_deck_source_form, get_deck_source_errors
 
 
 def is_tournament_admin(view_func):
@@ -173,6 +178,10 @@ def get_viewer_pod(stage, player):
     return viewer_stage_player.pod if viewer_stage_player else None
 
 
+def get_lineup_settings_context(form):
+    return {'lineup_settings_json': json.dumps(form.get_lineup_settings())}
+
+
 def get_stage_pod_entries(stage, include_ids=True):
     if not stage:
         return []
@@ -262,6 +271,7 @@ def render_player_item(request, tournament, player):
         'tournament': tournament,
         'player': player,
         'pods': pods,
+        'required_deck_count': tournament.get_required_deck_count(),
     }
     return render(request, 'tourney/manage-players.html#player-item', context)
 
@@ -385,6 +395,7 @@ def create_tournament(request):
             {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
         ]),
         **get_pod_form_context(form, []),
+        **get_lineup_settings_context(form),
         'result_form_picker': build_result_form_picker_context(form, request.user),
     })
 
@@ -464,9 +475,28 @@ def edit_tournament(request, tournament_code):
             {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
         ]),
         **get_pod_form_context(form, get_stage_pod_entries(main_stage)),
+        **get_lineup_settings_context(form),
         'result_form_picker': build_result_form_picker_context(form, request.user),
     }
     return render(request, 'tourney/tournament-form.html', context)
+
+
+def get_registration_status_context(request, tournament, player, registration_form=None, **lineup_state):
+    return {
+        'tournament': tournament,
+        'player': player,
+        'is_player': player is not None,
+        'is_active_player': player is not None and player.status == Player.PlayerStatus.ACTIVE,
+        'is_dropped_player': player is not None and player.status == Player.PlayerStatus.DROPPED,
+        'registration_form': registration_form or PlayerRegistrationForm(),
+        **build_registration_lineup_context(tournament, request.user, player, **lineup_state),
+    }
+
+
+def render_registration_status(request, tournament, player, **form_state):
+    return render(
+        request, 'tourney/partials/tournament-detail-registration-status.html',
+        get_registration_status_context(request, tournament, player, **form_state))
 
 
 def get_tournament_base_context(request, tournament):
@@ -477,7 +507,6 @@ def get_tournament_base_context(request, tournament):
     player = None
     is_player = False
     is_active_player = False
-    is_dropped_player = False
 
     if request.user.is_authenticated:
         is_admin = tournament.is_user_admin(request.user)
@@ -485,7 +514,6 @@ def get_tournament_base_context(request, tournament):
             player = tournament.players.get(user=request.user)
             is_player = True
             is_active_player = player.status == Player.PlayerStatus.ACTIVE
-            is_dropped_player = player.status == Player.PlayerStatus.DROPPED
         except Player.DoesNotExist:
             pass
 
@@ -523,7 +551,8 @@ def get_tournament_base_context(request, tournament):
                 'round__stage',
                 'player_one__player',
                 'player_one__pod',
-                'player_two__player'
+                'player_two__player',
+                'trade_secrets_session__template'
             ).order_by('round__stage__order', 'round__order')
 
     active_timer = tournament.get_active_timer()
@@ -549,13 +578,9 @@ def get_tournament_base_context(request, tournament):
     pod_query_string = f'?{urlencode({"pod": requested_pod})}' if requested_pod else ''
 
     return {
-        'tournament': tournament,
+        **get_registration_status_context(request, tournament, player),
         'stages': tournament.stages.all(),
         'is_admin': is_admin,
-        'is_player': is_player,
-        'is_active_player': is_active_player,
-        'is_dropped_player': is_dropped_player,
-        'player': player,
         'can_create_round': can_create_round,
         'can_start_next_stage': can_start_next_stage,
         'can_start_current_stage': can_start_current_stage,
@@ -601,7 +626,7 @@ def tournament_detail_matches(request, tournament_code):
         stage_rounds = []
         for round_obj in stage.rounds.order_by('-order'):
             round_matches = list(round_obj.matches.select_related(
-                'result', 'player_one__player', 'player_two__player'))
+                'result', 'player_one__player', 'player_two__player', 'trade_secrets_session'))
             if not round_matches:
                 continue
 
@@ -997,7 +1022,8 @@ def manage_players(request, tournament_code):
 
         return redirect_to(request, reverse('tourney:tourney-manage-players', kwargs={'tournament_code': tournament.code}))
 
-    players = list(tournament.players.all().order_by('status', 'created_on'))
+    players = list(tournament.players.all().order_by('status', 'created_on').prefetch_related(
+        'lineup_decks__deck__set'))
     pods, pod_id_by_player_id = get_manage_players_pod_context(tournament)
     for player in players:
         player.current_pod_id = pod_id_by_player_id.get(player.id)
@@ -1015,6 +1041,7 @@ def manage_players(request, tournament_code):
         'tournament': tournament,
         'players': players,
         'pods': pods,
+        'required_deck_count': tournament.get_required_deck_count(),
         'form': form,
         'playgroup_usernames': playgroup_usernames,
     }
@@ -1111,6 +1138,36 @@ def report_match_result(request, tournament_code, match_id):
     messages.success(
         request, f'Match result {"updated" if outcome.was_update else "reported"} successfully!')
     return redirect_to(request, get_matches_url(request, tournament))
+
+
+@login_required
+@require_POST
+def open_match_session(request, tournament_code, match_id):
+    tournament = get_object_or_404(Tournament, code=tournament_code)
+    match = get_object_or_404(
+        Match.objects.select_related('player_one__player__user', 'player_two__player__user'),
+        id=match_id, round__stage__tournament=tournament)
+    if not (tournament.is_user_admin(request.user) or is_user_in_match(request.user, match)):
+        raise PermissionDenied
+
+    session = get_or_create_match_session(tournament, match)
+    if session is None:
+        raise Http404
+    return redirect_to(request, reverse('trade_secrets:session-detail', args=[session.code]))
+
+
+@login_required
+@require_GET
+@is_tournament_admin
+def export_matches_csv(request, tournament_code):
+    tournament = get_object_or_404(Tournament, code=tournament_code)
+    filename = slugify(tournament.name) or tournament.code
+    response = HttpResponse(
+        content_type='text/csv',
+        headers={'Content-Disposition': f'attachment; filename="{filename}-matches.csv"'},
+    )
+    write_matches_csv(tournament, response)
+    return response
 
 
 @login_required
@@ -1564,9 +1621,27 @@ def register_for_tournament(request, tournament_code):
             request, 'You are already registered for this tournament.')
         return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
+    required_deck_count = tournament.get_required_deck_count()
     form = PlayerRegistrationForm(request.POST)
-    if form.is_valid():
-        try:
+    deck_form = None
+    if required_deck_count is not None:
+        deck_form = build_deck_source_form(request.POST, request.user, required_deck_count)
+
+    is_registration_valid = form.is_valid()
+    is_lineup_valid = deck_form is None or deck_form.is_valid()
+    if not (is_registration_valid and is_lineup_valid):
+        if deck_form is not None and request.htmx:
+            return render_registration_status(
+                request, tournament, None, registration_form=form, submitted_deck_form=deck_form)
+        if not is_lineup_valid:
+            for lineup_error in get_deck_source_errors(deck_form):
+                messages.error(request, lineup_error)
+        if not is_registration_valid:
+            messages.error(request, 'Error registering for tournament.')
+        return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+
+    try:
+        with transaction.atomic():
             player = Player.objects.create(
                 user=request.user,
                 tournament=tournament,
@@ -1577,6 +1652,9 @@ def register_for_tournament(request, tournament_code):
             if current_stage:
                 current_stage.add_stage_player(player)
 
+            if deck_form is not None:
+                player.replace_lineup(deck_form.deck_ids, getattr(deck_form, 'source_version', None))
+
             TournamentActionLog.objects.create(
                 tournament=tournament,
                 user=request.user,
@@ -1584,15 +1662,52 @@ def register_for_tournament(request, tournament_code):
                 description=f'Player {player.get_display_name()} registered'
             )
 
-            messages.success(
-                request, 'Successfully registered for tournament!')
-        except IntegrityError:
-            messages.error(
-                request, 'You are already registered for this tournament.')
-    else:
-        messages.error(request, 'Error registering for tournament.')
+        messages.success(
+            request, 'Successfully registered for tournament!')
+    except IntegrityError:
+        messages.error(
+            request, 'You are already registered for this tournament.')
 
     return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
+
+
+LINEUP_LOCKED_MESSAGE = 'Lineups are locked once the first round is created. Ask an organizer for help.'
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def player_lineup(request, tournament_code):
+    tournament = get_object_or_404(Tournament, code=tournament_code)
+    player = get_object_or_404(Player, tournament=tournament, user=request.user)
+    required_deck_count = tournament.get_required_deck_count()
+    if required_deck_count is None:
+        raise Http404
+    tournament_home_url = reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code})
+
+    if request.method == 'GET':
+        if not request.htmx:
+            return redirect_to(request, tournament_home_url)
+        return render_registration_status(
+            request, tournament, player, is_editing_lineup=request.GET.get('edit') == '1')
+
+    if not player.can_change_lineup(required_deck_count):
+        messages.error(request, LINEUP_LOCKED_MESSAGE)
+        return redirect_to(request, tournament_home_url)
+
+    deck_form = build_deck_source_form(request.POST, request.user, required_deck_count)
+    if not deck_form.is_valid():
+        if request.htmx:
+            return render_registration_status(
+                request, tournament, player, submitted_deck_form=deck_form, is_editing_lineup=True)
+        for lineup_error in get_deck_source_errors(deck_form):
+            messages.error(request, lineup_error)
+        return redirect_to(request, tournament_home_url)
+
+    player.replace_lineup(deck_form.deck_ids, getattr(deck_form, 'source_version', None))
+    if request.htmx:
+        return render_registration_status(request, tournament, player, was_lineup_saved=True)
+    messages.success(request, 'Lineup saved.')
+    return redirect_to(request, tournament_home_url)
 
 
 @login_required
@@ -1669,13 +1784,7 @@ def drop_from_tournament(request, tournament_code):
         messages.error(request, 'You are not registered for this tournament.')
 
     if request.htmx:
-        context = {
-            'tournament': tournament,
-            'is_player': True,
-            'is_active_player': player.status == Player.PlayerStatus.ACTIVE,
-            'is_dropped_player': player.status == Player.PlayerStatus.DROPPED
-        }
-        return render(request, 'tourney/partials/tournament-detail-registration-status.html', context)
+        return render_registration_status(request, tournament, player)
 
     return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
@@ -1716,13 +1825,7 @@ def undrop_from_tournament(request, tournament_code):
         messages.error(request, 'You are not registered for this tournament.')
 
     if request.htmx:
-        context = {
-            'tournament': tournament,
-            'is_player': True,
-            'is_active_player': player.status == Player.PlayerStatus.ACTIVE,
-            'is_dropped_player': player.status == Player.PlayerStatus.DROPPED
-        }
-        return render(request, 'tourney/partials/tournament-detail-registration-status.html', context)
+        return render_registration_status(request, tournament, player)
 
     return redirect_to(request, reverse('tourney:tourney-detail-home', kwargs={'tournament_code': tournament.code}))
 
@@ -1969,7 +2072,8 @@ def copy_tournament(request, tournament_code):
     if request.method == 'POST':
         form = TournamentForm(
             request.POST, user=request.user,
-            copy_source_result_form=source_tournament.result_form)
+            copy_source_result_form=source_tournament.result_form,
+            copy_source_trade_secrets_template=source_tournament.trade_secrets_template)
         if form.is_valid():
             with transaction.atomic():
                 tournament = form.save(commit=False)
@@ -2046,6 +2150,9 @@ def copy_tournament(request, tournament_code):
             'is_accepting_registrations': source_tournament.is_accepting_registrations,
             'is_public': source_tournament.is_public,
             'result_form': COPY_SOURCE_RESULT_FORM if source_tournament.result_form else '',
+            'trade_secrets_template': source_tournament.trade_secrets_template_id,
+            'is_lineup_required': source_tournament.is_lineup_required,
+            'lineup_deck_count': source_tournament.lineup_deck_count,
         }
 
         source_main_stage = source_tournament.stages.filter(order=1).first()
@@ -2071,7 +2178,8 @@ def copy_tournament(request, tournament_code):
 
         form = TournamentForm(
             initial=initial_data, is_edit_mode=False, user=request.user,
-            copy_source_result_form=source_tournament.result_form)
+            copy_source_result_form=source_tournament.result_form,
+            copy_source_trade_secrets_template=source_tournament.trade_secrets_template)
 
     ranking_criteria_data = []
     source_main_stage = source_tournament.stages.filter(order=1).first()
@@ -2106,6 +2214,7 @@ def copy_tournament(request, tournament_code):
             {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
         ]),
         **get_pod_form_context(form, get_stage_pod_entries(source_main_stage, include_ids=False)),
+        **get_lineup_settings_context(form),
         'result_form_picker': build_result_form_picker_context(form, request.user),
     }
 
@@ -2310,6 +2419,7 @@ def create_tournament_from_event(request, event_id):
             {'key': c['key'], 'enabled': c['enabled']} for c in ordered_criteria_display
         ]),
         **get_pod_form_context(form, []),
+        **get_lineup_settings_context(form),
         'result_form_picker': build_result_form_picker_context(form, request.user),
     })
 

@@ -674,6 +674,31 @@
   min-height: var(--tap-target);
 }
 
+.ts-deck-source,
+.ts-deck-source__panel {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ts-deck-source:has(input[name="source"][value="lineup"]:checked) .ts-deck-source__panel--links,
+.ts-deck-source:has(input[name="source"][value="links"]:checked) .ts-deck-source__panel--lineup {
+  display: none;
+}
+
+.ts-deck-source__panel textarea {
+  min-height: 7rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.ts-deck-source .ts-lineup-preview:not(:empty) {
+  margin: 0;
+}
+
+.form-actions .ts-loading:not(.htmx-request) {
+  display: none;
+}
+
 .ts-lineup-preview:not(:empty) {
   margin: var(--space-4) 0 var(--space-2);
 }

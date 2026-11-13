@@ -7,7 +7,8 @@
               {% include 'tourney/partials/match-card.html' with match=match is_admin=is_admin show_match_number=False match_id_prefix='my-' %}
 
               <div class="text-center text-muted text-small">
-                  {{ match.round.stage.name }}{% if match.player_one.pod %} - {{ match.player_one.pod.name }}{% endif %} - Round {{ match.round.order }}
+                  {{ match.round.stage.name }}{% if match.player_one.pod %} · {{ match.player_one.pod.name }}{% endif %} · Round {{ match.round.order }}
+                  {% include 'tourney/partials/match-session-control.html' with shows_template_name=True %}
               </div>
           </div>
       {% endfor %}

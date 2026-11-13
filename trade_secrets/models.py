@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from dataclasses import dataclass
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -28,6 +29,12 @@ def generate_session_code():
         code = 'ts_' + get_random_string(6, allowed_chars=CODE_CHARACTERS)
         if not Session.objects.filter(code=code).exists():
             return code
+
+
+@dataclass(frozen=True)
+class PreloadedLineup:
+    deck_ids: tuple
+    source_version: object = None
 
 
 class SessionTemplate(models.Model):
@@ -114,8 +121,11 @@ class SessionTemplate(models.Model):
     def can_start_session(self, user):
         return user.is_authenticated and self.can_view(user) and not self.is_archived
 
+    def is_in_use(self):
+        return self.sessions.exists() or self.tournaments.exists()
+
     def can_delete(self, user):
-        return self.can_manage(user) and self.is_archived and not self.sessions.exists()
+        return self.can_manage(user) and self.is_archived and not self.is_in_use()
 
     def archive(self):
         self.archived_on = timezone.now()
@@ -201,6 +211,15 @@ class Session(models.Model):
         if not self.code:
             self.code = generate_session_code()
         super().save(*args, **kwargs)
+
+    @classmethod
+    def create_for_players(cls, template, host, guest, lineups_by_seat):
+        with transaction.atomic():
+            session = cls.objects.create(template=template, host=host, guest=guest)
+            for seat, lineup in lineups_by_seat.items():
+                session.submit_decks(
+                    seat, session.user_for(seat), list(lineup.deck_ids), lineup.source_version)
+        return session
 
     @property
     def has_guest(self):

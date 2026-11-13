@@ -2,9 +2,10 @@ from django import forms
 from django.contrib.auth.models import User
 from django.db.models import Q
 from ghostform.models import Form as GhostformForm
+from trade_secrets.models import SessionTemplate
 from .models import (
     Tournament, Player, Stage, MatchResult, get_available_ranking_criteria,
-    MAXIMUM_PODS_PER_STAGE
+    MAXIMUM_PODS_PER_STAGE, MINIMUM_LINEUP_DECK_COUNT, MAXIMUM_LINEUP_DECK_COUNT
 )
 from pmc.models import Playgroup, EventFormat
 from django.utils.translation import gettext_lazy as _
@@ -20,6 +21,12 @@ def get_result_form_choice_label(ghostform):
 class ResultFormChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, ghostform):
         return get_result_form_choice_label(ghostform)
+
+
+class TradeSecretsTemplateChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, template):
+        deck_count = template.deck_count
+        return f'{template.name} ({deck_count} deck{"" if deck_count == 1 else "s"})'
 
 
 class TournamentForm(forms.ModelForm):
@@ -80,7 +87,11 @@ class TournamentForm(forms.ModelForm):
         is_edit_mode = kwargs.pop('is_edit_mode', False)
         user = kwargs.pop('user', None)
         copy_source_result_form = kwargs.pop('copy_source_result_form', None)
+        copy_source_trade_secrets_template = kwargs.pop('copy_source_trade_secrets_template', None)
         super().__init__(*args, **kwargs)
+        self.fields['trade_secrets_template'].queryset = self._get_trade_secrets_template_choices(
+            user, getattr(instance, 'trade_secrets_template', None) or copy_source_trade_secrets_template)
+        self.fields['trade_secrets_template'].empty_label = 'No template'
         self.fields['result_form'].queryset = self._get_result_form_choices(
             user, getattr(instance, 'result_form', None))
         self.fields['result_form'].empty_label = 'No form'
@@ -125,22 +136,37 @@ class TournamentForm(forms.ModelForm):
     class Meta:
         model = Tournament
         fields = ['name', 'description',
-                  'is_accepting_registrations', 'is_closed', 'is_public', 'result_form']
+                  'is_accepting_registrations', 'is_closed', 'is_public', 'result_form',
+                  'trade_secrets_template', 'is_lineup_required', 'lineup_deck_count']
         field_classes = {
             'result_form': ResultFormChoiceField,
+            'trade_secrets_template': TradeSecretsTemplateChoiceField,
         }
         labels = {
             'is_closed': 'Close tournament',
             'is_public': 'Public tournament',
             'result_form': 'Result Form',
+            'trade_secrets_template': 'Trade Secrets template',
+            'is_lineup_required': 'Require decks at registration',
+            'lineup_deck_count': 'Decks per player',
         }
         help_texts = {
             'description': "Markdown formatted. Start with h3's (###) for section headers.",
             'is_public': 'Allow anyone to view standings and matches without logging in',
             'result_form': "Players answer this form whenever they report a match result. The form's status only controls its share link.",
+            'trade_secrets_template': 'Players get a link from each match to a Trade Secrets session that uses this template.',
+            'is_lineup_required': 'Players register their decks when they join and can change them until round 1 is created.',
+            'lineup_deck_count': 'Only used when no Trade Secrets template is selected.',
         }
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 4, 'style': 'text-wrap: auto'})
+            'description': forms.Textarea(attrs={'rows': 4, 'style': 'text-wrap: auto'}),
+            'trade_secrets_template': forms.Select(attrs={'x-model': 'templateId'}),
+            'is_lineup_required': forms.CheckboxInput(attrs={'x-model': 'isRequired'}),
+            'lineup_deck_count': forms.NumberInput(attrs={
+                'min': MINIMUM_LINEUP_DECK_COUNT,
+                'max': MAXIMUM_LINEUP_DECK_COUNT,
+                ':disabled': '!needsDeckCount',
+            }),
         }
 
     def _offer_result_form_copy(self, source_result_form):
@@ -180,13 +206,44 @@ class TournamentForm(forms.ModelForm):
             available_forms |= Q(pk=linked_result_form.pk)
         return GhostformForm.objects.filter(available_forms).order_by('title')
 
+    @staticmethod
+    def _get_trade_secrets_template_choices(user, linked_template):
+        available_templates = Q(pk__in=[])
+        if user is not None:
+            available_templates |= Q(pk__in=SessionTemplate.usable_by(user).values('pk'))
+        if linked_template is not None:
+            available_templates |= Q(pk=linked_template.pk)
+        return SessionTemplate.objects.filter(available_templates).prefetch_related('steps')
+
+    def get_lineup_settings(self):
+        selected_template_id = self['trade_secrets_template'].value()
+        return {
+            'templateId': '' if selected_template_id is None else str(selected_template_id),
+            'isRequired': bool(self['is_lineup_required'].value()),
+            'templateDeckCounts': {
+                str(template.pk): template.deck_count
+                for template in self.fields['trade_secrets_template'].queryset
+            },
+        }
+
     def clean(self):
         cleaned_data = super().clean()
         self.pod_entries = self._get_pod_entries_from_data()
         if self.pod_entries is not None:
             for error in self._get_pod_entry_errors(self.pod_entries):
                 self.add_error(None, error)
+        self._clean_lineup_deck_count(cleaned_data)
         return cleaned_data
+
+    def _clean_lineup_deck_count(self, cleaned_data):
+        needs_deck_count = (
+            cleaned_data.get('is_lineup_required')
+            and cleaned_data.get('trade_secrets_template') is None
+            and 'trade_secrets_template' not in self.errors)
+        if not needs_deck_count:
+            cleaned_data['lineup_deck_count'] = None
+        elif cleaned_data.get('lineup_deck_count') is None and 'lineup_deck_count' not in self.errors:
+            self.add_error('lineup_deck_count', 'Enter how many decks each player registers.')
 
     def _get_pod_entries_from_data(self):
         if not hasattr(self.data, 'getlist') or 'pods_submitted' not in self.data:

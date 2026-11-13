@@ -2,7 +2,7 @@
         hx-get="{% url 'trade_secrets:lineup-preview' %}" hx-trigger="load, change"
         hx-target="#ts-lineup-preview" hx-swap="innerHTML">
   {% for version in versions %}
-  <option value="{{ version.pk }}"{% if version.deck_count != required_count %} disabled{% elif forloop.first %} selected{% endif %}>{{ version.name }}{% if forloop.first %} (latest){% endif %} · {{ version.deck_count }} deck{{ version.deck_count|pluralize }}{% if version.deck_count != required_count %} (needs {{ required_count }}){% endif %}</option>
+  <option value="{{ version.pk }}"{% if version.deck_count != required_count %} disabled{% elif selected_version_id == version.pk %} selected{% elif not selected_version_id and forloop.first %} selected{% endif %}>{{ version.name }}{% if forloop.first %} (latest){% endif %} · {{ version.deck_count }} deck{{ version.deck_count|pluralize }}{% if version.deck_count != required_count %} (needs {{ required_count }}){% endif %}</option>
   {% empty %}
   <option value="" disabled selected>No versions yet</option>
   {% endfor %}

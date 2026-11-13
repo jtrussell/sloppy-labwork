@@ -11,11 +11,14 @@
     {% if active_result_form %}
     <link rel="stylesheet" href="{% static 'ghostform/main.css' %}">
     {% endif %}
+    {% if required_deck_count %}
+    <link rel="stylesheet" href="{% static 'trade_secrets/main.css' %}">
+    {% endif %}
     <header class="page-header">
         <h1>{{ tournament.name }}</h1>
     </header>
 
-    <div class="stack stack--md tournament-header">
+    <div class="stack stack--xl tournament-header">
     {% if tournament.description %}
         <section>{{ tournament.description | markdown | safe }}</section>
     {% endif %}

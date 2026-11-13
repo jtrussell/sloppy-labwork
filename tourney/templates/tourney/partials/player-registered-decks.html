@@ -1,0 +1,27 @@
+<details class="disclosure player-lineup">
+    <summary>
+        Lineup
+        {% if registered_decks|length == required_deck_count %}
+            <span class="badge badge--small badge--success">{{ registered_decks|length }} / {{ required_deck_count }} decks</span>
+        {% elif registered_decks %}
+            <span class="badge badge--small badge--warning">{{ registered_decks|length }} / {{ required_deck_count }} decks</span>
+        {% else %}
+            <span class="badge badge--small badge--warning">No lineup</span>
+        {% endif %}
+    </summary>
+    <div class="disclosure__body">
+        {% if registered_decks %}
+        <ol class="player-lineup__decks">
+            {% for player_deck in registered_decks %}
+            <li>
+                {{ player_deck.deck.name|default:player_deck.deck_id }}{% if player_deck.deck.set %} · {{ player_deck.deck.set.short_name }}{% endif %}
+                · <a href="{{ player_deck.deck.get_dok_url }}" target="_blank" rel="noopener">DoK</a>
+                · <a href="{{ player_deck.deck.get_mv_url }}" target="_blank" rel="noopener">MV</a>
+            </li>
+            {% endfor %}
+        </ol>
+        {% else %}
+        <p class="text-muted text-small">No decks registered yet.</p>
+        {% endif %}
+    </div>
+</details>

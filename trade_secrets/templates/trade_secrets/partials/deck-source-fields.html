@@ -1,0 +1,31 @@
+<div class="ts-deck-source">
+  {% if deck_source_errors %}
+  <div class="note note--danger" role="alert"><ul class="note__list">{% for error in deck_source_errors %}<li>{{ error }}</li>{% endfor %}</ul></div>
+  {% endif %}
+  {% if lineups %}
+  <div class="segmented">
+    <label class="segmented__option"><input type="radio" name="source" value="links"{% if deck_source != 'lineup' %} checked{% endif %}>Paste links</label>
+    <label class="segmented__option"><input type="radio" name="source" value="lineup"{% if deck_source == 'lineup' %} checked{% endif %}>My lineups</label>
+  </div>
+  {% else %}
+  <input type="hidden" name="source" value="links">
+  {% endif %}
+  <div class="ts-deck-source__panel ts-deck-source__panel--links">
+    <label for="{{ links_form.deck_links.id_for_label }}">{{ links_form.deck_links.label }}</label>
+    {{ links_form.deck_links }}
+    <p class="field__help">Master Vault or Decks of KeyForge links, one per line. Exactly {{ required_count }}.{% if not lineups %} Or build a lineup in <a href="{% url 'lineups-list' %}">Lineup Manager</a> and pick it here.{% endif %}</p>
+  </div>
+  {% if lineups %}
+  <div class="ts-deck-source__panel ts-deck-source__panel--lineup">
+    <label for="ts-lineup-select">Lineup</label>
+    <select name="lineup" id="ts-lineup-select"
+            hx-get="{% url 'trade_secrets:lineup-versions' %}?count={{ required_count }}"
+            hx-trigger="change" hx-target="#ts-version-select" hx-swap="outerHTML">
+      {% for lineup in lineups %}<option value="{{ lineup.pk }}"{% if lineup.pk == selected_lineup_id %} selected{% endif %}>{{ lineup.name }}</option>{% endfor %}
+    </select>
+    <label for="ts-version-select">Version</label>
+    {% include 'trade_secrets/partials/version-select.html' %}
+    <div id="ts-lineup-preview" class="ts-lineup-preview" aria-live="polite"></div>
+  </div>
+  {% endif %}
+</div>

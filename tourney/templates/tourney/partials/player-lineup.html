@@ -1,0 +1,70 @@
+<div class="stack stack--sm">
+    {% if player_lineup.was_saved %}
+        <p class="note note--success" role="status">Lineup saved.</p>
+    {% endif %}
+    {% if player_lineup.shows_form %}
+        {% if not player_lineup.is_complete %}
+        <div class="callout callout--warning">
+            <p class="callout__title">Submit your lineup</p>
+            <p>
+                {% if player_lineup.deck_count %}
+                    Your lineup has {{ player_lineup.deck_count }} deck{{ player_lineup.deck_count|pluralize }}; this tournament needs {{ required_deck_count }}.
+                {% else %}
+                    You haven't registered your decks yet.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+        <form
+            method="post"
+            class="form-wide stack stack--md"
+            action="{% url 'tourney:tourney-player-lineup' tournament.code %}"
+            hx-post="{% url 'tourney:tourney-player-lineup' tournament.code %}"
+            hx-sync="this:replace"
+            hx-disabled-elt="find button[type=submit]"
+            hx-indicator="#ts-decks-loading"
+        >
+            {% csrf_token %}
+            <fieldset class="field">
+                <legend class="field__label">Your lineup ({{ required_deck_count }} deck{{ required_deck_count|pluralize }})</legend>
+                {% include 'trade_secrets/partials/deck-source-fields.html' %}
+            </fieldset>
+            <div class="form-actions">
+                <button type="submit" class="button button-primary">Save lineup</button>
+                {% if player_lineup.is_complete %}
+                    <button type="button" class="button" hx-get="{% url 'tourney:tourney-player-lineup' tournament.code %}">Cancel</button>
+                {% endif %}
+                <p id="ts-decks-loading" class="htmx-indicator ts-loading" role="status">Fetching decks from Master Vault…</p>
+            </div>
+        </form>
+    {% else %}
+        <details class="disclosure">
+            <summary>
+                Your decks ({{ player_lineup.deck_count }})
+                {% if player_lineup.is_locked %}
+                    <span class="badge badge--small badge--subtle">Locked</span>
+                {% elif player_lineup.is_complete %}
+                    <span class="badge badge--small badge--success">Registered</span>
+                {% else %}
+                    <span class="badge badge--small badge--warning">Incomplete</span>
+                {% endif %}
+            </summary>
+            <div class="disclosure__body">
+                {% if player_lineup.cards %}
+                <ul class="ts-lineup__list" role="list">
+                    {% for card in player_lineup.cards %}
+                    <li>{% include 'trade_secrets/partials/deck-card.html' with card=card selectable=False %}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">No decks registered.</p>
+                {% endif %}
+            </div>
+        </details>
+        {% if player_lineup.can_change %}
+            <div>
+                <button type="button" class="button button-small" hx-get="{% url 'tourney:tourney-player-lineup' tournament.code %}?edit=1">Change lineup</button>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>

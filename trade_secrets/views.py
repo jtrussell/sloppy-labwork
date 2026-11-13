@@ -2,7 +2,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Count
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -13,16 +12,17 @@ from django_htmx.http import reswap, retarget
 from lineups.models import Lineup, LineupVersion
 
 from . import engine
+from .deck_sources import (
+    SOURCE_LINKS, build_deck_source_form, get_deck_source_errors, own_lineups, versions_with_deck_counts,
+)
 from .forms import (
-    DeckLineupForm, DeckLinksForm, PickForm, PlayResultForm, TemplateDetailsForm,
+    DeckLinksForm, PickForm, PlayResultForm, TemplateDetailsForm,
     apply_builder_action, default_builder_steps, parse_builder_steps,
 )
 from .models import Session, SessionTemplate
 from .session_view import ACTION_ICONS, ActionState, build_session_view, template_rail, template_summary
 
 SESSION_PAGE = 'trade_secrets/session-detail.html'
-SOURCE_LINKS = 'links'
-SOURCE_LINEUP = 'lineup'
 
 
 def redirect_to(request, url):
@@ -154,6 +154,7 @@ def template_detail(request, template_code):
         'can_start': template.can_start_session(request.user),
         'visibility_choices': SessionTemplate.Visibility.choices,
         'session_count': template.sessions.count(),
+        'tournament_count': template.tournaments.count(),
     })
 
 
@@ -259,16 +260,6 @@ def parse_integer(value):
         return 0
 
 
-def versions_with_deck_counts(lineup):
-    if lineup is None:
-        return []
-    return list(lineup.versions.annotate(deck_count=Count('version_decks')).order_by('-sort_order'))
-
-
-def own_lineups(user):
-    return list(Lineup.objects.filter(owner=user).order_by('name'))
-
-
 def session_context(request, session, **extra):
     view = build_session_view(session, request.user, request)
     context = {'view': view, 'session': session}
@@ -350,13 +341,10 @@ def session_decks(request, session_code):
     seat = require_seat(session, request.user)
     required_count = session.template.deck_count
     source = request.POST.get('source', SOURCE_LINKS)
-    if source == SOURCE_LINEUP:
-        form = DeckLineupForm(request.POST, user=request.user, required_count=required_count)
-    else:
-        form = DeckLinksForm(request.POST, required_count=required_count)
+    form = build_deck_source_form(request.POST, request.user, required_count)
 
     if not form.is_valid():
-        form_errors = [error for errors in form.errors.values() for error in errors]
+        form_errors = get_deck_source_errors(form)
         extra = {'deck_source': source}
         if source == SOURCE_LINKS:
             extra['links_form'] = form

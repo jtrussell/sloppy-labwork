@@ -36,6 +36,16 @@ def find_latest_linked_response(form, context_key):
     ).order_by('-submitted_on', '-id').first()
 
 
+def find_latest_linked_responses(form, context_keys):
+    latest_responses = {}
+    linked_responses = Response.objects.filter(
+        form=form, context_key__in=context_keys, is_context_removed=False
+    ).order_by('-submitted_on', '-id').prefetch_related('answers')
+    for response in linked_responses:
+        latest_responses.setdefault(response.context_key, response)
+    return latest_responses
+
+
 def has_linked_responses(context_key):
     return Response.objects.filter(
         context_key=context_key, is_context_removed=False).exists()

@@ -3,14 +3,17 @@ import importlib
 import io
 import json
 import logging
+import uuid
 from datetime import date, timedelta
 from unittest.mock import patch
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.contrib.auth.models import User
-from django.db import models
+from django.db import connection, models
+from django.db.models import RestrictedError
 from django.core.exceptions import PermissionDenied
 from django.urls import reverse
-from .forms import EditPlayerForm, PlayerForm
+from .forms import EditPlayerForm, PlayerForm, TournamentForm
 from .models import (
     Tournament, Player, Stage, StagePlayer, Round, Match, MatchResult,
     StandingCalculator, get_pairing_strategy, GamesPlayedRankingCriterion,
@@ -28,6 +31,8 @@ from ghostform.models import (
     Response as GhostformResponse
 )
 from lineups.models import Lineup, LineupVersion, LineupVersionDeck
+from trade_secrets.engine import Seat, StepSpec
+from trade_secrets.models import Session, SessionTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -4771,7 +4776,9 @@ class TournamentResultFormTestCase(TestCase):
         response = self.client.get(self._url('tourney-tournament-detail-admin'))
 
         self.assertContains(response, reverse('ghostform:ghostform-detail', args=[self.result_form.code]))
-        self.assertContains(response, reverse('ghostform:ghostform-responses-csv', args=[self.result_form.code]))
+        self.assertContains(response, self._url('tourney-matches-export'))
+        self.assertNotContains(
+            response, reverse('ghostform:ghostform-responses-csv', args=[self.result_form.code]))
 
     def test_co_admin_can_view_linked_form_and_download_csv(self):
         self._report('user1', {'winner': self.anvil.id, **self._answers()})
@@ -5189,3 +5196,743 @@ class PlayerFormUsernameLookupTestCase(TestCase):
         form = EditPlayerForm(data={'username': 'MIXEDCASEPLAYER', 'nickname': ''})
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data['user_obj'], self.user)
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class LineupTournamentTestCase(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user('owner', 'owner@test.com', 'password')
+        self.newcomer = User.objects.create_user('dynamo', 'dynamo@test.com', 'password')
+        self.triad = SessionTemplate.objects.get(system_key='triad')
+        self.tournament = Tournament.objects.create(
+            name='Triad Night', owner=self.owner,
+            trade_secrets_template=self.triad, is_lineup_required=True)
+        self.stage = Stage.objects.create(
+            tournament=self.tournament, name='Main Stage', order=1, pairing_strategy='swiss',
+            report_full_scores=Stage.SCORE_REPORTING_OPTIONAL)
+        self.anvil = self.add_player('Anvil', seed=1)
+        self.beacon = self.add_player('Beacon', seed=2)
+        self.comet = self.add_player('Comet', seed=3)
+        self.anvil_decks = self.make_decks(3, 'Anvil')
+        self.beacon_decks = self.make_decks(3, 'Beacon')
+
+    def add_player(self, nickname, seed):
+        user = User.objects.create_user(nickname.lower(), f'{nickname.lower()}@test.com', 'password')
+        player = Player.objects.create(user=user, tournament=self.tournament, nickname=nickname)
+        return StagePlayer.objects.create(player=player, stage=self.stage, seed=seed)
+
+    def make_decks(self, count, prefix):
+        return [
+            Deck.objects.create(id=uuid.uuid4(), name=f'{prefix} Deck {number}')
+            for number in range(1, count + 1)
+        ]
+
+    def register_lineup(self, stage_player, decks):
+        stage_player.player.replace_lineup([deck.id for deck in decks])
+
+    def register_both_lineups(self):
+        self.register_lineup(self.anvil, self.anvil_decks)
+        self.register_lineup(self.beacon, self.beacon_decks)
+
+    def registered_deck_ids(self, stage_player):
+        return list(stage_player.player.lineup_decks.values_list('deck_id', flat=True))
+
+    def create_match(self, player_one, player_two):
+        round_obj, _created = Round.objects.get_or_create(stage=self.stage, order=1)
+        return Match.objects.create(round=round_obj, player_one=player_one, player_two=player_two)
+
+    def links_for(self, decks):
+        return '\n'.join(str(deck.id) for deck in decks)
+
+    def login_as(self, stage_player):
+        self.client.force_login(stage_player.player.user)
+
+    def _url(self, name, *args):
+        return reverse(f'tourney:{name}', args=[self.tournament.code, *args])
+
+    def htmx_post(self, url, data=None):
+        return self.client.post(url, data or {}, HTTP_HX_REQUEST='true')
+
+    def htmx_get(self, url):
+        return self.client.get(url, HTTP_HX_REQUEST='true')
+
+    def open_session(self, match):
+        response = self.client.post(self._url('tourney-match-session', match.id))
+        match.refresh_from_db()
+        return response
+
+
+class LineupSettingsTestCase(LineupTournamentTestCase):
+    def _tournament_post_data(self, **overrides):
+        data = {
+            'name': 'Configured Tournament',
+            'is_accepting_registrations': True,
+            'is_public': False,
+            'main_pairing_strategy': 'swiss',
+            'main_score_reporting': '0',
+            'main_allow_ties': 'False',
+            'playoff_score_reporting': '0',
+        }
+        data.update(overrides)
+        return data
+
+    def make_private_template(self, owner):
+        return SessionTemplate.create_with_steps(owner, 'House Rules', '', [
+            StepSpec(0, 'submit', 4),
+            StepSpec(1, 'play', 1),
+        ])
+
+    def test_required_deck_count_is_none_when_decks_are_not_required(self):
+        self.tournament.is_lineup_required = False
+
+        self.assertIsNone(self.tournament.get_required_deck_count())
+
+    def test_required_deck_count_comes_from_template_over_manual_count(self):
+        self.tournament.lineup_deck_count = 7
+
+        self.assertEqual(self.tournament.get_required_deck_count(), 3)
+
+    def test_required_deck_count_uses_manual_count_without_template(self):
+        self.tournament.trade_secrets_template = None
+        self.tournament.lineup_deck_count = 2
+
+        self.assertEqual(self.tournament.get_required_deck_count(), 2)
+
+    def test_form_requires_deck_count_when_decks_are_required_without_template(self):
+        form = TournamentForm(self._tournament_post_data(is_lineup_required='on'), user=self.owner)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('lineup_deck_count', form.errors)
+
+    def test_form_accepts_manual_deck_count_without_template(self):
+        form = TournamentForm(
+            self._tournament_post_data(is_lineup_required='on', lineup_deck_count='2'), user=self.owner)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['lineup_deck_count'], 2)
+
+    def test_form_drops_manual_deck_count_when_template_is_selected(self):
+        form = TournamentForm(self._tournament_post_data(
+            trade_secrets_template=self.triad.pk, is_lineup_required='on', lineup_deck_count='7'),
+            user=self.owner)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertIsNone(form.cleaned_data['lineup_deck_count'])
+
+    def test_form_accepts_template_without_requiring_decks(self):
+        form = TournamentForm(
+            self._tournament_post_data(trade_secrets_template=self.triad.pk), user=self.owner)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertFalse(form.cleaned_data['is_lineup_required'])
+
+    def test_form_rejects_private_template_of_another_user(self):
+        private_template = self.make_private_template(self.newcomer)
+
+        form = TournamentForm(
+            self._tournament_post_data(trade_secrets_template=private_template.pk), user=self.owner)
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('trade_secrets_template', form.errors)
+
+    def test_form_keeps_linked_private_template_of_another_admin(self):
+        private_template = self.make_private_template(self.newcomer)
+        self.tournament.trade_secrets_template = private_template
+        self.tournament.save()
+
+        form = TournamentForm(
+            self._tournament_post_data(trade_secrets_template=private_template.pk),
+            instance=self.tournament, is_edit_mode=True, user=self.owner)
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_create_tournament_saves_lineup_settings(self):
+        self.client.force_login(self.owner)
+
+        self.client.post(reverse('tourney:tourney-create-tournament'), self._tournament_post_data(
+            trade_secrets_template=self.triad.pk, is_lineup_required='on'))
+
+        created_tournament = Tournament.objects.get(name='Configured Tournament')
+        self.assertEqual(created_tournament.trade_secrets_template, self.triad)
+        self.assertTrue(created_tournament.is_lineup_required)
+        self.assertEqual(created_tournament.get_required_deck_count(), 3)
+
+    def test_tournament_form_page_lists_template_deck_counts(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self._url('tourney-edit-tournament'))
+
+        lineup_settings = json.loads(response.context['lineup_settings_json'])
+        self.assertEqual(lineup_settings['templateId'], str(self.triad.pk))
+        self.assertTrue(lineup_settings['isRequired'])
+        self.assertEqual(lineup_settings['templateDeckCounts'][str(self.triad.pk)], 3)
+        self.assertContains(response, 'Triad (3 decks)')
+
+    def test_copy_tournament_carries_lineup_settings(self):
+        private_template = self.make_private_template(self.newcomer)
+        self.tournament.trade_secrets_template = private_template
+        self.tournament.save()
+        self.client.force_login(self.owner)
+        copy_url = self._url('tourney-copy-tournament')
+
+        copy_page = self.client.get(copy_url)
+        self.client.post(copy_url, self._tournament_post_data(
+            name='Copied Night', trade_secrets_template=private_template.pk, is_lineup_required='on'))
+
+        self.assertEqual(copy_page.context['form'].initial['trade_secrets_template'], private_template.pk)
+        self.assertTrue(copy_page.context['form'].initial['is_lineup_required'])
+        copied_tournament = Tournament.objects.get(name='Copied Night')
+        self.assertEqual(copied_tournament.trade_secrets_template, private_template)
+        self.assertTrue(copied_tournament.is_lineup_required)
+
+    def test_template_linked_to_tournament_cannot_be_deleted(self):
+        private_template = self.make_private_template(self.owner)
+        private_template.archive()
+        self.assertTrue(private_template.can_delete(self.owner))
+
+        self.tournament.trade_secrets_template = private_template
+        self.tournament.save()
+
+        self.assertFalse(private_template.can_delete(self.owner))
+        with self.assertRaises(RestrictedError):
+            private_template.delete()
+
+
+class LineupRegistrationTestCase(LineupTournamentTestCase):
+    def setUp(self):
+        super().setUp()
+        self.newcomer_decks = self.make_decks(3, 'Dynamo')
+
+    def register(self, **data):
+        self.client.force_login(self.newcomer)
+        return self.htmx_post(self._url('tourney-register'), data)
+
+    def test_registration_page_links_template_and_asks_for_decks(self):
+        self.client.force_login(self.newcomer)
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertContains(response, reverse('trade_secrets:template-detail', args=[self.triad.code]))
+        self.assertContains(response, 'Your lineup (3 decks)')
+        self.assertContains(response, 'name="deck_links"')
+        self.assertContains(response, 'trade_secrets/main.css')
+
+    def test_hidden_deck_links_field_does_not_block_submitting_a_lineup(self):
+        Lineup.objects.create(owner=self.newcomer, name='Triad Stack')
+        self.client.force_login(self.newcomer)
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertContains(response, 'value="lineup"')
+        self.assertNotRegex(response.content.decode(), r'<textarea[^>]*\brequired\b')
+
+    def test_private_template_of_another_user_is_named_without_a_link(self):
+        private_template = SessionTemplate.create_with_steps(self.owner, 'House Rules', '', [
+            StepSpec(0, 'submit', 3),
+            StepSpec(1, 'play', 1),
+        ])
+        self.tournament.trade_secrets_template = private_template
+        self.tournament.save()
+        self.client.force_login(self.newcomer)
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertContains(response, 'House Rules')
+        self.assertNotContains(
+            response, reverse('trade_secrets:template-detail', args=[private_template.code]))
+
+    def test_registration_without_requirement_needs_no_decks(self):
+        self.tournament.is_lineup_required = False
+        self.tournament.save()
+
+        self.register(nickname='Dynamo')
+
+        player = self.tournament.players.get(user=self.newcomer)
+        self.assertFalse(player.lineup_decks.exists())
+
+    def test_registration_with_links_saves_player_and_decks_in_order(self):
+        response = self.register(
+            nickname='Dynamo', source='links', deck_links=self.links_for(self.newcomer_decks))
+
+        self.assertIn('HX-Redirect', response)
+        player = self.tournament.players.get(user=self.newcomer)
+        self.assertEqual(player.nickname, 'Dynamo')
+        self.assertEqual(
+            list(player.lineup_decks.values_list('deck_id', flat=True)),
+            [deck.id for deck in self.newcomer_decks])
+        self.assertTrue(self.stage.stage_players.filter(player=player).exists())
+
+    def test_registration_with_lineup_records_source_version(self):
+        lineup = Lineup.objects.create(owner=self.newcomer, name='Triad Stack')
+        version = LineupVersion.objects.create(lineup=lineup, name='v1', sort_order=1)
+        for sort_order, deck in enumerate(self.newcomer_decks):
+            LineupVersionDeck.objects.create(version=version, deck=deck, sort_order=sort_order)
+
+        self.register(source='lineup', lineup=lineup.pk, version=version.pk)
+
+        player = self.tournament.players.get(user=self.newcomer)
+        self.assertEqual(player.lineup_decks.count(), 3)
+        self.assertEqual(player.lineup_decks.first().source_version, version)
+
+    def test_registration_with_wrong_deck_count_keeps_input_and_creates_no_player(self):
+        response = self.register(
+            nickname='Dynamo', source='links', deck_links=self.links_for(self.newcomer_decks[:2]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('HX-Redirect', response)
+        self.assertContains(response, 'exactly 3 decks')
+        self.assertContains(response, 'value="Dynamo"')
+        self.assertContains(response, str(self.newcomer_decks[0].id))
+        self.assertFalse(self.tournament.players.filter(user=self.newcomer).exists())
+
+    def test_registration_without_decks_is_rejected(self):
+        response = self.register(nickname='Dynamo')
+
+        self.assertContains(response, 'This field is required.')
+        self.assertFalse(self.tournament.players.filter(user=self.newcomer).exists())
+
+    def test_registration_with_another_players_lineup_is_rejected(self):
+        lineup = Lineup.objects.create(owner=self.owner, name='Not Yours')
+        version = LineupVersion.objects.create(lineup=lineup, name='v1')
+
+        self.register(source='lineup', lineup=lineup.pk, version=version.pk)
+
+        self.assertFalse(self.tournament.players.filter(user=self.newcomer).exists())
+
+
+class PlayerLineupTestCase(LineupTournamentTestCase):
+    def setUp(self):
+        super().setUp()
+        self.register_lineup(self.anvil, self.anvil_decks)
+        self.replacement_decks = self.make_decks(3, 'Replacement')
+
+    def submit_lineup(self, stage_player, decks):
+        self.login_as(stage_player)
+        return self.htmx_post(
+            self._url('tourney-player-lineup'), {'source': 'links', 'deck_links': self.links_for(decks)})
+
+    def test_player_sees_own_lineup_with_change_button_before_first_round(self):
+        self.login_as(self.anvil)
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertContains(response, 'Your decks (3)')
+        self.assertContains(response, 'Anvil Deck 1')
+        self.assertContains(response, 'Change lineup')
+
+    def test_lineup_is_hidden_from_other_players(self):
+        self.login_as(self.beacon)
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertNotContains(response, 'Anvil Deck 1')
+
+    def test_edit_mode_shows_lineup_form(self):
+        self.login_as(self.anvil)
+
+        response = self.htmx_get(self._url('tourney-player-lineup') + '?edit=1')
+
+        self.assertContains(response, 'Save lineup')
+        self.assertContains(response, 'name="deck_links"')
+
+    def test_player_can_change_lineup_before_first_round(self):
+        response = self.submit_lineup(self.anvil, self.replacement_decks)
+
+        self.assertContains(response, 'Lineup saved.')
+        self.assertEqual(
+            self.registered_deck_ids(self.anvil), [deck.id for deck in self.replacement_decks])
+
+    def test_invalid_lineup_change_keeps_registered_decks(self):
+        response = self.submit_lineup(self.anvil, self.replacement_decks[:1])
+
+        self.assertContains(response, 'exactly 3 decks')
+        self.assertContains(response, 'Save lineup')
+        self.assertEqual(self.registered_deck_ids(self.anvil), [deck.id for deck in self.anvil_decks])
+
+    def test_complete_lineup_locks_once_first_round_is_created(self):
+        self.create_match(self.anvil, self.beacon)
+
+        response = self.submit_lineup(self.anvil, self.replacement_decks)
+        lineup_panel = self.htmx_get(self._url('tourney-player-lineup') + '?edit=1')
+
+        self.assertIn('HX-Redirect', response)
+        self.assertEqual(self.registered_deck_ids(self.anvil), [deck.id for deck in self.anvil_decks])
+        self.assertContains(lineup_panel, 'Locked')
+        self.assertNotContains(lineup_panel, 'Save lineup')
+
+    def test_missing_lineup_can_be_submitted_after_first_round(self):
+        self.create_match(self.anvil, self.beacon)
+
+        response = self.submit_lineup(self.beacon, self.beacon_decks)
+
+        self.assertContains(response, 'Lineup saved.')
+        self.assertEqual(self.registered_deck_ids(self.beacon), [deck.id for deck in self.beacon_decks])
+
+    def test_player_without_lineup_is_prompted_to_submit_one(self):
+        self.login_as(self.beacon)
+
+        response = self.client.get(self._url('tourney-detail-matches'))
+
+        self.assertContains(response, 'Submit your lineup')
+        self.assertContains(response, 'Save lineup')
+
+    def test_closed_tournament_rejects_lineup_changes(self):
+        self.tournament.is_closed = True
+        self.tournament.save()
+
+        self.submit_lineup(self.anvil, self.replacement_decks)
+
+        self.assertEqual(self.registered_deck_ids(self.anvil), [deck.id for deck in self.anvil_decks])
+
+    def test_lineup_view_is_missing_when_decks_are_not_required(self):
+        self.tournament.is_lineup_required = False
+        self.tournament.save()
+
+        response = self.submit_lineup(self.anvil, self.replacement_decks)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_rejoining_after_a_drop_keeps_the_lineup_panel(self):
+        self.login_as(self.anvil)
+
+        dropped_response = self.htmx_post(self._url('tourney-drop'))
+        rejoined_response = self.htmx_post(self._url('tourney-undrop'))
+
+        self.assertContains(dropped_response, 'You are dropped from this tournament.')
+        self.assertNotContains(dropped_response, 'Your decks')
+        self.assertContains(rejoined_response, 'Your decks (3)')
+        self.assertContains(rejoined_response, 'Anvil Deck 1')
+
+    def test_manage_players_shows_registered_decks_to_admins(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self._url('tourney-manage-players'))
+
+        self.assertContains(response, '3 / 3 decks')
+        self.assertContains(response, 'Anvil Deck 1')
+        self.assertContains(response, 'No lineup')
+
+    def test_manage_players_hides_lineups_when_decks_are_not_required(self):
+        self.tournament.is_lineup_required = False
+        self.tournament.save()
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self._url('tourney-manage-players'))
+
+        self.assertNotContains(response, 'Anvil Deck 1')
+
+
+class MatchSessionTestCase(LineupTournamentTestCase):
+    def setUp(self):
+        super().setUp()
+        self.match = self.create_match(self.anvil, self.beacon)
+        self.session_url = self._url('tourney-match-session', self.match.id)
+
+    def session_deck_ids(self, seat):
+        return list(self.match.trade_secrets_session.decks.filter(seat=seat).order_by(
+            'sort_order').values_list('deck_id', flat=True))
+
+    def test_session_is_not_created_by_get(self):
+        self.login_as(self.anvil)
+
+        response = self.client.get(self.session_url)
+
+        self.assertEqual(response.status_code, 405)
+        self.assertFalse(Session.objects.exists())
+
+    def test_either_player_starting_the_session_reaches_the_same_one(self):
+        self.login_as(self.anvil)
+        first_response = self.open_session(self.match)
+        self.login_as(self.beacon)
+        second_response = self.open_session(self.match)
+
+        session = self.match.trade_secrets_session
+        expected_url = reverse('trade_secrets:session-detail', args=[session.code])
+        self.assertRedirects(first_response, expected_url, fetch_redirect_response=False)
+        self.assertRedirects(second_response, expected_url, fetch_redirect_response=False)
+        self.assertEqual(Session.objects.count(), 1)
+
+    def test_session_seats_player_one_as_host_and_player_two_as_guest(self):
+        self.login_as(self.beacon)
+        self.open_session(self.match)
+
+        session = self.match.trade_secrets_session
+        self.assertEqual(session.template, self.triad)
+        self.assertEqual(session.host, self.anvil.player.user)
+        self.assertEqual(session.guest, self.beacon.player.user)
+
+    def test_required_lineups_are_preloaded_and_complete_the_decks_step(self):
+        self.register_both_lineups()
+        self.login_as(self.anvil)
+
+        self.open_session(self.match)
+
+        self.assertEqual(self.match.trade_secrets_session.revealed_step_count, 1)
+        self.assertEqual(self.session_deck_ids(Seat.HOST), [deck.id for deck in self.anvil_decks])
+        self.assertEqual(self.session_deck_ids(Seat.GUEST), [deck.id for deck in self.beacon_decks])
+
+    def test_only_complete_lineups_are_preloaded(self):
+        self.register_lineup(self.anvil, self.anvil_decks)
+        self.register_lineup(self.beacon, self.beacon_decks[:2])
+        self.login_as(self.anvil)
+
+        self.open_session(self.match)
+
+        self.assertEqual(self.match.trade_secrets_session.revealed_step_count, 0)
+        self.assertEqual(self.session_deck_ids(Seat.HOST), [deck.id for deck in self.anvil_decks])
+        self.assertEqual(self.session_deck_ids(Seat.GUEST), [])
+
+    def test_no_lineups_are_preloaded_when_decks_are_not_required(self):
+        self.register_both_lineups()
+        self.tournament.is_lineup_required = False
+        self.tournament.save()
+        self.login_as(self.anvil)
+
+        self.open_session(self.match)
+
+        self.assertEqual(self.match.trade_secrets_session.revealed_step_count, 0)
+        self.assertFalse(self.match.trade_secrets_session.decks.exists())
+
+    def test_admin_can_start_the_session(self):
+        self.client.force_login(self.owner)
+
+        response = self.open_session(self.match)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIsNotNone(self.match.trade_secrets_session)
+
+    def test_other_players_cannot_start_the_session(self):
+        self.login_as(self.comet)
+
+        response = self.open_session(self.match)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIsNone(self.match.trade_secrets_session)
+
+    def test_session_is_unavailable_without_template(self):
+        self.tournament.trade_secrets_template = None
+        self.tournament.is_lineup_required = False
+        self.tournament.save()
+        self.login_as(self.anvil)
+
+        response = self.open_session(self.match)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_session_is_unavailable_for_byes_and_guest_players(self):
+        bye_match = self.create_match(self.comet, None)
+        guest_player = Player.objects.create(tournament=self.tournament, nickname='Walk-in')
+        guest_stage_player = StagePlayer.objects.create(player=guest_player, stage=self.stage, seed=4)
+        guest_match = self.create_match(self.comet, guest_stage_player)
+        self.client.force_login(self.owner)
+
+        bye_response = self.open_session(bye_match)
+        guest_response = self.open_session(guest_match)
+
+        self.assertEqual(bye_response.status_code, 404)
+        self.assertEqual(guest_response.status_code, 404)
+        self.assertFalse(Session.objects.exists())
+
+    def test_match_card_offers_start_to_its_players_then_links_everyone(self):
+        self.login_as(self.comet)
+        outsider_page_before = self.client.get(self._url('tourney-detail-matches'))
+        self.login_as(self.anvil)
+        player_page_before = self.client.get(self._url('tourney-detail-matches'))
+        self.open_session(self.match)
+        player_page_after = self.client.get(self._url('tourney-detail-matches'))
+        self.login_as(self.comet)
+        outsider_page_after = self.client.get(self._url('tourney-detail-matches'))
+
+        session_page_url = reverse(
+            'trade_secrets:session-detail', args=[self.match.trade_secrets_session.code])
+        self.assertNotContains(outsider_page_before, self.session_url)
+        self.assertContains(player_page_before, self.session_url)
+        self.assertContains(player_page_before, 'Start Trade Secrets session')
+        self.assertNotContains(player_page_after, self.session_url)
+        self.assertContains(player_page_after, session_page_url)
+        self.assertContains(player_page_after, 'Open Trade Secrets session')
+        self.assertContains(outsider_page_after, session_page_url)
+
+    def test_result_can_be_reported_without_starting_the_session(self):
+        self.login_as(self.anvil)
+
+        self.client.post(self._url('tourney-report-result', self.match.id), {'winner': self.anvil.id})
+
+        self.assertEqual(MatchResult.objects.get(match=self.match).winner, self.anvil)
+        self.assertFalse(Session.objects.exists())
+
+
+class MatchExportTestCase(LineupTournamentTestCase):
+    def setUp(self):
+        super().setUp()
+        self.register_both_lineups()
+        self.match = self.create_match(self.anvil, self.beacon)
+        self.create_match(self.comet, None)
+
+    def export_rows(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(self._url('tourney-matches-export'))
+        self.assertEqual(response.status_code, 200)
+        return list(csv.DictReader(io.StringIO(response.content.decode())))
+
+    def start_session(self, match):
+        self.login_as(match.player_one)
+        self.open_session(match)
+        return match.trade_secrets_session
+
+    def session_deck_id(self, session, deck):
+        return session.decks.get(deck=deck).id
+
+    def play_first_game(self, session):
+        anvil_user = self.anvil.player.user
+        beacon_user = self.beacon.player.user
+        session.submit_picks(
+            Seat.HOST, anvil_user, 1, [self.session_deck_id(session, self.beacon_decks[0])])
+        session.submit_picks(
+            Seat.GUEST, beacon_user, 1, [self.session_deck_id(session, self.anvil_decks[0])])
+        session.submit_picks(
+            Seat.HOST, anvil_user, 2, [self.session_deck_id(session, self.anvil_decks[1])])
+        session.submit_picks(
+            Seat.GUEST, beacon_user, 2, [self.session_deck_id(session, self.beacon_decks[1])])
+        session.record_result(anvil_user, 2, Seat.GUEST, host_score=1, guest_score=3)
+
+    def test_export_is_limited_to_admins(self):
+        self.login_as(self.anvil)
+
+        response = self.client.get(self._url('tourney-matches-export'))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_export_has_one_row_per_match_without_byes(self):
+        rows = self.export_rows()
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['Stage'], 'Main Stage')
+        self.assertEqual(rows[0]['Round'], '1')
+        self.assertEqual(rows[0]['Player one'], 'Anvil')
+        self.assertEqual(rows[0]['Player two'], 'Beacon')
+        self.assertEqual(rows[0]['Winner'], '')
+        self.assertEqual(rows[0]['TS session'], '')
+
+    def test_export_includes_match_result(self):
+        MatchResult.objects.create(
+            match=self.match, winner=self.beacon, player_one_score=1, player_two_score=3)
+
+        row = self.export_rows()[0]
+
+        self.assertEqual(row['Winner'], 'Beacon')
+        self.assertEqual(row['Player one score'], '1')
+        self.assertEqual(row['Player two score'], '3')
+        self.assertTrue(row['Result recorded at'])
+
+    def test_export_marks_ties(self):
+        MatchResult.objects.create(match=self.match, winner=None)
+
+        self.assertEqual(self.export_rows()[0]['Winner'], 'Tie')
+
+    def test_export_includes_result_form_answers(self):
+        result_form = GhostformForm.objects.create(
+            owner=self.owner, title='Match Notes', status=GhostformForm.Status.PUBLISHED)
+        notes_question = GhostformQuestion.objects.create(form=result_form, label='Notes', order=1)
+        self.tournament.result_form = result_form
+        self.tournament.save()
+        self.login_as(self.anvil)
+        self.client.post(self._url('tourney-report-result', self.match.id), {
+            'winner': self.anvil.id,
+            f'ghostform-{notes_question.get_field_name()}': 'Close game',
+        })
+
+        row = self.export_rows()[0]
+
+        self.assertEqual(row['Winner'], 'Anvil')
+        self.assertEqual(row['Notes'], 'Close game')
+
+    def test_export_includes_each_players_trade_secrets_picks(self):
+        session = self.start_session(self.match)
+        self.play_first_game(session)
+
+        row = self.export_rows()[0]
+
+        self.assertEqual(row['TS session'], session.code)
+        self.assertEqual(row['TS template'], 'Triad')
+        self.assertEqual(
+            row['TS Submit 3 (Player one)'], ';'.join(str(deck.id) for deck in self.anvil_decks))
+        self.assertEqual(
+            row['TS Submit 3 (Player two)'], ';'.join(str(deck.id) for deck in self.beacon_decks))
+        self.assertEqual(row['TS Ban (Player one)'], str(self.beacon_decks[0].id))
+        self.assertEqual(row['TS Ban (Player two)'], str(self.anvil_decks[0].id))
+        self.assertEqual(row['TS Game 1 deck (Player one)'], str(self.anvil_decks[1].id))
+        self.assertEqual(row['TS Game 1 deck (Player two)'], str(self.beacon_decks[1].id))
+        self.assertEqual(row['TS Game 1 winner'], 'Beacon')
+        self.assertEqual(row['TS Game 1 score (Player one)'], '1')
+        self.assertEqual(row['TS Game 1 score (Player two)'], '3')
+
+    def test_export_leaves_unrevealed_steps_blank(self):
+        session = self.start_session(self.match)
+        session.submit_picks(
+            Seat.HOST, self.anvil.player.user, 1, [self.session_deck_id(session, self.beacon_decks[0])])
+
+        row = self.export_rows()[0]
+
+        self.assertEqual(row['TS Ban (Player one)'], '')
+        self.assertEqual(row['TS Game 1 deck (Player one)'], '')
+        self.assertEqual(row['TS Game 1 winner'], '')
+
+    def test_export_follows_players_when_their_seats_are_swapped(self):
+        session = self.start_session(self.match)
+        self.play_first_game(session)
+        Match.objects.filter(pk=self.match.pk).update(player_one=self.beacon, player_two=self.anvil)
+
+        row = self.export_rows()[0]
+
+        self.assertEqual(row['Player one'], 'Beacon')
+        self.assertEqual(row['TS Ban (Player one)'], str(self.anvil_decks[0].id))
+        self.assertEqual(row['TS Game 1 score (Player one)'], '3')
+        self.assertEqual(row['TS Game 1 winner'], 'Beacon')
+
+    def test_export_keeps_columns_of_sessions_from_a_replaced_template(self):
+        session = self.start_session(self.match)
+        self.tournament.trade_secrets_template = SessionTemplate.objects.get(system_key='triad-bo1')
+        self.tournament.save()
+
+        row = self.export_rows()[0]
+
+        triad_prefix = f'TS [Triad {self.triad.code}]'
+        self.assertEqual(row['TS session'], session.code)
+        self.assertEqual(
+            row[f'{triad_prefix} Submit 3 (Player one)'],
+            ';'.join(str(deck.id) for deck in self.anvil_decks))
+        self.assertEqual(
+            row[f'TS [Triad Bo1 {self.tournament.trade_secrets_template.code}] Submit 3 (Player one)'], '')
+
+    def test_export_has_no_trade_secrets_columns_without_template_or_sessions(self):
+        self.tournament.trade_secrets_template = None
+        self.tournament.is_lineup_required = False
+        self.tournament.save()
+
+        row = self.export_rows()[0]
+
+        self.assertFalse([header for header in row if header.startswith('TS')])
+
+    def test_export_query_count_does_not_grow_with_matches(self):
+        self.start_session(self.match)
+        self.client.force_login(self.owner)
+        with CaptureQueriesContext(connection) as queries_for_one_match:
+            self.client.get(self._url('tourney-matches-export'))
+
+        for seed in (4, 6):
+            player_one = self.add_player(f'Extra{seed}', seed=seed)
+            player_two = self.add_player(f'Extra{seed + 1}', seed=seed + 1)
+            self.start_session(self.create_match(player_one, player_two))
+        self.client.force_login(self.owner)
+        with CaptureQueriesContext(connection) as queries_for_three_matches:
+            self.client.get(self._url('tourney-matches-export'))
+
+        self.assertEqual(len(queries_for_three_matches), len(queries_for_one_match))
+
+    def test_admin_tab_links_to_match_export(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self._url('tourney-tournament-detail-admin'))
+
+        self.assertContains(response, self._url('tourney-matches-export'))

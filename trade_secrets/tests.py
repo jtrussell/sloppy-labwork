@@ -15,7 +15,8 @@ from lineups.models import Lineup, LineupVersion, LineupVersionDeck
 
 from . import engine
 from .engine import Phase, Seat, StepSpec
-from .models import PlayResult, Session, SessionTemplate, StepSubmission
+from .exports import SessionExporter
+from .models import PlayResult, PreloadedLineup, Session, SessionTemplate, StepSubmission
 from .session_view import build_session_view
 
 
@@ -1609,3 +1610,152 @@ class TemplateEditTests(SessionViewTestCase):
         self.assertContains(self.client.get(detail_url), 'Edit details')
         self.client.force_login(self.bob)
         self.assertNotContains(self.client.get(detail_url), 'Edit details')
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class PreloadedSessionTests(SessionViewTestCase):
+    def preloaded(self, decks):
+        return PreloadedLineup(tuple(deck.id for deck in decks))
+
+    def create_triad(self, lineups_by_seat):
+        return Session.create_for_players(
+            self.system_template('triad'), self.alice, self.bob, lineups_by_seat)
+
+    def test_both_lineups_complete_the_decks_step(self):
+        session = self.create_triad({
+            HOST: self.preloaded(self.alice_decks[:3]),
+            GUEST: self.preloaded(self.bob_decks[:3]),
+        })
+
+        view = build_session_view(session, self.alice)
+        self.assertEqual(session.guest, self.bob)
+        self.assertEqual(session.revealed_step_count, 1)
+        self.assertEqual(view.phase, Phase.SELECTING)
+        self.assertFalse(view.shows_share_card)
+        self.assertTrue(view.rail[0].is_done)
+
+    def test_each_seat_is_recorded_as_submitting_its_own_decks(self):
+        session = self.create_triad({
+            HOST: self.preloaded(self.alice_decks[:3]),
+            GUEST: self.preloaded(self.bob_decks[:3]),
+        })
+
+        self.assertEqual(session.submissions.get(seat=HOST).submitted_by, self.alice)
+        self.assertEqual(session.submissions.get(seat=GUEST).submitted_by, self.bob)
+        self.assertCountEqual(
+            session.decks.filter(seat=GUEST).values_list('deck_id', flat=True),
+            [deck.id for deck in self.bob_decks[:3]])
+
+    def test_one_lineup_keeps_it_hidden_until_the_other_seat_submits(self):
+        session = self.create_triad({HOST: self.preloaded(self.alice_decks[:3])})
+        self.client.force_login(self.bob)
+
+        response = self.client.get(self.detail_url(session))
+
+        self.assertEqual(session.revealed_step_count, 0)
+        self.assertEqual(build_session_view(session, self.alice).action_state, 'submit-decks-locked')
+        self.assertEqual(build_session_view(session, self.bob).action_state, 'submit-decks')
+        self.assertNotContains(response, 'Alice Deck 1')
+        self.assertNotContains(response, 'Invite your opponent')
+
+    def test_no_lineups_starts_at_deck_submission_without_an_invite(self):
+        session = self.create_triad({})
+
+        view = build_session_view(session, self.alice)
+        self.assertEqual(view.phase, Phase.SUBMITTING_DECKS)
+        self.assertEqual(view.action_state, 'submit-decks')
+        self.assertFalse(view.shows_share_card)
+
+    def test_wrong_deck_count_creates_no_session(self):
+        with self.assertRaises(ValidationError):
+            self.create_triad({HOST: self.preloaded(self.alice_decks[:2])})
+
+        self.assertFalse(Session.objects.exists())
+
+    def test_private_archived_template_of_someone_else_can_be_used(self):
+        template = self.make_template(self.carol, 'submit:3', 'play')
+        template.archive()
+
+        session = Session.create_for_players(template, self.alice, self.bob, {})
+
+        self.assertEqual(session.template, template)
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class SessionExportTests(HexadBo1Mixin, SessionViewTestCase):
+    PARTICIPANTS = ('Player one', 'Player two')
+
+    def export_row(self, session, participant_seats=(HOST, GUEST)):
+        exporter = SessionExporter([session.template_id], [session], ';')
+        headers = exporter.headers_for(session.template_id, 'TS', self.PARTICIPANTS)
+        cells = exporter.cells_for(
+            session, participant_seats,
+            dict(zip(participant_seats, self.PARTICIPANTS)))
+        self.assertEqual(len(headers), len(cells))
+        self.assertEqual(len(headers), len(exporter.blank_cells_for(session.template_id)))
+        return dict(zip(headers, cells))
+
+    def joined_ids(self, decks):
+        return ';'.join(str(deck.id) for deck in decks)
+
+    def test_every_step_reports_what_each_seat_chose(self):
+        session = self.start_hexad_bo1()
+        self.ban_matchups(session, 4, 6)
+        session.record_result(self.alice, 5, GUEST, 3, 2)
+
+        row = self.export_row(session)
+
+        self.assertEqual(row['TS Submit 6 (Player one)'], self.joined_ids(self.alice_decks))
+        self.assertEqual(row['TS Submit 6 (Player two)'], self.joined_ids(self.bob_decks))
+        self.assertEqual(row['TS Ban 1 (Player one)'], str(self.bob_decks[0].id))
+        self.assertEqual(row['TS Safe (Player two)'], str(self.bob_decks[1].id))
+        self.assertEqual(row['TS Ban 2 (Player two)'], str(self.alice_decks[2].id))
+        self.assertEqual(row['TS Matchup 1 deck (Player one)'], str(self.alice_decks[3].id))
+        self.assertEqual(row['TS Matchup 1 winner'], 'Banned')
+        self.assertEqual(row['TS Matchup 2 deck (Player two)'], str(self.bob_decks[4].id))
+        self.assertEqual(row['TS Matchup 2 winner'], 'Player two')
+        self.assertEqual(row['TS Matchup 2 score (Player one)'], 3)
+        self.assertEqual(row['TS Matchup 2 score (Player two)'], 2)
+        self.assertEqual(row['TS Matchup 3 winner'], 'Banned')
+        self.assertEqual(row['TS Ban matchup (Player one)'], 'Matchup 1')
+        self.assertEqual(row['TS Ban matchup (Player two)'], 'Matchup 3')
+
+    def test_columns_follow_the_given_seat_order(self):
+        session = self.start_hexad_bo1()
+        self.ban_matchups(session, 4, 6)
+        session.record_result(self.alice, 5, GUEST, 3, 2)
+
+        row = self.export_row(session, participant_seats=(GUEST, HOST))
+
+        self.assertEqual(row['TS Submit 6 (Player one)'], self.joined_ids(self.bob_decks))
+        self.assertEqual(row['TS Ban matchup (Player one)'], 'Matchup 3')
+        self.assertEqual(row['TS Matchup 2 winner'], 'Player one')
+        self.assertEqual(row['TS Matchup 2 score (Player one)'], 2)
+
+    def test_unrevealed_steps_are_blank(self):
+        session = self.started_triad()
+        self.pick(session, HOST, self.bob_decks[0])
+
+        row = self.export_row(session)
+
+        self.assertEqual(row['TS Submit 3 (Player one)'], self.joined_ids(self.alice_decks[:3]))
+        self.assertEqual(row['TS Ban (Player one)'], '')
+        self.assertEqual(row['TS Game 1 deck (Player one)'], '')
+        self.assertEqual(row['TS Game 1 winner'], '')
+
+    def test_decks_stay_blank_until_both_seats_have_submitted(self):
+        session = self.start_session(self.system_template('triad'), self.alice, self.bob)
+        session.submit_decks(HOST, self.alice, [deck.id for deck in self.alice_decks[:3]])
+
+        row = self.export_row(session)
+
+        self.assertEqual(row['TS Submit 3 (Player one)'], '')
+
+    def test_query_count_does_not_grow_with_sessions(self):
+        first_session = self.start_hexad_bo1()
+        with self.assertNumQueries(6):
+            SessionExporter([first_session.template_id], [first_session], ';')
+
+        sessions = [first_session, self.started_triad(), self.started_triad()]
+        with self.assertNumQueries(6):
+            SessionExporter({session.template_id for session in sessions}, sessions, ';')

@@ -876,6 +876,11 @@ body:has(.mobile-nav-toggle:checked) {
   min-width: 0;
 }
 
+.grid > .field:not(.field--check) {
+  grid-template-rows: 1fr;
+  grid-auto-rows: auto;
+}
+
 .field > *,
 .field label,
 .field input,

@@ -11,6 +11,7 @@ class TournamentModelAdmin(admin.ModelAdmin):
     list_filter = ['is_accepting_registrations', 'created_on']
     search_fields = ['name', 'owner__username']
     readonly_fields = ['created_on', 'updated_on']
+    raw_id_fields = ['trade_secrets_template']
 
 
 @admin.register(Player)
@@ -66,6 +67,7 @@ class MatchAdmin(admin.ModelAdmin):
     list_display = ['round', 'player_one', 'player_two', 'has_result', 'created_on']
     list_filter = ['round__stage', 'created_on']
     search_fields = ['round__stage__name', 'player_one__player__user__username', 'player_two__player__user__username']
+    raw_id_fields = ['trade_secrets_session']
 
 
 @admin.register(MatchResult)

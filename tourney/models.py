@@ -1,6 +1,7 @@
 from enum import unique
 from django.contrib.auth.models import User
-from django.db import models
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models, transaction
 from django.db.models import UniqueConstraint
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Q
@@ -8,10 +9,13 @@ from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 import random
 from abc import ABC, abstractmethod
+from trade_secrets.engine import MAXIMUM_DECKS_PER_PLAYER
 from .pairing_strategies import get_pairing_strategy
 
 
 MAXIMUM_PODS_PER_STAGE = 24
+MINIMUM_LINEUP_DECK_COUNT = 1
+MAXIMUM_LINEUP_DECK_COUNT = MAXIMUM_DECKS_PER_PLAYER
 MINIMUM_PODS_FOR_POD_PLAY = 2
 ALL_PODS_FILTER = 'all'
 
@@ -78,11 +82,35 @@ class Tournament(models.Model):
         related_name='tournaments', default=None, null=True, blank=True,
         help_text="Form players fill out when reporting match results"
     )
+    trade_secrets_template = models.ForeignKey(
+        'trade_secrets.SessionTemplate', on_delete=models.RESTRICT,
+        related_name='tournaments', default=None, null=True, blank=True,
+        help_text="Trade Secrets template players use to play their matches"
+    )
+    is_lineup_required = models.BooleanField(
+        default=False,
+        help_text="Require players to register their decks"
+    )
+    lineup_deck_count = models.PositiveSmallIntegerField(
+        default=None, null=True, blank=True,
+        validators=[
+            MinValueValidator(MINIMUM_LINEUP_DECK_COUNT),
+            MaxValueValidator(MAXIMUM_LINEUP_DECK_COUNT),
+        ],
+        help_text="Decks each player registers when no Trade Secrets template sets the count"
+    )
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_on']
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(lineup_deck_count__isnull=True) | Q(
+                    lineup_deck_count__gte=MINIMUM_LINEUP_DECK_COUNT,
+                    lineup_deck_count__lte=MAXIMUM_LINEUP_DECK_COUNT),
+                name='tourney_lineup_deck_count_in_range'),
+        ]
 
     def __str__(self):
         return self.name
@@ -111,6 +139,16 @@ class Tournament(models.Model):
 
     def get_active_players(self):
         return self.players.filter(status=Player.PlayerStatus.ACTIVE)
+
+    def get_required_deck_count(self):
+        if not self.is_lineup_required:
+            return None
+        if self.trade_secrets_template_id is not None:
+            return self.trade_secrets_template.deck_count or None
+        return self.lineup_deck_count
+
+    def has_rounds(self):
+        return Round.objects.filter(stage__tournament=self).exists()
 
     def create_initial_stage(self, main_pairing_strategy='swiss', main_max_players=None,
                              main_allow_ties=False, main_score_reporting=0, main_round_length=None):
@@ -363,6 +401,47 @@ class Player(models.Model):
 
     def get_username_display(self):
         return self.user.username if self.user else "(Guest)"
+
+    def has_lineup_of(self, deck_count):
+        return self.lineup_decks.count() == deck_count
+
+    def can_change_lineup(self, required_deck_count):
+        if self.tournament.is_closed or self.status != self.PlayerStatus.ACTIVE:
+            return False
+        return not (self.has_lineup_of(required_deck_count) and self.tournament.has_rounds())
+
+    def replace_lineup(self, deck_ids, source_version=None):
+        with transaction.atomic():
+            self.lineup_decks.all().delete()
+            PlayerDeck.objects.bulk_create(
+                PlayerDeck(
+                    player=self, deck_id=deck_id,
+                    source_version=source_version, sort_order=sort_order)
+                for sort_order, deck_id in enumerate(deck_ids)
+            )
+
+
+class PlayerDeck(models.Model):
+    player = models.ForeignKey(
+        Player, on_delete=models.CASCADE, related_name='lineup_decks')
+    deck = models.ForeignKey(
+        'decks.Deck', on_delete=models.PROTECT, related_name='tourney_player_entries')
+    source_version = models.ForeignKey(
+        'lineups.LineupVersion', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tourney_player_entries')
+    sort_order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['player', 'sort_order']
+        constraints = [
+            UniqueConstraint(
+                fields=['player', 'deck'], name='tourney_unique_player_deck'),
+            UniqueConstraint(
+                fields=['player', 'sort_order'], name='tourney_unique_player_deck_order'),
+        ]
+
+    def __str__(self):
+        return f'{self.player.get_display_name()}: {self.deck}'
 
 
 class TournamentAdmin(models.Model):
@@ -1123,6 +1202,9 @@ class Match(models.Model):
         default=None, null=True, blank=True)
     player_two = models.ForeignKey(
         StagePlayer, on_delete=models.CASCADE, related_name='matches_as_player_two',
+        default=None, null=True, blank=True)
+    trade_secrets_session = models.OneToOneField(
+        'trade_secrets.Session', on_delete=models.SET_NULL, related_name='tourney_match',
         default=None, null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
 

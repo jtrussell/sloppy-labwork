@@ -75,6 +75,8 @@
 <p class="ts-template-note">
   {% if template.is_archived and session_count %}
   This template can't be deleted because {{ session_count }} session{{ session_count|pluralize }} use{{ session_count|pluralize:"s," }} it.
+  {% elif template.is_archived and tournament_count %}
+  This template can't be deleted because {{ tournament_count }} tournament{{ tournament_count|pluralize }} use{{ tournament_count|pluralize:"s," }} it.
   {% elif template.is_archived %}
   Archived templates are hidden from your list and can't start new sessions.
   {% else %}

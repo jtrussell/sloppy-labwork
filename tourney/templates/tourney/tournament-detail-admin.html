@@ -52,6 +52,16 @@
     </section>
 
     <section class="stack stack--sm">
+        <h2>Match Export</h2>
+        <p class="text-muted">
+            One row per match with its result{% if tournament.result_form %}, result form answers{% endif %}{% if tournament.trade_secrets_template_id %} and Trade Secrets session picks{% endif %}.
+        </p>
+        <div class="cluster">
+            <a href="{% url 'tourney:tourney-matches-export' tournament.code %}" class="button button-primary">Download Matches (CSV)</a>
+        </div>
+    </section>
+
+    <section class="stack stack--sm">
         <h2>Result Form</h2>
         {% if tournament.result_form %}
         <p class="text-muted">
@@ -60,7 +70,6 @@
         </p>
         <div class="cluster">
             <a href="{% url 'ghostform:ghostform-detail' tournament.result_form.code %}" class="button button-primary">View Form</a>
-            <a href="{% url 'ghostform:ghostform-responses-csv' tournament.result_form.code %}" class="button">Download Responses (CSV)</a>
         </div>
         {% else %}
         <p class="text-muted">

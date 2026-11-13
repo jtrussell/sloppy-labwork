@@ -1,0 +1,23 @@
+{% if match.trade_secrets_session_id %}
+    {% if shows_template_name %}
+        · <a class="match-session-inline" href="{% url 'trade_secrets:session-detail' match.trade_secrets_session.code %}">{% include "components/icon.html" with name="play" label="Open Trade Secrets session" %} {{ match.trade_secrets_session.template.name }}</a>
+    {% else %}
+        <a class="match-session-link"
+           href="{% url 'trade_secrets:session-detail' match.trade_secrets_session.code %}"
+           title="Open Trade Secrets session">{% include "components/icon.html" with name="play" label="Open Trade Secrets session" %}</a>
+    {% endif %}
+{% elif tournament.trade_secrets_template_id and match.player_two_id and match.player_one.player.user_id and match.player_two.player.user_id %}
+    {% if is_admin or match.player_one.player.user_id == user.id or match.player_two.player.user_id == user.id %}
+        {% if shows_template_name %}
+            · <form method="post" action="{% url 'tourney:tourney-match-session' tournament.code match.id %}" class="form-inline">
+                {% csrf_token %}
+                <button type="submit" class="button-link match-session-inline">{% include "components/icon.html" with name="play" label="Start Trade Secrets session" %} {{ tournament.trade_secrets_template.name }}</button>
+            </form>
+        {% else %}
+            <form method="post" action="{% url 'tourney:tourney-match-session' tournament.code match.id %}" class="match-session-form">
+                {% csrf_token %}
+                <button type="submit" class="match-session-link" title="Start Trade Secrets session">{% include "components/icon.html" with name="play" label="Start Trade Secrets session" %}</button>
+            </form>
+        {% endif %}
+    {% endif %}
+{% endif %}

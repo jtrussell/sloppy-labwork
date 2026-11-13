@@ -89,6 +89,9 @@
             </details>
         </div>
     </div>
+    {% if required_deck_count %}
+        {% include 'tourney/partials/player-registered-decks.html' with registered_decks=player.lineup_decks.all %}
+    {% endif %}
 </li>
 {% endpartialdef %}
 

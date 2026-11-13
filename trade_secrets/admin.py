@@ -9,7 +9,7 @@ class TemplateStepInline(admin.TabularInline):
     fields = ['order', 'action', 'quantity', 'played_deck_rule']
 
     def is_template_in_use(self, template):
-        return template is not None and template.sessions.exists()
+        return template is not None and template.is_in_use()
 
     def has_add_permission(self, request, obj=None):
         return not self.is_template_in_use(obj) and super().has_add_permission(request, obj)

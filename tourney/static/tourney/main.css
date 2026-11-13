@@ -160,7 +160,8 @@
   border-left: 1px solid var(--color-border);
 }
 
-.match-edit-btn {
+.match-edit-btn,
+.match-session-link {
   width: 100%;
   height: 100%;
   padding: 0;
@@ -174,9 +175,37 @@
   color: var(--color-text);
 }
 
-.match-edit-btn:hover {
+.match-edit-btn:hover,
+.match-session-link:hover {
   background-color: var(--color-primary);
   color: var(--color-bg);
+}
+
+.match-session-link {
+  font-size: var(--text-base);
+}
+
+.match-session-slot:not(:has(*)) {
+  display: none;
+}
+
+.match-session-form {
+  height: 100%;
+  margin: 0;
+}
+
+.match-session-inline,
+.match-session-inline:focus {
+  color: var(--color-accent);
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  text-decoration: var(--link-decoration);
+  white-space: nowrap;
+}
+
+.match-session-inline:hover {
+  color: var(--color-accent-hover);
 }
 
 .match-edit-btn:before {
@@ -280,6 +309,20 @@
 
 .player-actions {
   flex-shrink: 1;
+}
+
+.player-item .player-lineup {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.player-lineup__decks {
+  margin: 0;
+  font-size: inherit;
+}
+
+.player-lineup__decks li {
+  margin-bottom: var(--space-1);
 }
 
 /* Unmatched Players Section */
