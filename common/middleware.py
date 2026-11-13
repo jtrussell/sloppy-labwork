@@ -2,6 +2,7 @@
 import json
 from django.contrib.messages import get_messages
 from django.http import HttpRequest, HttpResponse
+from django.utils.html import conditional_escape
 from django.utils.deprecation import MiddlewareMixin
 
 
@@ -17,7 +18,7 @@ class HtmxMessageMiddleware(MiddlewareMixin):
         if 300 <= response.status_code < 400:
             return response
         messages = [
-            {"message": str(message.message), "tags": message.tags}
+            {"message": str(conditional_escape(message.message)), "tags": message.tags}
             for message in get_messages(request)
         ]
         if not messages:

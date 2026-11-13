@@ -1,0 +1,4 @@
+<div class="note message{% if level == 'error' %} note--danger{% elif level == 'warning' %} note--warning{% endif %}" data-message{% if level == 'error' or level == 'warning' %} data-message-persistent{% endif %}>
+  <div class="message__text" data-message-text>{{ text }}</div>
+  <button type="button" class="message__dismiss" aria-label="Dismiss" data-message-dismiss>{% include "components/icon.html" with name="close" %}</button>
+</div>

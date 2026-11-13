@@ -4,7 +4,7 @@
 {% block gallery_content %}
 <section>
   <h2>Notes</h2>
-  <p class="ds-lede">Short, page-level feedback. Django messages render as notes through <code>components/messages.html</code>.</p>
+  <p class="ds-lede">Short, page-level feedback that sits within the page content.</p>
   {% ds_example themed %}
   <div class="stack stack--sm">
     <div class="note">Registration closes at noon.</div>
@@ -15,6 +15,24 @@
   </div>
   {% end_ds_example %}
   <p><code>.note-danger</code> is the original name of <code>.note--danger</code>; both render the same, prefer the new one.</p>
+</section>
+
+<section>
+  <h2>Messages</h2>
+  <p>Django messages render through <code>components/messages.html</code>, which <code>page.html</code> and <code>page-full.html</code> already include. They float at the top of the viewport, above the page, so showing or dismissing one never moves the content. Load <code>js/messages.js</code> for the behaviour: every message has a dismiss button, success and info messages leave on their own after five seconds unless the pointer or keyboard focus is on them, and warnings and errors stay until dismissed.</p>
+  <p>Messages added during an htmx request arrive through the <code>HX-Trigger</code> header and stack below the ones already showing. Their text is escaped unless it is marked safe, so build links with <code>format_html</code>.</p>
+  <pre><code>messages.success(request, 'Lineup saved.')</code></pre>
+  {% ds_example themed %}
+  <div class="stack stack--sm">
+    {% include "components/message.html" with level="success" text="Lineup saved." %}
+    {% include "components/message.html" with level="warning" text="This deck is already in the lineup." %}
+    {% include "components/message.html" with level="error" text="We couldn't save your changes." %}
+  </div>
+  {% end_ds_example %}
+  <div class="cluster cluster--xs">
+    <button type="button" class="button" data-ds-message-demo="Lineup saved." data-ds-message-tags="success">Show a success message</button>
+    <button type="button" class="button" data-ds-message-demo="We couldn't save your changes." data-ds-message-tags="error">Show an error message</button>
+  </div>
 </section>
 
 <section>

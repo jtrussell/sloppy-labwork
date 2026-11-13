@@ -48,47 +48,12 @@
   <script src="{% static 'js/copy.js' %}"></script>
   <script src="{% static 'js/action-menu.js' %}"></script>
   <script src="{% static 'js/preserve-scroll.js' %}"></script>
+  <script src="{% static 'js/messages.js' %}"></script>
   <script type="text/javascript">
     // Used to avoid CSS animations on the initial load
     setTimeout(function () {
       document.querySelector('body').classList.remove('preload')
     }, 1000)
-
-    window.sloppyShowMessages = window.sloppyShowMessages || function(messagesJson) {
-      const messages = JSON.parse(messagesJson)?.messages ?? []
-      const messageList = document.getElementById('message-list')
-      messageList.replaceChildren(...messages.map(function (message) {
-        const tags = message.tags || ''
-        const note = document.createElement('div')
-        note.className = 'note'
-        if (tags.includes('error')) {
-          note.classList.add('note--danger')
-        } else if (tags.includes('warning')) {
-          note.classList.add('note--warning')
-        }
-        note.innerHTML = message.message
-        return note
-      }))
-    }
-
-    document.addEventListener('htmx:afterRequest', function(event) {
-      const messagesJson = event.detail.xhr.getResponseHeader('HX-Trigger') || '{}'
-      const isRedirect = !!event.detail.xhr.getResponseHeader('HX-Redirect')
-      if (isRedirect) {
-        window.localStorage.setItem('flashMessages', messagesJson)
-      } else {
-        window.sloppyShowMessages(messagesJson)
-      }
-    });	
-
-    document.addEventListener('DOMContentLoaded', function() {
-      const messagesJson = window.localStorage.getItem('flashMessages')
-      if (messagesJson) {
-        window.sloppyShowMessages(messagesJson)
-      }
-      window.localStorage.removeItem('flashMessages')
-    });
-
   </script>
 
   {% block extra_body %}

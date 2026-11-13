@@ -27,4 +27,15 @@
       result.textContent = isConfirmed ? 'Confirmed.' : 'Cancelled.'
     })
   })
+
+  document.addEventListener('click', function (event) {
+    const messageDemoButton = event.target.closest('[data-ds-message-demo]')
+    if (!messageDemoButton || !window.sloppyShowMessages) {
+      return
+    }
+    window.sloppyShowMessages([{
+      message: messageDemoButton.dataset.dsMessageDemo,
+      tags: messageDemoButton.dataset.dsMessageTags
+    }])
+  })
 })()

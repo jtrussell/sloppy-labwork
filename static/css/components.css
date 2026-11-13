@@ -208,12 +208,15 @@ form .helptext {
 
 /* Notes */
 .message-list {
+  position: fixed;
+  inset-block-start: max(var(--space-4), env(safe-area-inset-top));
+  inset-inline: 0;
+  z-index: var(--z-toast);
   display: grid;
   gap: var(--space-2);
-}
-
-.message-list:has(.note) {
-  margin-bottom: var(--space-6);
+  width: min(28rem, calc(100% - 2 * var(--space-4)));
+  margin-inline: auto;
+  pointer-events: none;
 }
 
 .message-list > .note {
@@ -230,6 +233,45 @@ form .helptext {
 
 .note *:last-child {
   margin-bottom: 0;
+}
+
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  text-align: start;
+  pointer-events: auto;
+}
+
+.message__text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.message > .message__dismiss {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.message > .message__dismiss:hover,
+.message > .message__dismiss:focus {
+  border: 0;
+  background-color: transparent;
+  color: var(--color-text);
 }
 
 .note-danger {

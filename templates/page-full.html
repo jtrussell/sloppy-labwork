@@ -21,6 +21,7 @@
 </head>
 
 <body class="preload">
+  {% include 'components/icon-sprite.html' %}
   {% block body %}
   <main role="main" class="container stack text-center">
     {% include 'components/messages.html' %}
@@ -38,6 +39,7 @@
     {% endblock %}
   </main>
 
+  <script src="{% static 'js/messages.js' %}"></script>
   <script>
     // Used to avoid CSS animations on the initial load
     setTimeout(function () {

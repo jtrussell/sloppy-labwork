@@ -1,8 +1,11 @@
 <div id="message-list" class="message-list" role="status">
   {% for message in messages %}
-  <div class="note{% if message.level_tag == 'error' %} note--danger{% elif message.level_tag == 'warning' %} note--warning{% endif %}">{{ message }}</div>
+  {% include "components/message.html" with level=message.level_tag text=message %}
   {% endfor %}
   {% for message in error_messages %}
-  <div class="note note--danger">{{ message }}</div>
+  {% include "components/message.html" with level="error" text=message %}
   {% endfor %}
 </div>
+<template id="message-template">
+  {% include "components/message.html" with level="" text="" %}
+</template>

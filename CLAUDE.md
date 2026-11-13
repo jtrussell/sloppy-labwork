@@ -115,7 +115,9 @@ In `design_system/templates/components/`:
 - `field.html` / `form-fields.html` - Django form fields with label, required
   marker, help text and errors (keeps Django's ARIA wiring).
 - `pagination.html`, `empty-state.html`, `table-empty-row.html`
-- `messages.html` - Django messages as notes.
+- `messages.html` - Django messages as dismissable notes fixed to the top of
+  the viewport, out of the page flow. `message.html` is the single message it
+  repeats.
 - `icon-sprite.html` (once per page) and `icon.html`
 - `step-rail.html`
 - `dialog-header.html`, `dialog-confirm.html`, `dialog-host.html`
@@ -127,6 +129,8 @@ In `design_system/templates/components/`:
   through the confirm dialog.
 - `static/js/copy.js` - `data-copy-text`, `data-copy-from` and
   `data-share-url` buttons.
+- `static/js/messages.js` - dismiss buttons, auto-dismiss for success and info
+  messages, and messages delivered by htmx responses (`HX-Trigger`).
 - `static/js/preserve-scroll.js` - `data-preserve-scroll` on a link or form
   restores the scroll position after the page load it causes.
 - `static/js/action-menu.js` - closing behaviour for `details.action-menu`

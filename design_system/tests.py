@@ -122,6 +122,28 @@ class FormFieldsIncludeTests(SimpleTestCase):
         self.assertIn(f'{form["deck_name"].auto_id}_error', form['deck_name'].aria_describedby)
 
 
+class MessagesIncludeTests(SimpleTestCase):
+    def test_only_warnings_and_errors_wait_to_be_dismissed(self):
+        rendered_by_level = {
+            level: render_to_string('components/message.html', {'level': level, 'text': 'Saved.'})
+            for level in ['success', 'info', 'warning', 'error']
+        }
+        persistent_levels = [
+            level for level, rendered in rendered_by_level.items() if 'data-message-persistent' in rendered
+        ]
+        self.assertEqual(persistent_levels, ['warning', 'error'])
+
+    def test_every_message_can_be_dismissed(self):
+        rendered = render_to_string('components/messages.html', {'error_messages': ['Nope.', 'Still no.']})
+        self.assertEqual(rendered.count('data-message-dismiss'), 3)
+        self.assertEqual(rendered.count('<template id="message-template">'), 1)
+
+    def test_message_text_is_escaped(self):
+        rendered = render_to_string('components/message.html', {'level': 'error', 'text': '<img src=x>'})
+        self.assertNotIn('<img src=x', rendered)
+        self.assertIn('&lt;img src=x', rendered)
+
+
 class FieldIncludeEscapingTests(SimpleTestCase):
     def test_help_text_is_escaped(self):
         class FormWithUserHelpText(forms.Form):
