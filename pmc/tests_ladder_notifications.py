@@ -2,6 +2,7 @@ from datetime import timedelta
 from unittest import mock
 
 import requests
+from allauth.socialaccount.models import SocialAccount
 from django.contrib.messages import get_messages
 from django.core import mail
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -234,8 +235,7 @@ class LadderDiscordWebhookTests(LadderTestBase):
         return f'{description}\n\n[View the ladder]({ladder_url})'
 
     def test_challenge_issued_message(self):
-        self.player(3).user.profile.discord_id = 987654321
-        self.player(3).user.profile.save()
+        SocialAccount.objects.create(user=self.player(3).user, provider='discord', uid='987654321')
         with self.captureOnCommitCallbacks(execute=True):
             self.ladder.issue_challenge(self.player(5), self.player(3))
 

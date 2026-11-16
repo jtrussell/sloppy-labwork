@@ -1,5 +1,6 @@
 import logging
 
+from allauth.socialaccount.models import SocialAccount
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
@@ -40,8 +41,8 @@ def ladder_url(ladder):
 
 
 def discord_id_for(member):
-    profile = getattr(member.user, 'profile', None)
-    return getattr(profile, 'discord_id', None)
+    return SocialAccount.objects.filter(
+        user_id=member.user_id, provider='discord').values_list('uid', flat=True).first()
 
 
 def notify_challenge_issued(challenge_id, challenger_rank, defender_rank):
@@ -76,8 +77,8 @@ def load_challenge(challenge_id):
     from .models import LadderChallenge
     return LadderChallenge.objects.select_related(
         'ladder__playgroup',
-        'match__player_one__user__profile',
-        'match__player_two__user__profile',
+        'match__player_one__user',
+        'match__player_two__user',
         'match__result__winner',
     ).get(pk=challenge_id)
 

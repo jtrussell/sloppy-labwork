@@ -1,3 +1,4 @@
+from allauth.socialaccount.models import SocialAccount
 from django.utils.translation import gettext_lazy as _
 from django.db import models
 from django.contrib.auth.models import User
@@ -92,8 +93,8 @@ class MatchingService():
             match_with.save()
             request.save()
 
-            d1 = player.user.profile.discord_id
-            d2 = match_with.player.user.profile.discord_id
+            d1 = MatchingService.get_discord_id_for(player)
+            d2 = MatchingService.get_discord_id_for(match_with.player)
             if d1 and d2:
                 if player.pod == PodPlayer.Pod.DIS:
                     webhook_url = os.environ.get(
@@ -107,6 +108,11 @@ class MatchingService():
             pass
 
         return request
+
+    @staticmethod
+    def get_discord_id_for(player: PodPlayer):
+        return SocialAccount.objects.filter(
+            user_id=player.user_id, provider='discord').values_list('uid', flat=True).first()
 
     @staticmethod
     def cancel_request_and_completing(match_request: MatchRequest):
