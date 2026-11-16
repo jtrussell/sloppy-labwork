@@ -10,7 +10,8 @@ from django.views.decorators.http import require_POST, require_http_methods
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 from .deck_suggestions import (
-    DECK_NAME_OPTIONS_TEMPLATE, DECK_SUGGESTION_LIMIT, find_lineup_decks_matching_name
+    DECK_NAME_OPTIONS_TEMPLATE, DECK_SUGGESTION_LIMIT, find_lineup_deck_named,
+    find_lineup_decks_matching_name
 )
 from .models import Lineup, LineupNote, LineupVersion, LineupVersionNote, LineupVersionDeck
 from .forms import LineupForm, LineupNoteForm, LineupVersionForm, LineupVersionNoteForm
@@ -500,20 +501,16 @@ def version_deck_add(request, version_code):
         return redirect_to(request, f'/lineups/versions/{version.code}/')
 
     deck = None
-    is_url_or_uuid = '/' in deck_input or 'http' in deck_input.lower() or len(deck_input) == 36
+    deck_id = Deck.get_id_from_master_vault_url(deck_input)
 
     try:
         with transaction.atomic():
-            if is_url_or_uuid:
-                deck_id = Deck.get_id_from_master_vault_url(deck_input)
+            if deck_id:
                 deck, created = Deck.objects.get_or_create(id=deck_id)
                 if created or not deck.name:
                     deck.hydrate_from_master_vault(save=True)
             else:
-                deck = Deck.objects.filter(
-                    lineup_versions__version__lineup__owner=request.user,
-                    name=deck_input
-                ).first()
+                deck = find_lineup_deck_named(request.user, deck_input)
 
                 if not deck:
                     messages.error(request, f'Deck "{deck_input}" not found. Try pasting a URL instead.')
