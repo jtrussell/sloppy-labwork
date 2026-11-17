@@ -325,7 +325,8 @@ class LadderDiscordWebhookTests(LadderTestBase):
         self.client.force_login(self.organizer.user)
         url = reverse('pmc-pg-ladder-discord-test', args=[self.playgroup.slug, self.ladder.pk])
         response = self.client.post(url)
-        self.assertIn('Test message sent to Discord.', [str(message) for message in get_messages(response.wsgi_request)])
+        self.assertIn('Test message sent to Discord.', [str(message)
+                      for message in get_messages(response.wsgi_request)])
         self.assertIn('KeyChain is connected to Main Ladder', self.posted_messages()[0]['embeds'][0]['title'])
 
         self.post.return_value = mock.Mock(status_code=404, text='Unknown Webhook')

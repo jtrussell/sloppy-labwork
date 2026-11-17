@@ -225,7 +225,8 @@ class TournamentStandingsTestCase(StandingsTestCase):
 
         # Create a playoff round with a match
         playoff_round = Round.objects.create(stage=playoff_stage, order=1)
-        playoff_match = Match.objects.create(round=playoff_round, player_one=playoff_player1, player_two=playoff_player2)
+        playoff_match = Match.objects.create(
+            round=playoff_round, player_one=playoff_player1, player_two=playoff_player2)
         MatchResult.objects.create(match=playoff_match, winner=playoff_player1)
 
         standings = StandingCalculator.get_tournament_standings(self.tournament)
@@ -239,8 +240,8 @@ class TournamentStandingsTestCase(StandingsTestCase):
         # Check stage advancement
         self.assertTrue(standings[0]['is_in_current_stage'])   # Player1 in playoff (current)
         self.assertTrue(standings[1]['is_in_current_stage'])   # Player2 in playoff (current)
-        self.assertFalse(standings[2]['is_in_current_stage']) # Player3 not in playoff
-        self.assertFalse(standings[3]['is_in_current_stage']) # Player4 not in playoff
+        self.assertFalse(standings[2]['is_in_current_stage'])  # Player3 not in playoff
+        self.assertFalse(standings[3]['is_in_current_stage'])  # Player4 not in playoff
 
     def test_tournament_standings_aggregates_stats_across_stages(self):
         """Test that wins/losses are aggregated across all stages for export."""
@@ -605,10 +606,10 @@ class SingleEliminationPairingTestCase(TestCase):
         # Check that seed 1 is paired with seed 4
         if match_with_seed1.player_one == sp1:
             self.assertEqual(match_with_seed1.player_two, sp4,
-                           "Seed 1 should be paired with seed 4")
+                             "Seed 1 should be paired with seed 4")
         else:
             self.assertEqual(match_with_seed1.player_one, sp4,
-                           "Seed 1 should be paired with seed 4")
+                             "Seed 1 should be paired with seed 4")
 
     def test_6_player_single_elimination(self):
         """Test single elimination with 6 players - verify bracket with byes."""
@@ -731,7 +732,8 @@ class SwissPairingPerformanceTestCase(TestCase):
             # Verify matches were created
             matches = Match.objects.filter(round=round_obj)
             expected_matches = 4  # 3 regular matches + 1 bye
-            self.assertEqual(matches.count(), expected_matches, f"Round {round_num} should have {expected_matches} matches")
+            self.assertEqual(matches.count(), expected_matches,
+                             f"Round {round_num} should have {expected_matches} matches")
 
             # Verify exactly one bye match
             bye_matches = matches.filter(player_two__isnull=True)
@@ -793,7 +795,8 @@ class SwissPairingPerformanceTestCase(TestCase):
             # Verify matches were created
             matches = Match.objects.filter(round=round_obj)
             expected_matches = 50  # 100 players = 50 matches (even number)
-            self.assertEqual(matches.count(), expected_matches, f"Round {round_num} should have {expected_matches} matches")
+            self.assertEqual(matches.count(), expected_matches,
+                             f"Round {round_num} should have {expected_matches} matches")
 
             # Verify no bye matches (even number of players)
             bye_matches = matches.filter(player_two__isnull=True)
@@ -949,8 +952,8 @@ class SwissTournamentTestCase(TestCase):
             pairing = tuple(sorted([match.player_one.id, match.player_two.id]))
 
             self.assertNotIn(pairing, pairings,
-                f"Players {match.player_one.player.get_display_name()} and "
-                f"{match.player_two.player.get_display_name()} have been paired more than once")
+                             f"Players {match.player_one.player.get_display_name()} and "
+                             f"{match.player_two.player.get_display_name()} have been paired more than once")
             pairings.add(pairing)
 
     def test_3_player_tournament_2_rounds(self):
@@ -1153,9 +1156,10 @@ class SwissTournamentTestCase(TestCase):
                 # In a well-paired Swiss tournament, scores should be somewhat spread out
                 unique_scores = len(set(scores))
                 self.assertGreaterEqual(unique_scores, 2,
-                    f"Tournament with {player_count} players should have varied scores, got: {scores}")
+                                        f"Tournament with {player_count} players should have varied scores, got: {scores}")
 
-                logger.debug(f"Quality test passed for {player_count} players, {round_count} rounds - Score spread: {sorted(scores, reverse=True)}")
+                logger.debug(
+                    f"Quality test passed for {player_count} players, {round_count} rounds - Score spread: {sorted(scores, reverse=True)}")
 
     def test_bye_distribution_fairness(self):
         """Test that byes are distributed fairly in odd-player tournaments."""
@@ -1201,7 +1205,7 @@ class SwissTournamentTestCase(TestCase):
         # At least 3 different players should get byes (since we have 3 rounds and 5 players)
         players_with_byes = sum(1 for count in bye_counts if count > 0)
         self.assertGreaterEqual(players_with_byes, 2,
-            f"At least 2 players should get byes, got {players_with_byes} players with byes")
+                                f"At least 2 players should get byes, got {players_with_byes} players with byes")
 
         logger.debug(f"Bye distribution test passed: {bye_counts} byes per player")
 
@@ -1229,7 +1233,7 @@ class SwissTournamentTestCase(TestCase):
         r1_matches = [(f"{m.player_one.player.get_display_name()}" +
                       (f" vs {m.player_two.player.get_display_name()}" if m.player_two else " (BYE)"),
                       f"Winner: {m.result.winner.player.get_display_name()}" if hasattr(m, 'result') and m.result else "No result")
-                     for m in matches_r1]
+                      for m in matches_r1]
         logger.debug(f"Round 1 pairings: {r1_matches}")
 
         # Get standings BEFORE Round 2 to determine who should get the bye
@@ -1255,7 +1259,7 @@ class SwissTournamentTestCase(TestCase):
             lower_ranked_without_byes = []
             for i, standing in enumerate(standings_after_r1):
                 if (i > bye_player_rank and  # Lower ranked than current bye recipient
-                    standing['stage_player'].id != r1_bye_player_id):  # Hasn't had a bye
+                        standing['stage_player'].id != r1_bye_player_id):  # Hasn't had a bye
                     lower_ranked_without_byes.append(standing['stage_player'])
 
             if bye_player_rank == 0:
@@ -1453,7 +1457,8 @@ class SwissTournamentTestCase(TestCase):
                     MatchResult.objects.create(match=match, winner=winner)
 
         # Check that no player got more than one bye (unless it was unavoidable)
-        players_with_multiple_byes = {player_id: rounds for player_id, rounds in bye_recipients.items() if len(rounds) > 1}
+        players_with_multiple_byes = {player_id: rounds for player_id,
+                                      rounds in bye_recipients.items() if len(rounds) > 1}
 
         if players_with_multiple_byes:
             # If any player got multiple byes, it should only be when necessary to avoid repeat pairings
@@ -1510,9 +1515,9 @@ class SwissTournamentTestCase(TestCase):
             if players_without_byes_r2:
                 # The bye should go to someone who hasn't had a bye yet
                 self.assertIn(bye_player_r2, players_without_byes_r2,
-                    f"Round 2 bye should go to a player without a previous bye. "
-                    f"Players without byes: {[p.player.get_display_name() for p in players_without_byes_r2]}, "
-                    f"but bye went to {bye_player_r2.player.get_display_name()}")
+                              f"Round 2 bye should go to a player without a previous bye. "
+                              f"Players without byes: {[p.player.get_display_name() for p in players_without_byes_r2]}, "
+                              f"but bye went to {bye_player_r2.player.get_display_name()}")
 
                 # Among players without byes, it should prefer lower-ranked ones
                 # (but we allow flexibility for pairing constraints)
@@ -1521,8 +1526,8 @@ class SwissTournamentTestCase(TestCase):
                 # Verify it's not in the top half (which would be very wrong)
                 total_players = len(standings_after_r1)
                 self.assertGreater(bye_rank, total_players // 2,
-                    f"Bye should not go to top-half player. {bye_player_r2.player.get_display_name()} "
-                    f"is ranked {bye_rank + 1} out of {total_players}")
+                                   f"Bye should not go to top-half player. {bye_player_r2.player.get_display_name()} "
+                                   f"is ranked {bye_rank + 1} out of {total_players}")
 
             bye_recipients.add(bye_player_r2.id)
 
@@ -1556,9 +1561,9 @@ class SwissTournamentTestCase(TestCase):
             if players_without_byes_r3:
                 # The bye should go to someone who hasn't had a bye yet
                 self.assertIn(bye_player_r3, players_without_byes_r3,
-                    f"Round 3 bye should go to a player without a previous bye. "
-                    f"Players without byes: {[p.player.get_display_name() for p in players_without_byes_r3]}, "
-                    f"but bye went to {bye_player_r3.player.get_display_name()}")
+                              f"Round 3 bye should go to a player without a previous bye. "
+                              f"Players without byes: {[p.player.get_display_name() for p in players_without_byes_r3]}, "
+                              f"but bye went to {bye_player_r3.player.get_display_name()}")
 
                 # Among players without byes, it should prefer lower-ranked ones
                 # (but we allow flexibility for pairing constraints)
@@ -1567,22 +1572,23 @@ class SwissTournamentTestCase(TestCase):
                 # Verify it's not in the top half (which would be very wrong)
                 total_players = len(standings_after_r2)
                 self.assertGreater(bye_rank, total_players // 2,
-                    f"Bye should not go to top-half player. {bye_player_r3.player.get_display_name()} "
-                    f"is ranked {bye_rank + 1} out of {total_players}")
+                                   f"Bye should not go to top-half player. {bye_player_r3.player.get_display_name()} "
+                                   f"is ranked {bye_rank + 1} out of {total_players}")
             else:
                 # All players have had byes - any player is acceptable
                 logger.debug("All players have had byes, any selection is acceptable")
 
         logger.debug(f"Bye assignment test: R1={bye_match_r1.player_one.player.get_display_name() if bye_match_r1 else None}, "
-                    f"R2={bye_match_r2.player_one.player.get_display_name() if bye_match_r2 else None}, "
-                    f"R3={bye_match_r3.player_one.player.get_display_name() if bye_match_r3 else None}")
+                     f"R2={bye_match_r2.player_one.player.get_display_name() if bye_match_r2 else None}, "
+                     f"R3={bye_match_r3.player_one.player.get_display_name() if bye_match_r3 else None}")
 
     def test_bye_exception_for_repeat_pairings(self):
         """Test that a player can get a second bye to avoid repeat pairings."""
         # This test will be more complex to set up - we need a scenario where
         # giving the bye to the lowest unassigned player would force a repeat pairing
 
-        tournament, stage, players, stage_players = self._create_tournament_with_players(5, "Repeat Pairing Exception Test")
+        tournament, stage, players, stage_players = self._create_tournament_with_players(
+            5, "Repeat Pairing Exception Test")
 
         strategy = get_pairing_strategy('swiss')
 
@@ -1679,7 +1685,7 @@ class RoundRobinScheduledTestCase(TestCase):
                 models.Q(player_one=stage_player) | models.Q(player_two=stage_player)
             )
             self.assertEqual(player_matches.count(), 3,
-                f"Player {stage_player.player.get_display_name()} should play exactly 3 matches")
+                             f"Player {stage_player.player.get_display_name()} should play exactly 3 matches")
 
         # Verify no bye matches (even number of players)
         bye_matches = total_matches.filter(player_two__isnull=True)
@@ -1737,7 +1743,7 @@ class RoundRobinScheduledTestCase(TestCase):
                 models.Q(player_one=stage_player) | models.Q(player_two=stage_player)
             )
             self.assertEqual(player_regular_matches.count(), 6,
-                f"Player {stage_player.player.get_display_name()} should play exactly 6 regular matches")
+                             f"Player {stage_player.player.get_display_name()} should play exactly 6 regular matches")
 
         # Verify each player gets exactly one bye
         bye_distribution = {}
@@ -1748,7 +1754,7 @@ class RoundRobinScheduledTestCase(TestCase):
         for stage_player in stage_players:
             bye_count = bye_distribution.get(stage_player.id, 0)
             self.assertEqual(bye_count, 1,
-                f"Player {stage_player.player.get_display_name()} should get exactly 1 bye, got {bye_count}")
+                             f"Player {stage_player.player.get_display_name()} should get exactly 1 bye, got {bye_count}")
 
     def test_round_robin_strategy_properties(self):
         """Test that the Round Robin Scheduled strategy has correct properties."""
@@ -1762,7 +1768,7 @@ class RoundRobinScheduledTestCase(TestCase):
         # Test can_create_new_round returns False (all rounds created at start)
         tournament, stage, players, stage_players = self._create_tournament_with_players(4)
         self.assertFalse(strategy.can_create_new_round(stage),
-            "Round Robin Scheduled should not allow creating additional rounds")
+                         "Round Robin Scheduled should not allow creating additional rounds")
 
     def test_round_robin_no_additional_rounds_created(self):
         """Test that calling make_pairings_for_round on non-first rounds doesn't create additional rounds."""
@@ -1788,9 +1794,9 @@ class RoundRobinScheduledTestCase(TestCase):
         final_matches_count = Match.objects.filter(round__stage=stage).count()
 
         self.assertEqual(final_rounds_count, initial_rounds_count,
-            "No additional rounds should be created on subsequent calls")
+                         "No additional rounds should be created on subsequent calls")
         self.assertEqual(final_matches_count, initial_matches_count,
-            "No additional matches should be created on subsequent calls")
+                         "No additional matches should be created on subsequent calls")
 
     def test_round_robin_odd_players_auto_resolves_byes(self):
         tournament, stage, players, stage_players = self._create_tournament_with_players(3)
@@ -2461,7 +2467,7 @@ class SyncToKeyChainTestCase(TestCase):
 
     def _get_url(self):
         return reverse('tourney:tourney-sync-to-keychain',
-                        args=[self.tournament.code])
+                       args=[self.tournament.code])
 
     def _play_round(self, winner, loser):
         round_obj = Round.objects.create(

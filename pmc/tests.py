@@ -323,6 +323,7 @@ class TopNPerMonthRankingTest(TestCase):
 
 class DummyAward:
     """Helper class to test criteria without needing actual Award objects."""
+
     def __init__(self, criteria, mode=AwardBase.ModeOptions.ANY, house=None):
         self.criteria = criteria
         self.mode = mode

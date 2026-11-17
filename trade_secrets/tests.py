@@ -1565,7 +1565,6 @@ class ExchangeFlowTests(TradeSecretsTestMixin, TestCase):
         self.assertEqual(self.phase(), engine.Phase.COMPLETE)
 
 
-
 @override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
 class TemplateEditTests(SessionViewTestCase):
     def setUp(self):
@@ -1584,7 +1583,8 @@ class TemplateEditTests(SessionViewTestCase):
         self.assertRedirects(response, reverse('trade_secrets:template-detail', args=[self.template.code]))
         self.template.refresh_from_db()
         self.assertEqual((self.template.name, self.template.description), ('New Name', 'Fresh words'))
-        self.assertEqual([spec.quantity for spec in SessionTemplate.objects.get(pk=self.template.pk).step_specs], [3, 1, 1])
+        self.assertEqual([spec.quantity for spec in SessionTemplate.objects.get(
+            pk=self.template.pk).step_specs], [3, 1, 1])
         self.assertContains(self.client.get(self.detail_url(session)), 'New Name')
 
     def test_name_is_required(self):

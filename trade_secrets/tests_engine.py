@@ -400,7 +400,8 @@ class TemplateValidationTests(SimpleTestCase):
         self.assertValid('submit:3', 'ban:3')
 
     def test_replayable_decks_allow_many_games(self):
-        self.assertValid('submit:2', 'play:eligible', 'play:eligible', 'play:eligible', 'play:eligible', 'play:eligible')
+        self.assertValid('submit:2', 'play:eligible', 'play:eligible',
+                         'play:eligible', 'play:eligible', 'play:eligible')
         self.assertValid('submit:3', 'ban:1', 'play:losing_only', 'play:losing_only', 'play:losing_only',
                          'play:losing_only', 'play:losing_only')
 
@@ -643,7 +644,8 @@ class WaveLabelTests(SimpleTestCase):
         match = Match('submit:5', 'ban:2', 'ban:1', 'play')
         match.reveal(host=[guest_deck(1), guest_deck(2)], guest=[host_deck(1), host_deck(2)])
         deck_names = {deck.id: f'Deck {deck.id}' for deck in match.pool}
-        lines = results_summary_lines(match.state, 'Custom', 'ts_X', {HOST: 'Alice', GUEST: 'Bob'}, deck_names, {}, 'url')
+        lines = results_summary_lines(match.state, 'Custom', 'ts_X', {
+                                      HOST: 'Alice', GUEST: 'Bob'}, deck_names, {}, 'url')
         self.assertIn('Ban 1 (2 decks banned): Alice banned Deck 101; Deck 102; Bob banned Deck 1; Deck 2', lines)
 
     def test_engine_records_wave_orders(self):

@@ -25,7 +25,8 @@ class ComponentDemoForm(forms.Form):
     )
     houses = forms.MultipleChoiceField(choices=DECK_HOUSES, widget=forms.CheckboxSelectMultiple, required=False)
     notes = forms.CharField(widget=forms.Textarea(attrs={'rows': 3}), required=False)
-    is_public = forms.BooleanField(required=False, label='List this deck publicly', help_text='Anyone with the link can view it.')
+    is_public = forms.BooleanField(required=False, label='List this deck publicly',
+                                   help_text='Anyone with the link can view it.')
 
     def clean(self):
         cleaned_data = super().clean()

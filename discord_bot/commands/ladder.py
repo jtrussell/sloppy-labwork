@@ -27,7 +27,7 @@ LADDER_NOT_FOUND_MESSAGE = 'I couldn\'t find that ladder. Pick one of your ladde
 OPPONENT_NOT_FOUND_MESSAGE = 'I couldn\'t find that player. Pick an opponent from the list.'
 CHALLENGE_NOT_FOUND_MESSAGE = 'I couldn\'t find that open challenge. Pick one of yours from the list.'
 OUTCOME_NOT_FOUND_MESSAGE = 'Pick how the game went from the list.'
-NOT_ALLOWED_MESSAGE ='You aren\'t allowed to record that result.'
+NOT_ALLOWED_MESSAGE = 'You aren\'t allowed to record that result.'
 CHALLENGE_ISSUED_MESSAGE = 'Challenge issued to {defender} on {ladder}. The result is due {respond_by}.'
 RESULT_RECORDED_MESSAGE = 'Result recorded on {ladder}.'
 

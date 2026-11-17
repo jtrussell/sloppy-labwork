@@ -58,6 +58,7 @@ from .models import Box, BoxLeague, BoxLeagueSession, BoxLeagueRuleViolation, Bo
 LADDERS_NON_MEMBER_MESSAGE = _('Ladders are only available to playgroup members.')
 BOX_LEAGUES_NON_MEMBER_MESSAGE = _('Box leagues are only available to playgroup members.')
 
+
 def can_access_member_pages(user, slug):
     playgroup = Playgroup.objects.filter(slug=slug).first()
     if playgroup and playgroup.is_global:
@@ -2571,7 +2572,8 @@ def playgroup_finder_table(request):
     if region not in regions:
         region = ''
 
-    playgroups = Playgroup.objects.discoverable().annotate_is_primarily_digital().annotate_member_count().annotate_recent_activity().select_related('type', 'primary_venue').prefetch_related('venues').order_by('name')
+    playgroups = Playgroup.objects.discoverable().annotate_is_primarily_digital().annotate_member_count(
+    ).annotate_recent_activity().select_related('type', 'primary_venue').prefetch_related('venues').order_by('name')
 
     if search:
         playgroups = playgroups.matching_search(search)

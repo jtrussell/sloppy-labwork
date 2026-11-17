@@ -538,7 +538,7 @@ class SwissPairingStrategy(PairingStrategy):
         ).count()
 
     def _exhaustive_search_pairing(self, sorted_players, previous_opponents,
-                                    round_number=None, undefeated_player_ids=None):
+                                   round_number=None, undefeated_player_ids=None):
         """
         Exhaustive search for small tournaments (≤8 players).
         Tries each eligible bye candidate and picks the one that produces the
@@ -585,7 +585,7 @@ class SwissPairingStrategy(PairingStrategy):
         return best_pairings or self._create_simple_pairings(sorted_players)
 
     def _smart_brute_force_pairing(self, sorted_players, previous_opponents,
-                                    round_number=None, undefeated_player_ids=None):
+                                   round_number=None, undefeated_player_ids=None):
         """
         Smart brute force for medium tournaments (9-14 players).
         Uses greedy approach with backtracking, limited search.

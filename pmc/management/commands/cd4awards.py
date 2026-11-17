@@ -27,10 +27,14 @@ class Command(BaseCommand):
         }
 
         tier_data = [
-            (AchievementTier.TierOptions.BRONZE, 2, 'https://res.cloudinary.com/dig7eguxo/image/upload/v1764547507/074_PremierPro_T1_zjxvqy.png'),
-            (AchievementTier.TierOptions.SILVER, 8, 'https://res.cloudinary.com/dig7eguxo/image/upload/v1764547505/074_PremierPro_T2_llc6va.png'),
-            (AchievementTier.TierOptions.GOLD, 20, 'https://res.cloudinary.com/dig7eguxo/image/upload/v1764547505/074_PremierPro_T3_tq6cv6.png'),
-            (AchievementTier.TierOptions.ASCENSION, 50, 'https://res.cloudinary.com/dig7eguxo/image/upload/v1764547505/074_PremierPro_T4_nmav6v.png'),
+            (AchievementTier.TierOptions.BRONZE, 2,
+             'https://res.cloudinary.com/dig7eguxo/image/upload/v1764547507/074_PremierPro_T1_zjxvqy.png'),
+            (AchievementTier.TierOptions.SILVER, 8,
+             'https://res.cloudinary.com/dig7eguxo/image/upload/v1764547505/074_PremierPro_T2_llc6va.png'),
+            (AchievementTier.TierOptions.GOLD, 20,
+             'https://res.cloudinary.com/dig7eguxo/image/upload/v1764547505/074_PremierPro_T3_tq6cv6.png'),
+            (AchievementTier.TierOptions.ASCENSION, 50,
+             'https://res.cloudinary.com/dig7eguxo/image/upload/v1764547505/074_PremierPro_T4_nmav6v.png'),
         ]
 
         trophy_data = [

@@ -705,4 +705,3 @@ class SessionViewBuilder:
     def games_won(self):
         tally = engine.games_won(self.state)
         return [(self.seat_names[seat], tally[seat]) for seat in engine.SEATS]
-

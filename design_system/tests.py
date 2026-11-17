@@ -81,7 +81,8 @@ class GalleryAccessTests(TestCase):
     def test_dialog_demo_success_swaps_outside_the_dialog(self):
         user = User.objects.create_superuser('admin', password='password')
         self.client.force_login(user)
-        response = self.client.post(reverse('design_system:dialog-demo'), {'deck_name': 'Ironside'}, HTTP_HX_REQUEST='true')
+        response = self.client.post(reverse('design_system:dialog-demo'),
+                                    {'deck_name': 'Ironside'}, HTTP_HX_REQUEST='true')
         self.assertNotIn('HX-Retarget', response)
         self.assertContains(response, 'Ironside')
 
