@@ -1791,6 +1791,38 @@ class CaseInsensitiveUsernameLookupTests(TestCase):
             playgroup=self.playgroup, user=self.player).exists())
 
 
+@override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
+class PlaygroupMembersPageTests(TestCase):
+    def setUp(self):
+        self.playgroup = Playgroup.objects.create(name='Members Group', slug='members-group')
+        self.staff_user = User.objects.create_user(username='Organizer')
+        PlaygroupMember.objects.create(
+            playgroup=self.playgroup, user=self.staff_user, is_staff=True)
+        self.player = User.objects.create_user(username='Player')
+        PlaygroupMember.objects.create(
+            playgroup=self.playgroup, user=self.player, nickname='<b>Sneaky</b>')
+        self.members_url = reverse('pmc-pg-members', kwargs={'slug': self.playgroup.slug})
+
+    def test_member_nickname_is_escaped_in_messages(self):
+        self.client.force_login(self.staff_user)
+        response = self.client.post(
+            reverse('pmc-pg-add-member-by-username', kwargs={'slug': self.playgroup.slug}),
+            {'username': 'Player'})
+        message_text = ' '.join(str(message) for message in get_messages(response.wsgi_request))
+        self.assertIn('&lt;b&gt;Sneaky&lt;/b&gt;', message_text)
+        self.assertNotIn('<b>Sneaky</b>', message_text)
+        self.assertIn('<a href=', message_text)
+
+    def test_staff_area_is_sent_to_staff_only(self):
+        self.client.force_login(self.staff_user)
+        self.assertContains(self.client.get(self.members_url), 'Staff Area')
+        self.client.force_login(self.player)
+        self.assertNotContains(self.client.get(self.members_url), 'Staff Area')
+
+
 class ManageProfileEmailChangeTests(TestCase):
     def setUp(self):
         cache.clear()

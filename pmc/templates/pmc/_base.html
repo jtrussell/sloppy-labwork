@@ -139,7 +139,7 @@
 				e.preventDefault()
 				Swal.fire({
 					title: 'Please confirm',
-					html: e.detail.question,
+					text: e.detail.question,
 					showCloseButton: true,
 					showCancelButton: true,
 					theme: '{% if my_profile.theme == 1 %}light{% else %}dark{% endif %}',

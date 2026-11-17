@@ -19,7 +19,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.translation import gettext_lazy as _
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -871,6 +871,8 @@ def render_box_league_session(request, league, session):
         if roster_entry.member_id not in assigned_member_ids
     ]
     is_session_open = session is not None and not session.is_completed()
+    viewer_is_staff = viewer_member is not None and viewer_member.is_staff
+    can_organize_session = viewer_is_staff and is_session_open
     placed_player_count = len(assigned_member_ids)
     viewer_summary = next((summary for summary in box_summaries if summary.is_viewer_box), None)
     viewer_unplayed_matches = [
@@ -889,8 +891,8 @@ def render_box_league_session(request, league, session):
         'placed_player_count': placed_player_count,
         'suggested_box_count': league.suggested_box_count(placed_player_count),
         'resize_form': BoxProposalResizeForm(
-            initial={'box_count': len(box_summaries)}) if session and session.is_proposed() else None,
-        'add_box_form': BoxAddForm(session=session) if is_session_open else None,
+            initial={'box_count': len(box_summaries)}) if can_organize_session and session.is_proposed() else None,
+        'add_box_form': BoxAddForm(session=session) if can_organize_session else None,
         'league': league,
         'session': session,
         'box_summaries': box_summaries,
@@ -902,7 +904,7 @@ def render_box_league_session(request, league, session):
         'viewer_has_confirmed': viewer_has_confirmed,
         'waiting_members': waiting_members,
         'is_stale_proposal': session is not None and session.is_stale_proposal(),
-        'assignment_form': BoxAssignmentForm(session=session, box_summaries=box_summaries) if is_session_open else None,
+        'assignment_form': BoxAssignmentForm(session=session, box_summaries=box_summaries) if can_organize_session else None,
     })
 
 
@@ -2098,9 +2100,8 @@ def add_pg_member_by_qrcode(request, slug):
             'slug': slug,
             'username': member.user.username
         })
-        msg = _(
-            '{} added. View <a href="{}">their profile</a>.').format(member, href_member_detail)
-        messages.success(request, mark_safe(msg))
+        messages.success(request, format_html(
+            _('{} added. View <a href="{}">their profile</a>.'), member, href_member_detail))
         return HttpResponseRedirect(reverse('pmc-pg-members', kwargs={
             'slug': slug
         }))
@@ -2154,18 +2155,16 @@ def add_pg_member_by_username(request, slug):
         })
 
         if created:
-            msg = _(
-                '{} added. View <a href="{}">their profile</a>.').format(member, href_member_detail)
-            messages.success(request, mark_safe(msg))
+            messages.success(request, format_html(
+                _('{} added. View <a href="{}">their profile</a>.'), member, href_member_detail))
             context = {
                 'member': member,
                 'playgroup': Playgroup.objects.get(slug=slug),
             }
             return render(request, 'pmc/pg-members.html#member-list-item', context)
         else:
-            msg = _(
-                '{} is already a member. View <a href="{}">their profile</a>.').format(member, href_member_detail)
-            messages.success(request, mark_safe(msg))
+            messages.success(request, format_html(
+                _('{} is already a member. View <a href="{}">their profile</a>.'), member, href_member_detail))
     except User.DoesNotExist:
         messages.error(request, _(
             'Oops! We could not find a user with that username.'))

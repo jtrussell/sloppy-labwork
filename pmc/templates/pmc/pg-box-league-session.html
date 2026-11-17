@@ -103,7 +103,7 @@
     </div>
   {% endif %}
 
-  {% if session and not session.is_completed %}
+  {% if session and not session.is_completed and playgroup_member.is_staff %}
     <div class="card staff-only">
       <div class="next-step-body">
         <p>

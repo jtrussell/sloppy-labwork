@@ -19,7 +19,7 @@
             <form
               class="award-container pointer {% if not badge.user_badge_id %}disabled{% endif %}"
               hx-post
-              hx-confirm="<span class='text-bold text-em'>{{ badge.description }}</span><br><br>Are you sure you would like to assign {{ badge.name }} to {{ member }}? This action cannot be undone."
+              hx-confirm="{{ badge.name }}: {{ badge.description }} Are you sure you would like to assign it to {{ member }}? This action cannot be undone."
               hx-trigger="click"
             >
               <input type="hidden" name="action" value="assign_badge" />

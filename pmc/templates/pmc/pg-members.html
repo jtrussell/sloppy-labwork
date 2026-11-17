@@ -25,6 +25,7 @@
 {% block content %}
 	<h1>Members</h1>
 
+	{% if playgroup_member.is_staff %}
 	<div class="card staff-only">
 		<h2>Staff Area</h2>
 		<p>Add members to your playgroup by username or by scanning the QR code on
@@ -53,6 +54,7 @@
 			</div>
 		</form>
 	</div>
+	{% endif %}
 
 	<ul class="card-list" id="member-list">
 		{% for member in members %}

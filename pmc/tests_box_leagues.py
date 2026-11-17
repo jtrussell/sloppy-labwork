@@ -498,6 +498,20 @@ class BoxLeagueViewTests(BoxLeagueTestBase):
             self.assertIn('Box leagues are only available to playgroup members.',
                           self.message_texts(response))
 
+    def test_organizer_tools_are_sent_to_staff_only(self):
+        self.league.plan_next_session()
+        session_page_url = self.league_url('pmc-pg-box-league-detail')
+        self.client.force_login(self.organizer.user)
+        organizer_response = self.client.get(session_page_url, follow=True)
+        self.assertContains(organizer_response, 'place-player-dialog')
+        self.assertIsNotNone(organizer_response.context['assignment_form'])
+        self.client.force_login(self.player(1).user)
+        player_response = self.client.get(session_page_url, follow=True)
+        self.assertNotContains(player_response, 'place-player-dialog')
+        self.assertIsNone(player_response.context['assignment_form'])
+        self.assertIsNone(player_response.context['resize_form'])
+        self.assertIsNone(player_response.context['add_box_form'])
+
     def test_nav_and_playgroup_page_show_box_leagues_when_enabled(self):
         self.client.force_login(self.player(1).user)
         response = self.client.get(reverse('pmc-pg-detail', args=[self.playgroup.slug]))
