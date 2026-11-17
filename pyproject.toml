@@ -20,3 +20,12 @@ dependencies = [
     "geopy>=2.4.0",
     "pillow==13.0",
 ]
+
+[dependency-groups]
+dev = [
+    "autopep8>=2.3.2",
+]
+
+[tool.autopep8]
+max_line_length = 120
+exclude = "*/migrations/*,.venv"
