@@ -142,8 +142,9 @@ class LadderChallengeEmailTests(LadderTestBase):
     def test_email_failure_does_not_break_challenges(self):
         self.opt_in(self.player(3))
         with mock.patch('pmc.ladder_notifications.send_mail', side_effect=RuntimeError('SES is down')):
-            with self.captureOnCommitCallbacks(execute=True):
-                challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+            with self.assertLogs('pmc.ladder_notifications', level='ERROR'):
+                with self.captureOnCommitCallbacks(execute=True):
+                    challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
         self.assertTrue(challenge.is_pending())
 
     def test_switch_saves_without_reloading(self):
@@ -202,9 +203,11 @@ class DiscordWebhookUrlTests(TestCase):
 
     def test_post_failures_are_reported_not_raised(self):
         with mock.patch('pmc.discord_webhooks.requests.post', side_effect=requests.ConnectionError):
-            self.assertEqual(discord_webhooks.post_message(WEBHOOK_URL, {})[0], False)
+            with self.assertLogs('pmc.discord_webhooks', level='WARNING'):
+                self.assertEqual(discord_webhooks.post_message(WEBHOOK_URL, {})[0], False)
         with mock.patch('pmc.discord_webhooks.requests.post', return_value=mock.Mock(status_code=429, text='slow down')):
-            self.assertEqual(discord_webhooks.post_message(WEBHOOK_URL, {})[0], False)
+            with self.assertLogs('pmc.discord_webhooks', level='WARNING'):
+                self.assertEqual(discord_webhooks.post_message(WEBHOOK_URL, {})[0], False)
         with mock.patch('pmc.discord_webhooks.requests.post', return_value=mock.Mock(status_code=204, text='')):
             self.assertEqual(discord_webhooks.post_message(WEBHOOK_URL, {}), (True, ''))
 
@@ -301,8 +304,9 @@ class LadderDiscordWebhookTests(LadderTestBase):
 
     def test_discord_outage_does_not_break_challenges(self):
         self.post.side_effect = requests.Timeout
-        with self.captureOnCommitCallbacks(execute=True):
-            challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        with self.assertLogs('pmc.discord_webhooks', level='WARNING'):
+            with self.captureOnCommitCallbacks(execute=True):
+                challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
         self.assertTrue(challenge.is_pending())
 
     def test_webhook_url_is_validated_in_ladder_settings(self):
@@ -330,7 +334,8 @@ class LadderDiscordWebhookTests(LadderTestBase):
         self.assertIn('KeyChain is connected to Main Ladder', self.posted_messages()[0]['embeds'][0]['title'])
 
         self.post.return_value = mock.Mock(status_code=404, text='Unknown Webhook')
-        response = self.client.post(url)
+        with self.assertLogs('pmc.discord_webhooks', level='WARNING'):
+            response = self.client.post(url)
         self.assertIn('Discord rejected the message (HTTP 404).',
                       [str(message) for message in get_messages(response.wsgi_request)])
 
