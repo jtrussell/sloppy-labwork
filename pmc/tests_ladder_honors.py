@@ -141,7 +141,7 @@ class RelentlessCreeperTests(LadderHonorTestBase):
 class MadladTests(LadderHonorTestBase):
     def test_three_straight_defenses_of_the_top_spot_allow_ascending(self):
         self.defend_top_spot(2)
-        with self.assertRaisesMessage(LadderRuleViolation, 'Madlad status takes 3 wins in a row'):
+        with self.assertRaisesMessage(LadderRuleViolation, 'Mad Mab status takes 3 wins in a row'):
             self.ladder.ascend_as_madlad(self.player(1))
 
         self.defend_top_spot(1)
@@ -150,7 +150,7 @@ class MadladTests(LadderHonorTestBase):
         self.assertEqual(self.ranked_usernames(), self.usernames_for(2, 3, 4, 5, 6, 1))
         self.assert_positions_contiguous()
         self.assertEqual(self.entry_for(self.player(1)).madlad_count, 1)
-        self.assertEqual(self.members_honored_as('Madlad x1'), [self.player(1)])
+        self.assertEqual(self.members_honored_as('Mad Mab x1'), [self.player(1)])
 
     def test_defenses_of_a_lower_spot_do_not_count(self):
         self.defend_top_spot(3, champion=self.player(2), challenger=self.player(3))
@@ -173,7 +173,7 @@ class MadladTests(LadderHonorTestBase):
 
         self.defend_top_spot(3)
         self.ladder.ascend_as_madlad(self.player(1))
-        self.assertEqual(self.members_honored_as('Madlad x2'), [self.player(1)])
+        self.assertEqual(self.members_honored_as('Mad Mab x2'), [self.player(1)])
 
     def test_ties_and_voided_defenses_do_not_count(self):
         self.allow_ties()
@@ -233,7 +233,7 @@ class MadladDiscordTests(LadderHonorTestBase):
         self.assertEqual(
             message['content'], 'The Crucible trembles. A champion ascends. Rise again, <@987654321>.')
         self.assertEqual(message['allowed_mentions'], {'parse': [], 'users': ['987654321']})
-        self.assertIn('Madlad x1 on Main Ladder', message['embeds'][0]['title'])
+        self.assertIn('Mad Mab x1 on Main Ladder', message['embeds'][0]['title'])
 
     def test_names_the_champion_without_a_discord_account(self):
         message = self.ascend_and_get_message()
@@ -258,7 +258,7 @@ class LadderHonorViewTests(LadderHonorTestBase):
     def test_go_madlad_is_offered_only_when_earned(self):
         self.client.force_login(self.player(1).user)
         response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
-        self.assertNotContains(response, 'Go Madlad')
+        self.assertNotContains(response, 'Go Mad Mab')
 
         self.defend_top_spot(3)
         response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
@@ -274,7 +274,7 @@ class LadderHonorViewTests(LadderHonorTestBase):
     def test_posting_madlad_without_earning_it_is_refused(self):
         self.client.force_login(self.player(1).user)
         response = self.client.post(self.ladder_url('pmc-pg-ladder-madlad'))
-        self.assertIn('Madlad status takes 3 wins in a row defending the #1 spot.',
+        self.assertIn('Mad Mab status takes 3 wins in a row defending the #1 spot.',
                       [str(message) for message in get_messages(response.wsgi_request)])
         self.assertEqual(self.ranked_usernames()[0], 'player1')
 

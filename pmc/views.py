@@ -529,7 +529,7 @@ def ascend_ladder_madlad(request, slug, ladder_id):
     return run_competition_action(
         request,
         lambda: ladder.ascend_as_madlad(viewer_member),
-        _('The Crucible trembles. Rise again, Madlad!'),
+        _('The Crucible trembles. Rise again, Mad Mab!'),
         ladder_detail_url(ladder),
     )
 

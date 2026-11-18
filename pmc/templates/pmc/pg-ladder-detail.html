@@ -59,7 +59,7 @@
               Organizers set the positions on this ladder.
             {% elif viewer_can_ascend_as_madlad %}
               <strong>You're #1 and unbeaten.</strong>
-              Go Madlad: drop to the bottom of the ladder and climb it again.
+              Go Mad Mab: drop to the bottom of the ladder and climb it again.
             {% elif viewer_standing.rank == 1 %}
               <strong>You're #1.</strong> Hold on to that top spot!
             {% else %}
@@ -77,8 +77,8 @@
                 type="button"
                 class="btn btn--solid"
                 hx-post="{% url 'pmc-pg-ladder-madlad' playgroup.slug ladder.pk %}"
-                hx-confirm="Go Madlad? You give up #1 and move to the bottom of {{ ladder.name }}."
-              >Go Madlad</button>
+                hx-confirm="Go Mad Mab? You give up #1 and move to the bottom of {{ ladder.name }}."
+              >Go Mad Mab</button>
             {% endif %}
             <details class="action-menu" data-menu>
               <summary class="action-menu__trigger" aria-label="More ladder actions">{% include 'pmc/_icon.html' with name='more' %}</summary>
@@ -91,8 +91,8 @@
                     type="button"
                     class="action-menu__item"
                     hx-post="{% url 'pmc-pg-ladder-madlad' playgroup.slug ladder.pk %}"
-                    hx-confirm="Go Madlad? You give up #1 and move to the bottom of {{ ladder.name }}."
-                  >Go Madlad</button>
+                    hx-confirm="Go Mad Mab? You give up #1 and move to the bottom of {{ ladder.name }}."
+                  >Go Mad Mab</button>
                 {% endif %}
                 {% if viewer_challenge and viewer_challenge.match.player_one_id == playgroup_member.pk %}
                   <button

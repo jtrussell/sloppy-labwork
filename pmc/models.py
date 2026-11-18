@@ -2458,7 +2458,7 @@ class Ladder(models.Model):
             entry = self._require_entry(entries, member)
             if entries[0] is not entry or not self.can_ascend_as_madlad(entry):
                 raise LadderRuleViolation(
-                    _('Madlad status takes %(count)s wins in a row defending the #1 spot.') % {
+                    _('Mad Mab status takes %(count)s wins in a row defending the #1 spot.') % {
                         'count': ladder_honors.MADLAD_REQUIRED_TOP_SPOT_DEFENSES})
             entry.madlad_count += 1
             entry.save(update_fields=['madlad_count'])

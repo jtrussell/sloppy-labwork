@@ -21,7 +21,7 @@ RELENTLESS_CREEPER = HonorExplanation(
     gettext_lazy('Most ranks climbed in the last %(days)s days, with at least %(minimum)s.') % {
         'days': HONOR_WINDOW_DAYS, 'minimum': RELENTLESS_CREEPER_MINIMUM_RANKS})
 MADLAD = HonorExplanation(
-    gettext_lazy('Madlad'), 'flame',
+    gettext_lazy('Mad Mab'), 'flame',
     gettext_lazy('Defended #1 %(defenses)s times in a row, then dropped to the bottom to climb again.') % {
         'defenses': MADLAD_REQUIRED_TOP_SPOT_DEFENSES})
 
@@ -63,7 +63,7 @@ def honors_by_member_id(entries, challenges_resolved_in_window):
     for entry in entries:
         if entry.madlad_count:
             honors[entry.member_id].append(LadderHonor(
-                _('Madlad x%(count)s') % {'count': entry.madlad_count},
+                _('Mad Mab x%(count)s') % {'count': entry.madlad_count},
                 MADLAD.icon,
                 ngettext(
                     'Gave up the #1 spot to climb again %(count)s time',

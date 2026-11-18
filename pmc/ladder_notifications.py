@@ -186,7 +186,7 @@ def madlad_ascended_message(entry):
     champion = f'<@{discord_id}>' if discord_id else discord_webhooks.escape_markdown(entry.member)
     embed = ladder_embed(
         entry.ladder,
-        title=_('🔥 Madlad x%(count)s on %(ladder)s') % {
+        title=_('🔥 Mad Mab x%(count)s on %(ladder)s') % {
             'count': entry.madlad_count, 'ladder': entry.ladder.name},
         description=with_ladder_link(_('**%(name)s** gave up the #1 spot to climb again from the bottom.') % {
             'name': discord_webhooks.escape_markdown(entry.member)}, entry.ladder),
