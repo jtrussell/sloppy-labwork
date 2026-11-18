@@ -247,6 +247,14 @@
     </table>
   </div>
 
+  <div class="section-heading">
+    <h2>Recent Results</h2>
+    {% if recent_results %}
+      <a href="{% url 'pmc-pg-ladder-results' playgroup.slug ladder.pk %}" class="section-heading__action">All results</a>
+    {% endif %}
+  </div>
+  {% include 'pmc/_ladder-results.html' %}
+
   {% if ladder.challenges_enabled %}
     <h2>Honors</h2>
     <ul class="card list">
@@ -263,12 +271,4 @@
       {% endfor %}
     </ul>
   {% endif %}
-
-  <div class="section-heading">
-    <h2>Recent Results</h2>
-    {% if recent_results %}
-      <a href="{% url 'pmc-pg-ladder-results' playgroup.slug ladder.pk %}" class="section-heading__action">All results</a>
-    {% endif %}
-  </div>
-  {% include 'pmc/_ladder-results.html' %}
 {% endblock %}

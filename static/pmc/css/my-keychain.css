@@ -34,6 +34,7 @@
 @media (min-width: 720px) {
   .my-keychain {
     grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
     align-items: start;
   }
 
