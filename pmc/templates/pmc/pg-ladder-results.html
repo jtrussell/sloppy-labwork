@@ -1,0 +1,12 @@
+{% extends "pmc/_base.html" %}
+
+{% block content %}
+  <div class="page-header">
+    <h1>Results</h1>
+    <a class="btn btn--sm" href="{% url 'pmc-pg-ladder-detail' playgroup.slug ladder.pk %}">Back to Ladder</a>
+  </div>
+  <p class="subheading">{{ ladder.name }}</p>
+
+  {% include 'pmc/_ladder-results.html' with recent_results=page_obj %}
+  {% include 'pmc/_pagination.html' with page_obj=page_obj label='Result pages' %}
+{% endblock %}

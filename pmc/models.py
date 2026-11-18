@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.utils.timesince import timeuntil
 from contextlib import contextmanager
 from itertools import combinations
+from . import ladder_honors
 from . import ladder_notifications
 from .discord_webhooks import validate_discord_webhook_url
 import calendar
@@ -2236,7 +2237,7 @@ class MatchResult(models.Model):
 
 LadderStanding = namedtuple('LadderStanding', [
     'rank', 'entry', 'is_viewer', 'can_be_challenged', 'challenge_block_reason', 'has_open_challenge',
-    'top_spot_description', 'challenge_wins', 'has_most_challenge_wins'])
+    'top_spot_description', 'honors'])
 
 TOP_SPOT_DESCRIPTIONS = (
     _('Champion for %(duration)s'),
@@ -2326,20 +2327,41 @@ class Ladder(models.Model):
             'match__player_one__user', 'match__player_two__user'
         ).order_by('respond_by', 'pk')
 
-    def get_recent_results(self, limit=10):
+    def get_results(self):
         return self.challenges.filter(
             match__result__isnull=False
         ).select_related(
             'match__result__winner__user', 'match__player_one__user', 'match__player_two__user'
-        ).order_by('-resolved_on', '-pk')[:limit]
+        ).order_by('-resolved_on', '-pk')
 
-    def get_challenge_wins_by_member_id(self):
-        return dict(
-            self.challenges.filter(
-                status__in=[LadderChallenge.ChallengeStatuses.COMPLETED,
-                            LadderChallenge.ChallengeStatuses.FORFEITED],
-                match__result__winner__isnull=False,
-            ).order_by().values('match__result__winner').annotate(wins=Count('pk')).values_list('match__result__winner', 'wins'))
+    def get_recent_results(self, limit=10):
+        return self.get_results()[:limit]
+
+    def get_honors_by_member_id(self, entries):
+        honor_window_start = timezone.now() - timedelta(days=ladder_honors.HONOR_WINDOW_DAYS)
+        challenges_won_in_window = self.challenges.filter(
+            status__in=[LadderChallenge.ChallengeStatuses.COMPLETED,
+                        LadderChallenge.ChallengeStatuses.FORFEITED],
+            match__result__winner__isnull=False,
+            resolved_on__gte=honor_window_start,
+        ).select_related('match__result')
+        return ladder_honors.honors_by_member_id(entries, challenges_won_in_window)
+
+    def count_consecutive_top_spot_defenses(self, entry):
+        if entry.position != 1:
+            return 0
+        return self.challenges.filter(
+            status=LadderChallenge.ChallengeStatuses.COMPLETED,
+            match__player_two=entry.member,
+            match__result__winner=entry.member,
+            resolved_on__gte=entry.position_since,
+        ).count()
+
+    def can_ascend_as_madlad(self, entry):
+        return (
+            self.challenges_enabled
+            and self.count_consecutive_top_spot_defenses(entry) >= ladder_honors.MADLAD_REQUIRED_TOP_SPOT_DEFENSES
+        )
 
     def get_challenge_ineligibility_reason(self, challenger, defender):
         return self._challenge_ineligibility_reason(
@@ -2378,11 +2400,9 @@ class Ladder(models.Model):
         viewer_index = None
         if viewer_member is not None and viewer_member.pk in ranked_member_ids:
             viewer_index = ranked_member_ids.index(viewer_member.pk)
-        challenge_wins_by_member_id = self.get_challenge_wins_by_member_id()
+        honors_by_member_id = self.get_honors_by_member_id(entries)
         viewer_last_contact_on_by_opponent_id = self._get_last_contact_on_by_opponent_id(
             viewer_member) if viewer_index is not None else {}
-        most_challenge_wins = max(
-            (challenge_wins_by_member_id.get(member_id, 0) for member_id in ranked_member_ids), default=0)
 
         standings = []
         for index, entry in enumerate(entries):
@@ -2405,10 +2425,7 @@ class Ladder(models.Model):
                 has_open_challenge=entry.member_id in members_with_open_challenges,
                 top_spot_description=describe_top_spot(
                     self.playgroup, entry.get_full_days_in_position()) if index == 0 else None,
-                challenge_wins=challenge_wins_by_member_id.get(
-                    entry.member_id, 0),
-                has_most_challenge_wins=most_challenge_wins > 0 and challenge_wins_by_member_id.get(
-                    entry.member_id, 0) == most_challenge_wins,
+                honors=honors_by_member_id[entry.member_id],
             ))
         return standings
 
@@ -2435,6 +2452,21 @@ class Ladder(models.Model):
             self._close_open_challenges_for_departing(member)
             entries.remove(entry)
             entry.delete()
+
+    def ascend_as_madlad(self, member):
+        with self._ordered_entries_for_update() as entries:
+            entry = self._require_entry(entries, member)
+            if entries[0] is not entry or not self.can_ascend_as_madlad(entry):
+                raise LadderRuleViolation(
+                    _('Madlad status takes %(count)s wins in a row defending the #1 spot.') % {
+                        'count': ladder_honors.MADLAD_REQUIRED_TOP_SPOT_DEFENSES})
+            entry.madlad_count += 1
+            entry.save(update_fields=['madlad_count'])
+            entries.remove(entry)
+            entries.append(entry)
+            ladder_notifications.notify_after_commit(
+                ladder_notifications.notify_madlad_ascended, entry.pk)
+            return entry
 
     def issue_challenge(self, challenger, defender):
         with self._ordered_entries_for_update() as entries:
@@ -2534,7 +2566,7 @@ class Ladder(models.Model):
         challenger_new_rank = None
         if winner is not None and winner.pk == challenge.match.player_one_id:
             challenger_new_rank = self._move_challenger_ahead_of_defender(
-                entries, challenge.match)
+                entries, challenge)
         ladder_notifications.notify_after_commit(
             ladder_notifications.notify_result_recorded, challenge.pk, challenger_new_rank)
         return challenger_new_rank
@@ -2614,20 +2646,23 @@ class Ladder(models.Model):
         challenge.mark_resolved(
             LadderChallenge.ChallengeStatuses.FORFEITED, resolved_on=challenge.respond_by)
         challenger_new_rank = self._move_challenger_ahead_of_defender(
-            entries, challenge.match)
+            entries, challenge)
         ladder_notifications.notify_after_commit(
             ladder_notifications.notify_result_recorded, challenge.pk, challenger_new_rank)
 
-    def _move_challenger_ahead_of_defender(self, entries, match):
-        challenger_entry = self._find_entry(entries, match.player_one)
-        defender_entry = self._find_entry(entries, match.player_two)
+    def _move_challenger_ahead_of_defender(self, entries, challenge):
+        challenger_entry = self._find_entry(entries, challenge.match.player_one)
+        defender_entry = self._find_entry(entries, challenge.match.player_two)
         if challenger_entry is None or defender_entry is None:
             return None
         defender_index = entries.index(defender_entry)
-        if entries.index(challenger_entry) < defender_index:
+        challenger_index = entries.index(challenger_entry)
+        if challenger_index < defender_index:
             return None
         entries.remove(challenger_entry)
         entries.insert(defender_index, challenger_entry)
+        challenge.record_challenger_climb(
+            rank_before=challenger_index + 1, rank_after=defender_index + 1)
         return defender_index + 1
 
     def _close_open_challenges_for_departing(self, member):
@@ -2729,6 +2764,7 @@ class LadderEntry(models.Model):
     position_since = models.DateTimeField(default=timezone.now)
     joined_on = models.DateTimeField(auto_now_add=True)
     email_on_challenge = models.BooleanField(default=False)
+    madlad_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name_plural = 'Ladder entries'
@@ -2764,6 +2800,10 @@ class LadderChallenge(models.Model):
     resolved_on = models.DateTimeField(default=None, null=True, blank=True)
     was_issued = models.BooleanField(
         default=True, help_text=_('False when the game was played without a challenge first.'))
+    challenger_rank_before = models.PositiveIntegerField(
+        default=None, null=True, blank=True)
+    challenger_rank_after = models.PositiveIntegerField(
+        default=None, null=True, blank=True)
 
     class Meta:
         ordering = ['-issued_on']
@@ -2789,6 +2829,16 @@ class LadderChallenge(models.Model):
         self.status = status
         self.resolved_on = resolved_on or timezone.now()
         self.save(update_fields=['status', 'resolved_on'])
+
+    def record_challenger_climb(self, rank_before, rank_after):
+        self.challenger_rank_before = rank_before
+        self.challenger_rank_after = rank_after
+        self.save(update_fields=['challenger_rank_before', 'challenger_rank_after'])
+
+    def get_ranks_climbed(self):
+        if self.challenger_rank_before is None or self.challenger_rank_after is None:
+            return 0
+        return self.challenger_rank_before - self.challenger_rank_after
 
 
 class BoxLeagueRuleViolation(Exception):

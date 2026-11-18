@@ -36,6 +36,7 @@ from pmc.forms import (
 from pmc.forms import PlaygroupMemberForm
 from pmc.forms import LadderForm, LadderAddMemberForm, LadderMoveMemberForm, MatchOutcomeForm
 from pmc.forms import LadderPlayedResultForm
+from pmc.ladder_honors import HONOR_EXPLANATIONS
 from pmc.ladder_notifications import send_test_message as send_ladder_test_message
 from pmc.forms import BoxLeagueForm, BoxLeagueTierNameFormSet, BoxLeagueAddMemberForm
 from pmc.forms import BoxAssignmentForm, BoxSessionStartForm, BoxProposalResizeForm, BoxAddForm
@@ -62,6 +63,7 @@ from .models import Feature
 from .models import Box, BoxLeague, BoxLeagueSession, BoxLeagueRuleViolation, BoxMatch
 
 LADDERS_NON_MEMBER_MESSAGE = _('Ladders are only available to playgroup members.')
+LADDER_RESULTS_PAGE_SIZE = 25
 BOX_LEAGUES_NON_MEMBER_MESSAGE = _('Box leagues are only available to playgroup members.')
 
 
@@ -499,7 +501,37 @@ def playgroup_ladder_detail(request, slug, ladder_id):
             (standing.challenge_block_reason for standing in standings if standing.challenge_block_reason), None),
         'open_challenges': open_challenges,
         'recent_results': ladder.get_recent_results(),
+        'viewer_can_ascend_as_madlad': bool(viewer_standing) and ladder.can_ascend_as_madlad(viewer_standing.entry),
+        'honor_explanations': HONOR_EXPLANATIONS,
     })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@is_pg_member_or_redirect_to_playgroup(LADDERS_NON_MEMBER_MESSAGE)
+def playgroup_ladder_results(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    ladder.resolve_overdue_challenges()
+    paginator = Paginator(ladder.get_results(), LADDER_RESULTS_PAGE_SIZE)
+    return render(request, 'pmc/pg-ladder-results.html', {
+        'ladder': ladder,
+        'page_obj': paginator.get_page(request.GET.get('page')),
+    })
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@require_POST
+@is_pg_member
+def ascend_ladder_madlad(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    viewer_member = get_viewer_member_or_403(request, ladder.playgroup)
+    return run_competition_action(
+        request,
+        lambda: ladder.ascend_as_madlad(viewer_member),
+        _('The Crucible trembles. Rise again, Madlad!'),
+        ladder_detail_url(ladder),
+    )
 
 
 @login_required

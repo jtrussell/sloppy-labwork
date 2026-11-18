@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 CHALLENGE_ISSUED_COLOR = 0xFFB400
 RESULT_RECORDED_COLOR = 0x2BC98A
 TEST_MESSAGE_COLOR = 0x8FD3FA
+MADLAD_ASCENDED_COLOR = 0xE4572E
 
 
 def run_safely(notification, *args):
@@ -60,6 +61,13 @@ def notify_result_recorded(challenge_id, challenger_new_rank):
         challenge.ladder.discord_webhook_url,
         result_recorded_message(challenge, challenger_new_rank),
     )
+
+
+def notify_madlad_ascended(entry_id):
+    from .models import LadderEntry
+    entry = LadderEntry.objects.select_related('ladder__playgroup', 'member__user').get(pk=entry_id)
+    discord_webhooks.post_message_in_background(
+        entry.ladder.discord_webhook_url, madlad_ascended_message(entry))
 
 
 def send_test_message(ladder):
@@ -171,6 +179,23 @@ def result_description(challenge):
     if result.is_forfeit:
         return _('**%(winner)s** won by forfeit over **%(loser)s**') % names
     return _('**%(winner)s** beat **%(loser)s**') % names
+
+
+def madlad_ascended_message(entry):
+    discord_id = discord_id_for(entry.member)
+    champion = f'<@{discord_id}>' if discord_id else discord_webhooks.escape_markdown(entry.member)
+    embed = ladder_embed(
+        entry.ladder,
+        title=_('🔥 Madlad x%(count)s on %(ladder)s') % {
+            'count': entry.madlad_count, 'ladder': entry.ladder.name},
+        description=with_ladder_link(_('**%(name)s** gave up the #1 spot to climb again from the bottom.') % {
+            'name': discord_webhooks.escape_markdown(entry.member)}, entry.ladder),
+        color=MADLAD_ASCENDED_COLOR,
+    )
+    message = discord_webhooks.build_message(embed, [discord_id])
+    message['content'] = _('The Crucible trembles. A champion ascends. Rise again, %(champion)s.') % {
+        'champion': champion}
+    return message
 
 
 def result_recorded_message(challenge, challenger_new_rank):

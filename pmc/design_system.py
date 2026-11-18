@@ -34,7 +34,7 @@ NAV_ICON_NAMES = (
 )
 UTILITY_ICON_NAMES = (
     'close', 'chevron-left', 'chevron-right', 'check', 'lock', 'pin', 'plus', 'edit', 'trash', 'qr', 'external',
-    'shield', 'drag', 'map',
+    'shield', 'drag', 'map', 'target', 'shield-check', 'stairs', 'flame',
 )
 
 

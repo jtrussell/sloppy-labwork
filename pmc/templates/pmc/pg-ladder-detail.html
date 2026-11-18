@@ -57,6 +57,9 @@
             {% elif not ladder.challenges_enabled %}
               <strong>You're #{{ viewer_standing.rank }}.</strong>
               Organizers set the positions on this ladder.
+            {% elif viewer_can_ascend_as_madlad %}
+              <strong>You're #1 and unbeaten.</strong>
+              Go Madlad: drop to the bottom of the ladder and climb it again.
             {% elif viewer_standing.rank == 1 %}
               <strong>You're #1.</strong> Hold on to that top spot!
             {% else %}
@@ -69,12 +72,27 @@
               <a class="btn btn--solid" href="{% url 'pmc-pg-ladder-challenge-result' playgroup.slug ladder.pk viewer_challenge.pk %}">Record Result</a>
             {% elif challengeable_standings %}
               <button class="btn btn--solid" type="button" data-dialog-open="challenge-dialog">Challenge</button>
+            {% elif viewer_can_ascend_as_madlad %}
+              <button
+                type="button"
+                class="btn btn--solid"
+                hx-post="{% url 'pmc-pg-ladder-madlad' playgroup.slug ladder.pk %}"
+                hx-confirm="Go Madlad? You give up #1 and move to the bottom of {{ ladder.name }}."
+              >Go Madlad</button>
             {% endif %}
             <details class="action-menu" data-menu>
               <summary class="action-menu__trigger" aria-label="More ladder actions">{% include 'pmc/_icon.html' with name='more' %}</summary>
               <div class="action-menu__list">
                 {% if ladder.challenges_enabled %}
                   <a class="action-menu__item" href="{% url 'pmc-pg-ladder-played-result' playgroup.slug ladder.pk %}">Record a played game</a>
+                {% endif %}
+                {% if viewer_challenge and viewer_can_ascend_as_madlad %}
+                  <button
+                    type="button"
+                    class="action-menu__item"
+                    hx-post="{% url 'pmc-pg-ladder-madlad' playgroup.slug ladder.pk %}"
+                    hx-confirm="Go Madlad? You give up #1 and move to the bottom of {{ ladder.name }}."
+                  >Go Madlad</button>
                 {% endif %}
                 {% if viewer_challenge and viewer_challenge.match.player_one_id == playgroup_member.pk %}
                   <button
@@ -189,11 +207,18 @@
                   {% if standing.top_spot_description %}
                     <span class="player__note">{{ standing.top_spot_description }}</span>
                   {% endif %}
-                  {% if standing.has_most_challenge_wins %}
-                    <span class="player__note">Most challenge wins ({{ standing.challenge_wins }})</span>
-                  {% endif %}
                   {% if standing.has_open_challenge %}
                     <span class="player__note">In a challenge</span>
+                  {% endif %}
+                  {% if standing.honors %}
+                    <span class="chip-row">
+                      {% for honor in standing.honors %}
+                        <span class="chip chip--primary" title="{{ honor.detail }}">
+                          {% include 'pmc/_icon.html' with name=honor.icon class_name='chip__icon' %}
+                          {{ honor.name }}
+                        </span>
+                      {% endfor %}
+                    </span>
                   {% endif %}
                 </div>
               </div>
@@ -222,6 +247,28 @@
     </table>
   </div>
 
-  <h2>Recent Results</h2>
+  {% if ladder.challenges_enabled %}
+    <h2>Honors</h2>
+    <ul class="card list">
+      {% for honor in honor_explanations %}
+        <li>
+          <div class="list__item">
+            {% include 'pmc/_icon.html' with name=honor.icon %}
+            <span class="list__body">
+              <span class="list__title">{{ honor.name }}</span>
+              <span class="muted text-sm">{{ honor.explanation }}</span>
+            </span>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <div class="section-heading">
+    <h2>Recent Results</h2>
+    {% if recent_results %}
+      <a href="{% url 'pmc-pg-ladder-results' playgroup.slug ladder.pk %}" class="section-heading__action">All results</a>
+    {% endif %}
+  </div>
   {% include 'pmc/_ladder-results.html' %}
 {% endblock %}

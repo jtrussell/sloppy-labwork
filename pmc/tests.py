@@ -2406,25 +2406,6 @@ class LadderStandingHighlightTests(LadderTestBase):
             self.assertEqual(phrase_without_duration(days),
                              phrase_without_duration(days + rotation_length))
 
-    def test_most_challenge_wins_marks_every_tied_leader(self):
-        self.allow_open_challenges(2)
-        self.allow_ties()
-        first_challenge = self.ladder.issue_challenge(self.player(2), self.player(1))
-        self.ladder.record_result(first_challenge, self.player(2), self.player(2).user)
-        second_challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
-        self.ladder.record_result(second_challenge, self.player(4), self.player(4).user)
-        self.ladder.record_played_result(self.player(5), self.player(6), None, self.player(5).user)
-
-        leaders = [
-            standing.entry.member for standing in self.ladder.get_standings_for(None)
-            if standing.has_most_challenge_wins
-        ]
-        self.assertEqual(leaders, [self.player(2), self.player(4)])
-
-    def test_nobody_has_most_challenge_wins_before_any_are_won(self):
-        self.assertFalse(any(
-            standing.has_most_challenge_wins for standing in self.ladder.get_standings_for(None)))
-
 
 @override_settings(STORAGES={
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
