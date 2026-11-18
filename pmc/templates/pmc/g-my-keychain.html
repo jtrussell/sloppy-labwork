@@ -1,181 +1,248 @@
 {% extends "pmc/_base.html" %}
-{% load static %}
+{% load static humanize %}
 
 {% block extra_head %}
   <link rel="stylesheet" href="{% static 'pmc/css/playercard.css' %}">
+  <link rel="stylesheet" href="{% static 'pmc/css/my-keychain.css' %}">
 {% endblock %}
 
 {% block content %}
-  <h1>My KeyChain</h1>
+  <h1 class="visually-hidden">My KeyChain</h1>
 
-  <h2>Global</h2>
-
-  <div class="card">
-    <div class="split">
-      <div class="stack">
-        <h3>Playercard</h3>
-        {% include 'pmc/_playercard.html' %}
-      </div>
-      <div class="stack">
-        <h3>Most Recent Event</h3>
-        {% if my_results.first %}
+  <div class="my-keychain">
+    {% if up_next %}
+      <section class="card card--glow next-step" aria-label="Up next">
+        {% include 'pmc/_next-step-label.html' with is_due=up_next.is_due %}
+        <div class="next-step__body">
+          <p><strong>{{ up_next.headline.title }}</strong> {{ up_next.headline.detail }}</p>
+          <div class="next-step__actions">
+            <a href="{{ up_next.headline.url }}" class="btn btn--solid">{{ up_next.headline.action_label }}</a>
+          </div>
+        </div>
+        {% if up_next.additional_items %}
+          <ul class="list my-keychain__more">
+            {% for item in up_next.additional_items %}
+              <li>
+                <a href="{{ item.url }}" class="list__item">
+                  {% if item.event %}
+                    <span class="date-tile">
+                      <span class="date-tile__month">{{ item.event.start_date | date:"M" }}</span>
+                      <span class="date-tile__day">{{ item.event.start_date | date:"j" }}</span>
+                    </span>
+                  {% endif %}
+                  <span class="list__body">
+                    <span class="list__title">{{ item.title }}</span>
+                    <span class="meta">
+                      {% if item.context %}<span>{{ item.context }}</span>{% endif %}
+                      {% if item.playgroup_name %}<span>{{ item.playgroup_name }}</span>{% endif %}
+                    </span>
+                  </span>
+                  {% if item.is_registered %}
+                    <span class="chip chip--success">Registered</span>
+                  {% else %}
+                    <span class="list__hint">{{ item.action_label }}</span>
+                  {% endif %}
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </section>
+    {% elif last_time_out %}
+      <section class="card next-step" aria-label="Last time out">
+        <div class="next-step__label">Last time out</div>
+        <div class="next-step__body">
           <p>
-            <a href="{% url 'pmc-event-detail' my_results.first.event.pk %}">
-              {{ my_results.first.event }}
-            </a>
+            {% if last_time_out.result.finishing_position %}
+              <strong>{{ last_time_out.result.finishing_position | ordinal }} of {{ last_time_out.result.event.get_player_count }}</strong>
+              at {{ last_time_out.result.event }}{% else %}
+              <strong>{{ last_time_out.result.event }}</strong>{% endif %}{% if last_time_out.has_record %}, going {{ last_time_out.result.formatted_record }}{% endif %}.
           </p>
+          <div class="next-step__actions">
+            <a href="{% url 'pmc-event-detail' last_time_out.result.event.pk %}" class="btn">View Result</a>
+          </div>
+        </div>
+        {% if last_time_out.ranking_points is not None or last_time_out.xp is not None %}
+          <div class="chip-row">
+            {% if last_time_out.ranking_points is not None %}
+              <span class="chip chip--primary">+{{ last_time_out.ranking_points | floatformat:"-1" }} <span class="rp-icon" role="img" aria-label="RP"></span></span>
+            {% endif %}
+            {% if last_time_out.xp is not None %}
+              <span class="chip chip--primary">+{{ last_time_out.xp }} <span class="xp-icon" role="img" aria-label="XP"></span></span>
+            {% endif %}
+          </div>
+        {% endif %}
+      </section>
+    {% endif %}
+
+    <section class="card my-keychain__card" aria-label="Playercard">
+      <nav class="segmented" aria-label="Card side">
+        <a href="{% url 'pmc-my-keychain' %}" class="segmented__option" data-preserve-scroll {% if card_side == 'card' %}aria-current="true"{% endif %}>Card</a>
+        <a href="{% url 'pmc-my-keychain' %}?side=stats" class="segmented__option" data-preserve-scroll {% if card_side == 'stats' %}aria-current="true"{% endif %}>Stats</a>
+      </nav>
+
+      {% if card_side == 'stats' %}
+        <div class="my-keychain__stats">
+          <div class="stat-grid">
+            <div class="stat">
+              <span class="stat__value">{{ stats.events_attended }}</span>
+              <span class="stat__label">Events</span>
+            </div>
+            <div class="stat">
+              <span class="stat__value">{{ stats.events_won }}</span>
+              <span class="stat__label">Events Won</span>
+            </div>
+            <div class="stat">
+              <span class="stat__value">{{ stats.podium_finishes }}</span>
+              <span class="stat__label">Podiums</span>
+            </div>
+            <div class="stat">
+              <span class="stat__value">{{ stats.match_wins }}</span>
+              <span class="stat__label">Match Wins</span>
+            </div>
+            <div class="stat">
+              <span class="stat__value">{% if stats.win_rate is None %}-{% else %}{{ stats.win_rate }}%{% endif %}</span>
+              <span class="stat__label">Win Rate</span>
+            </div>
+            <div class="stat">
+              <span class="stat__value">{{ stats.awards_earned }}</span>
+              <span class="stat__label">Awards</span>
+            </div>
+          </div>
           <dl class="fact-list">
             <div class="fact-list__row">
-              <dt>Date</dt>
-              <dd>{{ my_results.first.event.start_date | date:"SHORT_DATE_FORMAT" }}</dd>
+              <dt>Match Record</dt>
+              <dd>{{ stats.match_record | default:"-" }}</dd>
             </div>
             <div class="fact-list__row">
-              <dt>Record</dt>
-              <dd>{{ my_results.first.formatted_record }}</dd>
+              <dt>Best Finish</dt>
+              <dd>
+                {% if stats.best_finish %}
+                  {{ stats.best_finish.finishing_position | ordinal }} of {{ stats.best_finish.event.get_player_count }}
+                {% else %}
+                  -
+                {% endif %}
+              </dd>
             </div>
             <div class="fact-list__row">
-              <dt>Experience <span class="xp-icon" role="img" aria-label="XP"></span></dt>
-              <dd>{{ my_results.first.get_xp }}</dd>
+              <dt>Favorite Format</dt>
+              <dd>{{ stats.favorite_format | default:"-" }}</dd>
             </div>
             <div class="fact-list__row">
-              <dt>Ranking Points <span class="rp-icon" role="img" aria-label="RP"></span></dt>
-              <dd>{{ my_results.first.ranking_points.first.points | default_if_none:"-" }}</dd>
+              <dt>Total <span class="xp-icon" role="img" aria-label="XP"></span></dt>
+              <dd>{{ total_xp }}</dd>
+            </div>
+            <div class="fact-list__row">
+              <dt>Playing Since</dt>
+              <dd>{{ stats.playing_since | date:"M Y" | default:"-" }}</dd>
             </div>
           </dl>
-        {% else %}
-          <p class="muted">None yet</p>
+        </div>
+      {% else %}
+        {% include 'pmc/_playercard.html' %}
+      {% endif %}
+
+      <div class="level">
+        <div class="level__row">
+          <span class="level__current"><span class="level__prefix">Lv</span>{{ current_level }}</span>
+          <span class="level__next"><span class="level__prefix">Lv</span>{{ next_level }}</span>
+        </div>
+        <div class="level__bar" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent_level_up | default:0 }}">
+          <div class="level__fill" style="width: {{ percent_level_up | default:0 }}%"></div>
+        </div>
+        <div class="level__caption">
+          <span>{{ level_increment_progress }} / {{ level_increment }} <span class="xp-icon" role="img" aria-label="XP"></span></span>
+          <a href="{% url 'pmc-about' %}#experience-points" class="text-link">How XP works</a>
+        </div>
+      </div>
+
+      <div class="cluster cluster--between">
+        <a href="{% url 'pmc-user-profile' user %}" class="text-link">Public Profile</a>
+        <a href="{% url 'pmc-my-keychain-manage' %}" class="text-link">Account</a>
+        <a href="{% url 'pmc-manage-avatar' %}" class="btn btn--sm">Edit Card</a>
+      </div>
+    </section>
+
+    <section class="stack" aria-labelledby="activity-heading">
+      <div class="section-heading">
+        <h2 id="activity-heading">Recent Activity</h2>
+        {% if recent_activity %}
+          <a href="{% url 'pmc-my-results' %}" class="section-heading__action">All results</a>
         {% endif %}
-
-        <h3>Stats</h3>
-        <div class="stat-grid">
-          <div class="stat">
-            <span class="stat__value">{{ my_results.count }}</span>
-            <span class="stat__label">Events Attended</span>
-          </div>
-          <div class="stat">
-            <span class="stat__value">{{ events_won.count }}</span>
-            <span class="stat__label">Events Won</span>
-          </div>
-          <div class="stat">
-            <span class="stat__value">{{ num_game_wins | default_if_none:0 }}</span>
-            <span class="stat__label">Match Wins</span>
-          </div>
-        </div>
       </div>
-    </div>
+      {% if recent_activity %}
+        <ul class="card list">
+          {% for activity in recent_activity %}
+            <li>
+              <a href="{% url 'pmc-event-detail' activity.result.event.pk %}" class="list__item">
+                <span class="date-tile">
+                  <span class="date-tile__month">{{ activity.result.event.start_date | date:"M" }}</span>
+                  <span class="date-tile__day">{{ activity.result.event.start_date | date:"j" }}</span>
+                </span>
+                <span class="list__body">
+                  <span class="list__title">{{ activity.result.event }}</span>
+                  <span class="meta">
+                    {% if activity.result.finishing_position %}
+                      <span>{{ activity.result.finishing_position | ordinal }} of {{ activity.result.event.get_player_count }}</span>
+                    {% endif %}
+                    {% if activity.has_record %}<span>{{ activity.result.formatted_record }}</span>{% endif %}
+                    {% if activity.playgroup_name %}<span>{{ activity.playgroup_name }}</span>{% endif %}
+                  </span>
+                </span>
+                <span class="list__trail">
+                  {% if activity.ranking_points is not None %}
+                    <span>+{{ activity.ranking_points | floatformat:"-1" }} <span class="rp-icon" role="img" aria-label="RP"></span></span>
+                  {% endif %}
+                  {% if activity.xp is not None %}
+                    <span>+{{ activity.xp }} <span class="xp-icon" role="img" aria-label="XP"></span></span>
+                  {% endif %}
+                </span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        {% include 'pmc/_empty.html' with title='No results yet.' text='Your event results appear here once they are recorded.' %}
+      {% endif %}
+    </section>
 
-    <div class="level">
-      <div class="level__row">
-        <span class="level__current"><span class="level__prefix">Lv</span>{{ current_level }}</span>
-        <span class="level__next"><span class="level__prefix">Lv</span>{{ next_level }}</span>
+    <section class="stack" aria-labelledby="playgroups-heading">
+      <div class="section-heading">
+        <h2 id="playgroups-heading">My Playgroups</h2>
       </div>
-      <div class="level__bar" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent_level_up | default:0 }}">
-        <div class="level__fill" style="width: {{ percent_level_up | default:0 }}%"></div>
-      </div>
-      <div class="level__caption">
-        <span>{{ level_increment_progress }} / {{ level_increment }} <span class="xp-icon" role="img" aria-label="XP"></span></span>
-      </div>
-    </div>
-
-    <div class="cluster cluster--between">
-      <div class="cluster">
-        <a href="{% url 'pmc-user-profile' user %}" class="text-link">My Profile</a>
-        <a href="{% url 'pmc-my-keychain-manage' %}" class="text-link">My Account</a>
-      </div>
-      <a href="{% url 'pmc-manage-avatar' %}" class="btn btn--solid">Edit Playercard</a>
-    </div>
-  </div>
-
-  <h2>My Playgroups</h2>
-
-  {% for membership in memberships %}
-    <div class="card">
-      <div class="page-header__media">
-        {% if membership.playgroup.logo_src %}
-          <img src="{{ membership.playgroup.logo_src }}" alt="{{ membership.playgroup.name }} logo" class="logo">
-        {% endif %}
-        <div class="grow">
-          <h3>
-            <a href="{% url 'pmc-pg-detail' membership.playgroup.slug %}">{{ membership.playgroup.name }}</a>
-          </h3>
-          <p class="subheading">{{ membership.playgroup.type | default_if_none:'Playgroup'}}</p>
-        </div>
-      </div>
-
-      <dl class="fact-list">
-        <div class="fact-list__row">
-          <dt>Nickname</dt>
-          <dd>{{ membership.nickname | default:"-" }}</dd>
-        </div>
-        <div class="fact-list__row">
-          <dt>Member Since</dt>
-          <dd>{{ membership.joined_on | date:"SHORT_DATE_FORMAT" }}</dd>
-        </div>
-      </dl>
-
-      <nav class="quick-links" aria-label="{{ membership.playgroup.name }}">
-        <a href="{% url 'pmc-pg-events' membership.playgroup.slug %}" class="quick-links__item">
-          {% include 'pmc/_icon.html' with name='calendar' %}
-          <span class="quick-links__label">Events</span>
+      {% if playgroup_rows %}
+        <ul class="card list">
+          {% for row in playgroup_rows %}
+            <li>
+              <a href="{% url 'pmc-pg-detail' row.playgroup.slug %}" class="list__item">
+                {% if row.playgroup.logo_src %}
+                  <img src="{{ row.playgroup.logo_src }}" alt="" class="logo logo--sm">
+                {% endif %}
+                <span class="list__body">
+                  <span class="list__title">{{ row.playgroup.name }}</span>
+                  <span class="meta">
+                    {% if row.is_global %}<span>Open to all KeyChain users</span>{% endif %}
+                    {% if row.rank_this_month %}<span>#{{ row.rank_this_month }} this month</span>{% endif %}
+                    {% if row.playgroup.next_event_date %}
+                      <span>Next event {{ row.playgroup.next_event_date | date:"M j" }}</span>
+                    {% endif %}
+                  </span>
+                </span>
+                {% include 'pmc/_icon.html' with name='chevron-right' class_name='list__chevron' %}
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        {% include 'pmc/_empty.html' with title='No playgroups yet.' %}
+      {% endif %}
+      <div class="cluster cluster--end">
+        <a href="https://keychaining.substack.com/about#%C2%A7playgroups" class="text-link">About Playgroups</a>
+        <a href="https://airtable.com/apphfJVNHnfUhWpgl/pagnpaWOAUD6ucQOd/form" target="_blank" rel="noopener" class="text-link">
+          Start a Playgroup
+          {% include 'pmc/_icon.html' with name='external' class_name='icon--sm' %}
         </a>
-        <a href="{% url 'pmc-pg-members' membership.playgroup.slug %}" class="quick-links__item">
-          {% include 'pmc/_icon.html' with name='users' %}
-          <span class="quick-links__label">Members</span>
-        </a>
-        <a href="{% url 'pmc-pg-leaderboard' membership.playgroup.slug %}" class="quick-links__item">
-          {% include 'pmc/_icon.html' with name='leaderboard' %}
-          <span class="quick-links__label">Leaderboards</span>
-        </a>
-        <a href="{% url 'pmc-my-pg-manage' membership.playgroup.slug %}" class="quick-links__item">
-          {% include 'pmc/_icon.html' with name='keychain' %}
-          <span class="quick-links__label">Profile</span>
-        </a>
-      </nav>
-    </div>
-  {% endfor %}
-
-  {% for global_playgroup in global_playgroups %}
-    <div class="card">
-      <div class="page-header__media">
-        {% if global_playgroup.logo_src %}
-          <img src="{{ global_playgroup.logo_src }}" alt="{{ global_playgroup.name }} logo" class="logo">
-        {% endif %}
-        <div class="grow">
-          <h3>
-            <a href="{% url 'pmc-pg-detail' global_playgroup.slug %}">{{ global_playgroup.name }}</a>
-          </h3>
-          <p class="subheading">Global Playgroup</p>
-        </div>
       </div>
-
-      <p class="text-italic">
-        Available to all KeyChain users
-      </p>
-
-      <nav class="quick-links" aria-label="{{ global_playgroup.name }}">
-        <a href="{% url 'pmc-pg-events' global_playgroup.slug %}" class="quick-links__item">
-          {% include 'pmc/_icon.html' with name='calendar' %}
-          <span class="quick-links__label">Events</span>
-        </a>
-        <a href="{% url 'pmc-pg-leaderboard' global_playgroup.slug %}" class="quick-links__item">
-          {% include 'pmc/_icon.html' with name='leaderboard' %}
-          <span class="quick-links__label">Leaderboards</span>
-        </a>
-      </nav>
-    </div>
-  {% endfor %}
-
-  {% if not memberships and not global_playgroups %}
-    <div class="card">
-      <p class="muted">No playgroups yet.</p>
-    </div>
-  {% endif %}
-
-  <div class="cluster cluster--end">
-    <a href="https://keychaining.substack.com/about#%C2%A7playgroups" class="text-link">About Playgroups</a>
-    <a href="https://airtable.com/apphfJVNHnfUhWpgl/pagnpaWOAUD6ucQOd/form" target="_blank" rel="noopener" class="text-link">
-      Start a Playgroup
-      {% include 'pmc/_icon.html' with name='external' class_name='icon--sm' %}
-    </a>
+    </section>
   </div>
 {% endblock %}

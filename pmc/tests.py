@@ -1853,6 +1853,11 @@ class PlaygroupMembersPageTests(TestCase):
             playgroup=self.playgroup, user=self.player, nickname='<b>Sneaky</b>')
         self.members_url = reverse('pmc-pg-members', kwargs={'slug': self.playgroup.slug})
 
+    def test_members_page_links_to_my_playgroup_profile(self):
+        self.client.force_login(self.player)
+        response = self.client.get(self.members_url)
+        self.assertContains(response, reverse('pmc-my-pg-manage', kwargs={'slug': self.playgroup.slug}))
+
     def test_member_nickname_is_escaped_in_messages(self):
         self.client.force_login(self.staff_user)
         response = self.client.post(

@@ -1,0 +1,50 @@
+.my-keychain {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.my-keychain > * {
+  min-width: 0;
+}
+
+.my-keychain__more {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.my-keychain__stats {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 520px;
+  margin-inline: auto;
+  aspect-ratio: 7 / 10;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border-strong);
+}
+
+.my-keychain__stats > .stat-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 720px) {
+  .my-keychain {
+    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .my-keychain__card {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    position: sticky;
+    top: var(--space-4);
+  }
+
+  .my-keychain > :not(.my-keychain__card) {
+    grid-column: 2;
+  }
+}

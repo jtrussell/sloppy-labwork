@@ -27,6 +27,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django_htmx.http import reswap, retarget
 from pmc.context_processors import playgroup
+from pmc import my_keychain as my_keychain_page
 from pmc.forms import (
     EventForm, EventResultDeckForm, EventResultUpdateForm, EventUpdateForm, LeaderboardSeasonPeriodForm,
     PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm, PmcProfilePrivacyForm, RankingPointsMapVersionForm,
@@ -1286,20 +1287,21 @@ def my_keychain(request):
     next_level = profile.get_next_level()
     level_up_info = profile._get_level_up_info()
     my_results = profile.get_events(exclude_upcoming=True)
+    recent_activity = my_keychain_page.build_recent_activity(request.user, my_results)
 
     return render(request, 'pmc/g-my-keychain.html', {
-        'my_results': my_results,
-        'events_won': my_results.filter(finishing_position=1),
-        'num_game_wins': my_results.aggregate(Sum('num_wins'))['num_wins__sum'],
+        'up_next': my_keychain_page.build_up_next(request.user),
+        'last_time_out': recent_activity[0] if recent_activity else None,
+        'recent_activity': recent_activity,
+        'stats': my_keychain_page.build_player_stats(request.user, my_results),
+        'total_xp': level_up_info['total_xp'],
+        'card_side': 'stats' if request.GET.get('side') == 'stats' else 'card',
+        'playgroup_rows': my_keychain_page.build_playgroup_rows(request.user),
         'current_level': current_level,
         'next_level': next_level,
         'percent_level_up': level_up_info['percent_level_up'],
         'level_increment': level_up_info['level_increment'],
         'level_increment_progress': level_up_info['level_increment_progress'],
-        'memberships': PlaygroupMember.objects.filter(
-            user=request.user
-        ),
-        'global_playgroups': Playgroup.objects.filter(is_global=True),
         'pinned_awards': PinnedAward.get_pinned_awards_for_display(request.user),
     })
 
