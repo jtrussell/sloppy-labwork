@@ -1,9 +1,9 @@
-<div class="page-heading">
+<div class="page-header">
   <h1>{{ ladder.name }}</h1>
   <a href="{% url 'pmc-pg-ladder-detail' playgroup.slug ladder.pk %}">View ladder</a>
 </div>
-<nav class="btn-group btn-group-center manage-tabs" aria-label="Manage {{ ladder.name }}">
-  <a class="btn{% if active_tab == 'roster' %} btn-solid{% endif %}" href="{% url 'pmc-pg-ladder-manage' playgroup.slug ladder.pk %}">Roster</a>
-  <a class="btn{% if active_tab == 'challenges' %} btn-solid{% endif %}" href="{% url 'pmc-pg-ladder-manage' playgroup.slug ladder.pk %}?tab=challenges">Challenges</a>
-  <a class="btn{% if active_tab == 'settings' %} btn-solid{% endif %}" href="{% url 'pmc-pg-ladder-edit' playgroup.slug ladder.pk %}">Settings</a>
+<nav class="segmented" aria-label="Manage {{ ladder.name }}">
+  <a class="segmented__option" href="{% url 'pmc-pg-ladder-manage' playgroup.slug ladder.pk %}"{% if active_tab == 'roster' %} aria-current="page"{% endif %} data-preserve-scroll>Roster</a>
+  <a class="segmented__option" href="{% url 'pmc-pg-ladder-manage' playgroup.slug ladder.pk %}?tab=challenges"{% if active_tab == 'challenges' %} aria-current="page"{% endif %} data-preserve-scroll>Challenges</a>
+  <a class="segmented__option" href="{% url 'pmc-pg-ladder-edit' playgroup.slug ladder.pk %}"{% if active_tab == 'settings' %} aria-current="page"{% endif %}>Settings</a>
 </nav>

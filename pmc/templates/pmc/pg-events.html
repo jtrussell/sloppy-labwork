@@ -1,85 +1,43 @@
 {% extends "pmc/_base.html" %}
 
 {% block content %}
-	<h1>Events</h1>
+  <h1>Events</h1>
 
-	<div class="card staff-only">
-		<h2>Staff Area</h2>
-		<a class="btn btn-solid btn-block" href="{% url 'pmc-pg-events-new' view.kwargs.slug %}">
-			Add New Event
-		</a>
-	</div>
+  <div class="card card--staff staff-only">
+    <p class="staff-tag">Staff</p>
+    <h2 class="card__title">Staff Area</h2>
+    <a class="btn btn--staff btn--solid btn--block" href="{% url 'pmc-pg-events-new' view.kwargs.slug %}">
+      Add New Event
+    </a>
+  </div>
 
-	<table class="lg-only">
-		<thead>
-			<tr>
-				<th class="text-left">Event</th>
-				<th>Date</th>
-				<th>Players</th>
-				<th>Format</th>
-			</tr>
-		</thead>
-		<tbody>
-			{% for event in events %}
-				<tr>
-					<td class="text-left">
-						<a href="{% url 'pmc-pg-event-detail' playgroup.slug event.pk %}">{{ event }}</a>
-					</td>
-					<td>{{ event.start_date | date:"SHORT_DATE_FORMAT" }}</td>
-					<td class="stat">{{ event.get_player_count }}</td>
-					<td>{{ event.format|default_if_none:"-" }}</td>
-				</tr>
-			{% empty %}
-				<tr><td colspan="4">No events yet.</td></tr>
-			{% endfor %}
-		</tbody>
-	</table>
+  {% if events %}
+    <ul class="card list">
+      {% for event in events %}
+        <li>
+          <a class="list__item" href="{% url 'pmc-pg-event-detail' playgroup.slug event.pk %}">
+            <span class="date-tile">
+              <span class="date-tile__month">{{ event.start_date | date:"M" }}</span>
+              <span class="date-tile__day">{{ event.start_date | date:"j" }}</span>
+            </span>
+            <span class="list__body">
+              <span class="list__title">{{ event }}</span>
+              <span class="meta">
+                <span>{{ event.start_date | date:"Y" }}</span>
+                <span>{{ event.get_player_count }} Players</span>
+                {% if event.format %}
+                  <span>{{ event.format }}</span>
+                {% endif %}
+              </span>
+            </span>
+            {% include 'pmc/_icon.html' with name='chevron-right' class_name='list__chevron' %}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    {% include 'pmc/_empty.html' with title='No events yet.' %}
+  {% endif %}
 
-	<table class="sm-only">
-		<thead>
-			<tr>
-				<th class="text-left">Event</th>
-				<th>Date</th>
-			</tr>
-		</thead>
-		<tbody>
-			{% for event in events %}
-				<tr>
-					<td class="text-left">
-						<a href="{% url 'pmc-pg-event-detail' playgroup.slug event.pk %}">{{ event }}</a>
-						<div class="text-smaller text-muted">
-							{{ event.get_player_count }} Players{% if event.format %} &middot; {{ event.format }}{% endif %}
-						</div>
-					</td>
-					<td>{{ event.start_date | date:"SHORT_DATE_FORMAT" }}</td>
-				</tr>
-			{% empty %}
-				<tr><td colspan="2">No events yet.</td></tr>
-			{% endfor %}
-		</tbody>
-	</table>
-
-	{% if page_obj.paginator.num_pages > 1 %}
-		<div class="btn-group btn-group-center">
-			{% if page_obj.has_previous %}
-				<a class="btn" href="?page={{ page_obj.previous_page_number }}">&laquo;</a>
-			{% else %}
-				<span class="btn" aria-disabled="true">&laquo;</span>
-			{% endif %}
-
-			{% for page_number in page_obj.paginator.page_range %}
-				{% if page_obj.number == page_number %}
-					<span class="btn btn-solid">{{ page_number }}</span>
-				{% else %}
-					<a class="btn" href="?page={{ page_number }}">{{ page_number }}</a>
-				{% endif %}
-			{% endfor %}
-
-			{% if page_obj.has_next %}
-				<a class="btn" href="?page={{ page_obj.next_page_number }}">&raquo;</a>
-			{% else %}
-				<span class="btn" aria-disabled="true">&raquo;</span>
-			{% endif %}
-		</div>
-	{% endif %}
+  {% include 'pmc/_pagination.html' with page_obj=page_obj label='Event pages' %}
 {% endblock %}

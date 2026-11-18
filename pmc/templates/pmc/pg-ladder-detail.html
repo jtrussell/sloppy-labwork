@@ -1,18 +1,12 @@
 {% extends "pmc/_base.html" %}
-{% load static %}
-{% load posts_extras %}
-
-{% block extra_head %}
-  <link rel="stylesheet" href="{% static 'pmc/css/ladders.css' %}">
-  {% include 'pmc/_competition-assets.html' %}
-{% endblock %}
+{% load pmc_extras %}
 
 {% block content %}
-  <div class="page-heading">
+  <div class="page-header">
     <h1>{{ ladder.name }}</h1>
-    <a class="staff-only" href="{% url 'pmc-pg-ladder-manage' playgroup.slug ladder.pk %}">Manage</a>
+    <a class="staff-link staff-only" href="{% url 'pmc-pg-ladder-manage' playgroup.slug ladder.pk %}">{% include 'pmc/_icon.html' with name='shield' class_name='icon--sm' %}Manage</a>
   </div>
-  <ul class="subheading inline-list lg-only">
+  <ul class="meta wide-only">
     <li>{{ standings|length }} player{{ standings|length|pluralize }}</li>
     {% if ladder.challenges_enabled %}
       <li>Challenge {{ ladder.challenge_range }} up</li>
@@ -26,27 +20,29 @@
   </ul>
 
   {% if ladder.description %}
-    <div class="card no-top-margin markdown">
-      {{ ladder.description | markdown | safe }}
+    <div class="card prose">
+      {{ ladder.description | markdown_sanitized }}
     </div>
   {% endif %}
 
   {% if playgroup_member %}
-    <div class="card next-step">
+    <div class="card card--glow next-step">
       {% include 'pmc/_next-step-label.html' with is_due=viewer_challenge %}
       {% if not viewer_standing %}
-        <div class="next-step-body">
+        <div class="next-step__body">
           <p>
             <strong>Join {{ ladder.name }}.</strong>
             New players start at the bottom{% if ladder.challenges_enabled %} and climb by challenging players above them{% endif %}.
           </p>
-          <form method="POST" action="{% url 'pmc-pg-ladder-join' playgroup.slug ladder.pk %}" class="next-step-actions">
-            {% csrf_token %}
-            <button class="btn btn-solid" type="submit">Join Ladder</button>
-          </form>
+          <div class="next-step__actions">
+            <form method="POST" action="{% url 'pmc-pg-ladder-join' playgroup.slug ladder.pk %}">
+              {% csrf_token %}
+              <button class="btn btn--solid" type="submit">Join Ladder</button>
+            </form>
+          </div>
         </div>
       {% else %}
-        <div class="next-step-body">
+        <div class="next-step__body">
           <p>
             {% if viewer_challenge %}
               {% if viewer_challenge.match.player_two_id == playgroup_member.pk %}
@@ -68,28 +64,29 @@
               {{ challenge_block_reason|default:"Nobody above you can be challenged right now." }}
             {% endif %}
           </p>
-          <div class="next-step-actions">
+          <div class="next-step__actions">
             {% if viewer_challenge %}
-              <a class="btn btn-solid" href="{% url 'pmc-pg-ladder-challenge-result' playgroup.slug ladder.pk viewer_challenge.pk %}">Record Result</a>
+              <a class="btn btn--solid" href="{% url 'pmc-pg-ladder-challenge-result' playgroup.slug ladder.pk viewer_challenge.pk %}">Record Result</a>
             {% elif challengeable_standings %}
-              <button class="btn btn-solid" type="button" data-dialog-open="challenge-dialog">Challenge</button>
+              <button class="btn btn--solid" type="button" data-dialog-open="challenge-dialog">Challenge</button>
             {% endif %}
-            <details class="action-menu">
-              <summary class="menu-trigger" aria-label="More ladder actions">{% include 'pmc/_more-actions-icon.html' %}</summary>
-              <div class="action-menu-items">
+            <details class="action-menu" data-menu>
+              <summary class="action-menu__trigger" aria-label="More ladder actions">{% include 'pmc/_icon.html' with name='more' %}</summary>
+              <div class="action-menu__list">
                 {% if ladder.challenges_enabled %}
-                  <a href="{% url 'pmc-pg-ladder-played-result' playgroup.slug ladder.pk %}">Record a played game</a>
+                  <a class="action-menu__item" href="{% url 'pmc-pg-ladder-played-result' playgroup.slug ladder.pk %}">Record a played game</a>
                 {% endif %}
                 {% if viewer_challenge and viewer_challenge.match.player_one_id == playgroup_member.pk %}
                   <button
                     type="button"
+                    class="action-menu__item"
                     hx-post="{% url 'pmc-pg-ladder-challenge-withdraw' playgroup.slug ladder.pk viewer_challenge.pk %}"
                     hx-confirm="Withdraw your challenge to {{ viewer_challenge.defender }}?"
                   >Withdraw challenge</button>
                 {% endif %}
                 <button
                   type="button"
-                  class="is-destructive"
+                  class="action-menu__item action-menu__item--danger"
                   hx-post="{% url 'pmc-pg-ladder-leave' playgroup.slug ladder.pk %}"
                   hx-confirm="Leave {{ ladder.name }}? Players below you will move up."
                 >Leave ladder</button>
@@ -97,61 +94,70 @@
             </details>
           </div>
         </div>
-        <label class="next-step-preference">
-          <input
-            type="checkbox"
-            class="switch"
-            name="email_on_challenge"
-            value="on"
-            {% if viewer_entry.email_on_challenge %}checked{% endif %}
-            hx-post="{% url 'pmc-pg-ladder-emails' playgroup.slug ladder.pk %}"
-            hx-trigger="change"
-            hx-swap="none"
-          >
-          <span class="text-smaller">Email me when someone challenges me</span>
-        </label>
+        <div class="next-step__preference">
+          <label class="switch-row grow">
+            <span class="switch-row__body">Email me when someone challenges me</span>
+            <input
+              type="checkbox"
+              class="switch"
+              name="email_on_challenge"
+              value="on"
+              {% if viewer_entry.email_on_challenge %}checked{% endif %}
+              hx-post="{% url 'pmc-pg-ladder-emails' playgroup.slug ladder.pk %}"
+              hx-trigger="change"
+              hx-swap="none"
+            >
+          </label>
+        </div>
       {% endif %}
     </div>
   {% endif %}
 
   {% if challengeable_standings %}
-    <dialog id="challenge-dialog" class="competition-dialog" aria-labelledby="challenge-dialog-title">
+    <dialog id="challenge-dialog" class="dialog" aria-labelledby="challenge-dialog-title">
       <form method="POST" action="{% url 'pmc-pg-ladder-challenge-new' playgroup.slug ladder.pk %}">
         {% csrf_token %}
-        <h2 id="challenge-dialog-title">Issue a Challenge</h2>
-        <p>Results are due within {{ ladder.response_window_days }} day{{ ladder.response_window_days|pluralize }}. If none is recorded, you win by forfeit.</p>
-        <ul class="link-list">
-          {% for standing in challengeable_standings %}
-            <li>
-              <label class="link-list-row">
-                <span>#{{ standing.rank }} {{ standing.entry.member }}</span>
-                <input type="radio" name="defender_id" value="{{ standing.entry.member_id }}" required {% if forloop.first %}checked{% endif %}>
-              </label>
-            </li>
-          {% endfor %}
-        </ul>
-        <div class="card-actions">
-          <button class="btn" type="submit" formmethod="dialog" formnovalidate>Cancel</button>
-          <button class="btn btn-solid" type="submit">Send Challenge</button>
+        {% include 'pmc/_dialog-header.html' with title_id='challenge-dialog-title' title='Issue a Challenge' %}
+        <div class="dialog__body">
+          <p>Results are due within {{ ladder.response_window_days }} day{{ ladder.response_window_days|pluralize }}. If none is recorded, you win by forfeit.</p>
+          <ul class="choice-list">
+            {% for standing in challengeable_standings %}
+              <li>
+                <label class="choice">
+                  <span>#{{ standing.rank }} {{ standing.entry.member }}</span>
+                  <input type="radio" name="defender_id" value="{{ standing.entry.member_id }}" required {% if forloop.first %}checked{% endif %}>
+                </label>
+              </li>
+            {% endfor %}
+          </ul>
         </div>
+        <footer class="dialog__footer">
+          <button class="btn btn--ghost" type="button" data-dialog-close>Cancel</button>
+          <button class="btn btn--solid" type="submit">Send Challenge</button>
+        </footer>
       </form>
     </dialog>
   {% endif %}
 
   {% if open_challenges %}
     <h2>Open Challenges</h2>
-    <ul class="card link-list">
+    <ul class="card list">
       {% for challenge in open_challenges %}
         <li>
           {% if playgroup_member.is_staff or challenge.match.player_one_id == playgroup_member.pk or challenge.match.player_two_id == playgroup_member.pk %}
-            <a class="link-list-row" href="{% url 'pmc-pg-ladder-challenge-result' playgroup.slug ladder.pk challenge.pk %}">
-              <span>{{ challenge.challenger }} challenged {{ challenge.defender }}</span>
-              <span class="link-list-hint">Due {{ challenge.respond_by|date:"SHORT_DATE_FORMAT" }} · Record result</span>
+            <a class="list__item" href="{% url 'pmc-pg-ladder-challenge-result' playgroup.slug ladder.pk challenge.pk %}">
+              <span class="list__body">
+                <span class="list__title">{{ challenge.challenger }} challenged {{ challenge.defender }}</span>
+                <span class="muted text-sm">Due {{ challenge.respond_by|date:"SHORT_DATE_FORMAT" }}</span>
+              </span>
+              <span class="list__hint">Record result</span>
             </a>
           {% else %}
-            <div class="link-list-row">
-              <span>{{ challenge.challenger }} challenged {{ challenge.defender }}</span>
-              <span class="text-smaller text-muted">Due {{ challenge.respond_by|date:"SHORT_DATE_FORMAT" }}</span>
+            <div class="list__item">
+              <span class="list__body">
+                <span class="list__title">{{ challenge.challenger }} challenged {{ challenge.defender }}</span>
+                <span class="muted text-sm">Due {{ challenge.respond_by|date:"SHORT_DATE_FORMAT" }}</span>
+              </span>
             </div>
           {% endif %}
         </li>
@@ -160,58 +166,61 @@
   {% endif %}
 
   <h2>Standings</h2>
-  <table class="ladder-standings">
-    <thead>
-      <tr>
-        <th class="col-sm">#</th>
-        <th class="text-left">Player</th>
-        {% if challengeable_standings %}
-          <th></th>
-        {% endif %}
-      </tr>
-    </thead>
-    <tbody>
-      {% for standing in standings %}
-        <tr{% if standing.is_viewer %} class="is-viewer"{% endif %}>
-          <td class="col-sm">{{ standing.rank }}</td>
-          <td class="text-left">
-            <div class="name-with-avatar">
-              <img class="avatar" src="{{ standing.entry.member.user.pmc_profile.get_avatar.src }}" alt="">
-              <div>
-                <a class="username" href="{% url 'pmc-pg-member-detail' playgroup.slug standing.entry.member.user.username %}">{{ standing.entry.member }}</a>
-                {% if standing.top_spot_description %}
-                  <div class="text-smaller text-muted">{{ standing.top_spot_description }}</div>
-                {% endif %}
-                {% if standing.has_most_challenge_wins %}
-                  <div class="text-smaller text-muted">Most challenge wins ({{ standing.challenge_wins }})</div>
-                {% endif %}
-                {% if standing.has_open_challenge %}
-                  <div class="text-smaller text-muted">In a challenge</div>
-                {% endif %}
-              </div>
-            </div>
-          </td>
+  <div class="card table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="table__rank">#</th>
+          <th>Player</th>
           {% if challengeable_standings %}
-            <td class="text-right challenge-cell">
-              {% if standing.can_be_challenged %}
-                <button
-                  type="button"
-                  class="btn-link"
-                  hx-post="{% url 'pmc-pg-ladder-challenge-new' playgroup.slug ladder.pk %}"
-                  hx-vals='{"defender_id": "{{ standing.entry.member_id }}"}'
-                  hx-confirm="Challenge {{ standing.entry.member }}? Results are due within {{ ladder.response_window_days }} day{{ ladder.response_window_days|pluralize }}. If none is recorded, you win by forfeit."
-                >Challenge</button>
-              {% endif %}
-            </td>
+            <th class="table__actions"><span class="visually-hidden">Challenge</span></th>
           {% endif %}
         </tr>
-      {% empty %}
-        <tr>
-          <td colspan="2" class="text-muted">No players yet.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {% for standing in standings %}
+          <tr{% if standing.is_viewer %} class="table__row--me"{% endif %}>
+            <td class="table__rank">{{ standing.rank }}</td>
+            <td class="table__player">
+              <div class="player">
+                <img class="avatar avatar--sm" src="{{ standing.entry.member.user.pmc_profile.get_avatar.src }}" alt="">
+                <div class="player__body">
+                  <a class="player__name" href="{% url 'pmc-pg-member-detail' playgroup.slug standing.entry.member.user.username %}">{{ standing.entry.member }}</a>
+                  {% if standing.top_spot_description %}
+                    <span class="player__note">{{ standing.top_spot_description }}</span>
+                  {% endif %}
+                  {% if standing.has_most_challenge_wins %}
+                    <span class="player__note">Most challenge wins ({{ standing.challenge_wins }})</span>
+                  {% endif %}
+                  {% if standing.has_open_challenge %}
+                    <span class="player__note">In a challenge</span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            {% if challengeable_standings %}
+              <td class="table__actions">
+                {% if standing.can_be_challenged %}
+                  <button
+                    type="button"
+                    class="text-button"
+                    hx-post="{% url 'pmc-pg-ladder-challenge-new' playgroup.slug ladder.pk %}"
+                    hx-vals='{"defender_id": "{{ standing.entry.member_id }}"}'
+                    hx-confirm="Challenge {{ standing.entry.member }}? Results are due within {{ ladder.response_window_days }} day{{ ladder.response_window_days|pluralize }}. If none is recorded, you win by forfeit."
+                    data-preserve-scroll
+                  >Challenge</button>
+                {% endif %}
+              </td>
+            {% endif %}
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="2" class="table__empty">No players yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
   <h2>Recent Results</h2>
   {% include 'pmc/_ladder-results.html' %}

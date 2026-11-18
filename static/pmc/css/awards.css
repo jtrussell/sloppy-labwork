@@ -1,261 +1,225 @@
-.award-list {
-  @media (max-width: 680px) {
-    justify-content: space-around;
-  }
+.award-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  gap: var(--space-4) var(--space-2);
 }
 
-.award-list-centered {
+.award-grid--center {
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
 }
 
-.award-container {
+.award-grid--center > .award-tile {
+  width: 7rem;
+}
+
+.award-tile {
+  position: relative;
+  min-width: 0;
+}
+
+.award-tile__link {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  margin-bottom: 1rem;
+  gap: var(--space-1);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: center;
   text-decoration: none;
   cursor: pointer;
-
-  a {
-    text-decoration: none;
-    cursor: pointer;
-  }
 }
 
-.award-container:not(.large) {
-  width: 9.5rem;
-  max-width: 9.5rem;
-}
-
-@media (max-width: 680px) {
-  .award-container:not(.large) {
-    width: 8rem;
-    max-width: 8rem;
-  }
-}
-
-.award-container.disabled img.award {
-  filter: brightness(40%) grayscale(1);
-  -webkit-filter: brightness(40%) grayscale(1);
-}
-
-.award-container:not(.no-hover):hover img.award,
-.award-container.disabled:not(.no-hover):hover img.award {
-  filter: brightness(1) grayscale(0) drop-shadow(0 0 0.5rem var(--color-primary));
-  -webkit-filter: brightness(1) grayscale(0) drop-shadow(0 0 0.5rem var(--color-primary));
-}
-
-img.award {
-  width: 9rem;
+.award-tile__art {
+  width: min(100%, 9rem);
   height: auto;
-  max-width: 9rem;
+  filter: brightness(1) grayscale(0) drop-shadow(0 0 0 transparent);
+  transition: filter var(--transition-default);
 }
 
-.award-container.large {
-  img.award {
-    width: 20rem;
-    max-width: 20rem;
-  }
-
-  img.award.tier-0 { width: 12rem; max-width: 12rem; }
-  img.award.tier-1 { width: 14rem; max-width: 14rem; }
-  img.award.tier-2 { width: 16rem; max-width: 16rem; }
-  img.award.tier-3 { width: 18rem; max-width: 18rem; }
+.award-tile--locked .award-tile__art,
+.award-hero--locked .award-hero__art {
+  filter: brightness(0.4) grayscale(1) drop-shadow(0 0 0 transparent);
 }
 
-@media (max-width: 680px) {
-  img.award {
-    width: 7rem;
-    max-width: 7rem;
-  }
-
-  .award-container.large {
-    img.award {
-      width: 12rem;
-      max-width: 12rem;
-    }
-
-    img.award.tier-0 { width: 8rem; max-width: 8rem; }
-    img.award.tier-1 { width: 10rem; max-width: 10rem; }
-    img.award.tier-2 { width: 12rem; max-width: 12rem; }
-    img.award.tier-3 { width: 14rem; max-width: 14rem; }
-  }
+.award-tile__link:is(:hover, :focus-visible) .award-tile__art {
+  filter: brightness(1) grayscale(0) drop-shadow(0 0 0.5rem var(--color-primary));
 }
 
-.trophy-amount {
-  text-decoration: none;
-  background-color: transparent;
+.award-tile__name {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+}
+
+.award-tile__tier {
   color: var(--color-primary);
-  height: 3rem;;
-  width: 3rem;
-  border-radius: 50%;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.award-tile--locked .award-tile__tier {
+  color: var(--color-text-muted);
+}
+
+.award-tile__count {
   display: flex;
-  justify-content: center;
   align-items: center;
-  border: 0.3rem solid var(--color-lines);
-  box-shadow: 0 0 5px var(--color-primary);
-}
-
-.tier-label {
-  font-size: 1rem;
-  margin-top: -0.5rem;
-}
-  
-:not(.disabled) .tier-label {
+  justify-content: center;
+  min-width: 3rem;
+  height: 3rem;
+  padding-inline: var(--space-2);
+  border: 0.3rem solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--glow-meter);
   color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
 }
 
-.award-container:hover .trophy-amount {
+.award-tile__link:hover .award-tile__count {
   border-color: var(--color-primary);
 }
 
-.no-awards-message {
-  font-style: italic;
-}
-
-.award-shelf-slots {
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 0;
-}
-
-.award-shelf-item {
-  position: relative;
-  width: 5rem;
-  height: 5rem;
-  border: none;
-  background: none;
+.award-tile__pin {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
   padding: 0;
-  cursor: grab;
+  border: 0;
+  background: none;
+  cursor: pointer;
 }
 
-.award-shelf-item.dragging {
-  opacity: 0.4;
+.award-tile__pin-badge,
+.award-shelf__unpin-badge {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  transition:
+    background-color var(--transition-quick),
+    color var(--transition-quick);
 }
 
-.award-shelf-img {
+.award-tile__pin-badge {
+  background-color: var(--color-surface-raised);
+  box-shadow: inset 0 0 0 1px var(--color-border-control);
+  color: var(--color-text);
+}
+
+.award-tile__pin:hover:enabled .award-tile__pin-badge,
+.award-tile__pin--active .award-tile__pin-badge {
+  background-color: var(--color-primary);
+  box-shadow: none;
+  color: var(--color-on-primary);
+}
+
+.award-tile__pin--active:hover:enabled .award-tile__pin-badge,
+.award-shelf__unpin-badge {
+  background-color: var(--color-danger);
+  box-shadow: none;
+  color: var(--color-on-danger);
+}
+
+.award-tile__pin:disabled {
+  cursor: not-allowed;
+}
+
+.award-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.award-hero__art {
+  width: min(100%, 12rem);
+  height: auto;
+}
+
+.award-hero .meta {
+  justify-content: center;
+}
+
+.award-shelf__slots {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 5rem));
+  align-items: start;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.award-shelf__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.award-shelf__art,
+.award-shelf__placeholder {
   width: 100%;
-  height: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+.award-shelf__art {
   object-fit: contain;
 }
 
-.award-shelf-unpin {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: none;
-  background: var(--color-danger, #c44);
-  color: #fff;
-  font-size: 12px;
-  line-height: 1;
+.award-shelf__placeholder {
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text-subtle);
+}
+
+.award-shelf__unpin {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: 0;
+  border: 0;
+  background: none;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s;
 }
 
-.award-shelf-item:hover .award-shelf-unpin {
-  opacity: 1;
-}
-
-.award-shelf-placeholder {
-  width: 5rem;
-  height: 5rem;
-  border: 2px dashed var(--color-lines);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.award-shelf-placeholder-icon {
+.award-shelf__count {
   color: var(--color-text-muted);
-  font-size: 1.4rem;
-}
-
-.award-shelf-count {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
   text-align: center;
-  margin-top: 4px;
-  font-size: 1.1rem;
 }
 
-.award-list li {
-  position: relative;
-}
-
-.pin-btn {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  line-height: 1;
-  z-index: 2;
-  border: 1px solid var(--color-lines);
-  background: var(--color-bg);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.award-list li:hover .pin-btn {
-  opacity: 1;
-}
-
-.pin-btn:hover {
-  background: var(--color-primary);
-  color: #fff;
-  border-color: var(--color-primary);
-}
-
-.pin-btn.pinned {
-  background: var(--color-primary);
-  color: #fff;
-  border-color: var(--color-primary);
-  opacity: 1;
-}
-
-.pin-btn.pinned:hover {
-  background: var(--color-danger, #c44);
-  border-color: var(--color-danger, #c44);
-}
-
-.pin-btn.disabled {
-  cursor: not-allowed;
-  opacity: 0;
-}
-
-.award-list li:hover .pin-btn.disabled {
-  opacity: 0.5;
-}
-
-@media (max-width: 680px) {
-  .award-shelf-item,
-  .award-shelf-placeholder {
-    width: 4rem;
-    height: 4rem;
+@media (min-width: 480px) {
+  .award-grid {
+    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
   }
 
-  .pin-btn {
-    opacity: 1;
+  .award-grid--center > .award-tile {
+    width: 9.5rem;
   }
 
-  .award-shelf-unpin {
-    opacity: 1;
+  .award-hero__art {
+    width: min(100%, 16rem);
+  }
+}
+
+@media (min-width: 720px) {
+  .award-hero__art {
+    width: min(100%, 20rem);
   }
 }

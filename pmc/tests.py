@@ -1,7 +1,7 @@
 from allauth.account.models import EmailAddress
 from django.core import mail
 from django.core.cache import cache
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.contrib.auth.models import User
 from datetime import date, timedelta
 from .models import (
@@ -19,7 +19,7 @@ from django.contrib.messages import get_messages
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 from .forms import PmcProfileForm, PmcProfilePrivacyForm
-from .templatetags.pmc_extras import relative_event_day
+from .templatetags.pmc_extras import markdown_sanitized, relative_event_day
 from django.urls import reverse
 from decks.models import House, Set, Deck
 import uuid
@@ -1594,6 +1594,53 @@ class PlaygroupRecentActivityAnnotationTests(UpcomingEventsFilterTestBase):
         self.create_event(self.today + timedelta(days=3))
         playgroup = Playgroup.objects.annotate_recent_activity().get(pk=self.playgroup.pk)
         self.assertIsNone(playgroup.last_event_date)
+
+
+class MarkdownSanitizedFilterTests(SimpleTestCase):
+    def test_renders_ordinary_markdown(self):
+        rendered = markdown_sanitized(
+            '# Heading\n\n**bold** and *emphasis*\n\n- item\n\n[link](https://example.com)\n\n```python\ncode\n```')
+        self.assertIn('<h1 id="heading">Heading</h1>', rendered)
+        self.assertIn('<strong>bold</strong>', rendered)
+        self.assertIn('<em>emphasis</em>', rendered)
+        self.assertIn('<li>item</li>', rendered)
+        self.assertIn('href="https://example.com"', rendered)
+        self.assertIn('<code class="language-python">', rendered)
+
+    def test_removes_scripts_and_event_handlers(self):
+        rendered = markdown_sanitized(
+            '<script>alert(1)</script>\n\n<img src="x" onerror="alert(1)">\n\nClick me\n{: onclick="alert(1)" }')
+        self.assertNotIn('<script', rendered)
+        self.assertNotIn('alert(1)', rendered)
+        self.assertNotIn('onerror', rendered)
+        self.assertNotIn('onclick', rendered)
+
+    def test_removes_unsafe_link_schemes(self):
+        rendered = markdown_sanitized('[click](javascript:alert(1))')
+        self.assertNotIn('javascript:', rendered)
+
+    def test_keeps_google_maps_embeds(self):
+        embed_source = 'https://www.google.com/maps/embed?pb=!1m18'
+        rendered = markdown_sanitized(
+            f'<iframe src="{embed_source}" width="600" height="450" loading="lazy" onload="alert(1)"></iframe>')
+        self.assertIn(f'src="{embed_source}"', rendered)
+        self.assertIn('width="600"', rendered)
+        self.assertNotIn('onload', rendered)
+
+    def test_removes_other_embeds_entirely(self):
+        rendered = markdown_sanitized('Before <iframe src="https://evil.example/maps/embed?pb=1"></iframe> after')
+        self.assertNotIn('evil.example', rendered)
+        self.assertNotIn('<iframe', rendered)
+        self.assertIn('Before', rendered)
+        self.assertIn('after', rendered)
+
+    def test_removes_embeds_without_a_source(self):
+        self.assertNotIn('<iframe', markdown_sanitized('<iframe width="600"></iframe>'))
+
+    def test_contents_links_reach_their_headings(self):
+        rendered = markdown_sanitized('[TOC]\n\n## Getting There')
+        self.assertIn('href="#getting-there"', rendered)
+        self.assertIn('<h2 id="getting-there">', rendered)
 
 
 class RelativeEventDayFilterTests(TestCase):

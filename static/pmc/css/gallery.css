@@ -1,0 +1,100 @@
+.ds-example {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ds-example__preview,
+.ds-theme-frame {
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+.ds-example__preview > * + *,
+.ds-theme-frame > * + * {
+  margin-top: var(--space-3);
+}
+
+.ds-example__themes {
+  display: grid;
+  gap: var(--space-2);
+}
+
+@media (min-width: 720px) {
+  .ds-example__themes {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.ds-theme-frame__label {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+}
+
+.ds-theme-frame .message {
+  pointer-events: auto;
+}
+
+.ds-example__markup pre {
+  max-height: 20rem;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  font-size: var(--text-xs);
+  overflow: auto;
+}
+
+.ds-example__markup code {
+  padding: 0;
+  border: 0;
+}
+
+.ds-swatch,
+.ds-radius {
+  display: inline-block;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: var(--space-2);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  vertical-align: middle;
+}
+
+.ds-radius {
+  background-color: var(--color-surface-raised);
+}
+
+.ds-space {
+  display: inline-block;
+  height: 0.75rem;
+  margin-right: var(--space-2);
+  background-color: var(--color-primary);
+  vertical-align: middle;
+}
+
+.ds-token-value {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.ds-icon-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-1);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: var(--text-2xs);
+  text-align: center;
+}

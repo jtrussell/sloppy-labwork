@@ -1,0 +1,15 @@
+<form
+  hx-post="{% url 'pmc-pg-manage-result' playgroup.slug result.pk %}"
+  hx-target="#results-table"
+  hx-swap="outerHTML"
+>
+  {% include 'pmc/_dialog-header.html' with title_id='dialog-title' title='Edit Result' %}
+  <div class="dialog__body">
+    <p class="text-lg">{{ result.user }}</p>
+    {% include 'pmc/_form-fields.html' with form=form %}
+  </div>
+  <footer class="dialog__footer">
+    <button type="button" class="btn btn--ghost" data-dialog-close>Cancel</button>
+    <button type="submit" class="btn btn--staff btn--solid">Save</button>
+  </footer>
+</form>

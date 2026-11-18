@@ -1,8 +1,6 @@
 {% extends "pmc/_base.html" %}
 
-{% block extra_head %}
-  {% include 'pmc/_competition-assets.html' %}
-{% endblock %}
+{% block staff_strip %}{% include 'pmc/_staff-strip.html' %}{% endblock %}
 
 {% block content %}
   {% include 'pmc/_box-league-manage-tabs.html' %}
@@ -11,86 +9,95 @@
     <div class="section-heading">
       <h2>Sessions</h2>
       {% if proposal %}
-        <a class="btn btn-solid" href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk proposal.number %}">Review Proposal</a>
+        <a class="btn btn--staff btn--solid" href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk proposal.number %}">Review Proposal</a>
       {% else %}
         <form method="POST" action="{% url 'pmc-pg-box-league-plan' playgroup.slug league.pk %}">
           {% csrf_token %}
-          <button class="btn btn-solid" type="submit">Plan Next Session</button>
+          <button class="btn btn--staff btn--solid" type="submit">Plan Next Session</button>
         </form>
       {% endif %}
     </div>
-    <ul class="card link-list">
+    <ul class="card list">
       {% for session in sessions %}
         <li>
-          <a class="link-list-row" href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk session.number %}">
-            <span>Session {{ session.number }}</span>
-            <span class="link-list-hint">
-              {{ session.get_status_display }}{% if session.starts_on %} · {{ session.starts_on|date:"SHORT_DATE_FORMAT" }} – {{ session.ends_on|date:"SHORT_DATE_FORMAT" }}{% endif %}
+          <a class="list__item" href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk session.number %}">
+            <span class="list__body">
+              <span class="list__title">Session {{ session.number }}</span>
+              {% if session.starts_on %}
+                <span class="muted text-sm">{{ session.starts_on|date:"SHORT_DATE_FORMAT" }} – {{ session.ends_on|date:"SHORT_DATE_FORMAT" }}</span>
+              {% endif %}
             </span>
+            <span class="list__hint">{{ session.get_status_display }}</span>
           </a>
         </li>
       {% empty %}
-        <li class="text-muted">No sessions yet. Plan the first one to propose boxes and ask players to confirm.</li>
+        <li class="muted">No sessions yet. Plan the first one to propose boxes and ask players to confirm.</li>
       {% endfor %}
     </ul>
   {% else %}
     <div class="section-heading">
       <h2>Players</h2>
-      <button class="btn btn-solid" type="button" data-dialog-open="add-player-dialog">Add Player</button>
+      <button class="btn btn--staff btn--solid" type="button" data-dialog-open="add-player-dialog">Add Player</button>
     </div>
-    <table>
-      <thead>
-        <tr>
-          <th class="text-left">Player</th>
-          <th class="text-left">{% if current_session %}Session {{ current_session.number }}{% else %}Box{% endif %}</th>
-          <th class="col-sm">&nbsp;</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for roster_entry, box_name in roster %}
+    <div class="card">
+      <table class="table">
+        <thead>
           <tr>
-            <td class="text-left">{{ roster_entry.member }}</td>
-            <td class="text-left">{{ box_name|default:"Waiting" }}</td>
-            <td class="row-menu">
-              <details class="action-menu">
-                <summary class="menu-trigger" aria-label="Actions for {{ roster_entry.member }}">{% include 'pmc/_more-actions-icon.html' %}</summary>
-                <div class="action-menu-items">
-                  {% if box_name %}
+            <th>Player</th>
+            <th>{% if current_session %}Session {{ current_session.number }}{% else %}Box{% endif %}</th>
+            <th class="table__actions"><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for roster_entry, box_name in roster %}
+            <tr>
+              <td>{{ roster_entry.member }}</td>
+              <td>{{ box_name|default:"Waiting" }}</td>
+              <td class="table__actions">
+                <details class="action-menu" data-menu>
+                  <summary class="action-menu__trigger" aria-label="Actions for {{ roster_entry.member }}">{% include 'pmc/_icon.html' with name='more' %}</summary>
+                  <div class="action-menu__list">
+                    {% if box_name %}
+                      <button
+                        type="button"
+                        class="action-menu__item"
+                        hx-post="{% url 'pmc-pg-box-league-session-remove' playgroup.slug league.pk current_session.number roster_entry.member_id %}"
+                        hx-confirm="Remove {{ roster_entry.member }} from session {{ current_session.number }}? Their unplayed matches will be deleted."
+                      >Remove from session {{ current_session.number }}</button>
+                    {% endif %}
                     <button
                       type="button"
-                      hx-post="{% url 'pmc-pg-box-league-session-remove' playgroup.slug league.pk current_session.number roster_entry.member_id %}"
-                      hx-confirm="Remove {{ roster_entry.member }} from session {{ current_session.number }}? Their unplayed matches will be deleted."
-                    >Remove from session {{ current_session.number }}</button>
-                  {% endif %}
-                  <button
-                    type="button"
-                    class="is-destructive"
-                    hx-post="{% url 'pmc-pg-box-league-member-remove' playgroup.slug league.pk roster_entry.member_id %}"
-                    hx-confirm="Remove {{ roster_entry.member }} from {{ league.name }}?"
-                  >Remove from league</button>
-                </div>
-              </details>
-            </td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="3" class="text-muted">No players yet.</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <p class="text-muted text-smaller">To move a player between boxes, use Place a player on the session page.</p>
+                      class="action-menu__item action-menu__item--danger"
+                      hx-post="{% url 'pmc-pg-box-league-member-remove' playgroup.slug league.pk roster_entry.member_id %}"
+                      hx-confirm="Remove {{ roster_entry.member }} from {{ league.name }}?"
+                      data-preserve-scroll
+                    >Remove from league</button>
+                  </div>
+                </details>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="3" class="table__empty">No players yet.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="muted text-sm">To move a player between boxes, use Place a player on the session page.</p>
 
-    <dialog id="add-player-dialog" class="competition-dialog" aria-labelledby="add-player-dialog-title">
+    <dialog id="add-player-dialog" class="dialog" aria-labelledby="add-player-dialog-title">
       <form method="POST" action="{% url 'pmc-pg-box-league-member-add' playgroup.slug league.pk %}">
         {% csrf_token %}
-        <h2 id="add-player-dialog-title">Add a Player</h2>
-        <p class="text-muted text-smaller">Added players join the next session in the bottom tier.</p>
-        {{ add_member_form.as_p }}
-        <div class="card-actions">
-          <button class="btn" type="submit" formmethod="dialog" formnovalidate>Cancel</button>
-          <button class="btn btn-solid" type="submit">Add Player</button>
+        {% include 'pmc/_dialog-header.html' with title_id='add-player-dialog-title' title='Add a Player' %}
+        <div class="dialog__body">
+          <p class="muted text-sm">Added players join the next session in the bottom tier.</p>
+          {% include 'pmc/_form-fields.html' with form=add_member_form %}
         </div>
+        <footer class="dialog__footer">
+          <button class="btn btn--ghost" type="button" data-dialog-close>Cancel</button>
+          <button class="btn btn--staff btn--solid" type="submit">Add Player</button>
+        </footer>
       </form>
     </dialog>
   {% endif %}

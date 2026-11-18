@@ -1,131 +1,130 @@
 {% extends "pmc/_base.html" %}
+{% load static %}
 
 {% partialdef deck-list-item %}
-<div class="flex card card-closable"  hx-target="this">
-  <div
-    class="pmc-icon icon-lg icon-set"
+<div class="card card--inset deck-item" hx-target="this">
+  <span
+    class="set-icon deck-item__set"
+    aria-hidden="true"
     style="background-image: url('{{ deck.set.src }}');"
-  ></div>
-  <div class="flex flex-col flex-1 flex-gap-0">
-    <span class="text-larger">{{ deck }}</span>
-      <ul class="inline-list flex">
-        <li><a href="{{ deck.get_mv_url }}">MV</a></li>
-        <li><a href="{{ deck.get_dok_url }}">DoK</a></li>
-      </ul>
-    <ul class="flex flex-gap-0">
-      <li><img class="pmc-icon pmc-icon-md" src="{{ deck.house_1.src }}" alt="house 1"></li>
-      <li><img class="pmc-icon pmc-icon-md" src="{{ deck.house_2.src }}" alt="house 2"></li>
-      <li><img class="pmc-icon pmc-icon-md" src="{{ deck.house_3.src }}" alt="house 3"></li>
+  ></span>
+  <div class="deck-item__body">
+    <span class="deck-item__name">{{ deck }}</span>
+    <ul class="meta">
+      <li><a href="{{ deck.get_mv_url }}">MV</a></li>
+      <li><a href="{{ deck.get_dok_url }}">DoK</a></li>
+    </ul>
+    <ul class="deck-item__houses">
+      <li><img class="deck-item__house" src="{{ deck.house_1.src }}" alt="house 1"></li>
+      <li><img class="deck-item__house" src="{{ deck.house_2.src }}" alt="house 2"></li>
+      <li><img class="deck-item__house" src="{{ deck.house_3.src }}" alt="house 3"></li>
     </ul>
   </div>
   {% if is_allowed_to_edit %}
-    <form hx-post hx-swap="delete" class="close-button">
+    <form hx-post hx-swap="delete">
       <input type="hidden" name="action" value="remove">
       <input type="hidden" name="deck_id" value="{{ deck.id }}">
-      <div class="flex flex-col flex-align-center">
-        <button class="btn btn-x">&times;</button>
-      </div>
+      <button class="icon-button" aria-label="Remove deck">{% include 'pmc/_icon.html' with name='close' %}</button>
     </form>
   {% endif %}
 </div>
 {% endpartialdef %}
 
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/playgroup.css' %}">
+{% endblock %}
+
 {% block content %}
   <h1>Result Detail</h1>
-  <div class="subheading">
-    <ul class="inline-list">
-      <li><a href="{% url 'pmc-pg-event-detail' playgroup.slug event_result.event.pk %}">{{ event_result.event }}</a></li>
-      <li>{{ event_result.event.start_date | date:"SHORT_DATE_FORMAT" }}</li>
-    </ul>
+  <ul class="meta">
+    <li><a href="{% url 'pmc-pg-event-detail' playgroup.slug event_result.event.pk %}">{{ event_result.event }}</a></li>
+    <li>{{ event_result.event.start_date | date:"SHORT_DATE_FORMAT" }}</li>
+  </ul>
+
+  <div class="card">
+    <dl class="fact-list">
+      <div class="fact-list__row">
+        <dt>Player</dt>
+        <dd>
+          <a class="player" href="{% url 'pmc-user-profile' event_result.user.username %}">
+            <img class="avatar avatar--sm" src="{{ event_result.user.pmc_profile.get_avatar.src }}" alt="">
+            <span class="player__name">{{ event_result.user }}</span>
+          </a>
+        </dd>
+      </div>
+      <div class="fact-list__row">
+        <dt>Event</dt>
+        <dd>{{ event_result.event }}</dd>
+      </div>
+      <div class="fact-list__row">
+        <dt>Date</dt>
+        <dd>{{ event_result.event.start_date | date:"SHORT_DATE_FORMAT" }}</dd>
+      </div>
+      <div class="fact-list__row">
+        <dt>Mode</dt>
+        <dd>{{ event_result.event.is_digital|yesno:"Digital,In-Person" }}</dd>
+      </div>
+      <div class="fact-list__row">
+        <dt>Finishing Position</dt>
+        <dd>{{ event_result.finishing_position | default_if_none:"-" }}</dd>
+      </div>
+      <div class="fact-list__row">
+        <dt>Wins</dt>
+        <dd>{{ event_result.num_wins | default_if_none:"-" }}</dd>
+      </div>
+      <div class="fact-list__row">
+        <dt>Losses</dt>
+        <dd>{{ event_result.num_losses | default_if_none:"-" }}</dd>
+      </div>
+      {% if event_result.num_ties is not None %}
+        <div class="fact-list__row">
+          <dt>Ties</dt>
+          <dd>{{ event_result.num_ties }}</dd>
+        </div>
+      {% endif %}
+      <div class="fact-list__row">
+        <dt>Ranking Points</dt>
+        <dd>{{ event_result.ranking_points.first.points | default_if_none:"-" }}</dd>
+      </div>
+      <div class="fact-list__row">
+        <dt>Experience</dt>
+        <dd>{{ event_result.get_xp | default_if_none:"-" }}</dd>
+      </div>
+    </dl>
   </div>
 
   <div class="card">
-    <table>
-      <tbody>
-        <tr>
-          <th>Player</th>
-          <td>
-            <a class="name-with-avatar" style="justify-content: flex-end" href="{% url 'pmc-user-profile' event_result.user.username %}">
-              <img class="avatar" src="{{ event_result.user.pmc_profile.get_avatar.src}}" alt="">
-              <span class="username">{{ event_result.user }}</span>
-            </a>
-          </td>
-        </tr>
-        <tr>
-          <th>Event</th>
-          <td>{{ event_result.event }}</td>
-        </tr>
-        <tr>
-          <th>Date</th>
-          <td>{{ event_result.event.start_date | date:"SHORT_DATE_FORMAT" }}</td>
-        </tr>
-        <tr>
-          <th>Mode</th>
-          <td>{{ event_result.event.is_digital|yesno:"Digital,In-Person" }}</td>
-        </tr>
-        <tr>
-          <th>Finishing Position</th>
-          <td>{{ event_result.finishing_position | default_if_none:"-" }}</td>
-        </tr>
-        <tr>
-          <th>Wins</th>
-          <td>{{ event_result.num_wins | default_if_none:"-" }}</td>
-        </tr>
-        <tr>
-          <th>Losses</th>
-          <td>{{ event_result.num_losses | default_if_none:"-" }}</td>
-        </tr>
-        {% if event_result.num_ties is not None %}
-        <tr>
-          <th>Ties</th>
-          <td>{{ event_result.num_ties }}</td>
-        </tr>
-        {% endif %}
-        <tr>
-          <th>Ranking Points</th>
-          <td>{{ event_result.ranking_points.first.points | default_if_none:"-" }}</td>
-        </tr>
-        <tr>
-          <th>Experience</th>
-          <td>{{ event_result.get_xp | default_if_none:"-" }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+    <h2 class="card__title">Decks</h2>
+    <p class="text-sm text-staff staff-only">Editing as an event organizer</p>
 
-  <div class="card">
-    <h2>Decks</h2>
-    <div class="subheading text-staff-only">
-      Editing as an event organizer
-    </div>
-
-    <div class="flex flex-col flex-gap-1" id="decks-list"  hx-confirm="Are you sure you want to remove this deck?">
+    <div class="stack" id="decks-list" hx-confirm="Are you sure you want to remove this deck?">
       {% for result_deck in event_result.event_result_decks.all %}
         {% with deck=result_deck.deck %}
           {% partial deck-list-item %}
         {% endwith %}
       {% empty %}
-        <p class="text-muted" id="no-decks-message">No decks submitted.</p>
+        <p class="muted" id="no-decks-message">No decks submitted.</p>
       {% endfor %}
     </div>
 
     {% if is_allowed_to_edit %}
       <form
-        hx-on::after-request="if(event.detail.successful) this.reset(); document.getElementById('no-decks-message').remove();"
-        class="card-form"
+        hx-on::after-request="if(event.detail.successful) this.reset(); document.getElementById('no-decks-message')?.remove();"
       >
         <input type="hidden" name="action" value="add">
-        {{ form.as_p }}
-        <div class="card-actions">
-          <button
-            class="btn btn-solid"
-            type="submit"
-            hx-post
-            hx-target="#decks-list"
-            hx-swap="beforeend"
-          >
-            Add Deck
-          </button>
+        <div class="stack">
+          {% include 'pmc/_form-fields.html' with form=form %}
+          <div class="form__actions">
+            <button
+              class="btn btn--solid"
+              type="submit"
+              hx-post
+              hx-target="#decks-list"
+              hx-swap="beforeend"
+            >
+              Add Deck
+            </button>
+          </div>
         </div>
       </form>
     {% endif %}

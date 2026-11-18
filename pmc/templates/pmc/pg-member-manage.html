@@ -5,27 +5,31 @@
   <link rel="stylesheet" href="{% static 'pmc/css/awards.css' %}">
 {% endblock %}
 
+{% block staff_strip %}{% include 'pmc/_staff-strip.html' %}{% endblock %}
+
 {% block content %}
   <h1>{{ member }}</h1>
-  <div class="subheading">Manage Member</div>
+  <p class="subheading">Manage Member</p>
 
-  <div class="card staff-only">
-    <h2>Assign Badges</h2>
-    <ul class="flex flex-row flex-gap-1 flex-wrap">
+  <div class="card card--staff staff-only">
+    <p class="staff-tag">Staff</p>
+    <h2 class="card__title">Assign Badges</h2>
+    <ul class="award-grid">
       {% for badge in badges %}
         {% if badge.is_eo_assignable %}
         {% if badge.user_badge_id or not badge.is_hidden %}
-          <li>
+          <li class="award-tile{% if not badge.user_badge_id %} award-tile--locked{% endif %}">
             <form
-              class="award-container pointer {% if not badge.user_badge_id %}disabled{% endif %}"
               hx-post
               hx-confirm="{{ badge.name }}: {{ badge.description }} Are you sure you would like to assign it to {{ member }}? This action cannot be undone."
-              hx-trigger="click"
+              data-preserve-scroll
             >
-              <input type="hidden" name="action" value="assign_badge" />
-              <input type="hidden" name="badge_id" value="{{ badge.pk }}" />
-              <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award" />
-              <span class="text-shy text-center">{{ badge.name }}</span>
+              <input type="hidden" name="action" value="assign_badge">
+              <input type="hidden" name="badge_id" value="{{ badge.pk }}">
+              <button type="submit" class="award-tile__link">
+                <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award-tile__art">
+                <span class="award-tile__name">{{ badge.name }}</span>
+              </button>
             </form>
           </li>
         {% endif %}
@@ -34,21 +38,21 @@
     </ul>
   </div>
 
-  <div class="card staff-only">
-    <h2>Danger Zone</h2>
+  <div class="card card--danger staff-only">
+    <p class="staff-tag">Staff</p>
+    <h2 class="card__title">Danger Zone</h2>
     <p>
       Remove this member from the playgroup.
     </p>
-    <div class="card-actions">
+    <div class="card__actions">
       <button
-        class="btn"
+        class="btn btn--danger"
         hx-delete
         hx-confirm="Are you sure you would like to remove {{ member }} from this playgroup?"
-        type="submit"
+        type="button"
       >
         Remove Member
       </button>
     </div>
   </div>
-
 {% endblock %}

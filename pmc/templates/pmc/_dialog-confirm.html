@@ -1,0 +1,15 @@
+<dialog id="confirm-dialog" class="dialog" role="alertdialog" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-question">
+  <form method="dialog">
+    <header class="dialog__header">
+      <h2 id="confirm-dialog-title" class="dialog__title">Please confirm</h2>
+      <button type="submit" value="cancel" class="icon-button dialog__close" aria-label="Close">{% include 'pmc/_icon.html' with name='close' %}</button>
+    </header>
+    <div class="dialog__body">
+      <p id="confirm-dialog-question" data-confirm-question></p>
+    </div>
+    <footer class="dialog__footer">
+      <button type="submit" value="cancel" class="btn btn--ghost" autofocus>Cancel</button>
+      <button type="submit" value="confirm" class="btn btn--solid">Confirm</button>
+    </footer>
+  </form>
+</dialog>

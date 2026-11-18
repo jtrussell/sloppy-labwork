@@ -1,0 +1,15 @@
+{% load pmc_extras %}{% if page_obj.has_other_pages %}{% with page_param=page_param|default:"page" %}{% preserved_query page_param as query_suffix %}
+<nav class="pagination" aria-label="{{ label|default:'Pagination' }}">
+  {% if page_obj.has_previous %}
+    <a href="?{{ page_param }}={{ page_obj.previous_page_number }}{{ query_suffix }}" class="btn btn--sm btn--ghost" rel="prev" data-preserve-scroll>Prev</a>
+  {% else %}
+    <span class="btn btn--sm btn--ghost" aria-disabled="true">Prev</span>
+  {% endif %}
+  <span class="pagination__info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+    <a href="?{{ page_param }}={{ page_obj.next_page_number }}{{ query_suffix }}" class="btn btn--sm btn--ghost" rel="next" data-preserve-scroll>Next</a>
+  {% else %}
+    <span class="btn btn--sm btn--ghost" aria-disabled="true">Next</span>
+  {% endif %}
+</nav>
+{% endwith %}{% endif %}

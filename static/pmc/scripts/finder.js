@@ -1,7 +1,7 @@
 (function () {
 	var RESULTS_PAGE_SIZE = 20
 	var SHEET_STATES = ['peek', 'half', 'full']
-	var MOBILE_MEDIA_QUERY = window.matchMedia('(max-width: 680px)')
+	var MOBILE_MEDIA_QUERY = window.matchMedia('(max-width: 719.98px)')
 
 	var map = L.map('finder-map', { zoomControl: false }).setView([30, 0], 2)
 	L.control.zoom({ position: 'bottomright' }).addTo(map)
@@ -14,8 +14,8 @@
 	var SOON_WINDOW_DAYS = 7
 	var MARKER_PIN_PATH = 'M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z'
 	var MARKER_STYLES = {
-		primary: { fill: '#FFB400', width: 28, height: 40, dotRadius: 5 },
-		secondary: { fill: '#888', width: 22, height: 32, dotRadius: 4 },
+		primary: { width: 28, height: 40, dotRadius: 5 },
+		secondary: { width: 22, height: 32, dotRadius: 4 },
 	}
 	var CLUSTER_SIZES = [
 		{ maxCount: 9, size: 34 },
@@ -79,15 +79,15 @@
 
 	function buildMarkerIcon(isPrimary, soonLabel) {
 		var style = isPrimary ? MARKER_STYLES.primary : MARKER_STYLES.secondary
-		var classNames = ['finder-marker', isPrimary ? 'finder-marker-primary' : 'finder-marker-secondary']
-		if (soonLabel) classNames.push('finder-marker-soon')
+		var classNames = ['finder-marker', isPrimary ? 'finder-marker--primary' : 'finder-marker--secondary']
+		if (soonLabel) classNames.push('finder-marker--soon')
 		return L.divIcon({
 			className: classNames.join(' '),
 			html: '<svg viewBox="0 0 24 36" width="' + style.width + '" height="' + style.height + '">' +
-					'<path d="' + MARKER_PIN_PATH + '" fill="' + style.fill + '" stroke="#131313" stroke-width="1.5"/>' +
-					'<circle cx="12" cy="11" r="' + style.dotRadius + '" fill="#131313"/>' +
+					'<path class="finder-marker__pin" d="' + MARKER_PIN_PATH + '"/>' +
+					'<circle class="finder-marker__dot" cx="12" cy="11" r="' + style.dotRadius + '"/>' +
 				'</svg>' +
-				(soonLabel ? '<span class="finder-marker-tag">' + escapeHtml(soonLabel) + '</span>' : ''),
+				(soonLabel ? '<span class="finder-marker__tag">' + escapeHtml(soonLabel) + '</span>' : ''),
 			iconSize: [style.width, style.height],
 			iconAnchor: [style.width / 2, style.height],
 			popupAnchor: [0, -style.height + 4],
@@ -101,7 +101,7 @@
 			return marker.options.hasSoonEvent
 		})
 		return L.divIcon({
-			className: 'finder-cluster' + (hasSoonEvent ? ' finder-cluster-soon' : ''),
+			className: 'finder-cluster' + (hasSoonEvent ? ' finder-cluster--soon' : ''),
 			html: '<span>' + count + '</span>',
 			iconSize: [size, size],
 		})
@@ -111,9 +111,9 @@
 		var groupHasPrimaryVenue = playgroup.venues.some(function (candidate) { return candidate.is_primary })
 		var secondaryLabel = groupHasPrimaryVenue && !venue.is_primary ? ' (Secondary)' : ''
 		return '<div class="finder-popup">' +
-			'<div class="finder-popup-venue">' + escapeHtml(venue.name) + secondaryLabel + '</div>' +
-			'<div class="finder-popup-card" aria-live="polite" data-card-url="' + escapeHtml(playgroup.card_url) + '">' +
-				(cardHtmlByUrl[playgroup.card_url] || '<div class="finder-popup-loading">Loading ' + escapeHtml(playgroup.name) + '…</div>') +
+			'<div class="eyebrow finder-popup__venue">' + escapeHtml(venue.name) + secondaryLabel + '</div>' +
+			'<div class="finder-popup__card" aria-live="polite" data-card-url="' + escapeHtml(playgroup.card_url) + '">' +
+				(cardHtmlByUrl[playgroup.card_url] || '<div class="muted">Loading ' + escapeHtml(playgroup.name) + '…</div>') +
 			'</div>' +
 		'</div>'
 	}
@@ -143,7 +143,7 @@
 	}
 
 	function loadPopupCard(event) {
-		var cardContainer = event.popup.getElement().querySelector('.finder-popup-card')
+		var cardContainer = event.popup.getElement().querySelector('.finder-popup__card')
 		var cardUrl = cardContainer.getAttribute('data-card-url')
 		if (cardHtmlByUrl[cardUrl]) return
 
@@ -159,7 +159,7 @@
 				event.popup.update()
 			})
 			.catch(function () {
-				cardContainer.innerHTML = '<div class="finder-popup-loading">Couldn\u2019t load this group.</div>'
+				cardContainer.innerHTML = '<div class="muted">Couldn\u2019t load this group.</div>'
 			})
 	}
 
@@ -257,7 +257,7 @@
 	function buildShowAllButton(label) {
 		var button = document.createElement('button')
 		button.type = 'button'
-		button.className = 'finder-link-button'
+		button.className = 'text-button'
 		button.textContent = label || 'Show all'
 		button.addEventListener('click', fitMapToAllPlaygroups)
 		return button
@@ -273,45 +273,42 @@
 
 	function buildResultItem(playgroup) {
 		var li = document.createElement('li')
-		li.setAttribute('data-pg-id', playgroup.id)
-		li.tabIndex = 0
-		li.setAttribute('role', 'button')
+
+		var button = document.createElement('button')
+		button.type = 'button'
+		button.className = 'finder-result'
+		button.setAttribute('data-pg-id', playgroup.id)
 		if (playgroup.id === activePlaygroupId) {
-			li.classList.add('active')
+			button.setAttribute('aria-current', 'true')
 		}
 
 		var img = document.createElement('img')
 		img.src = playgroup.logo_src
 		img.alt = ''
-		img.className = 'finder-result-logo'
+		img.className = 'finder-result__logo'
 
-		var info = document.createElement('div')
-		info.className = 'finder-result-info'
+		var body = document.createElement('span')
+		body.className = 'finder-result__body'
 
 		var nameSpan = document.createElement('span')
-		nameSpan.className = 'finder-result-name'
+		nameSpan.className = 'finder-result__name'
 		nameSpan.textContent = playgroup.name
 
 		var metaSpan = document.createElement('span')
-		metaSpan.className = 'finder-result-meta'
+		metaSpan.className = 'finder-result__meta'
 		var metaParts = [pluralize(playgroup.member_count, 'member', 'members')]
 		if (playgroup.type) {
 			metaParts.push(playgroup.type)
 		}
 		metaSpan.textContent = metaParts.join(' • ')
 
-		info.appendChild(nameSpan)
-		info.appendChild(metaSpan)
-		li.appendChild(img)
-		li.appendChild(info)
+		body.appendChild(nameSpan)
+		body.appendChild(metaSpan)
+		button.appendChild(img)
+		button.appendChild(body)
+		li.appendChild(button)
 
-		li.addEventListener('click', function () { focusPlaygroup(playgroup) })
-		li.addEventListener('keydown', function (event) {
-			if (event.key === 'Enter' || event.key === ' ') {
-				event.preventDefault()
-				focusPlaygroup(playgroup)
-			}
-		})
+		button.addEventListener('click', function () { focusPlaygroup(playgroup) })
 
 		return li
 	}
@@ -337,11 +334,11 @@
 		var venue = findPreferredVenue(playgroup)
 		var marker = markersByPlaygroupVenue[markerKey(playgroup.id, venue.id)]
 
-		resultsList.querySelectorAll('li.active').forEach(function (el) {
-			el.classList.remove('active')
+		resultsList.querySelectorAll('.finder-result[aria-current]').forEach(function (result) {
+			result.removeAttribute('aria-current')
 		})
-		var li = resultsList.querySelector('li[data-pg-id="' + playgroup.id + '"]')
-		if (li) li.classList.add('active')
+		var activeResult = resultsList.querySelector('.finder-result[data-pg-id="' + playgroup.id + '"]')
+		if (activeResult) activeResult.setAttribute('aria-current', 'true')
 
 		if (MOBILE_MEDIA_QUERY.matches) {
 			setSheetState('peek')

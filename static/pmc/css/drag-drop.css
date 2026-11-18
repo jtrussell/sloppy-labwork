@@ -1,0 +1,47 @@
+.drag-drop-item {
+  border-radius: var(--radius-md);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    box-shadow var(--transition-quick),
+    opacity var(--transition-quick);
+}
+
+.drag-drop-item:hover {
+  box-shadow: 0 0 0 1px var(--color-border-strong);
+}
+
+.drag-drop-item.dragging {
+  box-shadow: var(--glow-primary);
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.drag-handle {
+  display: inline-grid;
+  place-items: center;
+  color: var(--color-text-muted);
+  cursor: grab;
+}
+
+.drag-handle:hover {
+  color: var(--color-text);
+}
+
+.drag-drop-item.dragging .drag-handle,
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.drop-indicator {
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-primary);
+  opacity: 0;
+  transition: opacity var(--transition-quick);
+}
+
+.drop-indicator.active {
+  opacity: 1;
+}

@@ -1,53 +1,56 @@
-<table>
-  <thead>
-    <tr>
-      <th class="text-left">Result</th>
-      <th class="col-md lg-only">Date</th>
-      {% if show_void %}<th class="col-md">&nbsp;</th>{% endif %}
-    </tr>
-  </thead>
-  <tbody>
-    {% for challenge in recent_results %}
-      {% with result=challenge.match.result %}
-        <tr>
-          <td class="text-left">
-            {% if result.is_tie %}
-              {{ challenge.challenger }} and {{ challenge.defender }} tied
-            {% elif result.is_forfeit %}
-              {{ result.winner }} won by forfeit over {{ result.get_loser }}
-            {% else %}
-              {{ result.winner }} beat {{ result.get_loser }}
-            {% endif %}
-            <ul class="inline-list text-smaller text-muted">
-              {% if not challenge.was_issued %}<li>Played without a challenge</li>{% endif %}
-              {% if result.is_voided %}<li>Voided</li>{% endif %}
-              <li class="sm-only">{{ challenge.resolved_on|date:"SHORT_DATE_FORMAT" }}</li>
-            </ul>
-          </td>
-          <td class="col-md lg-only">{{ challenge.resolved_on|date:"SHORT_DATE_FORMAT" }}</td>
-          {% if show_void %}
-            <td class="row-menu">
-              {% if not result.is_voided %}
-                <details class="action-menu">
-                  <summary class="menu-trigger" aria-label="Actions for this result">{% include 'pmc/_more-actions-icon.html' %}</summary>
-                  <div class="action-menu-items">
-                    <button
-                      type="button"
-                      class="is-destructive"
-                      hx-post="{% url 'pmc-pg-ladder-challenge-void' playgroup.slug ladder.pk challenge.pk %}"
-                      hx-confirm="Void this result? Positions will not change; use Move on the Roster tab to correct them."
-                    >Void result</button>
-                  </div>
-                </details>
-              {% endif %}
-            </td>
-          {% endif %}
-        </tr>
-      {% endwith %}
-    {% empty %}
+<div class="card{% if not show_void %} table-wrap{% endif %}">
+  <table class="table">
+    <thead>
       <tr>
-        <td colspan="3" class="text-muted">No results yet.</td>
+        <th>Result</th>
+        <th class="table__wide">Date</th>
+        {% if show_void %}<th class="table__actions"><span class="visually-hidden">Actions</span></th>{% endif %}
       </tr>
-    {% endfor %}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {% for challenge in recent_results %}
+        {% with result=challenge.match.result %}
+          <tr>
+            <td>
+              {% if result.is_tie %}
+                {{ challenge.challenger }} and {{ challenge.defender }} tied
+              {% elif result.is_forfeit %}
+                {{ result.winner }} won by forfeit over {{ result.get_loser }}
+              {% else %}
+                {{ result.winner }} beat {{ result.get_loser }}
+              {% endif %}
+              <ul class="meta">
+                {% if not challenge.was_issued %}<li>Played without a challenge</li>{% endif %}
+                {% if result.is_voided %}<li>Voided</li>{% endif %}
+                <li class="table__narrow">{{ challenge.resolved_on|date:"SHORT_DATE_FORMAT" }}</li>
+              </ul>
+            </td>
+            <td class="table__wide">{{ challenge.resolved_on|date:"SHORT_DATE_FORMAT" }}</td>
+            {% if show_void %}
+              <td class="table__actions">
+                {% if not result.is_voided %}
+                  <details class="action-menu" data-menu>
+                    <summary class="action-menu__trigger" aria-label="Actions for this result">{% include 'pmc/_icon.html' with name='more' %}</summary>
+                    <div class="action-menu__list">
+                      <button
+                        type="button"
+                        class="action-menu__item action-menu__item--danger"
+                        hx-post="{% url 'pmc-pg-ladder-challenge-void' playgroup.slug ladder.pk challenge.pk %}"
+                        hx-confirm="Void this result? Positions will not change; use Move on the Roster tab to correct them."
+                        data-preserve-scroll
+                      >Void result</button>
+                    </div>
+                  </details>
+                {% endif %}
+              </td>
+            {% endif %}
+          </tr>
+        {% endwith %}
+      {% empty %}
+        <tr>
+          <td colspan="{% if show_void %}3{% else %}2{% endif %}" class="table__empty">No results yet.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

@@ -2,33 +2,32 @@
 
 {% block content %}
   <h1>Record Result</h1>
-  <div class="subheading">{{ league.name }} · Session {{ box_match.box.session.number }}</div>
+  <p class="subheading">{{ league.name }} · Session {{ box_match.box.session.number }}</p>
 
   <div class="card">
-    <h2>{{ box_match.match.player_one }} vs {{ box_match.match.player_two }}</h2>
+    <h2 class="card__title">{{ box_match.match.player_one }} vs {{ box_match.match.player_two }}</h2>
     <p>Standings update as soon as the result is saved.</p>
-    <form method="POST">
+    <form method="POST" class="stack">
       {% csrf_token %}
-      {{ form.as_p }}
-      <div class="card-actions">
-        <a class="btn" href="{{ session_url }}">Cancel</a>
-        <button class="btn btn-solid" type="submit">Save Result</button>
+      {% include 'pmc/_form-fields.html' with form=form %}
+      <div class="form__actions">
+        <a class="btn btn--ghost" href="{{ session_url }}">Cancel</a>
+        <button class="btn btn--solid" type="submit">Save Result</button>
       </div>
     </form>
   </div>
 
   {% if box_match.match.has_result %}
-    <p class="staff-only">
-      <button
-        type="button"
-        class="text-button is-destructive"
-        hx-post="{% url 'pmc-pg-box-league-match-clear' playgroup.slug league.pk box_match.pk %}"
-        hx-confirm="Clear this result so it can be recorded again?"
-      >Clear this result</button>
-    </p>
+    <div class="card card--staff staff-only">
+      <p class="staff-tag">Staff</p>
+      <p>
+        <button
+          type="button"
+          class="text-button text-button--danger"
+          hx-post="{% url 'pmc-pg-box-league-match-clear' playgroup.slug league.pk box_match.pk %}"
+          hx-confirm="Clear this result so it can be recorded again?"
+        >Clear this result</button>
+      </p>
+    </div>
   {% endif %}
-{% endblock %}
-
-{% block extra_head %}
-  {% include 'pmc/_competition-assets.html' %}
 {% endblock %}

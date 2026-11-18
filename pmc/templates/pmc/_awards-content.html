@@ -1,7 +1,7 @@
 {% load static %}
 {% load pmc_extras %}
 
-<div id="awards-content">
+<div id="awards-content" class="stack">
   {% include 'pmc/_award-shelf.html' %}
 
   {% award_type_badge as BADGE %}
@@ -9,41 +9,50 @@
   {% award_type_trophy as TROPHY %}
 
   <div class="card">
-    <h2>Badges</h2>
-    <p>Can be earned one-time, typically granted by an EO.</p>
+    <h2 class="card__title">Badges</h2>
+    <p class="muted">Can be earned one-time, typically granted by an EO.</p>
 
-    <ul class="award-list flex flex-wrap flex-gap-2">
+    <ul class="award-grid">
       {% for badge in badges %}
         {% if badge.user_badge_id or not badge.is_hidden %}
-          <li>
-            <a href="{% url 'pmc-my-badge-detail' badge.pk %}" class="award-container {% if not badge.user_badge_id %}disabled{% endif %}">
-              <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award" />
-              <span class="text-shy text-center">{{ badge.name }}</span>
+          <li class="award-tile{% if not badge.user_badge_id %} award-tile--locked{% endif %}">
+            <a href="{% url 'pmc-my-badge-detail' badge.pk %}" class="award-tile__link">
+              <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award-tile__art">
+              <span class="award-tile__name">{{ badge.name }}</span>
             </a>
             {% if badge.user_badge_id %}
               {% pinned_pk pinned_map BADGE badge.pk as pin_id %}
               {% if pin_id %}
                 <button
-                  class="pin-btn pinned"
+                  type="button"
+                  class="award-tile__pin award-tile__pin--active"
                   hx-post="{% url 'pmc-unpin-award' pin_id %}"
                   hx-target="#awards-content"
                   hx-swap="outerHTML show:none"
+                  aria-label="Unpin {{ badge.name }}"
                   title="Unpin {{ badge.name }}">
-                  &#x1F4CC;
+                  <span class="award-tile__pin-badge">{% include 'pmc/_icon.html' with name='pin' class_name='icon--sm' %}</span>
                 </button>
               {% elif pin_count < 5 %}
                 <button
-                  class="pin-btn"
+                  type="button"
+                  class="award-tile__pin"
                   hx-post="{% url 'pmc-pin-award' %}"
                   hx-target="#awards-content"
                   hx-swap="outerHTML show:none"
                   hx-vals='{"award_type": "{{ BADGE }}", "award_id": "{{ badge.pk }}"}'
+                  aria-label="Pin {{ badge.name }} to shelf"
                   title="Pin {{ badge.name }} to shelf">
-                  &#x1F4CC;
+                  <span class="award-tile__pin-badge">{% include 'pmc/_icon.html' with name='pin' class_name='icon--sm' %}</span>
                 </button>
               {% else %}
-                <button class="pin-btn disabled" disabled title="Shelf full - unpin an award first">
-                  &#x1F4CC;
+                <button
+                  type="button"
+                  class="award-tile__pin"
+                  disabled
+                  aria-label="Pin {{ badge.name }} to shelf (shelf full, unpin an award first)"
+                  title="Shelf full - unpin an award first">
+                  <span class="award-tile__pin-badge">{% include 'pmc/_icon.html' with name='pin' class_name='icon--sm' %}</span>
                 </button>
               {% endif %}
             {% endif %}
@@ -54,44 +63,51 @@
   </div>
 
   <div class="card">
-    <h2>Achievements</h2>
-    <p>Can be earned and subsequently leveled up to higher tiers.</p>
+    <h2 class="card__title">Achievements</h2>
+    <p class="muted">Can be earned and subsequently leveled up to higher tiers.</p>
 
-    <ul class="award-list flex flex-wrap flex-gap-2">
+    <ul class="award-grid">
       {% for achievement in achievements %}
         {% if achievement.user_achievement_tier or not achievement.is_hidden %}
-          <li>
-            <a href="{% url 'pmc-my-achievement-detail' achievement.pk %}" class="award-container {% if not achievement.user_achievement_tier_src %}disabled{% endif %}">
-              <img src="{{ achievement.user_achievement_tier_src | default:achievement.lowest_tier_src }}" alt="{{ achievement.name }} trophy" class="award" />
-              <span class="text-shy text-center">{{ achievement.name }}</span>
-              <span>
-                {{ achievement.user_achievement_tier | achievement_tier_label }}
-              </span>
+          <li class="award-tile{% if not achievement.user_achievement_tier_src %} award-tile--locked{% endif %}">
+            <a href="{% url 'pmc-my-achievement-detail' achievement.pk %}" class="award-tile__link">
+              <img src="{{ achievement.user_achievement_tier_src | default:achievement.lowest_tier_src }}" alt="{{ achievement.name }} trophy" class="award-tile__art">
+              <span class="award-tile__name">{{ achievement.name }}</span>
+              <span class="award-tile__tier">{{ achievement.user_achievement_tier | achievement_tier_label }}</span>
             </a>
             {% if achievement.user_achievement_tier_src %}
               {% pinned_pk pinned_map ACHIEVEMENT achievement.pk as pin_id %}
               {% if pin_id %}
                 <button
-                  class="pin-btn pinned"
+                  type="button"
+                  class="award-tile__pin award-tile__pin--active"
                   hx-post="{% url 'pmc-unpin-award' pin_id %}"
                   hx-target="#awards-content"
                   hx-swap="outerHTML show:none"
+                  aria-label="Unpin {{ achievement.name }}"
                   title="Unpin {{ achievement.name }}">
-                  &#x1F4CC;
+                  <span class="award-tile__pin-badge">{% include 'pmc/_icon.html' with name='pin' class_name='icon--sm' %}</span>
                 </button>
               {% elif pin_count < 5 %}
                 <button
-                  class="pin-btn"
+                  type="button"
+                  class="award-tile__pin"
                   hx-post="{% url 'pmc-pin-award' %}"
                   hx-target="#awards-content"
                   hx-swap="outerHTML show:none"
                   hx-vals='{"award_type": "{{ ACHIEVEMENT }}", "award_id": "{{ achievement.pk }}"}'
+                  aria-label="Pin {{ achievement.name }} to shelf"
                   title="Pin {{ achievement.name }} to shelf">
-                  &#x1F4CC;
+                  <span class="award-tile__pin-badge">{% include 'pmc/_icon.html' with name='pin' class_name='icon--sm' %}</span>
                 </button>
               {% else %}
-                <button class="pin-btn disabled" disabled title="Shelf full - unpin an award first">
-                  &#x1F4CC;
+                <button
+                  type="button"
+                  class="award-tile__pin"
+                  disabled
+                  aria-label="Pin {{ achievement.name }} to shelf (shelf full, unpin an award first)"
+                  title="Shelf full - unpin an award first">
+                  <span class="award-tile__pin-badge">{% include 'pmc/_icon.html' with name='pin' class_name='icon--sm' %}</span>
                 </button>
               {% endif %}
             {% endif %}
@@ -102,44 +118,51 @@
   </div>
 
   <div class="card">
-    <h2>Trophies</h2>
-    <p>Can be earned multiple times.</p>
+    <h2 class="card__title">Trophies</h2>
+    <p class="muted">Can be earned multiple times.</p>
 
-    <ul class="award-list flex flex-wrap flex-gap-2">
+    <ul class="award-grid">
       {% for trophy in trophies %}
         {% if trophy.user_trophy_amount or not trophy.is_hidden %}
-          <li>
-            <a href="{% url 'pmc-my-trophy-detail' trophy.pk %}" class="award-container {% if not trophy.user_trophy_amount %}disabled{% endif %}">
-              <img src="{{ trophy.src }}" alt="{{ trophy.name }} trophy" class="award" />
-              <span class="text-shy text-center">{{ trophy.name }}</span>
-              <span class="trophy-amount">
-                {{ trophy.user_trophy_amount | default:"0" }}
-              </span>
+          <li class="award-tile{% if not trophy.user_trophy_amount %} award-tile--locked{% endif %}">
+            <a href="{% url 'pmc-my-trophy-detail' trophy.pk %}" class="award-tile__link">
+              <img src="{{ trophy.src }}" alt="{{ trophy.name }} trophy" class="award-tile__art">
+              <span class="award-tile__name">{{ trophy.name }}</span>
+              <span class="award-tile__count">{{ trophy.user_trophy_amount | default:"0" }}</span>
             </a>
             {% if trophy.user_trophy_amount %}
               {% pinned_pk pinned_map TROPHY trophy.pk as pin_id %}
               {% if pin_id %}
                 <button
-                  class="pin-btn pinned"
+                  type="button"
+                  class="award-tile__pin award-tile__pin--active"
                   hx-post="{% url 'pmc-unpin-award' pin_id %}"
                   hx-target="#awards-content"
                   hx-swap="outerHTML show:none"
+                  aria-label="Unpin {{ trophy.name }}"
                   title="Unpin {{ trophy.name }}">
-                  &#x1F4CC;
+                  <span class="award-tile__pin-badge">{% include 'pmc/_icon.html' with name='pin' class_name='icon--sm' %}</span>
                 </button>
               {% elif pin_count < 5 %}
                 <button
-                  class="pin-btn"
+                  type="button"
+                  class="award-tile__pin"
                   hx-post="{% url 'pmc-pin-award' %}"
                   hx-target="#awards-content"
                   hx-swap="outerHTML show:none"
                   hx-vals='{"award_type": "{{ TROPHY }}", "award_id": "{{ trophy.pk }}"}'
+                  aria-label="Pin {{ trophy.name }} to shelf"
                   title="Pin {{ trophy.name }} to shelf">
-                  &#x1F4CC;
+                  <span class="award-tile__pin-badge">{% include 'pmc/_icon.html' with name='pin' class_name='icon--sm' %}</span>
                 </button>
               {% else %}
-                <button class="pin-btn disabled" disabled title="Shelf full - unpin an award first">
-                  &#x1F4CC;
+                <button
+                  type="button"
+                  class="award-tile__pin"
+                  disabled
+                  aria-label="Pin {{ trophy.name }} to shelf (shelf full, unpin an award first)"
+                  title="Shelf full - unpin an award first">
+                  <span class="award-tile__pin-badge">{% include 'pmc/_icon.html' with name='pin' class_name='icon--sm' %}</span>
                 </button>
               {% endif %}
             {% endif %}

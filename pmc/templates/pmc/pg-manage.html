@@ -1,25 +1,28 @@
 {% extends "pmc/_base.html" %}
+{% load static %}
 
 {% partialdef venues-list %}
-<div id="venues-list">
+<div id="venues-list" class="card-list">
   {% for venue in venues %}
-    <div class="staff-only card">
-      <h3>{{ venue.name }}</h3>
-      {% if playgroup.primary_venue == venue %}<div class="subheading">Primary</div>{% endif %}
-      <p style="white-space: pre-wrap;">{{ venue.address }}</p>
-      <div class="card-actions">
+    <div class="card card--staff staff-only">
+      <p class="staff-tag">Staff</p>
+      <h3 class="card__title">{{ venue.name }}</h3>
+      {% if playgroup.primary_venue == venue %}<p class="subheading">Primary</p>{% endif %}
+      <p class="venue-address">{{ venue.address }}</p>
+      <div class="card__actions">
         {% if playgroup.primary_venue == venue %}
           <button
-            class="btn"
+            type="button"
+            class="btn btn--staff"
             hx-post="{% url 'pmc-pg-venue-set-primary' playgroup.slug %}"
             hx-target="#venues-list"
             hx-swap="outerHTML"
           >Not Primary</button>
         {% else %}
-          <form style="margin: 0;">
+          <form>
             <input type="hidden" name="venue_id" value="{{ venue.pk }}">
             <button
-              class="btn"
+              class="btn btn--staff"
               hx-post="{% url 'pmc-pg-venue-set-primary' playgroup.slug %}"
               hx-target="#venues-list"
               hx-swap="outerHTML"
@@ -28,7 +31,8 @@
           </form>
         {% endif %}
         <button
-          class="btn"
+          type="button"
+          class="btn btn--danger"
           hx-delete="{% url 'pmc-pg-venue-remove' playgroup.slug venue.pk %}"
           hx-target="#venues-list"
           hx-swap="outerHTML"
@@ -37,64 +41,73 @@
       </div>
     </div>
   {% empty %}
-    <div class="card text-muted">No venues registered yet.</div>
+    <div class="card muted">No venues registered yet.</div>
   {% endfor %}
 </div>
 {% endpartialdef %}
 
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/manage.css' %}">
+{% endblock %}
+
+{% block staff_strip %}{% include 'pmc/_staff-strip.html' %}{% endblock %}
+
 {% block content %}
   <h1>{{ playgroup }}</h1>
-  <div class="subheading">Manage</div>
+  <p class="subheading">Manage</p>
 
-  <div class="staff-only card">
-    <h2>Playgroup Details</h2>
-    <form method="POST">
+  <div class="card card--staff staff-only">
+    <p class="staff-tag">Staff</p>
+    <h2 class="card__title">Playgroup Details</h2>
+    <form method="POST" class="stack">
+      {% include 'pmc/_form-fields.html' with form=form %}
       {% csrf_token %}
-      {{ form.as_p }}
 
-      <p class="text-right">
-        <a href="https://daringfireball.net/projects/markdown/syntax" target="_blank">Help with formatting.</a>
+      <p class="text-right text-sm">
+        <a href="https://daringfireball.net/projects/markdown/syntax" target="_blank" rel="noopener">Help with formatting.</a>
       </p>
 
-      <div class="card-actions">
-        <button class="btn btn-solid" type="submit">Submit</button>
+      <div class="form__actions">
+        <button class="btn btn--staff btn--solid" type="submit">Submit</button>
       </div>
     </form>
   </div>
 
-  <div class="card staff-only">
-    <h2>Pending Join Requests</h2>
+  <div class="card card--staff staff-only">
+    <p class="staff-tag">Staff</p>
+    <h2 class="card__title">Pending Join Requests</h2>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Requesting User</th>
-          <th>Requested On</th>
-          <th>&nbsp;</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for req in join_requests %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
           <tr>
-            <td>{{ req.user.username }}</td>
-            <td>{{ req.created_on|date:"SHORT_DATE_FORMAT" }}</td>
-            <td>
-              <a href="{% url 'pmc-pg-join-manage' playgroup.slug req.pk %}">View</a>
-            </td>
+            <th>Requesting User</th>
+            <th>Requested On</th>
+            <th class="table__actions"><span class="visually-hidden">Actions</span></th>
           </tr>
-        {% empty %}
-          <tr>
-            <td colspan="3" class="text-muted">Nothing to see here.</td>
-          <tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {% for req in join_requests %}
+            <tr>
+              <td>{{ req.user.username }}</td>
+              <td>{{ req.created_on|date:"SHORT_DATE_FORMAT" }}</td>
+              <td class="table__actions">
+                <a href="{% url 'pmc-pg-join-manage' playgroup.slug req.pk %}" class="text-button text-button--staff">View</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="3" class="table__empty">Nothing to see here.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <h2 class="staff-only">Venues</h2>
-    {% partial venues-list %}
-  <div class="staff-only">
-    <a href="{% url 'pmc-pg-venue-add' playgroup.slug %}" class="btn btn-solid">Add Venue</a>
+  {% partial venues-list %}
+  <div class="btn-row staff-only">
+    <a href="{% url 'pmc-pg-venue-add' playgroup.slug %}" class="btn btn--staff">Add Venue</a>
   </div>
 {% endblock %}
-

@@ -2,67 +2,72 @@
 {% load static %}
 
 {% partialdef member-list-item %}
-	<li class="card">
-		<h2 class="banner-with-avatar" style="background-color: #{{ member.user.pmc_profile.get_avatar.banner_bg_color }}">
-			<img class="avatar" src="{{ member.user.pmc_profile.get_avatar.src }}" style="border-right: 3px solid #{{ member.user.pmc_profile.get_avatar.banner_stroke_color }}" alt="">
-			<div class="member-info" style="color: #{{ member.user.pmc_profile.get_avatar.banner_text_color }}">
-				<span class="banner-text">{{ member }}</span>
-				<span class="banner-sub-text">{{ member.user.pmc_profile.tagline | default:"Silence is golden." }}</span>
-			</div>
-		</h2>
+  <li class="card">
+    {% with avatar=member.user.pmc_profile.get_avatar %}
+    <h2 class="banner"{% if avatar %} style="--banner-bg: #{{ avatar.banner_bg_color }}; --banner-text: #{{ avatar.banner_text_color }}"{% endif %}>
+      <img class="avatar" src="{{ avatar.src }}" alt="">
+      <span class="banner__body">
+        <span class="banner__name">{{ member }}</span>
+        <span class="banner__tagline">{{ member.user.pmc_profile.tagline | default:"Silence is golden." }}</span>
+      </span>
+    </h2>
+    {% endwith %}
 
-		<div class="card-actions">
-			<a href="{% url 'pmc-pg-member-manage' playgroup.slug member.user %}" class="btn">
-				Manage Member
-			</a>
-			<a class="btn btn-solid" href="{% url 'pmc-pg-member-detail' playgroup.slug member.user %}">
-				Profile
-			</a>
-		</div>
-	</li>
+    <div class="card__actions">
+      <a href="{% url 'pmc-pg-member-manage' playgroup.slug member.user %}" class="btn btn--sm btn--ghost">
+        Manage Member
+      </a>
+      <a class="btn btn--sm" href="{% url 'pmc-pg-member-detail' playgroup.slug member.user %}">
+        Profile
+      </a>
+    </div>
+  </li>
 {% endpartialdef %}
 
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/playgroup.css' %}">
+{% endblock %}
+
 {% block content %}
-	<h1>Members</h1>
+  <h1>Members</h1>
 
-	{% if playgroup_member.is_staff %}
-	<div class="card staff-only">
-		<h2>Staff Area</h2>
-		<p>Add members to your playgroup by username or by scanning the QR code on
-		their playercard.</p>
-		{% if playgroup.get_pending_join_requests %}
-			<p>There are <a href="{% url 'pmc-pg-manage' playgroup.slug %}">{{ playgroup.get_pending_join_requests.count }} pending join requests</a>.</p>
-		{% endif %}
-		<div>
-			<form
-				hx-post="{% url 'pmc-pg-add-member-by-username' playgroup.slug %}"
-				hx-target="#member-list"
-				hx-swap="afterbegin"
-				class="flex flex-row flex-gap-1"
-			>
-				<input type="text" class="flex-1" name="username" placeholder="Username">
-				<button class="btn btn-solid">Add</button>
-			</flex>
-		</div>
-		<form action="{% url 'pmc-pg-add-member-by-qrcode' playgroup.slug %}" method="POST">
-			{% csrf_token %}
-			<input id="qr-code-message" type="hidden" name="qr_code_message" value="">
-			<p id="qr-reader"></p>
-			<div class="card-actions">
-				<button type="button" id="qr-btn-start" class="btn btn-solid btn-block">Scan</button>
-				<button type="button" id="qr-btn-stop" style="display: none;" class="btn btn-block">Cancel</button>
-			</div>
-		</form>
-	</div>
-	{% endif %}
+  {% if playgroup_member.is_staff %}
+    <div class="card card--staff staff-only">
+      <p class="staff-tag">Staff</p>
+      <h2 class="card__title">Staff Area</h2>
+      <p>Add members to your playgroup by username or by scanning the QR code on
+      their playercard.</p>
+      {% if playgroup.get_pending_join_requests %}
+        <p>There are <a href="{% url 'pmc-pg-manage' playgroup.slug %}">{{ playgroup.get_pending_join_requests.count }} pending join requests</a>.</p>
+      {% endif %}
+      <form
+        hx-post="{% url 'pmc-pg-add-member-by-username' playgroup.slug %}"
+        hx-target="#member-list"
+        hx-swap="afterbegin"
+        class="inline-form"
+      >
+        <input type="text" name="username" placeholder="Username" aria-label="Username">
+        <button class="btn btn--staff btn--solid">Add</button>
+      </form>
+      <form action="{% url 'pmc-pg-add-member-by-qrcode' playgroup.slug %}" method="POST" class="qr-form">
+        {% csrf_token %}
+        <input id="qr-code-message" type="hidden" name="qr_code_message" value="">
+        <div id="qr-reader" class="qr-reader"></div>
+        <div class="btn-row btn-row--stretch">
+          <button type="button" id="qr-btn-start" class="btn btn--staff">Scan</button>
+          <button type="button" id="qr-btn-stop" class="btn btn--ghost" hidden>Cancel</button>
+        </div>
+      </form>
+    </div>
+  {% endif %}
 
-	<ul class="card-list" id="member-list">
-		{% for member in members %}
-			{% partial member-list-item %}
-		{% empty %}
-			<li>No members yet.</li>
-		{% endfor %}
-	</ul>
+  <ul class="card-list" id="member-list">
+    {% for member in members %}
+      {% partial member-list-item %}
+    {% empty %}
+      <li class="muted">No members yet.</li>
+    {% endfor %}
+  </ul>
 {% endblock %}
 
 {% block extra_body %}

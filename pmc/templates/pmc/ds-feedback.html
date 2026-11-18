@@ -1,0 +1,66 @@
+{% extends "pmc/ds-base.html" %}
+{% load pmc_extras %}
+
+{% block gallery_content %}
+  <h2>Notices</h2>
+  <p class="muted">Inline, in the page flow. For something the user should read where it applies.</p>
+  {% kc_example themed %}
+<div class="notice">A neutral notice.</div>
+<div class="notice notice--success"><p class="notice__title">Result recorded</p><p>Standings have been updated.</p></div>
+<div class="notice notice--info">Registration opens on 1 December.</div>
+<div class="notice notice--warning">Your challenge is due tomorrow.</div>
+<div class="notice notice--danger"><p class="notice__title">Could not import results</p><ul><li>Row 4: unknown player</li></ul></div>
+  {% end_kc_example %}
+
+  <h2>Messages</h2>
+  <p class="muted">
+    Django messages appear fixed at the top of the viewport, out of the page flow. Success and info dismiss
+    themselves after five seconds; warnings and errors wait to be dismissed. Messages from htmx responses
+    arrive through the <code>HX-Trigger</code> header. Use the right level: <code>messages.success</code>,
+    <code>info</code>, <code>warning</code>, <code>error</code>.
+  </p>
+  <div class="btn-row">
+    <button type="button" class="btn btn--sm" data-ds-message-demo="Result recorded." data-ds-message-tags="success">Success</button>
+    <button type="button" class="btn btn--sm" data-ds-message-demo="Registration opens soon." data-ds-message-tags="info">Info</button>
+    <button type="button" class="btn btn--sm" data-ds-message-demo="Your challenge is due tomorrow." data-ds-message-tags="warning">Warning</button>
+    <button type="button" class="btn btn--sm" data-ds-message-demo="That player is already on the ladder." data-ds-message-tags="error">Error</button>
+  </div>
+  {% kc_example themed no_markup %}
+{% include 'pmc/_message.html' with level='success' text='Result recorded.' %}
+{% include 'pmc/_message.html' with level='error' text='That player is already on the ladder.' %}
+  {% end_kc_example %}
+
+  <h2>Confirm</h2>
+  <p class="muted">
+    <code>hx-confirm</code> opens the confirm dialog. The question is shown as plain text, never HTML, so
+    names and nicknames are safe to include.
+  </p>
+  <div class="cluster">
+    <button type="button" class="btn" data-ds-confirm-demo="Leave Summer Ladder? Players below you will move up.">Ask to confirm</button>
+    <span class="muted" data-ds-confirm-result></span>
+  </div>
+
+  <h2>Dialog</h2>
+  <p class="muted">
+    A native <code>&lt;dialog class="dialog"&gt;</code>: a bottom sheet on phones, centred from 480px. Open
+    with <code>data-dialog-open="id"</code>, close with <code>data-dialog-close</code>, Escape or the
+    backdrop. For content loaded by htmx, target <code>#dialog</code>; it opens when the response lands.
+  </p>
+  <button type="button" class="btn" data-dialog-open="demo-dialog">Open dialog</button>
+  <dialog id="demo-dialog" class="dialog" aria-labelledby="demo-dialog-title">
+    <form method="dialog">
+      {% include 'pmc/_dialog-header.html' with title_id='demo-dialog-title' title='Issue a challenge' %}
+      <div class="dialog__body">
+        <p>Results are due within 7 days. If none is recorded, you win by forfeit.</p>
+        <ul class="choice-list">
+          <li><label class="choice"><span>#3 Ada</span><input type="radio" name="defender" checked></label></li>
+          <li><label class="choice"><span>#4 Grace</span><input type="radio" name="defender"></label></li>
+        </ul>
+      </div>
+      <footer class="dialog__footer">
+        <button type="button" class="btn btn--ghost" data-dialog-close>Cancel</button>
+        <button type="submit" class="btn btn--solid">Send challenge</button>
+      </footer>
+    </form>
+  </dialog>
+{% endblock %}

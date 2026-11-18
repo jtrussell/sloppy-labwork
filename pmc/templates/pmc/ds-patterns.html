@@ -1,0 +1,77 @@
+{% extends "pmc/ds-base.html" %}
+{% load pmc_extras %}
+
+{% block gallery_content %}
+  <h2>Navigation</h2>
+  <div class="card prose">
+    <p>
+      The primary navigation is a floating tab bar on phones and a row of links from 720px. It shows the
+      links from <code>nav_links</code> in the order given. On phones the bar holds five slots: with six or
+      more links the first four are shown and the rest move behind "More". Reorder links in
+      <code>pmc/context_processors.py</code>.
+    </p>
+  </div>
+
+  <h2>A page</h2>
+  <p class="muted">Title, meta line, then content. One solid button for the main action.</p>
+  {% kc_example themed %}
+<div class="stack">
+  <div class="page-header">
+    <h1>Thursday League</h1>
+    <a href="#" class="staff-link staff-only staff-demo">{% include 'pmc/_icon.html' with name='shield' class_name='icon--sm' %}Manage</a>
+  </div>
+  <ul class="meta"><li>21 Nov 2026</li><li>16 players</li><li>Archon</li></ul>
+  <div class="card prose"><p>Every Thursday from 6pm. Bring two decks.</p></div>
+  <div class="btn-row"><button type="button" class="btn btn--solid">Register</button></div>
+  <div class="section-heading"><h2>Players</h2></div>
+  <div class="card table-wrap">
+    <table class="table">
+      <thead><tr><th class="table__rank">#</th><th>Player</th><th class="n">RP</th></tr></thead>
+      <tbody>
+        <tr><td class="table__rank">1</td><td>Ada</td><td class="n">32</td></tr>
+        <tr><td class="table__rank">2</td><td>Grace</td><td class="n">24</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+  {% end_kc_example %}
+
+  <h2>A form page</h2>
+  {% kc_example no_markup %}
+<div class="stack">
+  <h1>New event</h1>
+  <form class="card">
+    {% include 'pmc/_form-fields.html' with form=demo_form %}
+    <div class="form__actions">
+      <a href="#" class="btn btn--ghost">Cancel</a>
+      <button type="button" class="btn btn--solid">Create event</button>
+    </div>
+  </form>
+</div>
+  {% end_kc_example %}
+
+  <h2>A staff page</h2>
+  <p class="muted">Staff strip under the masthead, staff cards for tools, a danger card last.</p>
+  {% kc_example themed no_markup %}
+<div class="stack">
+  {% include 'pmc/_staff-strip.html' %}
+  <h1>Manage ladder</h1>
+  <div class="card card--staff staff-demo">
+    <p class="staff-tag">Staff</p>
+    <h3 class="card__title">Roster</h3>
+    <div class="table-wrap">
+      <table class="table table--dense">
+        <thead><tr><th class="table__rank">#</th><th>Player</th><th class="table__actions"><span class="visually-hidden">Actions</span></th></tr></thead>
+        <tbody>
+          <tr><td class="table__rank">1</td><td>Ada</td><td class="table__actions"><button type="button" class="text-button text-button--staff">Move</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card card--danger">
+    <h3 class="card__title">Danger zone</h3>
+    <div class="card__actions"><button type="button" class="btn btn--danger">Delete ladder</button></div>
+  </div>
+</div>
+  {% end_kc_example %}
+{% endblock %}

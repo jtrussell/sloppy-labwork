@@ -1,16 +1,12 @@
 {% extends "pmc/_base.html" %}
-{% load static %}
 
-{% block extra_head %}
-  <link rel="stylesheet" href="{% static 'pmc/css/box-leagues.css' %}">
-  {% include 'pmc/_competition-assets.html' %}
-{% endblock %}
+{% block staff_strip %}{% include 'pmc/_staff-strip.html' %}{% endblock %}
 
 {% block content %}
   {% if league %}
     {% include 'pmc/_box-league-manage-tabs.html' %}
     {% if league.has_unbalanced_movement %}
-      <div class="card staff-only">
+      <div class="notice notice--staff staff-only">
         <p>
           {% if league.promotion_count > league.relegation_count %}More players move up than down each session.{% else %}More players move down than up each session.{% endif %}
           Boxes are evened out when the next session is planned, so some players may stay in their tier.
@@ -21,48 +17,58 @@
     <h1>New Box League</h1>
   {% endif %}
 
-  <form method="POST">
+  <form method="POST" class="stack">
     {% csrf_token %}
-    <div class="card staff-only form">
-      <h2>Details</h2>
-      {{ form.as_p }}
+    <div class="card card--staff staff-only">
+      <p class="staff-tag">Staff</p>
+      <h2 class="card__title">Details</h2>
+      {% include 'pmc/_form-fields.html' with form=form %}
     </div>
 
     {% if tier_formset %}
-      <div class="card staff-only">
-        <h2>Tier Names</h2>
-        <p class="text-muted">
+      <div class="card card--staff staff-only">
+        <p class="staff-tag">Staff</p>
+        <h2 class="card__title">Tier Names</h2>
+        <p class="muted">
           Name tiers from the top down, e.g. Gold, Silver, Bronze. Unnamed tiers show as
           "Tier 2", "Tier 3" and so on. Each session's boxes follow the layout and players per box.
         </p>
         {{ tier_formset.management_form }}
-        <table class="box-league-tiers">
-          <thead>
-            <tr>
-              <th class="col-sm">Tier</th>
-              <th class="text-left">Name</th>
-              <th class="col-md">Remove</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for tier_form in tier_formset %}
+        <div class="table-wrap">
+          <table class="table table--dense">
+            <thead>
               <tr>
-                <td class="col-sm">{{ forloop.counter }}</td>
-                <td class="text-left">{{ tier_form.name }}</td>
-                <td class="col-md">{{ tier_form.DELETE }}</td>
+                <th class="table__rank">Tier</th>
+                <th>Name</th>
+                <th class="table__actions">Remove</th>
               </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        <p class="text-muted text-smaller">Save to add another tier name.</p>
+            </thead>
+            <tbody>
+              {% for tier_form in tier_formset %}
+                <tr>
+                  <td class="table__rank">{{ forloop.counter }}</td>
+                  <td>
+                    <label class="visually-hidden" for="{{ tier_form.name.id_for_label }}">Name of tier {{ forloop.counter }}</label>
+                    {{ tier_form.name }}
+                  </td>
+                  <td class="table__actions">
+                    <label class="visually-hidden" for="{{ tier_form.DELETE.id_for_label }}">Remove tier {{ forloop.counter }}</label>
+                    {{ tier_form.DELETE }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="muted text-sm">Save to add another tier name.</p>
       </div>
     {% endif %}
 
-    <div class="card-actions">
+    <div class="form__actions">
       {% if not league %}
-        <a class="btn" href="{% url 'pmc-pg-play' playgroup.slug %}">Cancel</a>
+        <a class="btn btn--ghost" href="{% url 'pmc-pg-play' playgroup.slug %}">Cancel</a>
       {% endif %}
-      <button class="btn btn-solid" type="submit">Save</button>
+      <button class="btn btn--staff btn--solid" type="submit">Save</button>
     </div>
   </form>
 {% endblock %}

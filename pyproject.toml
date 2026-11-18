@@ -19,6 +19,7 @@ dependencies = [
     "django-htmx==1.29",
     "geopy>=2.4.0",
     "pillow==13.0",
+    "nh3>=0.3.8",
 ]
 
 [dependency-groups]

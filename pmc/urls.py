@@ -1,10 +1,12 @@
 from django.urls import path, include
 from django.views.generic.base import RedirectView
 from common.urls import urlpatterns as common_urlpatterns
-from . import views
+from . import design_system, views
 
 urlpatterns = [
     path('', RedirectView.as_view(url='@me', permanent=False)),
+    path('design-system/', design_system.index, name='pmc-design-system'),
+    path('design-system/<slug:section_slug>/', design_system.section, name='pmc-design-system-section'),
     path('@me/', views.my_keychain, name='pmc-my-keychain'),
     path('@me/manage/', views.manage_my_pmc_profile,
          name='pmc-my-keychain-manage'),
@@ -143,7 +145,6 @@ urlpatterns = [
     path('api/finder/', views.playgroup_finder_data, name='pmc-finder-data'),
     path('leaderboard/', views.global_leaderboard, name='pmc-leaderboard'),
     path('leaderboard/<int:pk>/', views.global_leaderboard, name='pmc-leaderboard'),
-    path('typography/', views.typography),
     path('about/', views.about, name='pmc-about'),
     path('about-ranking-points/', views.about_ranking_points,
          name='pmc-about-ranking-points'),

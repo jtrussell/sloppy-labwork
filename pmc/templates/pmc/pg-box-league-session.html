@@ -2,17 +2,15 @@
 {% load static %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'pmc/css/box-leagues.css' %}">
-  {% include 'pmc/_competition-assets.html' %}
 {% endblock %}
 
 {% block content %}
-  <div class="page-heading">
+  <div class="page-header">
     <h1>{{ league.name }}</h1>
-    <a class="staff-only" href="{% url 'pmc-pg-box-league-manage' playgroup.slug league.pk %}">Manage</a>
+    <a class="staff-link staff-only" href="{% url 'pmc-pg-box-league-manage' playgroup.slug league.pk %}">{% include 'pmc/_icon.html' with name='shield' class_name='icon--sm' %}Manage</a>
   </div>
   {% if session %}
-    <ul class="subheading inline-list">
+    <ul class="meta">
       <li>Session {{ session.number }}</li>
       {% if session.is_proposed %}
         <li>Proposed</li>
@@ -23,29 +21,31 @@
     </ul>
 
     {% if previous_session or next_session %}
-      <nav class="box-session-nav" aria-label="Sessions">
+      <nav class="cluster cluster--between" aria-label="Sessions">
         {% if previous_session %}
-          <a href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk previous_session.number %}">&larr; Session {{ previous_session.number }}</a>
+          <a class="btn btn--sm btn--ghost" href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk previous_session.number %}" rel="prev">{% include 'pmc/_icon.html' with name='chevron-left' class_name='icon--sm' %}Session {{ previous_session.number }}</a>
         {% else %}
           <span></span>
         {% endif %}
         {% if next_session %}
-          <a href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk next_session.number %}">Session {{ next_session.number }}{% if next_session.is_proposed %} (Proposed){% endif %} &rarr;</a>
+          <a class="btn btn--sm btn--ghost" href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk next_session.number %}" rel="next">Session {{ next_session.number }}{% if next_session.is_proposed %} (Proposed){% endif %}{% include 'pmc/_icon.html' with name='chevron-right' class_name='icon--sm' %}</a>
         {% endif %}
       </nav>
     {% endif %}
   {% endif %}
 
   {% if playgroup_member %}
-    <div class="card next-step">
+    <div class="card card--glow next-step">
       {% include 'pmc/_next-step-label.html' with is_due=next_step_is_due %}
-      <div class="next-step-body">
+      <div class="next-step__body">
         {% if not is_on_roster %}
           <p><strong>Join {{ league.name }}.</strong> New players start in the bottom tier when the next session begins.</p>
-          <form method="POST" action="{% url 'pmc-pg-box-league-join' playgroup.slug league.pk %}" class="next-step-actions">
-            {% csrf_token %}
-            <button class="btn btn-solid" type="submit">Join League</button>
-          </form>
+          <div class="next-step__actions">
+            <form method="POST" action="{% url 'pmc-pg-box-league-join' playgroup.slug league.pk %}">
+              {% csrf_token %}
+              <button class="btn btn--solid" type="submit">Join League</button>
+            </form>
+          </div>
         {% else %}
           <p>
             {% if session.is_proposed %}
@@ -71,27 +71,27 @@
               <a href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk proposal.number %}">Session {{ proposal.number }} is being planned. Confirm you're in.</a>
             {% endif %}
           </p>
-          <div class="next-step-actions">
+          <div class="next-step__actions">
             {% if session.is_proposed and not viewer_has_confirmed %}
               <form method="POST" action="{% url 'pmc-pg-box-league-confirm' playgroup.slug league.pk %}">
                 {% csrf_token %}
-                <button class="btn btn-solid" type="submit">Confirm I'm In</button>
+                <button class="btn btn--solid" type="submit">Confirm I'm In</button>
               </form>
             {% elif session.is_active and viewer_next_match %}
-              <a class="btn btn-solid" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk viewer_next_match.pk %}">Record a Result</a>
+              <a class="btn btn--solid" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk viewer_next_match.pk %}">Record a Result</a>
             {% endif %}
-            <details class="action-menu">
-              <summary class="menu-trigger" aria-label="More league actions">{% include 'pmc/_more-actions-icon.html' %}</summary>
-              <div class="action-menu-items">
+            <details class="action-menu" data-menu>
+              <summary class="action-menu__trigger" aria-label="More league actions">{% include 'pmc/_icon.html' with name='more' %}</summary>
+              <div class="action-menu__list">
                 {% if session.is_proposed and viewer_has_confirmed %}
                   <form method="POST" action="{% url 'pmc-pg-box-league-sit-out' playgroup.slug league.pk %}">
                     {% csrf_token %}
-                    <button type="submit">Sit out session {{ session.number }}</button>
+                    <button class="action-menu__item" type="submit">Sit out session {{ session.number }}</button>
                   </form>
                 {% endif %}
                 <button
                   type="button"
-                  class="is-destructive"
+                  class="action-menu__item action-menu__item--danger"
                   hx-post="{% url 'pmc-pg-box-league-leave' playgroup.slug league.pk %}"
                   hx-confirm="Leave {{ league.name }}? Your unplayed matches this session will be removed."
                 >Leave league</button>
@@ -104,38 +104,41 @@
   {% endif %}
 
   {% if session and not session.is_completed and playgroup_member.is_staff %}
-    <div class="card staff-only">
-      <div class="next-step-body">
+    <div class="card card--staff staff-only">
+      <p class="staff-tag">Staff</p>
+      <div class="next-step__body">
         <p>
           {% if session.is_proposed %}
             <strong>{{ confirmed_member_ids|length }} player{{ confirmed_member_ids|length|pluralize }} confirmed.</strong>
             {{ placed_player_count }} placed in {{ box_summaries|length }} box{{ box_summaries|length|pluralize:"es" }}.
-            {% if is_stale_proposal %}<br><span class="text-smaller">Results have changed since this plan. Rebalance to use the latest standings.</span>{% endif %}
+            {% if is_stale_proposal %}<br><span class="text-sm">Results have changed since this plan. Rebalance to use the latest standings.</span>{% endif %}
           {% else %}
             <strong>Organizer tools</strong>
           {% endif %}
         </p>
-        <div class="next-step-actions">
+        <div class="next-step__actions">
           {% if session.is_proposed %}
-            <a class="btn btn-solid" href="{% url 'pmc-pg-box-league-start' playgroup.slug league.pk %}">Start Session</a>
+            <a class="btn btn--staff btn--solid" href="{% url 'pmc-pg-box-league-start' playgroup.slug league.pk %}">Start Session</a>
           {% endif %}
-          <details class="action-menu">
-            <summary class="menu-trigger" aria-label="Organizer actions">{% include 'pmc/_more-actions-icon.html' %}</summary>
-            <div class="action-menu-items">
+          <details class="action-menu" data-menu>
+            <summary class="action-menu__trigger action-menu__trigger--staff" aria-label="Organizer actions">{% include 'pmc/_icon.html' with name='more' %}</summary>
+            <div class="action-menu__list">
               {% if session.is_proposed %}
                 <button
                   type="button"
+                  class="action-menu__item"
                   hx-post="{% url 'pmc-pg-box-league-rebalance' playgroup.slug league.pk %}"
                   hx-confirm="Rebalance the boxes using confirmed players only?"
+                  data-preserve-scroll
                 >Rebalance with confirmed players</button>
-                <button type="button" data-dialog-open="resize-dialog">Change number of boxes&hellip;</button>
+                <button type="button" class="action-menu__item" data-dialog-open="resize-dialog">Change number of boxes&hellip;</button>
               {% endif %}
-              <button type="button" data-dialog-open="place-player-dialog">Place a player&hellip;</button>
-              <button type="button" data-dialog-open="add-box-dialog">Add a box&hellip;</button>
+              <button type="button" class="action-menu__item" data-dialog-open="place-player-dialog">Place a player&hellip;</button>
+              <button type="button" class="action-menu__item" data-dialog-open="add-box-dialog">Add a box&hellip;</button>
               {% if session.is_proposed %}
                 <button
                   type="button"
-                  class="is-destructive"
+                  class="action-menu__item action-menu__item--danger"
                   hx-post="{% url 'pmc-pg-box-league-discard' playgroup.slug league.pk %}"
                   hx-confirm="Discard this proposed session?"
                 >Discard proposal</button>
@@ -147,50 +150,56 @@
     </div>
 
     {% if resize_form %}
-      <dialog id="resize-dialog" class="competition-dialog" aria-labelledby="resize-dialog-title">
-        <form method="POST" action="{% url 'pmc-pg-box-league-resize' playgroup.slug league.pk %}">
+      <dialog id="resize-dialog" class="dialog" aria-labelledby="resize-dialog-title">
+        <form method="POST" action="{% url 'pmc-pg-box-league-resize' playgroup.slug league.pk %}" data-preserve-scroll>
           {% csrf_token %}
-          <h2 id="resize-dialog-title">Change Number of Boxes</h2>
-          <p class="text-muted">
-            {{ placed_player_count }} player{{ placed_player_count|pluralize }} placed. At {{ league.target_box_size }} per box, about {{ suggested_box_count }} box{{ suggested_box_count|pluralize:"es" }}.
-          </p>
-          {{ resize_form.as_p }}
-          <div class="card-actions">
-            <button class="btn" type="submit" formmethod="dialog" formnovalidate>Cancel</button>
-            <button class="btn btn-solid" type="submit">Update Boxes</button>
+          {% include 'pmc/_dialog-header.html' with title_id='resize-dialog-title' title='Change Number of Boxes' %}
+          <div class="dialog__body">
+            <p class="muted">
+              {{ placed_player_count }} player{{ placed_player_count|pluralize }} placed. At {{ league.target_box_size }} per box, about {{ suggested_box_count }} box{{ suggested_box_count|pluralize:"es" }}.
+            </p>
+            {% include 'pmc/_form-fields.html' with form=resize_form %}
           </div>
+          <footer class="dialog__footer">
+            <button class="btn btn--ghost" type="button" data-dialog-close>Cancel</button>
+            <button class="btn btn--staff btn--solid" type="submit">Update Boxes</button>
+          </footer>
         </form>
       </dialog>
     {% endif %}
 
     {% if assignment_form %}
-      <dialog id="place-player-dialog" class="competition-dialog" aria-labelledby="place-player-dialog-title">
-        <form method="POST" action="{% url 'pmc-pg-box-league-assign' playgroup.slug league.pk session.number %}">
+      <dialog id="place-player-dialog" class="dialog" aria-labelledby="place-player-dialog-title">
+        <form method="POST" action="{% url 'pmc-pg-box-league-assign' playgroup.slug league.pk session.number %}" data-preserve-scroll>
           {% csrf_token %}
-          <h2 id="place-player-dialog-title">Place a Player</h2>
-          <p class="text-muted text-smaller">
-            {% if session.is_active %}Moving a player deletes their unplayed matches in their old box and creates matches in the new one.{% else %}Placing a player also confirms them for this session.{% endif %}
-          </p>
-          {{ assignment_form.as_p }}
-          <div class="card-actions">
-            <button class="btn" type="submit" formmethod="dialog" formnovalidate>Cancel</button>
-            <button class="btn btn-solid" type="submit">Place Player</button>
+          {% include 'pmc/_dialog-header.html' with title_id='place-player-dialog-title' title='Place a Player' %}
+          <div class="dialog__body">
+            <p class="muted text-sm">
+              {% if session.is_active %}Moving a player deletes their unplayed matches in their old box and creates matches in the new one.{% else %}Placing a player also confirms them for this session.{% endif %}
+            </p>
+            {% include 'pmc/_form-fields.html' with form=assignment_form %}
           </div>
+          <footer class="dialog__footer">
+            <button class="btn btn--ghost" type="button" data-dialog-close>Cancel</button>
+            <button class="btn btn--staff btn--solid" type="submit">Place Player</button>
+          </footer>
         </form>
       </dialog>
     {% endif %}
 
     {% if add_box_form %}
-      <dialog id="add-box-dialog" class="competition-dialog" aria-labelledby="add-box-dialog-title">
-        <form method="POST" action="{% url 'pmc-pg-box-league-box-add' playgroup.slug league.pk session.number %}">
+      <dialog id="add-box-dialog" class="dialog" aria-labelledby="add-box-dialog-title">
+        <form method="POST" action="{% url 'pmc-pg-box-league-box-add' playgroup.slug league.pk session.number %}" data-preserve-scroll>
           {% csrf_token %}
-          <h2 id="add-box-dialog-title">Add a Box</h2>
-          <p class="text-muted text-smaller">New boxes start empty. Place players into them afterwards.</p>
-          {{ add_box_form.as_p }}
-          <div class="card-actions">
-            <button class="btn" type="submit" formmethod="dialog" formnovalidate>Cancel</button>
-            <button class="btn btn-solid" type="submit">Add Box</button>
+          {% include 'pmc/_dialog-header.html' with title_id='add-box-dialog-title' title='Add a Box' %}
+          <div class="dialog__body">
+            <p class="muted text-sm">New boxes start empty. Place players into them afterwards.</p>
+            {% include 'pmc/_form-fields.html' with form=add_box_form %}
           </div>
+          <footer class="dialog__footer">
+            <button class="btn btn--ghost" type="button" data-dialog-close>Cancel</button>
+            <button class="btn btn--staff btn--solid" type="submit">Add Box</button>
+          </footer>
         </form>
       </dialog>
     {% endif %}
@@ -203,25 +212,27 @@
     {% endif %}
 
     <h2>{% if viewer_summary %}Other Boxes{% elif session.is_proposed %}Proposed Boxes{% else %}Boxes{% endif %}</h2>
-    <div class="box-grid">
+    <div class="grid grid--wide">
       {% for summary in box_summaries %}
         {% if not summary.is_viewer_box %}
           {% include 'pmc/_box-standings.html' %}
         {% endif %}
       {% empty %}
-        <div class="card text-muted">No boxes in this session.</div>
+        <div class="card muted">No boxes in this session.</div>
       {% endfor %}
     </div>
   {% else %}
-    <div class="card text-muted">No sessions yet. Once organizers plan the first session, boxes will show up here.</div>
+    <div class="card muted">No sessions yet. Once organizers plan the first session, boxes will show up here.</div>
   {% endif %}
 
   {% if waiting_members %}
     <h2>Waiting for the Next Session</h2>
-    <ul class="card inline-list">
-      {% for waiting_member in waiting_members %}
-        <li>{{ waiting_member }}</li>
-      {% endfor %}
-    </ul>
+    <div class="card">
+      <ul class="chip-row">
+        {% for waiting_member in waiting_members %}
+          <li class="chip">{{ waiting_member }}</li>
+        {% endfor %}
+      </ul>
+    </div>
   {% endif %}
 {% endblock %}

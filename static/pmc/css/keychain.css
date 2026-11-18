@@ -1,0 +1,13 @@
+@layer reset, base, components, utilities;
+
+@import url("system/reset.css") layer(reset);
+@import url("system/tokens.css");
+@import url("system/base.css") layer(base);
+@import url("system/components.css") layer(components);
+@import url("system/utilities.css") layer(utilities);
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}

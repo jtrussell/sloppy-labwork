@@ -1,0 +1,4 @@
+<div class="notice message{% if level == 'error' %} notice--danger{% elif level == 'warning' %} notice--warning{% elif level == 'success' %} notice--success{% elif level == 'info' %} notice--info{% endif %}" data-message{% if level == 'error' or level == 'warning' %} data-message-persistent{% endif %}>
+  <div class="message__text" data-message-text>{{ text }}</div>
+  <button type="button" class="icon-button message__dismiss" aria-label="Dismiss" data-message-dismiss>{% include 'pmc/_icon.html' with name='close' class_name='icon--sm' %}</button>
+</div>

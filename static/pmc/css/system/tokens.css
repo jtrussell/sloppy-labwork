@@ -1,0 +1,185 @@
+:root {
+  --color-on-art: #ffffff;
+  --color-on-art-muted: rgba(255, 255, 255, 0.75);
+  --color-art-scrim: rgba(0, 0, 0, 0.6);
+  --color-art-scrim-soft: rgba(0, 0, 0, 0.1);
+  --color-art-highlight: #ffd23f;
+  --color-map-marker: #ffb400;
+  --color-map-marker-muted: #888888;
+  --color-on-map-marker: #131313;
+  --color-map-chrome: rgba(19, 19, 19, 0.85);
+  --color-on-map-chrome: #ffffff;
+  --color-on-map-chrome-muted: rgba(255, 255, 255, 0.8);
+
+  --icon-lock: url("https://static.sloppylabwork.com/pmc/lock.svg");
+  --icon-set-generic: url("https://res.cloudinary.com/dig7eguxo/image/upload/v1750447189/OTHER_wltacg.png");
+  --icon-set-empty: url("https://res.cloudinary.com/dig7eguxo/image/upload/v1750446466/ADD_nex8zp.png");
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.75rem;
+  --space-7: 2.5rem;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  --font-body: "Lexend", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.75rem;
+  --text-4xl: 2.25rem;
+
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-normal: 1.5;
+
+  --tracking-caps: 0.06em;
+  --tracking-eyebrow: 0.12em;
+
+  --tap-min: 44px;
+  --control-height: 44px;
+  --control-height-sm: 36px;
+  --page-width: 52rem;
+  --page-gutter: var(--space-4);
+  --tab-bar-height: 64px;
+
+  --focus-ring: 2px solid var(--color-focus);
+  --focus-offset: 2px;
+
+  --z-dropdown: 20;
+  --z-nav: 30;
+  --z-toast: 60;
+
+  --transition-quick: 140ms ease-out;
+  --transition-default: 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --tint-subtle: 10%;
+  --tint-strong: 22%;
+}
+
+:root,
+[data-theme="0"] {
+  --color-bg: #0f0e0d;
+  --color-surface: #1a1816;
+  --color-surface-raised: #24211e;
+  --color-masthead: #070606;
+  --color-text: #ffffff;
+  --color-text-muted: #b3aca4;
+  --color-text-subtle: #968f88;
+  --color-border: #2f2b27;
+  --color-border-strong: #4a443d;
+  --color-border-control: #787068;
+  --color-primary: #ffb400;
+  --color-primary-bright: #ffd23f;
+  --color-primary-soft: rgba(255, 180, 0, 0.14);
+  --color-on-primary: #131313;
+  --color-ember: #69140e;
+  --color-ember-bright: #a3291d;
+  --color-success: #2bc98a;
+  --color-success-soft: rgba(43, 201, 138, 0.14);
+  --color-warning: #ffe870;
+  --color-warning-soft: rgba(255, 232, 112, 0.12);
+  --color-danger: #ff7474;
+  --color-danger-soft: rgba(255, 116, 116, 0.14);
+  --color-on-danger: #131313;
+  --color-info: #6fd3de;
+  --color-info-soft: rgba(111, 211, 222, 0.12);
+  --color-staff: #8fd3fa;
+  --color-staff-soft: rgba(143, 211, 250, 0.12);
+  --color-on-staff: #0c1d43;
+  --color-focus: #ffd23f;
+  --color-overlay: rgba(5, 4, 3, 0.72);
+  --color-switch-knob: #ffffff;
+  --color-button-highlight: rgba(255, 255, 255, 0.35);
+
+  --color-on-tier: #131313;
+  --tier-bronze: #c98a53;
+  --tier-silver: #c7ccd4;
+  --tier-gold: #ffc93a;
+  --tier-ascension: #c79bff;
+
+  --gradient-primary: linear-gradient(180deg, #ffd23f 0%, #ffb400 55%, #f29c00 100%);
+  --gradient-ember: linear-gradient(135deg, #a3291d 0%, #69140e 60%, #3d0b07 100%);
+  --glow-primary: 0 0 0 1px rgba(255, 180, 0, 0.55), 0 0 22px -4px rgba(255, 180, 0, 0.55);
+  --glow-soft: 0 10px 30px -12px rgba(255, 180, 0, 0.35);
+  --glow-meter: 0 0 12px rgba(255, 180, 0, 0.6);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 28px -18px rgba(0, 0, 0, 0.9);
+  --shadow-raised: 0 12px 30px -12px rgba(0, 0, 0, 0.8);
+
+  --wordmark: url("https://static.sloppylabwork.com/pmc/brand/KC_WORDMARK_DARK_ALPHA.png");
+  --icon-xp: url("https://static.sloppylabwork.com/pmc/icons/XP_SIMPLE.svg");
+  --icon-rp: url("https://static.sloppylabwork.com/pmc/icons/RP_SIMPLE.svg");
+  --icon-discord: url("https://res.cloudinary.com/dig7eguxo/image/upload/v1743023560/Discord-Symbol-White_qnyxug.svg");
+}
+
+[data-theme="1"] {
+  --color-bg: #f4f1ec;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f8f4ee;
+  --color-masthead: #ece6dd;
+  --color-text: #161311;
+  --color-text-muted: #5c554e;
+  --color-text-subtle: #6e675f;
+  --color-border: #e3dcd2;
+  --color-border-strong: #c6bcae;
+  --color-border-control: #8a8177;
+  --color-primary: #69140e;
+  --color-primary-bright: #8a1c12;
+  --color-primary-soft: rgba(105, 20, 14, 0.09);
+  --color-on-primary: #ffffff;
+  --color-ember: #ffb400;
+  --color-ember-bright: #ffd23f;
+  --color-success: #0f6e49;
+  --color-success-soft: rgba(15, 110, 73, 0.1);
+  --color-warning: #735b00;
+  --color-warning-soft: rgba(115, 91, 0, 0.1);
+  --color-danger: #bd2c2c;
+  --color-danger-soft: rgba(189, 44, 44, 0.08);
+  --color-on-danger: #ffffff;
+  --color-info: #0b6470;
+  --color-info-soft: rgba(11, 100, 112, 0.09);
+  --color-staff: #0c3a7a;
+  --color-staff-soft: rgba(12, 58, 122, 0.08);
+  --color-on-staff: #ffffff;
+  --color-focus: #69140e;
+  --color-overlay: rgba(22, 19, 17, 0.4);
+  --color-switch-knob: #ffffff;
+  --color-button-highlight: rgba(255, 255, 255, 0.2);
+
+  --color-on-tier: #ffffff;
+  --tier-bronze: #8a5225;
+  --tier-silver: #5f6772;
+  --tier-gold: #8a6408;
+  --tier-ascension: #7a4bc4;
+
+  --gradient-primary: linear-gradient(180deg, #8a1c12 0%, #69140e 60%, #4f0e09 100%);
+  --gradient-ember: linear-gradient(135deg, #ffd23f 0%, #ffb400 60%, #f29c00 100%);
+  --glow-primary: 0 0 0 1px rgba(105, 20, 14, 0.45), 0 0 18px -6px rgba(105, 20, 14, 0.45);
+  --glow-soft: 0 10px 30px -14px rgba(105, 20, 14, 0.3);
+  --glow-meter: 0 0 10px rgba(105, 20, 14, 0.35);
+  --shadow-card: 0 1px 2px rgba(60, 40, 20, 0.06), 0 12px 28px -20px rgba(60, 40, 20, 0.35);
+  --shadow-raised: 0 12px 30px -14px rgba(60, 40, 20, 0.45);
+
+  --wordmark: url("https://res.cloudinary.com/dig7eguxo/image/upload/v1743023560/KC_WORDMARK_LIGHT_ALPHA_bewlrz.png");
+  --icon-xp: url("https://res.cloudinary.com/dig7eguxo/image/upload/v1743645712/XP_SIMPLE_LIGHT_mtqhqe.svg");
+  --icon-rp: url("https://res.cloudinary.com/dig7eguxo/image/upload/v1743645712/RP_SIMPLE_LIGHT_jologn.svg");
+  --icon-discord: url("https://res.cloudinary.com/dig7eguxo/image/upload/v1743023560/Discord-Symbol-Black_cril5b.svg");
+}

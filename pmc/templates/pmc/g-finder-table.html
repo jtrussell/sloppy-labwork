@@ -35,20 +35,20 @@
 
 {% partialdef mode-badge %}
 	{% if playgroup.is_primarily_digital %}
-		<span class="finder-mode-badge finder-mode-badge-digital">Digital</span>
+		<span class="chip chip--primary">Digital</span>
 	{% else %}
-		<span class="finder-mode-badge">In person</span>
+		<span class="chip chip--outline">In person</span>
 	{% endif %}
 {% endpartialdef %}
 
 {% partialdef next-event %}
 	{% if playgroup.next_event_date %}
-		<span class="finder-table-next-event" title="{{ playgroup.next_event_date|date:'DATE_FORMAT' }}">
-			<time class="finder-table-next-event-day" datetime="{{ playgroup.next_event_date|date:'Y-m-d' }}" data-relative-event-day>{{ playgroup.next_event_date|relative_event_day }}</time>
-			{% if playgroup.next_event_format_name %}<span class="finder-format-chip">{{ playgroup.next_event_format_name }}</span>{% endif %}
+		<span class="finder-table__next-event" title="{{ playgroup.next_event_date|date:'DATE_FORMAT' }}">
+			<time class="finder-table__next-event-day" datetime="{{ playgroup.next_event_date|date:'Y-m-d' }}" data-relative-event-day>{{ playgroup.next_event_date|relative_event_day }}</time>
+			{% if playgroup.next_event_format_name %}<span class="chip">{{ playgroup.next_event_format_name }}</span>{% endif %}
 		</span>
 	{% else %}
-		<span class="text-muted">Nothing scheduled</span>
+		<span class="muted">Nothing scheduled</span>
 	{% endif %}
 {% endpartialdef %}
 
@@ -59,7 +59,7 @@
 		{% endwith %}
 	{% endif %}
 
-	<p class="finder-table-count text-muted text-smaller">
+	<p class="finder-table__count muted text-sm">
 		{% with total=page_obj.paginator.count %}
 			{% if total %}
 				Showing {{ page_obj.start_index }}&ndash;{{ page_obj.end_index }} of {{ total }} group{{ total|pluralize }}
@@ -67,80 +67,74 @@
 		{% endwith %}
 	</p>
 
-	<table class="finder-table">
-		<thead>
-			<tr>
-				<th class="text-left">Group</th>
-				<th class="text-left lg-only">Location</th>
-				<th class="text-left lg-only">Next event</th>
-				<th class="text-left lg-only">Activity</th>
-				<th class="lg-only">Mode</th>
-				<th class="lg-only">Members</th>
-			</tr>
-		</thead>
-		<tbody>
-			{% for playgroup in page_obj %}
-				<tr class="{% if playgroup.is_primarily_digital %}is-digital{% endif %}">
-					<td class="text-left">
-						<div class="finder-table-group">
-							<img class="finder-table-logo" src="{{ playgroup.get_logo_src }}" alt="">
-							<div>
-								<a href="{% url 'pmc-pg-detail' playgroup.slug %}">{{ playgroup.name }}</a>
-								{% if playgroup.type %}
-									<div class="lg-only text-smaller text-muted">{{ playgroup.type }}</div>
-								{% endif %}
-								<div class="sm-only text-smaller text-muted">
-									{% partial location %}
-								</div>
-								<div class="sm-only finder-table-meta text-smaller text-muted">
-									{% partial mode-badge %}
-									{% include 'pmc/_finder-group-card.html#activity-meter' %}
-									<span>{{ playgroup.member_count }} member{{ playgroup.member_count|pluralize }}</span>
-								</div>
-								{% if playgroup.next_event_date %}
-									<div class="sm-only finder-table-meta text-smaller">
-										Next: {% partial next-event %}
-									</div>
-								{% endif %}
-							</div>
-						</div>
-					</td>
-					<td class="text-left lg-only">
-						{% partial location %}
-					</td>
-					<td class="text-left lg-only">{% partial next-event %}</td>
-					<td class="text-left lg-only">{% include 'pmc/_finder-group-card.html#activity-meter' %}</td>
-					<td class="lg-only">{% partial mode-badge %}</td>
-					<td class="lg-only stat">{{ playgroup.member_count }}</td>
+	<div class="card table-wrap">
+		<table class="table finder-table">
+			<thead>
+				<tr>
+					<th>Group</th>
+					<th class="table__wide">Location</th>
+					<th class="table__wide">Next event</th>
+					<th class="table__wide">Activity</th>
+					<th class="table__wide">Mode</th>
+					<th class="n table__wide">Members</th>
 				</tr>
-			{% empty %}
-				<tr><td colspan="6">No groups match your search.</td></tr>
-			{% endfor %}
-		</tbody>
-	</table>
+			</thead>
+			<tbody>
+				{% for playgroup in page_obj %}
+					<tr>
+						<td>
+							<div class="player">
+								<img class="logo logo--sm finder-table__logo" src="{{ playgroup.get_logo_src }}" alt="">
+								<div class="player__body finder-table__group">
+									<a class="player__name" href="{% url 'pmc-pg-detail' playgroup.slug %}">{{ playgroup.name }}</a>
+									{% if playgroup.type %}
+										<span class="player__note table__wide">{{ playgroup.type }}</span>
+									{% endif %}
+									<span class="player__note table__narrow">
+										{% partial location %}
+									</span>
+									<span class="player__note table__narrow cluster">
+										{% partial mode-badge %}
+										{% include 'pmc/_finder-group-card.html#activity-meter' %}
+										<span>{{ playgroup.member_count }} member{{ playgroup.member_count|pluralize }}</span>
+									</span>
+									{% if playgroup.next_event_date %}
+										<span class="text-sm table__narrow cluster">
+											Next: {% partial next-event %}
+										</span>
+									{% endif %}
+								</div>
+							</div>
+						</td>
+						<td class="table__wide">
+							{% partial location %}
+						</td>
+						<td class="table__wide">{% partial next-event %}</td>
+						<td class="table__wide">{% include 'pmc/_finder-group-card.html#activity-meter' %}</td>
+						<td class="table__wide">{% partial mode-badge %}</td>
+						<td class="n table__wide">{{ playgroup.member_count }}</td>
+					</tr>
+				{% empty %}
+					<tr><td colspan="6" class="table__empty">No groups match your search.</td></tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
 
-	{% if page_obj.paginator.num_pages > 1 %}
-		<div class="btn-group btn-group-center finder-table-pagination" hx-boost="true" hx-target="#finder-table-results" hx-push-url="true">
+	{% if page_obj.has_other_pages %}
+		<nav class="pagination" aria-label="Pagination" hx-boost="true" hx-target="#finder-table-results" hx-push-url="true">
 			{% if page_obj.has_previous %}
-				<a class="btn" href="{% querystring page=page_obj.previous_page_number %}">&laquo;</a>
+				<a class="btn btn--sm btn--ghost" rel="prev" href="{% querystring page=page_obj.previous_page_number %}">Prev</a>
 			{% else %}
-				<span class="btn" aria-disabled="true">&laquo;</span>
+				<span class="btn btn--sm btn--ghost" aria-disabled="true">Prev</span>
 			{% endif %}
-
-			{% for page_number in page_obj.paginator.page_range %}
-				{% if page_obj.number == page_number %}
-					<span class="btn btn-solid">{{ page_number }}</span>
-				{% else %}
-					<a class="btn" href="{% querystring page=page_number %}">{{ page_number }}</a>
-				{% endif %}
-			{% endfor %}
-
+			<span class="pagination__info">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
 			{% if page_obj.has_next %}
-				<a class="btn" href="{% querystring page=page_obj.next_page_number %}">&raquo;</a>
+				<a class="btn btn--sm btn--ghost" rel="next" href="{% querystring page=page_obj.next_page_number %}">Next</a>
 			{% else %}
-				<span class="btn" aria-disabled="true">&raquo;</span>
+				<span class="btn btn--sm btn--ghost" aria-disabled="true">Next</span>
 			{% endif %}
-		</div>
+		</nav>
 	{% endif %}
 {% endpartialdef %}
 
@@ -149,76 +143,78 @@
 {% endblock %}
 
 {% block content %}
-	<div class="flex flex-spread flex-align-baseline">
+	<div class="page-header">
 		<h1>Find a Group</h1>
-		<a href="{% url 'pmc-finder' %}">Map view</a>
+		<a class="btn btn--ghost" href="{% url 'pmc-finder' %}">{% include 'pmc/_icon.html' with name='map' class_name='icon--sm' %}Map view</a>
 	</div>
 
 	<form
 		method="GET"
-		class="card finder-table-filters"
+		class="card"
 		hx-get="{% url 'pmc-finder-table' %}"
 		hx-target="#finder-table-results"
 		hx-push-url="true"
 		hx-sync="this:replace"
 		hx-trigger="submit, change, input delay:300ms from:#finder-table-search"
 	>
-		<div class="finder-table-field finder-table-field-wide">
-			<label for="finder-table-search">Search</label>
-			<input
-				type="search"
-				name="search"
-				id="finder-table-search"
-				value="{{ filters.search }}"
-				placeholder="Groups, venues, places..."
-				autocomplete="off"
-			>
-		</div>
+		<div class="finder-table-filters">
+			<div class="field finder-table-filters__wide">
+				<label class="field__label" for="finder-table-search">Search</label>
+				<input
+					type="search"
+					name="search"
+					id="finder-table-search"
+					value="{{ filters.search }}"
+					placeholder="Groups, venues, places..."
+					autocomplete="off"
+				>
+			</div>
 
-		<div class="finder-table-field">
-			<label for="finder-table-mode">Mode</label>
-			<select name="mode" id="finder-table-mode">
-				<option value="">All</option>
-				<option value="in_person" {% if filters.mode == 'in_person' %}selected{% endif %}>In person</option>
-				<option value="digital" {% if filters.mode == 'digital' %}selected{% endif %}>Digital</option>
-			</select>
-		</div>
+			<div class="field">
+				<label class="field__label" for="finder-table-mode">Mode</label>
+				<select name="mode" id="finder-table-mode">
+					<option value="">All</option>
+					<option value="in_person" {% if filters.mode == 'in_person' %}selected{% endif %}>In person</option>
+					<option value="digital" {% if filters.mode == 'digital' %}selected{% endif %}>Digital</option>
+				</select>
+			</div>
 
-		<div class="finder-table-field">
-			<label for="finder-table-format">Format</label>
-			<select name="event_format" id="finder-table-format">
-				<option value="">All</option>
-				{% for event_format in event_formats %}
-					<option value="{{ event_format.id }}" {% if filters.event_format == event_format.id|stringformat:'d' %}selected{% endif %}>{{ event_format.name }}</option>
-				{% endfor %}
-				<option value="other" {% if filters.event_format == 'other' %}selected{% endif %}>Other</option>
-			</select>
-		</div>
+			<div class="field">
+				<label class="field__label" for="finder-table-format">Format</label>
+				<select name="event_format" id="finder-table-format">
+					<option value="">All</option>
+					{% for event_format in event_formats %}
+						<option value="{{ event_format.id }}" {% if filters.event_format == event_format.id|stringformat:'d' %}selected{% endif %}>{{ event_format.name }}</option>
+					{% endfor %}
+					<option value="other" {% if filters.event_format == 'other' %}selected{% endif %}>Other</option>
+				</select>
+			</div>
 
-		<div class="finder-table-field">
-			<label for="finder-table-country">Country</label>
-			<select name="country" id="finder-table-country">
-				<option value="">All countries</option>
-				{% for country in countries %}
-					<option value="{{ country }}" {% if country == filters.country %}selected{% endif %}>{{ country }}</option>
-				{% endfor %}
-			</select>
-		</div>
+			<div class="field">
+				<label class="field__label" for="finder-table-country">Country</label>
+				<select name="country" id="finder-table-country">
+					<option value="">All countries</option>
+					{% for country in countries %}
+						<option value="{{ country }}" {% if country == filters.country %}selected{% endif %}>{{ country }}</option>
+					{% endfor %}
+				</select>
+			</div>
 
-		<div class="finder-table-field">
-			<label for="finder-table-region">Region</label>
-			{% partial region-select %}
-		</div>
+			<div class="field">
+				<label class="field__label" for="finder-table-region">Region</label>
+				{% partial region-select %}
+			</div>
 
-		<div class="finder-table-field finder-table-field-checkbox">
-			<input type="checkbox" name="upcoming_events" value="1" id="finder-table-upcoming" {% if filters.upcoming_events %}checked{% endif %}>
-			<label for="finder-table-upcoming">Has upcoming events</label>
-		</div>
+			<label class="switch-row switch-row--start finder-table-filters__wide">
+				<input type="checkbox" class="switch" name="upcoming_events" value="1" id="finder-table-upcoming" {% if filters.upcoming_events %}checked{% endif %}>
+				<span>Has upcoming events</span>
+			</label>
 
-		<noscript><button type="submit" class="btn btn-solid">Search</button></noscript>
+			<noscript class="finder-table-filters__wide"><button type="submit" class="btn btn--solid">Search</button></noscript>
+		</div>
 	</form>
 
-	<div id="finder-table-results">
+	<div id="finder-table-results" class="stack">
 		{% partial finder-table-results %}
 	</div>
 {% endblock %}

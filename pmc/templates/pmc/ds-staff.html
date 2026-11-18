@@ -1,0 +1,65 @@
+{% extends "pmc/ds-base.html" %}
+{% load pmc_extras %}
+
+{% block gallery_content %}
+  <div class="card prose">
+    <p>
+      Blue means staff. A staff element sits on the normal surface and is marked by the blue accent and the
+      word "Staff", so it reads the same in both themes and never relies on colour alone.
+    </p>
+    <ul>
+      <li>Add <code>.staff-only</code> to hide an element from non-staff. This hides controls only.</li>
+      <li>Data and capabilities must be withheld on the server (<code>playgroup_member.is_staff</code> in the view or template).</li>
+      <li>A page only staff can open shows the staff strip under the masthead.</li>
+    </ul>
+  </div>
+
+  <h2>Staff strip</h2>
+  <p class="muted">In a page template: <code>{% templatetag openblock %} block staff_strip {% templatetag closeblock %}{% templatetag openblock %} include 'pmc/_staff-strip.html' {% templatetag closeblock %}{% templatetag openblock %} endblock {% templatetag closeblock %}</code></p>
+  {% kc_example themed no_markup %}
+{% include 'pmc/_staff-strip.html' %}
+  {% end_kc_example %}
+
+  <h2>Staff and player versions</h2>
+  {% kc_example themed %}
+<div class="split">
+  <div class="card">
+    <h3 class="card__title">Player card</h3>
+    <p>What every member sees.</p>
+    <div class="card__actions"><a href="#" class="btn btn--solid">Register</a></div>
+  </div>
+  <div class="card card--staff staff-only staff-demo">
+    <p class="staff-tag">Staff</p>
+    <h3 class="card__title">Staff area</h3>
+    <p>Tools only playgroup staff can use.</p>
+    <div class="card__actions">
+      <a href="#" class="btn btn--staff">Scan player</a>
+      <a href="#" class="btn btn--staff btn--solid">Manage event</a>
+    </div>
+  </div>
+</div>
+  {% end_kc_example %}
+
+  <h2>Staff actions beside player content</h2>
+  {% kc_example themed %}
+<div class="page-header">
+  <h1>Summer Ladder</h1>
+  <a href="#" class="staff-link staff-only staff-demo">{% include 'pmc/_icon.html' with name='shield' class_name='icon--sm' %}Manage</a>
+</div>
+<div class="cluster">
+  <span class="chip chip--staff staff-only staff-demo">3 join requests</span>
+  <button type="button" class="text-button text-button--staff staff-only staff-demo">Void result</button>
+  <span class="text-staff staff-only staff-demo">Staff-only note</span>
+</div>
+<div class="notice notice--staff staff-only staff-demo">
+  <p class="notice__title">Staff</p>
+  <p>This ladder has two players waiting for approval.</p>
+</div>
+  {% end_kc_example %}
+
+  <h2>Preview features</h2>
+  <p class="muted"><code>.preview</code> marks something only Django staff can see while it is being built.</p>
+  {% kc_example %}
+<a href="#" class="btn preview staff-demo">Preview feature</a>
+  {% end_kc_example %}
+{% endblock %}

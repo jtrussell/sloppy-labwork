@@ -1,22 +1,18 @@
 {% extends "pmc/_base.html" %}
 
-{% block extra_head %}
-  {% include 'pmc/_competition-assets.html' %}
-{% endblock %}
-
 {% block content %}
   <h1>Play</h1>
 
   {% if ladders is not None %}
     <div class="section-heading">
       <h2>Ladders</h2>
-      <a class="staff-only" href="{% url 'pmc-pg-ladder-new' playgroup.slug %}">Add ladder</a>
+      <a class="staff-link staff-only" href="{% url 'pmc-pg-ladder-new' playgroup.slug %}">{% include 'pmc/_icon.html' with name='shield' class_name='icon--sm' %}Add ladder</a>
     </div>
     <ul class="card-list">
       {% for ladder in ladders %}
         {% include 'pmc/_ladder-card.html' %}
       {% empty %}
-        <li class="card text-muted">No ladders yet.</li>
+        <li class="card muted">No ladders yet.</li>
       {% endfor %}
     </ul>
   {% endif %}
@@ -24,13 +20,13 @@
   {% if box_leagues is not None %}
     <div class="section-heading">
       <h2>Box Leagues</h2>
-      <a class="staff-only" href="{% url 'pmc-pg-box-league-new' playgroup.slug %}">Add box league</a>
+      <a class="staff-link staff-only" href="{% url 'pmc-pg-box-league-new' playgroup.slug %}">{% include 'pmc/_icon.html' with name='shield' class_name='icon--sm' %}Add box league</a>
     </div>
     <ul class="card-list">
       {% for box_league in box_leagues %}
         {% include 'pmc/_box-league-card.html' %}
       {% empty %}
-        <li class="card text-muted">No box leagues yet.</li>
+        <li class="card muted">No box leagues yet.</li>
       {% endfor %}
     </ul>
   {% endif %}

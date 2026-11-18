@@ -2,11 +2,13 @@
 
 {% block content %}
   <h1>Update Your Profile at {{ playgroup }}</h1>
-  <form method="POST" enctype="multipart/form-data">
+  <form method="POST" enctype="multipart/form-data" class="card">
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-solid">
-      Submit
-    </button>
+    {% include 'pmc/_form-fields.html' with form=form %}
+    <div class="form__actions">
+      <button type="submit" class="btn btn--solid">
+        Submit
+      </button>
+    </div>
   </form>
 {% endblock %}

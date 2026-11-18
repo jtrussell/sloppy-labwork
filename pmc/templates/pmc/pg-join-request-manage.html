@@ -1,29 +1,29 @@
 {% extends "pmc/_base.html" %}
 
+{% block staff_strip %}{% include 'pmc/_staff-strip.html' %}{% endblock %}
+
 {% block content %}
   <h1>{{ playgroup }}</h1>
-  <div class="card staff-only">
-    <h2>What? Your Playgroup is Evolving!</h2>
+  <div class="card card--staff staff-only">
+    <p class="staff-tag">Staff</p>
+    <h2 class="card__title">What? Your Playgroup is Evolving!</h2>
     <p>{{ join_request.user }} would like to join your playgroup. This request was
     submitted on {{ join_request.created_on | date:'SHORT_DATE_FORMAT' }}.</p>
     <p>If {{join_request.user }} included a note with their request it will be
     shown here:</p>
-    <p>
-      <blockquote>{{ join_request.note | default:'No note provided.' }}</blockquote>
-    </p>
-    <div class="card-actions">
+    <blockquote>{{ join_request.note | default:'No note provided.' }}</blockquote>
+    <div class="card__actions">
       <form method="POST">
         {% csrf_token %}
         <input type="hidden" name="action" value="decline" />
-        <button type="submit" class="btn">Decline</button>
+        <button type="submit" class="btn btn--staff">Decline</button>
       </form>
 
       <form method="POST">
         {% csrf_token %}
         <input type="hidden" name="action" value="accept" />
-        <button class="btn btn-solid">Accept</button>
+        <button type="submit" class="btn btn--staff btn--solid">Accept</button>
       </form>
     </div>
   </div>
 {% endblock %}
-

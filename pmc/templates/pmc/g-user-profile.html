@@ -8,22 +8,22 @@
 {% endblock %}
 
 {% block content %}
-  <h1 class="elide">{{ user }}</h1>
-  <div class="subheading">Public Profile</div>
+  <h1 class="truncate">{{ user }}</h1>
+  <p class="subheading">Public Profile</p>
 
   {% include 'pmc/_playercard.html' with my_profile=profile hide_qr_code=True %}
 
   {% if profile.show_stats_on_profile %}
-    <div>
-      <div class="flex flex-row flex-spread flex-align-baseline levels-spread">
-        <span class="current-level">{{ current_level }}</span>
-        <span class="next-level">{{ next_level }}</span>
+    <div class="level">
+      <div class="level__row">
+        <span class="level__current"><span class="level__prefix">Lv</span>{{ current_level }}</span>
+        <span class="level__next"><span class="level__prefix">Lv</span>{{ next_level }}</span>
       </div>
-      <div class="progress-bar">
-        <div class="progress" style="width: {{ percent_level_up }}%"></div>
+      <div class="level__bar" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent_level_up | default:0 }}">
+        <div class="level__fill" style="width: {{ percent_level_up | default:0 }}%"></div>
       </div>
-      <div class="text-muted">
-        {{ level_increment_progress }} / {{ level_increment }}  <i class="pmc-icon icon-xp"></i>
+      <div class="level__caption">
+        <span>{{ level_increment_progress }} / {{ level_increment }} <span class="xp-icon" role="img" aria-label="XP"></span></span>
       </div>
     </div>
   {% endif %}
@@ -31,13 +31,13 @@
   {% if profile.show_awards_on_profile %}
     {% if badges %}
       <div class="card">
-        <h2>Badges</h2>
-        <ul class="award-list award-list-centered flex flex-wrap flex-gap-2">
+        <h2 class="card__title">Badges</h2>
+        <ul class="award-grid award-grid--center">
           {% for badge in badges %}
-            <li>
-              <a href="{% url 'pmc-my-badge-detail' badge.pk %}"  class="award-container {% if not badge.user_badge_id %}disabled{% endif %}">
-                <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award" />
-                <span class="text-shy text-center">{{ badge.name }}</span>
+            <li class="award-tile{% if not badge.user_badge_id %} award-tile--locked{% endif %}">
+              <a href="{% url 'pmc-my-badge-detail' badge.pk %}" class="award-tile__link">
+                <img src="{{ badge.src }}" alt="{{ badge.name }} badge" class="award-tile__art">
+                <span class="award-tile__name">{{ badge.name }}</span>
               </a>
             </li>
           {% endfor %}
@@ -47,16 +47,14 @@
 
     {% if achievements %}
       <div class="card">
-        <h2>Achievements</h2>
-        <ul class="award-list award-list-centered flex flex-wrap flex-gap-2">
+        <h2 class="card__title">Achievements</h2>
+        <ul class="award-grid award-grid--center">
           {% for achievement in achievements %}
-            <li>
-              <a href="{% url 'pmc-my-achievement-detail' achievement.pk %}"  class="award-container {% if not achievement.user_achievement_tier_src %}disabled{% endif %}">
-                <img src="{{ achievement.user_achievement_tier_src | default:achievement.lowest_tier_src }}" alt="{{ achievement.name }} trophy" class="award" />
-                <span class="text-shy text-center">{{ achievement.name }}</span>
-                <span>
-                  {{ achievement.user_achievement_tier | achievement_tier_label }}
-                </span>
+            <li class="award-tile{% if not achievement.user_achievement_tier_src %} award-tile--locked{% endif %}">
+              <a href="{% url 'pmc-my-achievement-detail' achievement.pk %}" class="award-tile__link">
+                <img src="{{ achievement.user_achievement_tier_src | default:achievement.lowest_tier_src }}" alt="{{ achievement.name }} trophy" class="award-tile__art">
+                <span class="award-tile__name">{{ achievement.name }}</span>
+                <span class="award-tile__tier">{{ achievement.user_achievement_tier | achievement_tier_label }}</span>
               </a>
             </li>
           {% endfor %}
@@ -66,16 +64,14 @@
 
     {% if trophies %}
       <div class="card">
-        <h2>Trophies</h2>
-        <ul class="award-list award-list-centered flex flex-wrap flex-gap-2">
+        <h2 class="card__title">Trophies</h2>
+        <ul class="award-grid award-grid--center">
           {% for trophy in trophies %}
-            <li>
-              <a href="{% url 'pmc-my-trophy-detail' trophy.pk %}"  class="award-container {% if not trophy.user_trophy_amount %}disabled{% endif %}">
-                <img src="{{ trophy.src }}" alt="{{ trophy.name }} trophy" class="award" />
-                <span class="text-shy text-center">{{ trophy.name }}</span>
-                <span class="trophy-amount">
-                  {{ trophy.user_trophy_amount | default:"0" }}
-                </span>
+            <li class="award-tile{% if not trophy.user_trophy_amount %} award-tile--locked{% endif %}">
+              <a href="{% url 'pmc-my-trophy-detail' trophy.pk %}" class="award-tile__link">
+                <img src="{{ trophy.src }}" alt="{{ trophy.name }} trophy" class="award-tile__art">
+                <span class="award-tile__name">{{ trophy.name }}</span>
+                <span class="award-tile__count">{{ trophy.user_trophy_amount | default:"0" }}</span>
               </a>
             </li>
           {% endfor %}
@@ -85,20 +81,21 @@
   {% endif %}
 
   {% if profile.show_playgroups_on_profile and playgroup_memberships %}
-    <div class="card profile-playgroups">
-      <h2>Playgroups</h2>
-      <ul class="flex flex-col flex-gap-2 playgroups-list">
+    <div class="card">
+      <h2 class="card__title">Playgroups</h2>
+      <ul class="list">
         {% for membership in playgroup_memberships %}
-          <li class="flex flex-row flex-gap-1 flex-col-sm">
-            <img src="{{ membership.playgroup.get_logo_src }}" alt="{{ membership.playgroup.name }} logo" class="playgroup-logo-sm">
-            <div class="flex flex-col">
-              <a href="{% url 'pmc-pg-detail' membership.playgroup.slug %}">{{ membership.playgroup.name }}</a>
-              <div>{{ membership.playgroup.members.count }} Players</div>
-            </div>
+          <li>
+            <a href="{% url 'pmc-pg-detail' membership.playgroup.slug %}" class="list__item">
+              <img src="{{ membership.playgroup.get_logo_src }}" alt="{{ membership.playgroup.name }} logo" class="logo logo--sm">
+              <span class="list__body">
+                <span class="list__title">{{ membership.playgroup.name }}</span>
+                <span class="muted text-sm">{{ membership.playgroup.members.count }} Players</span>
+              </span>
+            </a>
           </li>
         {% endfor %}
       </ul>
     </div>
   {% endif %}
-
 {% endblock %}

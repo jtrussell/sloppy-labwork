@@ -1,6 +1,6 @@
 <li class="card">
-  <h2>{{ ladder.name }}</h2>
-  <ul class="subheading inline-list">
+  <h2 class="card__title">{{ ladder.name }}</h2>
+  <ul class="meta">
     <li>{{ ladder.num_players }} Player{{ ladder.num_players|pluralize }}</li>
     {% if ladder.challenges_enabled %}
       <li>Open for challenges</li>
@@ -8,7 +8,7 @@
       <li>Positions set by organizers</li>
     {% endif %}
   </ul>
-  <div class="card-actions">
-    <a class="btn btn-solid" href="{% url 'pmc-pg-ladder-detail' playgroup.slug ladder.pk %}">View Ladder</a>
+  <div class="card__actions">
+    <a class="btn" href="{% url 'pmc-pg-ladder-detail' playgroup.slug ladder.pk %}">View Ladder</a>
   </div>
 </li>

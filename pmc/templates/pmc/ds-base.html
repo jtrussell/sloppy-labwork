@@ -1,0 +1,38 @@
+{% extends "pmc/_base.html" %}
+{% load static %}
+{% load pmc_extras %}
+
+{% block head_title %}KeyChain | Design System{% if section_title %} | {{ section_title }}{% endif %}{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/gallery.css' %}">
+{% endblock %}
+
+{% block staff_strip %}{% include 'pmc/_staff-strip.html' with label='Design system · Django staff' %}{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div class="page-header__body">
+      <p class="eyebrow">KeyChain design system</p>
+      <h1>{{ section_title|default:'Overview' }}</h1>
+    </div>
+    <div class="segmented" role="group" aria-label="Preview theme">
+      {% for value, label in themes %}
+        <button type="button" class="segmented__option" data-ds-theme="{{ value }}" aria-pressed="false">{{ label }}</button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <nav class="segmented" aria-label="Design system sections">
+    <a href="{% url 'pmc-design-system' %}" class="segmented__option"{% if not current_section %} aria-current="page"{% endif %}>Overview</a>
+    {% for slug, title in sections %}
+      <a href="{% url 'pmc-design-system-section' slug %}" class="segmented__option"{% if slug == current_section %} aria-current="page"{% endif %}>{{ title }}</a>
+    {% endfor %}
+  </nav>
+
+  {% block gallery_content %}{% endblock %}
+{% endblock %}
+
+{% block extra_body %}
+  <script src="{% static 'pmc/scripts/gallery.js' %}"></script>
+{% endblock %}

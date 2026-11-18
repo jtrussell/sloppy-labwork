@@ -2,7 +2,10 @@ from django import forms
 from django.utils.safestring import mark_safe
 
 from decks.models import Deck
-from .models import Event, EventTag, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PlaygroupJoinRequest, PmcProfile, RankingPointsMapVersion
+from .models import (
+    Event, EventResult, EventTag, LeaderboardSeason, LeaderboardSeasonPeriod, Playgroup, PlaygroupJoinRequest,
+    PmcProfile, RankingPointsMapVersion
+)
 from .models import PlaygroupMember
 from .models import Venue
 from .models import EventFormat
@@ -165,6 +168,18 @@ class EventUpdateForm(forms.ModelForm):
             event.save()
             self.save_m2m()
         return event
+
+
+class EventResultUpdateForm(forms.ModelForm):
+    class Meta:
+        model = EventResult
+        fields = ('finishing_position', 'num_wins', 'num_losses', 'num_ties')
+        labels = {
+            'finishing_position': _('Finishing Position'),
+            'num_wins': _('Wins'),
+            'num_losses': _('Losses'),
+            'num_ties': _('Ties'),
+        }
 
 
 class EventResultDeckForm(forms.ModelForm):

@@ -7,41 +7,46 @@
 
 {% block content %}
   <h1>Update my Playercard</h1>
-  <div class="subheading">Choose a Background</div>
+  <p class="subheading">Choose a Background</p>
 
-  <div class="btn-group btn-group-center">
-    <a href="{% url 'pmc-manage-avatar' %}" class="btn">Avatar</a>
-    <a href="{% url 'pmc-manage-background' %}" class="btn btn-solid">Background</a>
-  </div>
-    
+  <nav class="segmented" aria-label="Playercard element">
+    <a href="{% url 'pmc-manage-avatar' %}" class="segmented__option" data-preserve-scroll>Avatar</a>
+    <a href="{% url 'pmc-manage-background' %}" class="segmented__option" aria-current="page" data-preserve-scroll>Background</a>
+  </nav>
+
   <h2>Current - Lv {{ current_level }}</h2>
 
-	{% include 'pmc/_playercard.html' %}
+  {% include 'pmc/_playercard.html' %}
 
   <h2>Options</h2>
   <div class="card">
-    {% for cat in categories %}
-      {% if cat.backgrounds.count %}
-      <div class="element-category">
-        <h3>{{ cat }}</h3>
-        <ul class="element-list">
-          {% for background in cat.backgrounds.all %}
-            <li class="element-list-item {{background.required_level}} {{current_level}} {% if background.required_level > current_level %} disabled{% endif %}">
-              <form action="{% url 'pmc-manage-background' %}" method="post">
-                {% csrf_token %}
-                <input type="hidden" name="background" value="{{ background.pk }}">
-                <a href="javascript:void(0)" class="element-selection-link" onclick="this.closest('form').submit()">
-                  <img src="{{ background.src_100 }}" alt="{{ background.name }}">
-                </a>
-              </form>
-              {% if background.required_level > current_level %}
-                <span class="element-level-requirement">{{ background.required_level }}</span>
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
-    {% endfor %}
+    <div class="stack stack--lg">
+      {% for cat in categories %}
+        {% if cat.backgrounds.count %}
+          <section class="stack">
+            <h3>{{ cat }}</h3>
+            <ul class="grid grid--tiles">
+              {% for background in cat.backgrounds.all %}
+                <li>
+                  <form action="{% url 'pmc-manage-background' %}" method="post" data-preserve-scroll>
+                    {% csrf_token %}
+                    <input type="hidden" name="background" value="{{ background.pk }}">
+                    <button type="submit" class="picker__tile"{% if background.required_level > current_level %} disabled{% endif %}>
+                      <img class="picker__art" src="{{ background.src_100 }}" alt="{{ background.name }}">
+                      {% if background.required_level > current_level %}
+                        <span class="picker__lock" aria-hidden="true">
+                          <span class="picker__level">Lv {{ background.required_level }}</span>
+                        </span>
+                        <span class="visually-hidden">Unlocks at level {{ background.required_level }}</span>
+                      {% endif %}
+                    </button>
+                  </form>
+                </li>
+              {% endfor %}
+            </ul>
+          </section>
+        {% endif %}
+      {% endfor %}
+    </div>
   </div>
 {% endblock %}

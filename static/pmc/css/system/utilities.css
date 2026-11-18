@@ -1,0 +1,99 @@
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.subtle {
+  color: var(--color-text-subtle);
+}
+
+.text-primary {
+  color: var(--color-primary);
+}
+
+.text-success {
+  color: var(--color-success);
+}
+
+.text-danger {
+  color: var(--color-danger);
+}
+
+.text-staff {
+  color: var(--color-staff);
+}
+
+.text-sm {
+  font-size: var(--text-sm);
+}
+
+.text-lg {
+  font-size: var(--text-lg);
+}
+
+.text-bold {
+  font-weight: var(--weight-semibold);
+}
+
+.text-italic {
+  font-style: italic;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.grow {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.is-not-playgroup-staff .staff-only:not(.staff-demo) {
+  display: none !important;
+}
+
+.is-not-django-staff .preview:not(.staff-demo) {
+  display: none !important;
+}
+
+.preview {
+  outline: 1px dashed var(--color-staff);
+  outline-offset: 2px;
+}
+
+@media (max-width: 719.98px) {
+  .wide-only {
+    display: none !important;
+  }
+}
+
+@media (min-width: 720px) {
+  .phone-only {
+    display: none !important;
+  }
+}

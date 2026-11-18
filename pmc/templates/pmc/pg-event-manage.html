@@ -1,262 +1,187 @@
 {% extends "pmc/_base.html" %}
-
-{% partialdef result-row %}
-  <tr hx-target="this">
-    <!-- Small screens -->
-    <td class="col-sm text-larger sm-only">{{ result.finishing_position|default_if_none:"-" }}</td>
-    <td class="sm-only">
-      <div class="name-with-avatar text-larger">
-        <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
-        <span class="username">{{ result.user }}</span>
-      </div>
-      <div class="flex flex-row flex-gap-1 text-muted text-smaller">
-        <span>Wins: {{ result.num_wins|default_if_none:"-" }}</span>
-        <span>Losses: {{ result.num_losses|default_if_none:"-" }}</span>
-        <span>Ties: {{ result.num_ties|default_if_none:"-" }}</span>
-        <span>RP: {{ result.ranking_points.first|default_if_none:"-" }}</span>
-      </div>
-    </td>
-
-    <!-- Large screens -->
-    <td class="col-sm lg-only">{{ result.finishing_position|default_if_none:"-" }}</td>
-    <td class="lg-only">
-      <div class="name-with-avatar">
-        <img class="avatar" src="{{ result.user.pmc_profile.get_avatar.src}}" alt="">
-        <span class="username">{{ result.user }}</span>
-      </div>
-    </td>
-    <td class="stat lg-only">{{ result.num_wins|default_if_none:"-" }}</td>
-    <td class="stat lg-only">{{ result.num_losses|default_if_none:"-" }}</td>
-    <td class="stat lg-only">{{ result.num_ties|default_if_none:"-" }}</td>
-    <td class="stat lg-only">{{ result.ranking_points.first|default_if_none:"-" }}</td>
-
-
-    <td class="staff-only col-sm">
-      <div class="flex flex-row flex-gap-1">
-        <a
-          class="btn"
-          onclick="editResult(this)"
-          data-pk="{{ result.pk }}"
-          data-position="{{ result.finishing_position|default_if_none:'' }}"
-          data-wins="{{ result.num_wins|default_if_none:'' }}"
-          data-losses="{{ result.num_losses|default_if_none:'' }}"
-          data-ties="{{ result.num_ties|default_if_none:'' }}"
-          data-username="{{ result.user }}"
-          data-url="{% url 'pmc-pg-manage-result' playgroup.slug result.pk %}"
-          title="Edit result"
-        >&#9998;</a>
-        <a
-          class="btn"
-          hx-delete="{% url 'pmc-pg-manage-result' playgroup.slug result.pk %}"
-          hx-swap="outerHTML"
-          hx-target="#results-table"
-          title="Delete result"
-        >X</a>
-      </div>
-    </td>
-  </tr>
-{% endpartialdef %}
+{% load static %}
 
 {% partialdef results-table %}
-    <table id="results-table">
-      <tr>
-        <th title="Finishing Position">#</th>
-        <th class="text-left">Player</th>
-
-        <th class="lg-only" title="Wins">W</th>
-        <th class="lg-only" title="Losses">L</th>
-        <th class="lg-only" title="Ties">T</th>
-        <th class="lg-only" title="Ranking Points">RP</th>
-
-        <th class="staff-only">&nbsp;</th>
-      </tr>
-
-      {% for result in object.results.all %}
-        {% partial result-row %}
-      {% endfor %}
-
-      <tr class="staff-only" id="add-result-row">
-        <td colspan="100%">
-          <div class="flex flex-row flex-col-sm flex-gap-1">
-            <label class="sm-only">Finishing Position</label>
-            <input id="form-entry-point" type="number" class="stat" placeholder="#" name="finishing_position" />
-
-            <label class="sm-only" for="username">Username</label>
-            <input required type="text" class="flex-1" name="username" list="usernames-list" placeholder="Username"/>
-            <datalist id="usernames-list">
-              {% for member in playgroup.members.all %}
-                <option value="{{ member.user.username }}"></option>
-              {% endfor %}
-            </datalist>
-
-            <label class="sm-only" for="num_wins">Number of Wins</label>
-            <input type="number" class="stat" placeholder="W" name="num_wins">
-
-            <label class="sm-only" for="num_losses">Number of Losses</label>
-            <input type="number" class="stat" placeholder="L" name="num_losses">
-
-            <label class="sm-only" for="num_ties">Number of Ties</label>
-            <input type="number" class="stat" placeholder="T" name="num_ties">
-            <button type="submit" class="btn btn-solid">Add</button>
-          </div>
-        </td>
-      </tr>
+  <div id="results-table" class="table-wrap">
+    <table class="table table--dense">
+      <thead>
+        <tr>
+          <th class="table__rank"><abbr title="Finishing Position">#</abbr></th>
+          <th>Player</th>
+          <th class="n table__wide"><abbr title="Wins">W</abbr></th>
+          <th class="n table__wide"><abbr title="Losses">L</abbr></th>
+          <th class="n table__wide"><abbr title="Ties">T</abbr></th>
+          <th class="n table__wide"><abbr title="Ranking Points">RP</abbr></th>
+          <th class="table__actions staff-only"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for result in object.results.all %}
+          <tr>
+            <td class="table__rank">{{ result.finishing_position|default_if_none:"-" }}</td>
+            <td class="table__player">
+              <div class="player">
+                <img class="avatar avatar--sm" src="{{ result.user.pmc_profile.get_avatar.src }}" alt="">
+                <span class="player__body">
+                  <span class="player__name">{{ result.user }}</span>
+                  <span class="player__note table__narrow">
+                    Wins: {{ result.num_wins|default_if_none:"-" }}
+                    &middot; Losses: {{ result.num_losses|default_if_none:"-" }}
+                    &middot; Ties: {{ result.num_ties|default_if_none:"-" }}
+                    &middot; RP: {{ result.ranking_points.first|default_if_none:"-" }}
+                  </span>
+                </span>
+              </div>
+            </td>
+            <td class="n table__wide">{{ result.num_wins|default_if_none:"-" }}</td>
+            <td class="n table__wide">{{ result.num_losses|default_if_none:"-" }}</td>
+            <td class="n table__wide">{{ result.num_ties|default_if_none:"-" }}</td>
+            <td class="n table__wide">{{ result.ranking_points.first|default_if_none:"-" }}</td>
+            <td class="table__actions staff-only">
+              <button
+                type="button"
+                class="icon-button icon-button--staff"
+                aria-label="Edit result for {{ result.user }}"
+                hx-get="{% url 'pmc-pg-manage-result' playgroup.slug result.pk %}"
+                hx-target="#dialog"
+              >{% include 'pmc/_icon.html' with name='edit' %}</button>
+              <button
+                type="button"
+                class="icon-button icon-button--danger"
+                aria-label="Delete result for {{ result.user }}"
+                hx-delete="{% url 'pmc-pg-manage-result' playgroup.slug result.pk %}"
+                hx-swap="outerHTML"
+                hx-target="#results-table"
+                hx-confirm="Delete the result for {{ result.user }}? This may impact RP and XP for participants."
+              >{% include 'pmc/_icon.html' with name='trash' %}</button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="table__empty">No results yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
     </table>
+  </div>
 {% endpartialdef %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/manage.css' %}">
+{% endblock %}
+
+{% block staff_strip %}{% include 'pmc/_staff-strip.html' %}{% endblock %}
 
 {% block content %}
   <h1>{{ object }}</h1>
-  <div class="subheading">
-    <ul class="inline-list">
-      <li>{{ object.start_date }}</li>
-      <li>{{ object.get_player_count }} Players</li>
-      {% if object.format is not None %}
+  <ul class="meta">
+    <li>{{ object.start_date }}</li>
+    <li>{{ object.get_player_count }} Players</li>
+    {% if object.format is not None %}
       <li>{{ object.format }}</li>
-      {% endif %}
-    </ul>
-  </div>
-  
-	<form method="POST" class="card staff-only">
-		<h2>Staff Area</h2>
-      {% csrf_token %}
-      {{ form.as_p }}
-      <div class="card-actions">
-        <a href="{% url 'pmc-pg-event-detail' playgroup.slug object.pk %}" class="btn">
-          &larr; Back
-        </a>
-        <span class="flex-1"></span>
-        <button class="btn btn-solid" type="submit">Update</button>
-      </div>
+    {% endif %}
+  </ul>
+
+  <form method="POST" class="card card--staff staff-only">
+    <p class="staff-tag">Staff</p>
+    <h2 class="card__title">Staff Area</h2>
+    {% csrf_token %}
+    {% include 'pmc/_form-fields.html' with form=form %}
+    <div class="cluster cluster--between">
+      <a href="{% url 'pmc-pg-event-detail' playgroup.slug object.pk %}" class="btn btn--ghost">
+        &larr; Back
+      </a>
+      <button class="btn btn--staff btn--solid" type="submit">Update</button>
+    </div>
   </form>
 
   {% if linked_tournament_url %}
-  <div class="card staff-only">
-    <h2>Tournament</h2>
-    <div class="card-actions">
-      <a href="{{ linked_tournament_url }}" class="btn">View Tournament</a>
+    <div class="card card--staff staff-only">
+      <p class="staff-tag">Staff</p>
+      <h2 class="card__title">Tournament</h2>
+      <div class="card__actions">
+        <a href="{{ linked_tournament_url }}" class="btn btn--staff">View Tournament</a>
+      </div>
     </div>
-  </div>
   {% elif can_start_tourney %}
-  <div class="card staff-only">
-    <h2>Tournament</h2>
-    <p>Create a tournament using this event's registered players.</p>
-    <div class="card-actions">
-      <a href="{{ create_tournament_url }}" class="btn btn-solid">Start a Tournament</a>
+    <div class="card card--staff staff-only">
+      <p class="staff-tag">Staff</p>
+      <h2 class="card__title">Tournament</h2>
+      <p>Create a tournament using this event's registered players.</p>
+      <div class="card__actions">
+        <a href="{{ create_tournament_url }}" class="btn btn--staff">Start a Tournament</a>
+      </div>
     </div>
-  </div>
   {% endif %}
 
-  <div class="card staff-only">
-    <h2>Danger Zone</h2>
-    <p>No take backsies.</p>
-    
-    <div class="card-actions">
+  <div class="card card--danger staff-only">
+    <h2 class="card__title">Danger Zone</h2>
+    <p class="muted">No take backsies.</p>
+    <div class="card__actions">
       <button
-        class="btn"
-        type="submit"
+        class="btn btn--danger"
+        type="button"
         hx-post="{% url 'pmc-delete-event' playgroup.slug object.pk %}"
         hx-confirm="Are you sure you would like to delete this event? This may impact RP and XP for participants."
       >
         Delete Event
       </button>
     </div>
-		</a>
-	</div>
+  </div>
 
   <div class="card">
-    <h2>Results</h2>
+    <h2 class="card__title">Results</h2>
 
     {% if object.tags.exists %}
-      <ul class="inline-list tag-list">
+      <ul class="chip-row">
         {% for tag in object.tags.all %}
-        <li class="tag">{{ tag.name }}</li>
+          <li class="chip chip--primary">{{ tag.name }}</li>
         {% endfor %}
       </ul>
     {% endif %}
 
+    {% partial results-table %}
+
     <form
+      class="card card--inset card--staff staff-only"
       autocomplete="off"
       hx-post="{% url 'pmc-pg-add-event-result' playgroup.slug object.pk %}"
       hx-target="#results-table"
       hx-swap="outerHTML"
       hx-on::after-request="if(event.detail.successful) { this.reset(); htmx.find('#form-entry-point').focus() }"
     >
-      {% partial results-table %}
+      <p class="staff-tag">Staff</p>
+      <h3 class="card__title">Add a Result</h3>
+      <div class="result-entry__fields">
+        <div class="field">
+          <label class="field__label" for="form-entry-point">Position</label>
+          <input id="form-entry-point" type="number" min="0" name="finishing_position">
+        </div>
+        <div class="field result-entry__player">
+          <label class="field__label" for="add-result-username">Username<span class="field__required" aria-hidden="true">*</span></label>
+          <input required type="text" id="add-result-username" name="username" list="usernames-list">
+          <datalist id="usernames-list">
+            {% for member in playgroup.members.all %}
+              <option value="{{ member.user.username }}"></option>
+            {% endfor %}
+          </datalist>
+        </div>
+        <div class="field">
+          <label class="field__label" for="add-result-wins">Wins</label>
+          <input type="number" min="0" id="add-result-wins" name="num_wins">
+        </div>
+        <div class="field">
+          <label class="field__label" for="add-result-losses">Losses</label>
+          <input type="number" min="0" id="add-result-losses" name="num_losses">
+        </div>
+        <div class="field">
+          <label class="field__label" for="add-result-ties">Ties</label>
+          <input type="number" min="0" id="add-result-ties" name="num_ties">
+        </div>
+      </div>
+      <div class="form__actions">
+        <button type="submit" class="btn btn--staff">Add</button>
+      </div>
     </form>
   </div>
-{% endblock %}
-
-{% block extra_body %}
-<script type="text/javascript">
-	function editResult(el) {
-		const theme = document.documentElement.className.includes('pmc-theme-1') ? 'light' : 'dark'
-		Swal.fire({
-			title: 'Edit Result',
-			html:
-				'<div style="margin-bottom:1rem;font-size:1.1rem">' + el.dataset.username + '</div>' +
-				'<div style="display:flex;flex-direction:column;gap:1rem;text-align:left">' +
-					'<div><label style="display:block;margin-bottom:0.25rem">Finishing Position</label>' +
-					'<input id="swal-position" type="number" style="margin:0;width:100%" min="0" value="' + el.dataset.position + '"></div>' +
-					'<div><label style="display:block;margin-bottom:0.25rem">Wins</label>' +
-					'<input id="swal-wins" type="number" style="margin:0;width:100%" min="0" value="' + el.dataset.wins + '"></div>' +
-					'<div><label style="display:block;margin-bottom:0.25rem">Losses</label>' +
-					'<input id="swal-losses" type="number" style="margin:0;width:100%" min="0" value="' + el.dataset.losses + '"></div>' +
-					'<div><label style="display:block;margin-bottom:0.25rem">Ties</label>' +
-					'<input id="swal-ties" type="number" style="margin:0;width:100%" min="0" value="' + el.dataset.ties + '"></div>' +
-				'</div>',
-			showCloseButton: true,
-			showCancelButton: true,
-			confirmButtonText: 'Save',
-			theme: theme,
-			customClass: {
-				confirmButton: 'btn btn-solid',
-				cancelButton: 'btn'
-			},
-			didOpen: function() {
-				var cancel = Swal.getCancelButton()
-				cancel.style.boxShadow = 'none'
-				cancel.style.transform = 'none'
-				cancel.addEventListener('mouseenter', function() {
-					this.style.boxShadow = '0 0 5px var(--staff-color-accent)'
-					this.style.transform = 'translate(0, -1px)'
-				})
-				cancel.addEventListener('mouseleave', function() {
-					this.style.boxShadow = 'none'
-					this.style.transform = 'none'
-				})
-			},
-			preConfirm: function() {
-				var csrfToken = document.querySelector('[hx-headers]').getAttribute('hx-headers')
-				csrfToken = JSON.parse(csrfToken)['x-csrftoken']
-				var formData = new URLSearchParams()
-				formData.append('finishing_position', document.getElementById('swal-position').value)
-				formData.append('num_wins', document.getElementById('swal-wins').value)
-				formData.append('num_losses', document.getElementById('swal-losses').value)
-				formData.append('num_ties', document.getElementById('swal-ties').value)
-				return fetch(el.dataset.url, {
-					method: 'POST',
-					body: formData,
-					headers: {
-						'HX-Request': 'true',
-						'Content-Type': 'application/x-www-form-urlencoded',
-						'X-CSRFToken': csrfToken
-					}
-				}).then(function(response) {
-					var messagesJson = response.headers.get('HX-Trigger') || '{}'
-					showMessages(messagesJson)
-					if (!response.ok) {
-						Swal.showValidationMessage('Failed to update result')
-						return
-					}
-					return response.text()
-				}).then(function(html) {
-					if (html) {
-						document.getElementById('results-table').outerHTML = html
-						htmx.process(document.getElementById('results-table'))
-					}
-				})
-			}
-		})
-	}
-</script>
 {% endblock %}

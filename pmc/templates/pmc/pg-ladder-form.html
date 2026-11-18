@@ -1,8 +1,6 @@
 {% extends "pmc/_base.html" %}
 
-{% block extra_head %}
-  {% include 'pmc/_competition-assets.html' %}
-{% endblock %}
+{% block staff_strip %}{% include 'pmc/_staff-strip.html' %}{% endblock %}
 
 {% block content %}
   {% if ladder %}
@@ -11,30 +9,30 @@
     <h1>New Ladder</h1>
   {% endif %}
 
-  <div class="card staff-only">
-    <form method="POST">
-      {% csrf_token %}
-      {{ form.as_p }}
+  <form method="POST" class="card card--staff staff-only">
+    <p class="staff-tag">Staff</p>
+    {% csrf_token %}
+    {% include 'pmc/_form-fields.html' with form=form %}
 
-      <div class="card-actions">
-        {% if not ladder %}
-          <a class="btn" href="{% url 'pmc-pg-play' playgroup.slug %}">Cancel</a>
-        {% endif %}
-        <button class="btn btn-solid" type="submit">Save</button>
-      </div>
-    </form>
-  </div>
+    <div class="form__actions">
+      {% if not ladder %}
+        <a class="btn btn--ghost" href="{% url 'pmc-pg-play' playgroup.slug %}">Cancel</a>
+      {% endif %}
+      <button class="btn btn--staff btn--solid" type="submit">Save</button>
+    </div>
+  </form>
 
   {% if ladder.discord_webhook_url %}
-    <div class="card staff-only">
-      <div class="section-heading">
-        <h2>Discord</h2>
+    <div class="card card--staff staff-only">
+      <p class="staff-tag">Staff</p>
+      <div class="card__header">
+        <h2 class="card__title">Discord</h2>
         <form method="POST" action="{% url 'pmc-pg-ladder-discord-test' playgroup.slug ladder.pk %}">
           {% csrf_token %}
-          <button class="text-button" type="submit">Send a test message</button>
+          <button class="text-button text-button--staff" type="submit">Send a test message</button>
         </form>
       </div>
-      <p class="text-muted">New challenges and results are posted to your Discord channel.</p>
+      <p class="muted">New challenges and results are posted to your Discord channel.</p>
     </div>
   {% endif %}
 {% endblock %}

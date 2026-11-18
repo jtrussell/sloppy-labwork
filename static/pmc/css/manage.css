@@ -1,0 +1,24 @@
+.venue-address {
+  white-space: pre-wrap;
+}
+
+.result-entry__fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.result-entry__player {
+  grid-column: span 2;
+}
+
+@media (min-width: 720px) {
+  .result-entry__fields {
+    grid-template-columns: 6rem minmax(0, 1fr) repeat(3, 5rem);
+    align-items: end;
+  }
+
+  .result-entry__player {
+    grid-column: auto;
+  }
+}

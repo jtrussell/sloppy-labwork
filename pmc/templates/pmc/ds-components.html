@@ -1,0 +1,256 @@
+{% extends "pmc/ds-base.html" %}
+{% load pmc_extras %}
+
+{% block gallery_content %}
+  <h2>Buttons</h2>
+  <p class="muted">One solid button per view for the main action. Everything else is outlined, ghost or a text button.</p>
+  {% kc_example themed %}
+<div class="btn-row">
+  <button type="button" class="btn btn--solid">Solid</button>
+  <button type="button" class="btn">Default</button>
+  <button type="button" class="btn btn--ghost">Ghost</button>
+  <button type="button" class="btn btn--danger">Danger</button>
+  <button type="button" class="btn" disabled>Disabled</button>
+</div>
+<div class="btn-row">
+  <button type="button" class="btn btn--sm btn--solid">Small solid</button>
+  <a href="#" class="btn btn--sm">Small link</a>
+  <button type="button" class="text-button">Text button</button>
+  <button type="button" class="text-button text-button--danger">Destructive text</button>
+</div>
+<button type="button" class="btn btn--block">Block button</button>
+  {% end_kc_example %}
+
+  <h3>Action row</h3>
+  <p class="muted">
+    Every group of buttons follows one rule, whichever container holds it: <code>.card__actions</code> in a
+    card, <code>.form__actions</code> under a form, <code>.dialog__footer</code> in a dialog and
+    <code>.btn-row</code> in the page. Below 720px buttons fill the width two per row, an odd one out takes
+    the full row, and with three or more the solid main action gets its own row at the bottom. From 720px
+    buttons keep their natural width; card, form and dialog actions sit on the right with the main action
+    last. Resize the window to see both.
+  </p>
+  {% kc_example %}
+<div class="card">
+  <h3 class="card__title">Three actions</h3>
+  <div class="card__actions">
+    <a href="#" class="btn">My profile</a>
+    <a href="#" class="btn">My account</a>
+    <a href="#" class="btn btn--solid">Edit playercard</a>
+  </div>
+</div>
+<div class="card">
+  <h3 class="card__title">Four links</h3>
+  <div class="card__actions">
+    <a href="#" class="btn">Events</a>
+    <a href="#" class="btn">Members</a>
+    <a href="#" class="btn">Leaderboards</a>
+    <a href="#" class="btn">My PG profile</a>
+  </div>
+</div>
+<div class="card">
+  <h3 class="card__title">Two actions share a row</h3>
+  <div class="card__actions">
+    <a href="#" class="btn btn--ghost">Cancel</a>
+    <a href="#" class="btn btn--solid">Save</a>
+  </div>
+</div>
+  {% end_kc_example %}
+
+  <h3>Text link</h3>
+  <p class="muted">A standalone link with a full-size tap target, for secondary places to go beside a main action.</p>
+  {% kc_example %}
+<div class="cluster cluster--between">
+  <div class="cluster">
+    <a href="#" class="text-link">My profile</a>
+    <a href="#" class="text-link">My account</a>
+  </div>
+  <a href="#" class="btn btn--solid">Edit playercard</a>
+</div>
+  {% end_kc_example %}
+
+  <h3>Quick links</h3>
+  <p class="muted">
+    A row of icon links at the foot of a card, for places to go rather than things to do. Uses the same
+    icons as the primary navigation. Up to four.
+  </p>
+  {% kc_example themed %}
+<div class="card">
+  <h3 class="card__title">The Lounge</h3>
+  <nav class="quick-links" aria-label="The Lounge">
+    <a href="#" class="quick-links__item">{% include 'pmc/_icon.html' with name='calendar' %}<span class="quick-links__label">Events</span></a>
+    <a href="#" class="quick-links__item">{% include 'pmc/_icon.html' with name='users' %}<span class="quick-links__label">Members</span></a>
+    <a href="#" class="quick-links__item">{% include 'pmc/_icon.html' with name='leaderboard' %}<span class="quick-links__label">Leaderboards</span></a>
+    <a href="#" class="quick-links__item">{% include 'pmc/_icon.html' with name='keychain' %}<span class="quick-links__label">Profile</span></a>
+  </nav>
+</div>
+  {% end_kc_example %}
+
+  <h3>Icon button</h3>
+  {% kc_example %}
+<div class="cluster">
+  <button type="button" class="icon-button" aria-label="Edit">{% include 'pmc/_icon.html' with name='edit' %}</button>
+  <button type="button" class="icon-button icon-button--danger" aria-label="Delete">{% include 'pmc/_icon.html' with name='trash' %}</button>
+</div>
+  {% end_kc_example %}
+
+  <h2>Cards</h2>
+  {% kc_example themed %}
+<div class="card">
+  <h3 class="card__title">Card</h3>
+  <p>The default surface for grouped content.</p>
+  <div class="card__actions">
+    <a href="#" class="btn">Secondary</a>
+    <a href="#" class="btn btn--solid">Details</a>
+  </div>
+</div>
+<div class="card card--glow">
+  <h3 class="card__title">Glow card</h3>
+  <p>For the single most important thing on a page.</p>
+</div>
+<div class="card">
+  <h3 class="card__title">Nested</h3>
+  <div class="card card--inset">An inset card sits inside another card.</div>
+</div>
+<div class="card card--danger">
+  <h3 class="card__title">Danger zone</h3>
+  <p class="muted">Destructive settings live in a danger card.</p>
+  <div class="card__actions"><button type="button" class="btn btn--danger">Delete ladder</button></div>
+</div>
+  {% end_kc_example %}
+
+  <h2>Headers</h2>
+  {% kc_example %}
+<div class="page-header">
+  <h1>Summer Ladder</h1>
+  <a href="#" class="btn btn--sm">Share</a>
+</div>
+<ul class="meta"><li>24 players</li><li>Challenge 3 up</li><li>7 days to play</li></ul>
+<div class="section-heading">
+  <h2>Upcoming events</h2>
+  <a href="#" class="section-heading__action">See all</a>
+</div>
+  {% end_kc_example %}
+
+  <h2>Chips</h2>
+  {% kc_example themed %}
+<div class="chip-row">
+  <span class="chip">Neutral</span>
+  <span class="chip chip--primary">Primary</span>
+  <span class="chip chip--success">Open</span>
+  <span class="chip chip--warning">Due soon</span>
+  <span class="chip chip--danger">Forfeit</span>
+  <span class="chip chip--outline">Archon</span>
+</div>
+  {% end_kc_example %}
+
+  <h2>Stats and facts</h2>
+  {% kc_example themed %}
+<div class="stat-grid">
+  <div class="stat"><span class="stat__value">42</span><span class="stat__label">Events</span></div>
+  <div class="stat"><span class="stat__value">61%</span><span class="stat__label">Win rate</span></div>
+  <div class="stat"><span class="stat__value">318</span><span class="stat__label">RP</span></div>
+</div>
+<dl class="fact-list">
+  <div class="fact-list__row"><dt>Member since</dt><dd>March 2024</dd></div>
+  <div class="fact-list__row"><dt>Favourite house</dt><dd>Untamed</dd></div>
+</dl>
+  {% end_kc_example %}
+
+  <h2>Level meter</h2>
+  {% kc_example themed %}
+<div class="level">
+  <div class="level__row">
+    <span class="level__current"><span class="level__prefix">Lv</span>12</span>
+    <span class="level__next"><span class="level__prefix">Lv</span>13</span>
+  </div>
+  <div class="level__bar" role="progressbar" aria-label="Progress to level 13" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64">
+    <div class="level__fill" style="width: 64%"></div>
+  </div>
+  <div class="level__caption"><span>1,280 XP</span><span>720 XP to go</span></div>
+</div>
+  {% end_kc_example %}
+
+  <h2>People and groups</h2>
+  {% kc_example themed %}
+<div class="cluster">
+  <span class="avatar avatar--sm">AB</span>
+  <span class="avatar">AB</span>
+  <span class="avatar avatar--lg">AB</span>
+</div>
+<div class="player">
+  <span class="avatar avatar--sm">MK</span>
+  <span class="player__body">
+    <span class="player__name">Miss "Onyx" Censorius</span>
+    <span class="player__note">In a challenge</span>
+  </span>
+</div>
+<div class="banner">
+  <span class="avatar">MK</span>
+  <span class="banner__body">
+    <span class="banner__name">Miss "Onyx" Censorius</span>
+    <span class="banner__tagline">Chains are temporary</span>
+  </span>
+</div>
+  {% end_kc_example %}
+
+  <h2>Segmented control and tabs</h2>
+  <p class="muted">Links for page tabs (<code>aria-current</code>), buttons for in-page choices (<code>aria-pressed</code>). Scrolls sideways when it does not fit.</p>
+  {% kc_example themed %}
+<nav class="segmented" aria-label="Example tabs">
+  <a href="#" class="segmented__option" aria-current="page">Standings</a>
+  <a href="#" class="segmented__option">Challenges</a>
+  <a href="#" class="segmented__option">Settings</a>
+</nav>
+  {% end_kc_example %}
+
+  <h2>Action menu</h2>
+  <p class="muted">For three or more actions, or actions beside a title that can grow. Needs <code>data-menu</code>.</p>
+  {% kc_example %}
+<details class="action-menu" data-menu>
+  <summary class="action-menu__trigger" aria-label="More actions">{% include 'pmc/_icon.html' with name='more' %}</summary>
+  <div class="action-menu__list">
+    <a href="#" class="action-menu__item">Record a played game</a>
+    <button type="button" class="action-menu__item">Withdraw challenge</button>
+    <button type="button" class="action-menu__item action-menu__item--danger">Leave ladder</button>
+  </div>
+</details>
+  {% end_kc_example %}
+
+  <h2>Disclosure</h2>
+  {% kc_example %}
+<details class="disclosure">
+  <summary>Show matches</summary>
+  <p>Content revealed on demand.</p>
+</details>
+  {% end_kc_example %}
+
+  <h2>Next step</h2>
+  {% kc_example themed %}
+<div class="card card--glow next-step">
+  <div class="next-step__label"><span class="pulse-dot" aria-hidden="true"></span>Your move</div>
+  <div class="next-step__body">
+    <p><strong>Ada challenged you.</strong> Play your game and record the result by 20 Nov.</p>
+    <div class="next-step__actions">
+      <a href="#" class="btn btn--solid">Record result</a>
+    </div>
+  </div>
+</div>
+  {% end_kc_example %}
+
+  <h2>Prose</h2>
+  <p class="muted">Wrap user-written or long-form content in <code>.prose</code>. Markdown descriptions go through <code>markdown_sanitized</code>.</p>
+  {% kc_example %}
+<div class="card prose">
+  <h2>League night</h2>
+  <p>Every Thursday from 6pm. Bring two decks.</p>
+  <ul><li>Archon, best of one</li><li>Prizes for the top four</li></ul>
+  <blockquote>New players welcome.</blockquote>
+</div>
+  {% end_kc_example %}
+
+  <h2>Empty state</h2>
+  {% kc_example %}
+{% include 'pmc/_empty.html' with title='No events yet' text='Events appear here once staff add them.' %}
+  {% end_kc_example %}
+{% endblock %}

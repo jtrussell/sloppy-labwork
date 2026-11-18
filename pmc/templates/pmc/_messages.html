@@ -1,0 +1,8 @@
+<div id="message-list" class="message-list" role="status">
+  {% for message in messages %}
+    {% include 'pmc/_message.html' with level=message.level_tag text=message %}
+  {% endfor %}
+</div>
+<template id="message-template">
+  {% include 'pmc/_message.html' with level='' text='' %}
+</template>

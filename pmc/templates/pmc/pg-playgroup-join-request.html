@@ -1,16 +1,16 @@
 {% extends "pmc/_base.html" %}
 
 {% block content %}
+  <h1>Request to Join</h1>
   <div class="card">
-    <h1>Request to Join</h1>
     {% if existing_request %}
       <p>You submitted a request to join this group on {{ existing_request.created_on | date:'SHORT_DATE_FORMAT' }}. We'll let you know once your request has
       been approved.</p>
       <form method="POST">
         {% csrf_token %}
-        <input type="hidden" name="action" value="cancel" />
-        <div class="card-actions" type="submit">
-          <button class="btn">Cancel request</button>
+        <input type="hidden" name="action" value="cancel">
+        <div class="card__actions">
+          <button class="btn" type="submit">Cancel request</button>
         </div>
       </form>
     {% else %}
@@ -21,10 +21,11 @@
 
       <form method="POST">
         {% csrf_token %}
-        {{ form.as_p }}
-
-        <div class="card-actions">
-          <button class="btn btn-solid" type="submit">Submit</button>
+        <div class="stack">
+          {% include 'pmc/_form-fields.html' with form=form %}
+          <div class="form__actions">
+            <button class="btn btn--solid" type="submit">Submit</button>
+          </div>
         </div>
       </form>
     {% endif %}

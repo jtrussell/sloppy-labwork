@@ -1,95 +1,55 @@
 {% extends "pmc/_base.html" %}
 
-{% partialdef rankings-card %}
-  <table>
-    <thead>
-      <th class="col-sm">#</th>
-      <th class="text-left">Player</th>
-      <th class="col-md lg-only">Points</th>
-      <th class="col-md lg-only">Events</th>
-    </thead>
-    <tbody>
-      {% for item in rankings_page %}
-      <tr>
-        <td class="col-sm">{{ item.rank }}</td>
-        <td class="text-left">
-          <div class="name-with-avatar text-larger">
-            <img class="avatar" src="{{ item.user.pmc_profile.get_avatar.src}}" alt="">
-            <div>
-              <a href="{% url 'pmc-user-profile' item.user.username %}">
-                <span class="username text-larger">{{ item.user }}</span>
-              </a>
-              <ul class="inline-list text-smaller sm-only">
-                <li><span class="text-muted">Points:</span> {{ item.total_points | floatformat:0 }}</li>
-                <li><span class="text-muted">Events:</span> {{ item.num_results }}</li>
-              </ul>
-              </div>
-            </div>
-          </div>
-        </td>
-        <td class="col-md lg-only">
-          {{ item.total_points | floatformat:0 }}
-        </td>
-        <td class="col-md lg-only">
-          {{ item.num_results }}
-        </td>
-      </tr>
-      {% empty %}
-        <td colspan="4" class="text-muted">Nothing to see here.</td>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  {% if rankings_page.paginator.num_pages > 1 %}
-  <div class="btn-group btn-group-center" role="group" aria-label="Item pagination">
-    {% if rankings_page.has_previous %}
-        <button type="submit" class="btn" name="page" value="{{ rankings_page.previous_page_number }}">&laquo;</a>
-    {% else %}
-        <button type="button" class="btn">&laquo;</button>
-    {% endif %}
-
-    {% for page_number in rankings_page.paginator.page_range %}
-        {% if rankings_page.number == page_number %}
-            <button type="button" class="btn btn-solid">
-                {{ page_number }}
-            </button>
-        {% else %}
-            <button type="submit" name="page" value="{{ page_number }}" class="btn">
-                {{ page_number }}
-            </button>
-        {% endif %}
-    {% endfor %}
-
-    {% if rankings_page.has_next %}
-        <button type="submit" name="page" value="{{ rankings_page.next_page_number }}" class="btn">&raquo;</button>
-    {% else %}
-        <button type="button" disabled class="btn">&raquo;</button>
-    {% endif %}
-  </div>
-  {% endif %}
-{% endpartialdef %}
-
-
 {% block content %}
-<h1>Leaderboards</h1>
+  <h1>Leaderboards</h1>
 
-<div class="btn-group btn-group-center">
-  {% for lb in leaderboards %}
-  <a href="{% url 'pmc-pg-leaderboard' playgroup.slug lb.pk %}" class="btn{% if lb.pk == pk %} btn-solid{% endif %}">
-    {{ lb }}
-  </a>
-  {% endfor %}
-</div>
+  <nav class="segmented" aria-label="Leaderboards">
+    {% for lb in leaderboards %}
+      <a href="{% url 'pmc-pg-leaderboard' playgroup.slug lb.pk %}" class="segmented__option"{% if lb.pk == pk %} aria-current="page"{% endif %} data-preserve-scroll>{{ lb }}</a>
+    {% endfor %}
+  </nav>
 
-<form method="GET">
-  {% for field in season_period_form %}
-    <p>
-      {{ field.label_tag }}
-      {{ field }}
-    </p>
-  {% endfor %}
-  <div class="card" hx-target="false">
-    {% partial rankings-card %}
+  <form method="GET" class="filter-row" data-preserve-scroll>
+    {% for field in season_period_form %}
+      <div class="field">
+        <label class="field__label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+      </div>
+    {% endfor %}
+  </form>
+
+  <div class="card table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="table__rank">#</th>
+          <th>Player</th>
+          <th class="n table__wide">Events</th>
+          <th class="n">Points</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in rankings_page %}
+          <tr{% if item.user_id == user.id %} class="table__row--me"{% endif %}>
+            <td class="table__rank">{{ item.rank }}</td>
+            <td class="table__player">
+              <div class="player">
+                <img class="avatar avatar--sm" src="{{ item.user.pmc_profile.get_avatar.src }}" alt="">
+                <span class="player__body">
+                  <a class="player__name" href="{% url 'pmc-user-profile' item.user.username %}">{{ item.user }}</a>
+                  <span class="player__note table__narrow">Events: {{ item.num_results }}</span>
+                </span>
+              </div>
+            </td>
+            <td class="n table__wide">{{ item.num_results }}</td>
+            <td class="n">{{ item.total_points | floatformat:0 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="table__empty">Nothing to see here.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-</form>
+
+  {% include 'pmc/_pagination.html' with page_obj=rankings_page label='Leaderboard pages' %}
 {% endblock %}

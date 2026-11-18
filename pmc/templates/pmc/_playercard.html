@@ -1,40 +1,46 @@
 {% load static %}
-<div class="playercard {% if pinned_awards %}has-pinned-awards{% endif %}">
-  <div class="banner" style="background-color: #{{ my_profile.get_avatar.banner_bg_color }}">
-    <img class="avatar" src="{{ my_profile.get_avatar.src }}" style="border-right: 5px solid #{{ my_profile.get_avatar.banner_stroke_color }}" alt="my_profile.get_avatar.name">
-    <div class="elide" style="color: #{{ my_profile.get_avatar.banner_text_color }}">
-      <span class="banner-text elide">{{ my_profile.user }}</span>
-      <span class="banner-sub-text">{{ my_profile.tagline | default:'Silence is golden.' }}</span>
+<div class="playercard{% if pinned_awards %} playercard--pinned{% endif %}">
+  <div
+    class="playercard__banner"
+    style="--playercard-banner-bg: #{{ my_profile.get_avatar.banner_bg_color }}; --playercard-banner-text: #{{ my_profile.get_avatar.banner_text_color }}; --playercard-banner-stroke: #{{ my_profile.get_avatar.banner_stroke_color }}"
+  >
+    <img class="playercard__avatar" src="{{ my_profile.get_avatar.src }}" alt="{{ my_profile.get_avatar.name }}">
+    <div class="playercard__identity">
+      <span class="playercard__name">{{ my_profile.user }}</span>
+      <span class="playercard__tagline">{{ my_profile.tagline | default:'Silence is golden.' }}</span>
     </div>
   </div>
 
   {% if my_profile.mv_qrcode_message and my_profile.user == request.user and not hide_qr_code %}
     <img
-      class="qrcode"
+      class="playercard__qr"
       src="https://static.sloppylabwork.com/{{ my_profile.get_mv_qrcode_path }}"
-      alt="Master Vault QR Code" />
+      alt="Master Vault QR Code"
+      tabindex="-1"
+      data-playercard-revealed>
     <button
       type="button"
-      class="qrcode-shield"
-      onclick="this.remove()"
+      class="playercard__shield"
+      data-playercard-reveal
       aria-label="Reveal QR Code">
       <img
-        class="qrcode-shield-pattern"
+        class="playercard__shield-pattern"
         src="{% static 'pmc/img/qr-code-placeholder.png' %}"
-        alt="" />
-      <span class="qrcode-shield-text">[REDACTED]<br>Click to reveal</span>
+        alt="">
+      <span class="playercard__shield-text">[REDACTED]<br>Click to reveal</span>
     </button>
+    <script src="{% static 'pmc/scripts/playercard.js' %}" defer></script>
   {% endif %}
 
   {% if pinned_awards %}
-    <div class="playercard-pinned-awards">
+    <div class="playercard__pins">
       {% for award in pinned_awards %}
-        <a href="{{ award.detail_url }}">
-          <img src="{{ award.src }}" alt="{{ award.name }}" class="playercard-pinned-award" />
+        <a href="{{ award.detail_url }}" class="playercard__pin">
+          <img src="{{ award.src }}" alt="{{ award.name }}" class="playercard__pin-art">
         </a>
       {% endfor %}
     </div>
   {% endif %}
 
-  <img class="background" src="{{ my_profile.get_background.src }}" alt="{{ my_profile.get_background.name }}">
+  <img class="playercard__background" src="{{ my_profile.get_background.src }}" alt="{{ my_profile.get_background.name }}">
 </div>

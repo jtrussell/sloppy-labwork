@@ -1,0 +1,63 @@
+{% extends "pmc/ds-base.html" %}
+{% load pmc_extras %}
+
+{% block gallery_content %}
+  <h2>Form fields include</h2>
+  <p class="muted">
+    Render a Django form with <code>{% templatetag openblock %} include 'pmc/_form-fields.html' with form=form {% templatetag closeblock %}</code>.
+    It replaces <code>form.as_p</code> and renders labels, help text, required markers and errors. Use
+    <code>pmc/_field.html</code> for a single field.
+  </p>
+  {% kc_example no_markup %}
+<form class="card">
+  {% include 'pmc/_form-fields.html' with form=demo_form %}
+  <div class="form__actions">
+    <button type="button" class="btn btn--ghost">Cancel</button>
+    <button type="button" class="btn btn--solid">Save</button>
+  </div>
+</form>
+  {% end_kc_example %}
+
+  <h2>Errors</h2>
+  {% kc_example no_markup %}
+<form class="card">
+  {% include 'pmc/_form-fields.html' with form=invalid_demo_form %}
+</form>
+  {% end_kc_example %}
+
+  <h2>Switch</h2>
+  {% kc_example themed %}
+<label class="switch-row">
+  <span class="switch-row__body">
+    <span>Email me when someone challenges me</span>
+    <span class="muted text-sm">You can change this at any time.</span>
+  </span>
+  <input type="checkbox" class="switch" checked>
+</label>
+<label class="switch-row">
+  <span class="switch-row__body"><span>Show my stats on my profile</span></span>
+  <input type="checkbox" class="switch">
+</label>
+  {% end_kc_example %}
+
+  <h2>Choice list</h2>
+  <p class="muted">Radio-backed rows for picking one item from a short list.</p>
+  {% kc_example %}
+<ul class="choice-list">
+  <li><label class="choice"><span>#3 Ada</span><input type="radio" name="demo-choice" checked></label></li>
+  <li><label class="choice"><span>#4 Grace</span><input type="radio" name="demo-choice"></label></li>
+</ul>
+  {% end_kc_example %}
+
+  <h2>Filter row and inline form</h2>
+  {% kc_example %}
+<form class="filter-row">
+  <select aria-label="Season"><option>Season 4</option><option>Season 3</option></select>
+  <select aria-label="Format"><option>All formats</option><option>Archon</option></select>
+</form>
+<form class="inline-form">
+  <input type="text" placeholder="Username" aria-label="Username">
+  <button type="button" class="btn">Add</button>
+</form>
+  {% end_kc_example %}
+{% endblock %}

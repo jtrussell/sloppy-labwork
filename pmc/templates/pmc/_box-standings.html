@@ -1,81 +1,92 @@
-<div class="card box-card{% if summary.is_viewer_box %} is-viewer-box{% endif %}">
-  <div class="box-card-heading">
-    <h3>{{ summary.name }}</h3>
+<div class="card">
+  <div class="card__header">
+    <h3 class="card__title">{{ summary.name }}</h3>
     {% if playgroup_member.is_staff and not session.is_completed and not summary.standings %}
-      <details class="action-menu staff-only">
-        <summary class="menu-trigger" aria-label="Actions for {{ summary.name }}">{% include 'pmc/_more-actions-icon.html' %}</summary>
-        <div class="action-menu-items">
+      <details class="action-menu staff-only" data-menu>
+        <summary class="action-menu__trigger action-menu__trigger--staff" aria-label="Actions for {{ summary.name }}">{% include 'pmc/_icon.html' with name='more' %}</summary>
+        <div class="action-menu__list">
           <button
             type="button"
-            class="is-destructive"
+            class="action-menu__item action-menu__item--danger"
             hx-post="{% url 'pmc-pg-box-league-box-remove' playgroup.slug league.pk session.number summary.box.pk %}"
             hx-confirm="Remove the empty box {{ summary.name }}?"
+            data-preserve-scroll
           >Remove box</button>
         </div>
       </details>
     {% endif %}
   </div>
-  <table class="box-standings">
-    <thead>
-      <tr>
-        <th class="col-sm">#</th>
-        <th class="text-left">Player</th>
-        {% if not session.is_proposed %}
-          <th class="col-sm">Pts</th>
-          <th class="col-md lg-only">W-T-L</th>
-        {% else %}
-          <th class="col-md">Status</th>
-        {% endif %}
-      </tr>
-    </thead>
-    <tbody>
-      {% for standing in summary.standings %}
-        <tr class="{% if standing.member.pk == playgroup_member.pk %}is-viewer{% endif %}{% if standing.is_promoted %} is-promoted{% endif %}{% if standing.is_relegated %} is-relegated{% endif %}">
-          <td class="col-sm">{{ standing.rank }}</td>
-          <td class="text-left">
-            {{ standing.member }}
-            {% if standing.is_promoted %}<div class="text-smaller text-muted">Moving up</div>{% endif %}
-            {% if standing.is_relegated %}<div class="text-smaller text-muted">Moving down</div>{% endif %}
-            {% if not session.is_proposed %}
-              <div class="text-smaller text-muted sm-only">{{ standing.wins }}-{{ standing.ties }}-{{ standing.losses }}</div>
-            {% endif %}
-          </td>
+  <div class="table-wrap">
+    <table class="table table--dense">
+      <thead>
+        <tr>
+          <th class="table__rank">#</th>
+          <th>Player</th>
           {% if not session.is_proposed %}
-            <td class="col-sm">{{ standing.points }}</td>
-            <td class="col-md lg-only">{{ standing.wins }}-{{ standing.ties }}-{{ standing.losses }}</td>
+            <th class="n">Pts</th>
+            <th class="n table__wide">W-T-L</th>
           {% else %}
-            <td class="col-md text-smaller">
-              {% if standing.member.pk in confirmed_member_ids %}Confirmed{% else %}<span class="text-muted">Not yet</span>{% endif %}
-            </td>
+            <th>Status</th>
           {% endif %}
         </tr>
-      {% empty %}
-        <tr>
-          <td colspan="4" class="text-muted">No players in this box.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {% for standing in summary.standings %}
+          <tr class="{% if standing.member.pk == playgroup_member.pk %}table__row--me{% endif %}{% if standing.is_promoted %} table__row--up{% endif %}{% if standing.is_relegated %} table__row--down{% endif %}">
+            <td class="table__rank">{{ standing.rank }}</td>
+            <td class="table__player">
+              <div class="player">
+                <div class="player__body">
+                  <span class="player__name">{{ standing.member }}</span>
+                  {% if standing.is_promoted %}<span class="player__note">Moving up</span>{% endif %}
+                  {% if standing.is_relegated %}<span class="player__note">Moving down</span>{% endif %}
+                  {% if not session.is_proposed %}
+                    <span class="player__note table__narrow">{{ standing.wins }}-{{ standing.ties }}-{{ standing.losses }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            {% if not session.is_proposed %}
+              <td class="n">{{ standing.points }}</td>
+              <td class="n table__wide">{{ standing.wins }}-{{ standing.ties }}-{{ standing.losses }}</td>
+            {% else %}
+              <td>
+                {% if standing.member.pk in confirmed_member_ids %}
+                  <span class="chip chip--success">Confirmed</span>
+                {% else %}
+                  <span class="chip">Not yet</span>
+                {% endif %}
+              </td>
+            {% endif %}
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="{% if session.is_proposed %}3{% else %}4{% endif %}" class="table__empty">No players in this box.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
   {% if summary.box_matches %}
-    <details class="box-matches"{% if summary.is_viewer_box %} open{% endif %}>
+    <details class="disclosure"{% if summary.is_viewer_box %} open{% endif %}>
       <summary>Matches</summary>
-      <ul class="link-list">
+      <ul class="list">
         {% for box_match in summary.box_matches %}
           {% with match=box_match.match %}
             <li>
               {% if session.is_active and playgroup_member.is_staff %}
-                <a class="link-list-row" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk box_match.pk %}">
+                <a class="list__item" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk box_match.pk %}">
                   {% include 'pmc/_box-match-summary.html' %}
-                  <span class="link-list-hint">{% if match.has_result %}Change{% else %}Record{% endif %}</span>
+                  <span class="list__hint">{% if match.has_result %}Change{% else %}Record{% endif %}</span>
                 </a>
               {% elif session.is_active and not match.has_result and playgroup_member.pk in match.player_ids %}
-                <a class="link-list-row" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk box_match.pk %}">
+                <a class="list__item" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk box_match.pk %}">
                   {% include 'pmc/_box-match-summary.html' %}
-                  <span class="link-list-hint">Record result</span>
+                  <span class="list__hint">Record result</span>
                 </a>
               {% else %}
-                <div class="link-list-row">
+                <div class="list__item">
                   {% include 'pmc/_box-match-summary.html' %}
                 </div>
               {% endif %}

@@ -1,20 +1,16 @@
 {% extends "pmc/_base.html" %}
 
-{% block extra_head %}
-  {% include 'pmc/_competition-assets.html' %}
-{% endblock %}
-
 {% block content %}
-  <div class="page-heading">
+  <div class="page-header">
     <h1>Ladders</h1>
-    <a class="staff-only" href="{% url 'pmc-pg-ladder-new' playgroup.slug %}">Add ladder</a>
+    <a class="staff-link staff-only" href="{% url 'pmc-pg-ladder-new' playgroup.slug %}">{% include 'pmc/_icon.html' with name='shield' class_name='icon--sm' %}Add ladder</a>
   </div>
 
   <ul class="card-list">
     {% for ladder in ladders %}
       {% include 'pmc/_ladder-card.html' %}
     {% empty %}
-      <li class="card text-muted">No ladders yet.</li>
+      <li class="card muted">No ladders yet.</li>
     {% endfor %}
   </ul>
 {% endblock %}

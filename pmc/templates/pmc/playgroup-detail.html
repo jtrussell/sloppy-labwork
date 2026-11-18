@@ -1,15 +1,15 @@
 {% extends "pmc/_base.html" %}
-{% load posts_extras %}
+{% load pmc_extras %}
 
 {% block content %}
-  <div class="flex flex-row flex-col-sm flex-gap-1 flex-align-center {% if object.logo_src %}h1{% endif %}">
-    {% if object.logo_src %}
-      <img src="{{ object.logo_src }}" alt="{{ object.name }} logo" class="playgroup-logo">
-    {% endif %}
-    <div class="flex-1">
-      <h1>{{ object.name }}</h1>
-      <div class="subheading">
-        <ul class="inline-list">
+  <div class="page-header">
+    <div class="page-header__media">
+      {% if object.logo_src %}
+        <img src="{{ object.logo_src }}" alt="{{ object.name }} logo" class="logo">
+      {% endif %}
+      <div class="grow stack stack--sm">
+        <h1>{{ object.name }}</h1>
+        <ul class="meta">
           {% if object.is_global %}
             <li><strong>Global Playgroup</strong></li>
           {% elif object.type %}
@@ -28,37 +28,40 @@
     </div>
   </div>
 
-  <div class="card staff-only">
-    <h2>Staff Area</h2>
-    <a href="{% url 'pmc-pg-manage' object.slug %}" class="btn btn-solid btn-block">Manage Playgroup</a>
-    {% if not object.is_global and 'ladders' in pg_features %}
-      <p><a href="{% url 'pmc-pg-ladder-new' object.slug %}" class="btn btn-block">Add Ladder</a></p>
-    {% endif %}
-    {% if not object.is_global and 'box-leagues' in pg_features %}
-      <p><a href="{% url 'pmc-pg-box-league-new' object.slug %}" class="btn btn-block">Add Box League</a></p>
-    {% endif %}
+  <div class="card card--staff staff-only">
+    <p class="staff-tag">Staff</p>
+    <h2 class="card__title">Staff Area</h2>
+    <div class="btn-row btn-row--stretch">
+      <a href="{% url 'pmc-pg-manage' object.slug %}" class="btn btn--staff btn--solid">Manage Playgroup</a>
+      {% if not object.is_global and 'ladders' in pg_features %}
+        <a href="{% url 'pmc-pg-ladder-new' object.slug %}" class="btn btn--staff">Add Ladder</a>
+      {% endif %}
+      {% if not object.is_global and 'box-leagues' in pg_features %}
+        <a href="{% url 'pmc-pg-box-league-new' object.slug %}" class="btn btn--staff">Add Box League</a>
+      {% endif %}
+    </div>
   </div>
 
   {% if not playgroup_member and not object.is_global %}
     <div class="card">
-      <h2>Hi There 👋!</h2>
+      <h2 class="card__title">Hi There 👋!</h2>
       <p>It looks like you haven't joined this group yet on KeyChain.</p>
-      <div class="card-actions">
-        <a href="{% url 'pmc-pg-join' object.slug %}" class="btn">Request to join</a>
+      <div class="card__actions">
+        <a href="{% url 'pmc-pg-join' object.slug %}" class="btn btn--solid">Request to join</a>
       </div>
     </div>
   {% endif %}
 
   {% if object.is_global %}
     <div class="card">
-      <h2>Welcome 👋!</h2>
+      <h2 class="card__title">Welcome 👋!</h2>
       <p>This is a global playgroup, available to all KeyChain users.</p>
     </div>
   {% endif %}
 
   {% if object.description %}
-    <div class="card no-top-margin markdown">
-      {{ object.description | markdown | safe }}
+    <div class="card prose">
+      {{ object.description | markdown_sanitized }}
     </div>
   {% endif %}
 
@@ -82,25 +85,28 @@
 
   {% if upcoming_events %}
     <h2>Upcoming Events</h2>
-    <ul class="card-list">
+    <ul class="card list">
       {% for event in upcoming_events %}
-        <li class="card">
-          <h2>{{ event }}</h2>
-          <ul class="subheading inline-list">
-            <li>{{ event.start_date | date:"SHORT_DATE_FORMAT" }}</li>
-            <li>{{ event.get_player_count }} Players</li>
-            {% if event.format %}
-              <li>{{ event.format }}</li>
-            {% endif %}
-            {% if event.is_registration_open %}
-              <li>Open for registration</li>
-            {% endif %}
-          </ul>
-          <div class="card-actions">
-            <a class="btn btn-solid" href="{% url 'pmc-pg-event-detail' object.slug event.pk %}">
-              Details
-            </a>
-          </div>
+        <li>
+          <a class="list__item" href="{% url 'pmc-pg-event-detail' object.slug event.pk %}">
+            <span class="date-tile">
+              <span class="date-tile__month">{{ event.start_date | date:"M" }}</span>
+              <span class="date-tile__day">{{ event.start_date | date:"j" }}</span>
+            </span>
+            <span class="list__body">
+              <span class="list__title">{{ event }}</span>
+              <span class="meta">
+                <span>{{ event.get_player_count }} Players</span>
+                {% if event.format %}
+                  <span>{{ event.format }}</span>
+                {% endif %}
+              </span>
+              {% if event.is_registration_open %}
+                <span class="list__hint">Open for registration</span>
+              {% endif %}
+            </span>
+            {% include 'pmc/_icon.html' with name='chevron-right' class_name='list__chevron' %}
+          </a>
         </li>
       {% endfor %}
     </ul>

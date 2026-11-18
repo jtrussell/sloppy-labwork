@@ -1,0 +1,126 @@
+{% extends "pmc/ds-base.html" %}
+{% load pmc_extras %}
+
+{% block gallery_content %}
+  <h2>Themeable tokens</h2>
+  <p class="muted">Defined once per theme. A new token must be added to every theme block; a test enforces it.</p>
+  <div class="card table-wrap">
+    <table class="table table--dense">
+      <thead>
+        <tr>
+          <th>Token</th>
+          {% for value, label in themes %}<th>{{ label }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in themeable_token_rows %}
+          <tr>
+            <td><code>{{ row.token.name }}</code></td>
+            {% for theme_number, value in row.values %}
+              <td>
+                {% if row.token.group_key == 'color' or row.token.group_key == 'tier' or row.token.group_key == 'gradient' %}
+                  <span class="ds-swatch" data-theme="{{ theme_number }}" style="background: var({{ row.token.name }})"></span>
+                {% endif %}
+                <span class="ds-token-value">{{ value }}</span>
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Static tokens</h2>
+  {% for group, tokens in static_tokens_by_group.items %}
+    <h3>{{ group|title }}</h3>
+    <div class="card table-wrap">
+      <table class="table table--dense">
+        <tbody>
+          {% for token in tokens %}
+            <tr>
+              <td><code>{{ token.name }}</code></td>
+              <td>
+                {% if group == 'color' %}<span class="ds-swatch" style="background: var({{ token.name }})"></span>{% endif %}
+                {% if group == 'space' %}<span class="ds-space" style="width: var({{ token.name }})"></span>{% endif %}
+                {% if group == 'text' %}<span style="font-size: var({{ token.name }})">Aa</span>{% endif %}
+                {% if group == 'radius' %}<span class="ds-radius" style="border-radius: var({{ token.name }})"></span>{% endif %}
+                <span class="ds-token-value">{{ token.value }}</span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endfor %}
+
+  <h2>Typography</h2>
+  {% kc_example themed %}
+<div class="stack">
+  <h1>Page title</h1>
+  <h2>Section heading</h2>
+  <h3>Sub heading</h3>
+  <p>Body text in Lexend. <a href="#">A link</a>, <strong>strong text</strong> and <code>code</code>.</p>
+  <p class="muted">Muted text for secondary detail.</p>
+  <p class="subtle">Subtle text for the least important detail.</p>
+  <p class="eyebrow">Eyebrow label</p>
+  <ul class="meta"><li>12 Oct 2026</li><li>16 players</li><li>Archon</li></ul>
+</div>
+  {% end_kc_example %}
+
+  <h2>Icons</h2>
+  <p class="muted">Navigation icons. Include with <code>pmc/_icon.html</code> and a <code>name</code>.</p>
+  <div class="card">
+    <ul class="grid grid--tiles">
+      {% for icon_name in nav_icon_names %}
+        <li class="ds-icon-tile">{% include 'pmc/_icon.html' with name=icon_name %}<span>{{ icon_name }}</span></li>
+      {% endfor %}
+    </ul>
+  </div>
+  <p class="muted">Utility icons.</p>
+  <div class="card">
+    <ul class="grid grid--tiles">
+      {% for icon_name in utility_icon_names %}
+        <li class="ds-icon-tile">{% include 'pmc/_icon.html' with name=icon_name %}<span>{{ icon_name }}</span></li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% kc_example %}
+<p>1,250 <span class="xp-icon" role="img" aria-label="XP"></span> · 87 <span class="rp-icon" role="img" aria-label="RP"></span> · <span class="discord-icon" aria-hidden="true"></span> Discord</p>
+  {% end_kc_example %}
+
+  <h2>Layout</h2>
+  <p class="muted">
+    The page column is 52rem wide and centred. <code>.page</code>, <code>.card</code> and <code>.stack</code>
+    space their children. Breakpoints are mobile first: 480px and 720px.
+  </p>
+  {% kc_example %}
+<div class="cluster cluster--between">
+  <span class="chip">cluster</span><span class="chip">wraps</span><span class="chip">and spreads</span>
+</div>
+<div class="grid">
+  <div class="card card--inset">grid</div>
+  <div class="card card--inset">auto-fill</div>
+  <div class="card card--inset">16rem min</div>
+</div>
+<div class="split">
+  <div class="card card--inset">split: one column on phones</div>
+  <div class="card card--inset">two from 720px</div>
+</div>
+  {% end_kc_example %}
+
+  <h2>Utilities</h2>
+  <div class="card table-wrap">
+    <table class="table table--dense">
+      <tbody>
+        <tr><td><code>.visually-hidden</code></td><td>Text for screen readers only</td></tr>
+        <tr><td><code>.truncate</code></td><td>Single line with ellipsis</td></tr>
+        <tr><td><code>.num</code></td><td>Tabular numerals</td></tr>
+        <tr><td><code>.muted</code> <code>.subtle</code> <code>.text-primary</code> <code>.text-success</code> <code>.text-danger</code> <code>.text-staff</code></td><td>Text tones</td></tr>
+        <tr><td><code>.text-sm</code> <code>.text-lg</code> <code>.text-bold</code> <code>.text-italic</code> <code>.text-center</code> <code>.text-right</code></td><td>Text size, weight and alignment</td></tr>
+        <tr><td><code>.phone-only</code> <code>.wide-only</code></td><td>Show below or from 720px</td></tr>
+        <tr><td><code>.staff-only</code></td><td>Hidden unless the viewer is playgroup staff</td></tr>
+        <tr><td><code>.preview</code></td><td>Hidden unless the viewer is Django staff</td></tr>
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

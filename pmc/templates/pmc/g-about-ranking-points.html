@@ -14,27 +14,29 @@
   <p>Ranking point payouts may be adjusted over time, use the form below to
   determine which points can be expected based on the date of an event.</p> 
 
-  <form method="get">
-    {{ form.as_p }}
+  <form method="get" class="card" data-preserve-scroll>
+    {% include 'pmc/_form-fields.html' %}
   </form>
 
   {% if selected_version %}
-    <p><strong>Showing:</strong> {{ selected_version.name }}, effective starting {{ selected_version.effective_on }}.</p>
+    <p class="muted"><strong>Showing:</strong> {{ selected_version.name }}, effective starting {{ selected_version.effective_on }}.</p>
   {% endif %}
 
   {% for label, ranges in ranges_by_size %}
   <div class="card">
     <h2>{{ label }}</h2>
-    <table>
+    <table class="table">
       <thead>
-        <th>Finishing Position</th>
-        <th>Points</th>
+        <tr>
+          <th>Finishing Position</th>
+          <th class="n">Points</th>
+        </tr>
       </thead>
       <tbody>
         {% for row in ranges %}
           <tr>
             <td>{{ row.position_range }}</td>
-            <td>{{ row.points }}</td>
+            <td class="n">{{ row.points }}</td>
           </tr>
         {% endfor %}
       </tbody>

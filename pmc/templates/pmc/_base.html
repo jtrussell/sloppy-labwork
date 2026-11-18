@@ -1,162 +1,72 @@
 {% load static %}
 {% load django_htmx %}
 <!DOCTYPE html>
-<html lang="en" class="pmc-theme-{{ my_profile.theme }}">
+<html lang="en" data-theme="{{ my_profile.theme|default:0 }}">
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-	<link rel="manifest" href="{% static 'manifest.json' %}">
+  <link rel="manifest" href="{% static 'manifest.json' %}">
 
-	<!-- CSS -->
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reset-css@5.0.2/reset.min.css">
-	<link rel="stylesheet" href="{% static 'pmc/css/main.css' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'pmc/css/keychain.css' %}">
 
-	<!-- Fonts -->
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="{% static 'pmc/img/favicon.png' %}">
 
-	<!-- Favicons -->
-  <link rel="icon" type="image/svg+xml" href="{% static 'pmc/img/favicon.png' %}">
+  <meta name="description" content="Unlock your KeyForge organized play with KeyChain">
+  <title>{% block head_title %}KeyChain{% endblock %}</title>
 
-	<meta name="description" content="Unlock your KeyForge organized play with KeyChain">
-	<meta name="keywords" content="">
-	<title>KeyChain</title>
-
-  {% block extra_head %}
-    <!-- Custom head content -->
-  {% endblock %}
+  {% block extra_head %}{% endblock %}
 </head>
 
 <body
-	class="
-		body
-		{% if not playgroup_member.is_staff %}is-not-playgroup-staff{% endif %}
-		{% if not user.is_staff %}is-not-django-staff{% endif %}
-	"
-	hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'
+  class="shell{% if not playgroup_member.is_staff %} is-not-playgroup-staff{% endif %}{% if not request.user.is_staff %} is-not-django-staff{% endif %}"
+  hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'
 >
-	<div class="viewport flex flex-col">
-		<div class="masthead">
-			<div class="container">
-				{% if playgroup %}
-					<span>
-						{{ playgroup.name }}
-					</span>
-				{% endif %}
+  {% include 'pmc/_icon-sprite.html' %}
 
-				<a href="{% url 'pmc-my-keychain' %}" class="wordmark"></a>
-			</div>
-		</div>
+  <header class="masthead">
+    <div class="container masthead__inner">
+      {% if playgroup %}
+        <span class="masthead__title">{{ playgroup.name }}</span>
+      {% endif %}
+      <a href="{% url 'pmc-my-keychain' %}" class="wordmark" aria-label="KeyChain"></a>
+    </div>
+  </header>
 
-		{% include 'pmc/_nav.html' %}
+  {% block staff_strip %}{% endblock %}
 
-		<ul class="messages container" id="message-list">
-				{% for message in messages %}
-				<li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
-						{{ message }}
-				</li>
-				{% endfor %}
-		</ul>
+  {% include 'pmc/_nav.html' %}
 
-		<div class="container">
-			{% block content %}
-				<!-- Silence is golden -->
-			{% endblock %}
-		</div>
+  {% include 'pmc/_messages.html' %}
 
-		<div class="flex-spacer"></div>
+  <main class="container page">
+    {% block content %}{% endblock %}
+  </main>
 
-		<footer>
-			<div class="container">
-				<ul class="footer-links flex flex-row flex-col-sm flex-align-center">
-					<li><span class="pmc-icon icon-discord"></span> <a href="https://discord.gg/rpqr5h7QN3" target="_blank">Discord</a></li>
-					<li><a href="https://keychaining.substack.com/about ">About</a></li>
-					<li><a href="https://keychaining.substack.com/p/attributions">Attributions</a></li>
-					<li><a href="{% url 'privacy' %}">Privacy Policy</a></li>
-					<li><a href="{% url 'terms' %}">Terms of Service</a></li>
-				</ul>
-			</div>
-		</footer>
-	</div>
+  <footer class="footer">
+    <div class="container">
+      <ul class="footer__links">
+        <li><a href="https://discord.gg/rpqr5h7QN3" target="_blank" rel="noopener"><span class="discord-icon" aria-hidden="true"></span>Discord</a></li>
+        <li><a href="https://keychaining.substack.com/about">About</a></li>
+        <li><a href="https://keychaining.substack.com/p/attributions">Attributions</a></li>
+        <li><a href="{% url 'privacy' %}">Privacy Policy</a></li>
+        <li><a href="{% url 'terms' %}">Terms of Service</a></li>
+      </ul>
+    </div>
+  </footer>
 
-	<script id="dialog" type="text/template"></script>
+  {% include 'pmc/_dialog-host.html' %}
+  {% include 'pmc/_dialog-confirm.html' %}
 
-	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" crossorigin="anonymous"></script>
-	<script src="https://cdn.jsdelivr.net/npm/datalist-polyfill@1.25.1/datalist-polyfill.min.js" integrity="sha256-etIKZ7e5TG2zsqLx+M4lFv97QYvplQUfbcEtuGsrBB4=" crossorigin="anonymous"></script>
+  {% htmx_script %}
+  <script src="{% static 'pmc/scripts/dialog.js' %}"></script>
+  <script src="{% static 'pmc/scripts/messages.js' %}"></script>
+  <script src="{% static 'pmc/scripts/menu.js' %}"></script>
+  <script src="{% static 'pmc/scripts/preserve-scroll.js' %}"></script>
 
-	{% htmx_script %}
-	<script type="text/javascript">
-		const showMessages = (messagesJson) => {
-			const messages = JSON.parse(messagesJson)?.messages ?? []
-			const messageEls = messages.map(message => {
-				const li = document.createElement('li')
-				li.className = message.tags
-				li.innerHTML = message.message
-				return li
-			})
-			document.getElementById('message-list').replaceChildren(...messageEls)	
-		}
-
-		document.addEventListener('htmx:afterRequest', function(event) {
-			const messagesJson = event.detail.xhr.getResponseHeader('HX-Trigger') || '{}'
-			const isRedirect = !!event.detail.xhr.getResponseHeader('HX-Redirect')
-			if (isRedirect) {
-				window.localStorage.setItem('flashMessages', messagesJson)
-			} else {
-				showMessages(messagesJson)
-			}
-
-			if (event.detail.target.id === 'dialog') {
-				const dialog = document.getElementById('dialog')
-				if (dialog) {
-					Swal.fire({
-						title: dialog.dataset.title || 'Dialog',
-						html: dialog.innerHTML,
-						showCloseButton: true,
-						showCancelButton: true,
-						theme: '{% if my_profile.theme == 1 %}light{% else %}dark{% endif %}',
-						customClass: {
-							confirmButton: 'btn btn-solid',
-							cancelButton: 'btn'
-						}
-					})
-				}
-			}
-		});	
-
-		document.addEventListener('DOMContentLoaded', function() {
-			const messagesJson = window.localStorage.getItem('flashMessages')
-			if (messagesJson) {
-				showMessages(messagesJson)
-			}
-			window.localStorage.removeItem('flashMessages')
-		});
-
-		document.addEventListener("htmx:confirm", function(e) {
-				if (!e.detail.question) { return }
-				e.preventDefault()
-				Swal.fire({
-					title: 'Please confirm',
-					text: e.detail.question,
-					showCloseButton: true,
-					showCancelButton: true,
-					theme: '{% if my_profile.theme == 1 %}light{% else %}dark{% endif %}',
-					customClass: {
-						confirmButton: 'btn btn-solid',
-						cancelButton: 'btn'
-					}
-				}).then(function(result) {
-					if (result.isConfirmed) {
-						e.detail.issueRequest(true)
-					}
-				})
-			})
-	</script>
-
-	{% block extra_body %}
-		<!-- Convenient place for script tags -->
-	{% endblock %}
+  {% block extra_body %}{% endblock %}
 </body>
 </html>

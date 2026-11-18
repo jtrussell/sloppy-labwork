@@ -42,6 +42,7 @@ def nav_links(request):
 
     nav_links.append({
         'name': _('My KeyChain'),
+        'icon': 'keychain',
         'url': reverse('pmc-my-keychain'),
         'is_active': False,
     })
@@ -54,12 +55,14 @@ def nav_links(request):
 
         nav_links.append({
             'name': _('Home'),
+            'icon': 'home',
             'url': reverse('pmc-pg-detail', args=[playgroup_slug]),
             'is_active': False,
         })
 
         nav_links.append({
             'name': _('Events'),
+            'icon': 'calendar',
             'url': reverse('pmc-pg-events', args=[playgroup_slug]),
             'is_active': False,
         })
@@ -68,6 +71,7 @@ def nav_links(request):
         if current_playgroup and not current_playgroup.is_global:
             nav_links.append({
                 'name': _('Members'),
+                'icon': 'users',
                 'url': reverse('pmc-pg-members', args=[playgroup_slug]),
                 'is_active': False,
             })
@@ -75,6 +79,7 @@ def nav_links(request):
         if current_playgroup and _should_show_play_link(request, current_playgroup):
             nav_links.append({
                 'name': _('Play'),
+                'icon': 'flag',
                 'url': reverse('pmc-pg-play', args=[playgroup_slug]),
                 'active_prefixes': [
                     reverse('pmc-pg-ladders', args=[playgroup_slug]),
@@ -85,6 +90,7 @@ def nav_links(request):
 
         nav_links.append({
             'name': _('Leaderboards'),
+            'icon': 'leaderboard',
             'url': reverse('pmc-pg-leaderboard', args=[playgroup_slug]),
             'is_active': False,
         })
@@ -98,24 +104,28 @@ def nav_links(request):
 
         nav_links.append({
             'name': _('Leaderboards'),
+            'icon': 'leaderboard',
             'url': reverse('pmc-leaderboard'),
             'is_active': False,
         })
 
         nav_links.append({
             'name': _('Results'),
+            'icon': 'results',
             'url': reverse('pmc-my-results'),
             'is_active': False,
         })
 
         nav_links.append({
             'name': _('Awards'),
+            'icon': 'award',
             'url': reverse('pmc-my-awards'),
             'is_active': False,
         })
 
         nav_links.append({
             'name': _('News'),
+            'icon': 'news',
             'url': 'https://keychaining.substack.com/',
             'is_active': False,
         })

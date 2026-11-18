@@ -3,16 +3,18 @@
 
 {% block extra_head %}
   <link rel="stylesheet" href="{% static 'pmc/css/awards.css' %}">
-  <link rel="stylesheet" href="{% static 'css/drag-drop.css' %}">
+  <link rel="stylesheet" href="{% static 'pmc/css/drag-drop.css' %}">
 {% endblock %}
 
 {% block content %}
   <h1>Awards</h1>
-  <div class="subheading">Check out my Static Collection Array</div>
+  <p class="subheading">Check out my Static Collection Array</p>
 
   {% include 'pmc/_awards-content.html' %}
+{% endblock %}
 
-  <script src="{% static 'js/drag-drop.js' %}"></script>
+{% block extra_body %}
+  <script src="{% static 'pmc/scripts/drag-drop.js' %}"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       initAwardShelfDragDrop()
@@ -27,7 +29,7 @@
 
     function initAwardShelfDragDrop() {
       new DragDropManager('#award-shelf-slots', {
-        itemSelector: '.award-shelf-item',
+        itemSelector: '.award-shelf__item',
         onReorder: function (orderedIds) {
           htmx.ajax('POST', '{% url "pmc-reorder-pins" %}', {
             values: { pin_order: orderedIds.join(',') },

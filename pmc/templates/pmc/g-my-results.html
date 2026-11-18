@@ -1,46 +1,48 @@
 {% extends "pmc/_base.html" %}
 
 {% block content %}
-<h1>My Event Results</h1>
+  <h1>My Event Results</h1>
 
-<div class="card">
-  <table>
-    <tbody>
+  <div class="card table-wrap">
+    <table class="table">
       <thead>
         <tr>
-          <th class="text-left">Event</th>
-          <th class="stat">FP</th>
-          <th class="stat">Record</th>
-          <th class="stat">RP</th>
-          <th class="stat">XP</th>
+          <th>Event</th>
+          <th class="n">FP</th>
+          <th class="n">Record</th>
+          <th class="n">RP</th>
+          <th class="n">XP</th>
         </tr>
       </thead>
-      {% for item in results %}
-      <tr>
-        <td class="text-left">
-          <a class="text-bold" href="{% url 'pmc-event-detail' item.event.pk %}">
-            {{ item.event }}
-          </a>
+      <tbody>
+        {% for item in results %}
+          <tr>
+            <td>
+              <a class="text-bold" href="{% url 'pmc-event-detail' item.event.pk %}">
+                {{ item.event }}
+              </a>
 
-          <ul class="inline-list text-shy">
-            <li>{{ item.event.start_date | date:"SHORT_DATE_FORMAT" }}</li>
-            <li>{{ item.event.format | default:"Unknown format" }}</li>
-          </ul>
-        </td>
-        <td class="stat">{{ item.finishing_position | default:"-" }}</td>
-        <td class="stat">{{ item.formatted_record }}</td>
-        <td class="stat">{{ item.ranking_points.first.points | default:"-" }}</td>
+              <ul class="meta">
+                <li>{{ item.event.start_date | date:"SHORT_DATE_FORMAT" }}</li>
+                <li>{{ item.event.format | default:"Unknown format" }}</li>
+              </ul>
+            </td>
+            <td class="n">{{ item.finishing_position | default:"-" }}</td>
+            <td class="n">{{ item.formatted_record }}</td>
+            <td class="n">{{ item.ranking_points.first.points | default:"-" }}</td>
 
-        {% if item.event.is_excluded_from_xp %}
-          <td class="stat">N/A</td>
-        {% else %}
-          <td class="stat">{{ item.get_xp | default_if_none:"-" }}</td>
-        {% endif %}
-      </tr>
-      {% empty %}
-        <td colspan="4" class="text-muted">Nothing to see here.</td>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+            {% if item.event.is_excluded_from_xp %}
+              <td class="n">N/A</td>
+            {% else %}
+              <td class="n">{{ item.get_xp | default_if_none:"-" }}</td>
+            {% endif %}
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="table__empty">Nothing to see here.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endblock %}

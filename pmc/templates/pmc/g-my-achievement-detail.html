@@ -8,54 +8,42 @@
 
 {% block content %}
   <h1>{{ achievement }}</h1>
-  <div class="subheading">Achievement Detail</div>
+  <p class="subheading">Achievement Detail</p>
 
+  <div class="card award-hero{% if not achievement.user_achievement_tier_src %} award-hero--locked{% endif %}">
+    <img src="{{ achievement.user_achievement_tier_src | default:achievement.lowest_tier_src }}" alt="{{ achievement.name }} achievement" class="award-hero__art">
+    <ul class="meta">
+      <li>{{ achievement.name }}</li>
+      <li class="text-bold">{{ achievement.user_achievement_tier | achievement_tier_label }}</li>
+    </ul>
 
-  <div class="card">
-    <div>
-      <div class="
-        award-container
-        large
-        no-hover
-        {% if not achievement.user_achievement_tier_src %}disabled{% endif %}
-      ">
-          <img src="{{ achievement.user_achievement_tier_src | default:achievement.lowest_tier_src }}" alt="{{ achievement.name }} achievement" class="award" />
-          <ul class="inline-list">
-            <li>{{ achievement.name }}</li>
-            <li class="text-bold">{{ achievement.user_achievement_tier | achievement_tier_label }}</li>
-          </ul>
-      </div> 
-    </div>
-
-    <p class="text-center text-larger">{{ achievement.description }}</p>
+    <p class="text-lg">{{ achievement.description }}</p>
   </div>
 
-  <div class="card">
-    <table>
+  <div class="card table-wrap">
+    <table class="table">
       <thead>
         <tr>
           <th>Tier</th>
-          <th>Requirement</th>
-          <th>Players Earned</th>
+          <th class="n">Requirement</th>
+          <th class="n">Players Earned</th>
         </tr>
       </thead>
       <tbody>
         {% with next_tier=achievement.user_achievement_tier|add:1|default:0 %}
         {% for tier in tiers %}
           <tr>
-            <td
-              class="text-bold {% if tier.tier == achievement.user_achievement_tier %}text-primary{% endif %}"$^
-            >{{ tier.tier | achievement_tier_label }}</td>
-            <td>
-              {% if tier.tier == next_tier %}<span class="text-muted">{{ my_stat }} /</span>{% endif %}
+            <td class="text-bold{% if tier.tier == achievement.user_achievement_tier %} text-primary{% endif %}">{{ tier.tier | achievement_tier_label }}</td>
+            <td class="n">
+              {% if tier.tier == next_tier %}<span class="muted">{{ my_stat }} /</span>{% endif %}
               {% if tier.tier > next_tier %}
-                &#128274;
+                {% include 'pmc/_icon.html' with name='lock' class_name='icon--sm' label='Locked' %}
               {% else %}
                 {{ tier.criteria_value }}
               {% endif %}
-              {% if my_stat >= tier.criteria_value %}<span class="text-primary">&#10004;</span>{% endif %}
+              {% if my_stat >= tier.criteria_value %}<span class="text-primary">{% include 'pmc/_icon.html' with name='check' class_name='icon--sm' label='Reached' %}</span>{% endif %}
             </td>
-            <td>
+            <td class="n">
               {{ tier.earned_count | default_if_none:"0" }}
             </td>
           </tr>
@@ -64,5 +52,4 @@
       </tbody>
     </table>
   </div>
-
 {% endblock %}

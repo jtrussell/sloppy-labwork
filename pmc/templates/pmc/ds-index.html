@@ -1,0 +1,53 @@
+{% extends "pmc/ds-base.html" %}
+
+{% block gallery_content %}
+  <div class="card prose">
+    <p>
+      Reference for building KeyChain pages. Every page extends the KeyChain base template and loads one
+      stylesheet, <code>pmc/css/keychain.css</code>. Use the theme buttons above to preview a page in either
+      theme; examples marked as themed show both at once.
+    </p>
+  </div>
+
+  <h2>Principles</h2>
+  <div class="card prose">
+    <ol>
+      <li><strong>Phone first.</strong> Most players open KeyChain at an event, on a phone. Design the narrow layout first; wider screens get the same content in a centred column.</li>
+      <li><strong>Tokens only.</strong> Every colour, space, size, radius and shadow comes from <code>tokens.css</code>. No raw colours anywhere else.</li>
+      <li><strong>Reach for a component.</strong> Check this gallery before writing CSS. If something reusable is missing, add it to the system and to the gallery.</li>
+      <li><strong>Components carry no outer margin.</strong> Parents space their children: the page, cards and stacks add the gap.</li>
+      <li><strong>Staff is obvious.</strong> Anything only staff can see or do carries the blue staff accent and a Staff label. Hiding staff controls with CSS is fine; data and capabilities are protected on the server.</li>
+      <li><strong>Keyboard focus is visible.</strong> Never remove focus outlines.</li>
+      <li><strong>Targets are at least 44px.</strong> Buttons, menu items and nav items meet the tap size.</li>
+      <li><strong>Stay in place.</strong> Filters, toggles, tabs and pagination keep the scroll position with <code>data-preserve-scroll</code>.</li>
+      <li><strong>Celebrate, do not shame.</strong> Activity labels are positive; quiet playgroups get neutral facts.</li>
+    </ol>
+  </div>
+
+  <h2>Sections</h2>
+  <ul class="card list">
+    {% for slug, title in sections %}
+      <li>
+        <a class="list__item" href="{% url 'pmc-design-system-section' slug %}">
+          <span class="list__body"><span class="list__title">{{ title }}</span></span>
+          {% include 'pmc/_icon.html' with name='chevron-right' class_name='list__chevron' %}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+
+  <h2>Files</h2>
+  <div class="card table-wrap">
+    <table class="table">
+      <thead><tr><th>Layer</th><th>File</th><th>Contents</th></tr></thead>
+      <tbody>
+        <tr><td><code>reset</code></td><td><code>system/reset.css</code></td><td>Normalisation</td></tr>
+        <tr><td>unlayered</td><td><code>system/tokens.css</code></td><td>Tokens for both themes</td></tr>
+        <tr><td><code>base</code></td><td><code>system/base.css</code></td><td>Element defaults, form controls, focus</td></tr>
+        <tr><td><code>components</code></td><td><code>system/components.css</code></td><td>Shell, layout primitives, components</td></tr>
+        <tr><td><code>utilities</code></td><td><code>system/utilities.css</code></td><td>Single-purpose helpers, staff hiding</td></tr>
+        <tr><td>unlayered</td><td>page stylesheets</td><td>Only what is specific to one feature</td></tr>
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

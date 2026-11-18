@@ -2,7 +2,7 @@
 
 {% block content %}
   <h1>Record a Played Game</h1>
-  <div class="subheading">{{ ladder.name }}</div>
+  <p class="subheading">{{ ladder.name }}</p>
 
   <div class="card">
     <p>
@@ -11,17 +11,17 @@
       against players up to {{ ladder.challenge_range }} place{{ ladder.challenge_range|pluralize }} away.
     </p>
     {% if form.fields.opponent.queryset.exists %}
-      <form method="POST">
+      <form method="POST" class="stack">
         {% csrf_token %}
-        {{ form.as_p }}
-        <div class="card-actions">
-          <a class="btn" href="{% url 'pmc-pg-ladder-detail' playgroup.slug ladder.pk %}">Cancel</a>
-          <button class="btn btn-solid" type="submit">Save Result</button>
+        {% include 'pmc/_form-fields.html' with form=form %}
+        <div class="form__actions">
+          <a class="btn btn--ghost" href="{% url 'pmc-pg-ladder-detail' playgroup.slug ladder.pk %}">Cancel</a>
+          <button class="btn btn--solid" type="submit">Save Result</button>
         </div>
       </form>
     {% else %}
-      <p class="text-muted">There's nobody within range to record a game against yet.</p>
-      <div class="card-actions">
+      <p class="muted">There's nobody within range to record a game against yet.</p>
+      <div class="card__actions">
         <a class="btn" href="{% url 'pmc-pg-ladder-detail' playgroup.slug ladder.pk %}">Back to Ladder</a>
       </div>
     {% endif %}

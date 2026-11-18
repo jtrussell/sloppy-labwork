@@ -7,50 +7,50 @@
   <div class="card">
     <p>Welcome, {{ request.user }}.</p>
     <p>Looking to <a href="{% url 'account_change_password' %}">change your password</a> or <a href="{% url 'socialaccount_connections' %}">manage your social connections</a>?</p>
-    <div class="card-actions">
+    <div class="card__actions">
       <form action="{% url 'account_logout' %}" method="POST">
         {% csrf_token %}
         <button type="submit" class="btn">
           Sign Out
         </button>
-      </form> 
+      </form>
     </div>
   </div>
 
-  <form method="POST" enctype="multipart/form-data">
-    <div class="card form">
-      <h2>Profile Settings</h2>
+  <form method="POST" enctype="multipart/form-data" class="stack">
+    <div class="card">
+      <h2 class="card__title">Profile Settings</h2>
       {% csrf_token %}
-      {{ username_form.as_p }}
-      {{ form.as_p }}
-      <div class="card-actions">
-        <button type="submit" class="btn btn-solid">
-            Update
+      {% include 'pmc/_form-fields.html' with form=username_form %}
+      {% include 'pmc/_form-fields.html' with form=form %}
+      <div class="form__actions">
+        <button type="submit" class="btn btn--solid">
+          Update
         </button>
       </div>
     </div>
 
-    <div class="card form">
-      <h3>Public Profile Privacy</h3>
-      <p class="text-muted">Control what information is visible on your public profile.</p>
-      {{ privacy_form.as_p }}
-      <div class="card-actions">
-        <button type="submit" class="btn btn-solid">
-            Update
+    <div class="card">
+      <h2 class="card__title">Public Profile Privacy</h2>
+      <p class="muted">Control what information is visible on your public profile.</p>
+      {% include 'pmc/_form-fields.html' with form=privacy_form %}
+      <div class="form__actions">
+        <button type="submit" class="btn">
+          Update
         </button>
       </div>
     </div>
   </form>
 
   <form action="{% url 'pmc-manage-mv-connect' %}" method="POST" class="card">
-    <h2>Master Vault</h2>
+    <h2 class="card__title">Master Vault</h2>
     {% csrf_token %}
     {% if my_profile.mv_username %}
       <input type="hidden" name="disconnect" value="1">
-      <p><span>Connected as <code>{{ my_profile.mv_username }}</code>.</span></p>
+      <p>Connected as <code>{{ my_profile.mv_username }}</code>.</p>
       <p>The QR code displayed on your KeyChain playercard may be used to register for
       organized play events or to gain access to playgroups within KeyChain.</p>
-      <div class="card-actions">
+      <div class="card__actions">
         <button type="submit" class="btn">Disconnect</button>
       </div>
     {% else %}
@@ -58,9 +58,9 @@
       <p>Add a Master Vault account to your KeyChain by scanning the QR code in
         your Master Vault profile.</p>
       <p id="qr-reader"></p>
-      <div class="card-actions">
-        <button type="button" id="qr-btn-start" class="btn btn-solid">Scan</button>
-        <button type="button" id="qr-btn-stop" style="display: none;" class="btn">Cancel</button>
+      <div class="card__actions">
+        <button type="button" id="qr-btn-start" class="btn">Scan</button>
+        <button type="button" id="qr-btn-stop" class="btn btn--ghost" hidden>Cancel</button>
       </div>
     {% endif %}
   </form>

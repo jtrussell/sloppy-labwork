@@ -10,7 +10,7 @@ from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.db.models import Exists, OuterRef, Sum, Count, Q, Prefetch
-from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseNotAllowed, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.views import generic
 from django.template import loader
@@ -25,8 +25,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django_htmx.http import reswap, retarget
 from pmc.context_processors import playgroup
-from pmc.forms import EventForm, EventResultDeckForm, EventUpdateForm, LeaderboardSeasonPeriodForm, PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm, PmcProfilePrivacyForm, RankingPointsMapVersionForm, VenueForm
+from pmc.forms import (
+    EventForm, EventResultDeckForm, EventResultUpdateForm, EventUpdateForm, LeaderboardSeasonPeriodForm,
+    PlaygroupForm, PlaygroupJoinRequestForm, PmcProfileForm, PmcProfilePrivacyForm, RankingPointsMapVersionForm,
+    VenueForm
+)
 from pmc.forms import PlaygroupMemberForm
 from pmc.forms import LadderForm, LadderAddMemberForm, LadderMoveMemberForm, MatchOutcomeForm
 from pmc.forms import LadderPlayedResultForm
@@ -64,6 +69,14 @@ def can_access_member_pages(user, slug):
     if playgroup and playgroup.is_global:
         return True
     return PlaygroupMember.objects.filter(user=user, playgroup__slug=slug).exists()
+
+
+def get_playgroup_event_or_404(slug, pk):
+    return get_object_or_404(Event, pk=pk, playgroup_events__playgroup__slug=slug)
+
+
+def get_playgroup_event_result_or_404(slug, pk):
+    return get_object_or_404(EventResult, pk=pk, event__playgroup_events__playgroup__slug=slug)
 
 
 def is_pg_member(view):
@@ -1444,6 +1457,9 @@ class EventDetail(generic.DetailView):
     model = Event
     template_name = 'pmc/pg-event-detail.html'
 
+    def get_queryset(self):
+        return Event.objects.filter(playgroup_events__playgroup__slug=self.kwargs['slug'])
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
@@ -1475,8 +1491,7 @@ class EventDetail(generic.DetailView):
 @login_required
 @is_pg_member
 def result_detail(request, slug, pk):
-    event_result = get_object_or_404(EventResult, pk=pk)
-    # todo - ensure that the event is associated with the playgroup
+    event_result = get_playgroup_event_result_or_404(slug, pk)
     is_allowed_to_edit = request.user == event_result.user or PlaygroupMember.objects.filter(
         user=request.user, playgroup__slug=slug, is_staff=True).exists()
 
@@ -1546,7 +1561,7 @@ def result_detail(request, slug, pk):
 @login_required
 @is_pg_staff
 def manage_event(request, slug, pk):
-    event = get_object_or_404(Event, pk=pk)
+    event = get_playgroup_event_or_404(slug, pk)
     if request.method == 'POST':
         form = EventUpdateForm(request.POST, instance=event, user=request.user)
         if form.is_valid():
@@ -1578,8 +1593,7 @@ def manage_event(request, slug, pk):
 @login_required
 @is_pg_staff
 def delete_event(request, slug, pk):
-    event = get_object_or_404(Event, pk=pk)
-    # TODO - ensure that the event is associated with the playgroup
+    event = get_playgroup_event_or_404(slug, pk)
     event.delete()
     messages.success(request, _('Event deleted.'))
     return redirect_to(request, reverse('pmc-pg-events', kwargs={'slug': slug}))
@@ -1792,10 +1806,6 @@ def submit_event_results(request, slug):
     })
 
 
-def typography(request):
-    return render(request, 'pmc/typography.html')
-
-
 def about(request):
     return render(request, 'pmc/about.html')
 
@@ -1876,18 +1886,21 @@ def change_background(request):
 @login_required
 @is_pg_staff
 def assign_event_points(request, slug, pk):
-    event = get_object_or_404(Event, pk=pk)
-    # TODO verify that the event is associated with the playgroup
+    event = get_playgroup_event_or_404(slug, pk)
     RankingPointsService.assign_points_for_event(event)
     messages.success(request, _('Ranking points updated.'))
     return HttpResponseRedirect(reverse('pmc-pg-event-detail', kwargs={'slug': slug, 'pk': pk}))
 
 
+def render_event_result_edit_form(request, form):
+    return render(request, 'pmc/_event-result-edit-form.html', {'form': form, 'result': form.instance})
+
+
 @login_required
 @is_pg_staff
 def manage_event_result(request, slug, pk):
+    result = get_playgroup_event_result_or_404(slug, pk)
     if request.method == 'DELETE':
-        result = get_object_or_404(EventResult, pk=pk)
         result.delete()
         RankingPointsService.assign_points_for_event(result.event)
         messages.success(request, _('Result removed.'))
@@ -1899,13 +1912,10 @@ def manage_event_result(request, slug, pk):
             return render(request, 'pmc/pg-event-manage.html#results-table', context)
         return HttpResponseRedirect(reverse('pmc-pg-event-manage', kwargs={'slug': slug, 'pk': result.event.pk}))
     elif request.method == 'POST':
-        result = get_object_or_404(EventResult, pk=pk)
-        result.finishing_position = request.POST.get(
-            'finishing_position') or None
-        result.num_wins = request.POST.get('num_wins') or None
-        result.num_losses = request.POST.get('num_losses') or None
-        result.num_ties = request.POST.get('num_ties') or None
-        result.save()
+        form = EventResultUpdateForm(request.POST, instance=result)
+        if not form.is_valid():
+            return reswap(retarget(render_event_result_edit_form(request, form), '#dialog'), 'innerHTML')
+        result = form.save()
         RankingPointsService.assign_points_for_event(result.event)
         messages.success(request, _('Result updated.'))
         if request.htmx:
@@ -1915,6 +1925,9 @@ def manage_event_result(request, slug, pk):
             }
             return render(request, 'pmc/pg-event-manage.html#results-table', context)
         return HttpResponseRedirect(reverse('pmc-pg-event-manage', kwargs={'slug': slug, 'pk': result.event.pk}))
+    elif request.method == 'GET':
+        return render_event_result_edit_form(request, EventResultUpdateForm(instance=result))
+    return HttpResponseNotAllowed(['GET', 'POST', 'DELETE'])
 
 
 @login_required
@@ -1922,8 +1935,7 @@ def manage_event_result(request, slug, pk):
 def add_event_result(request, slug, pk):
     if request.method == 'POST':
         status = HTTPStatus.OK
-        event = get_object_or_404(Event, pk=pk)
-        # TODO verify that the event is associated with the playgroup
+        event = get_playgroup_event_or_404(slug, pk)
         post_data = request.POST.dict()
         result_data = {key: (None if value == '' else value)
                        for key, value in post_data.items()}
@@ -1967,7 +1979,7 @@ def add_event_result(request, slug, pk):
 @require_POST
 @login_required
 def toggle_event_registration(request, slug, pk):
-    event = get_object_or_404(Event, pk=pk)
+    event = get_playgroup_event_or_404(slug, pk)
     if not event.is_registration_open:
         messages.error(request, _('Registration is not open for this event.'))
     else:
@@ -2115,7 +2127,7 @@ def add_pg_member_by_qrcode(request, slug):
 @login_required
 @is_pg_staff
 def checkin_player_by_qrcode(request, slug, pk):
-    event = get_object_or_404(Event, pk=pk)
+    event = get_playgroup_event_or_404(slug, pk)
     message = request.POST.get('qr_code_message')
     redirect_url = reverse('pmc-pg-event-detail', kwargs={'slug': slug, 'pk': pk})
     try:

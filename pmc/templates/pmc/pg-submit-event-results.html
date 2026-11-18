@@ -1,7 +1,9 @@
 {% extends "pmc/_base.html" %}
 
+{% block staff_strip %}{% include 'pmc/_staff-strip.html' %}{% endblock %}
+
 {% block content %}
-<div class="staff-only">
+<div class="stack staff-only">
   <h1>New Event</h1>
 
   <p>
@@ -9,10 +11,10 @@
   </p>
 
   {% if form_errors %}
-  <div class="card card-danger">
-    <h2>Ooops...</h2>
-    That didn't quite work. Check the issues below and try again.
-    <ul class="bulleted-list">
+  <div class="notice notice--danger" role="alert">
+    <p class="notice__title">Ooops...</p>
+    <p>That didn't quite work. Check the issues below and try again.</p>
+    <ul>
       {% for msg in form_errors %}
       <li>{{ msg }}</li>
       {% endfor %}
@@ -20,19 +22,22 @@
   </div>
   {% endif %}
 
-  <form method="POST" enctype="multipart/form-data">
+  <form method="POST" enctype="multipart/form-data" class="card card--staff">
+    <p class="staff-tag">Staff</p>
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-solid">
-      Submit
-    </button>
+    {% include 'pmc/_form-fields.html' with form=form %}
+    <div class="form__actions">
+      <button type="submit" class="btn btn--staff btn--solid">
+        Submit
+      </button>
+    </div>
   </form>
 
-  <div class="card">
+  <div class="card prose">
     <h2>Results File Format</h2>
     <p>
       You may optionally include a <code>CSV</code> file detailing event
-      results. When provided, uour results file should be in <code>CSV</code>
+      results. When provided, your results file should be in <code>CSV</code>
       format. I.e. it should be a file with a <code>.csv</code> extension.
     </p>
 
@@ -42,7 +47,7 @@
       field is required, all others are optional.
     </p>
 
-    <ul class="bulleted-list">
+    <ul>
       <li><code>user</code> <em>or</em> <code>username</code> - The username (not nickname) of the player. </li>
       <li><code>finishing_position</code> <em>or</em> <code>place</code> - The player's numeric finishing position in the event.</li>
       <li><code>num_wins</code> <em>or</em> <code>wins</code> - The number of wins attributed to the player in the event.</li>

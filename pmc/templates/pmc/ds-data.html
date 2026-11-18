@@ -1,0 +1,119 @@
+{% extends "pmc/ds-base.html" %}
+{% load pmc_extras %}
+
+{% block gallery_content %}
+  <h2>Table</h2>
+  <p class="muted">
+    Tables are opt-in with <code>.table</code> and left aligned. Numeric columns take <code>.n</code>. Wrap in
+    <code>.table-wrap</code> so a wide table scrolls instead of the page. Hide secondary columns on phones with
+    <code>.table__wide</code>; show a stacked sub-line instead with <code>.table__narrow</code>.
+  </p>
+  {% kc_example themed %}
+<div class="card table-wrap">
+  <table class="table">
+    <thead>
+      <tr><th class="table__rank">#</th><th>Player</th><th class="n table__wide">Record</th><th class="n">RP</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="table__rank">1</td>
+        <td class="table__player">
+          <div class="player">
+            <span class="avatar avatar--sm">AB</span>
+            <span class="player__body">
+              <a href="#" class="player__name">Ada Byron</a>
+              <span class="player__note table__narrow">4-0</span>
+            </span>
+          </div>
+        </td>
+        <td class="n table__wide">4-0</td>
+        <td class="n">32</td>
+      </tr>
+      <tr class="table__row--me">
+        <td class="table__rank">2</td>
+        <td class="table__player">
+          <div class="player">
+            <span class="avatar avatar--sm">ME</span>
+            <span class="player__body">
+              <a href="#" class="player__name">You, with a very long display name that truncates</a>
+              <span class="player__note table__narrow">3-1</span>
+            </span>
+          </div>
+        </td>
+        <td class="n table__wide">3-1</td>
+        <td class="n">24</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+  {% end_kc_example %}
+
+  <h3>Dense table with row actions</h3>
+  {% kc_example %}
+<div class="card table-wrap">
+  <table class="table table--dense">
+    <thead><tr><th>Player</th><th class="n">W</th><th class="n">L</th><th class="table__actions"><span class="visually-hidden">Actions</span></th></tr></thead>
+    <tbody>
+      <tr class="table__row--up">
+        <td>Ada</td><td class="n">3</td><td class="n">0</td>
+        <td class="table__actions">
+          <details class="action-menu" data-menu>
+            <summary class="action-menu__trigger" aria-label="Actions for Ada">{% include 'pmc/_icon.html' with name='more' %}</summary>
+            <div class="action-menu__list">
+              <button type="button" class="action-menu__item">Edit result</button>
+              <button type="button" class="action-menu__item action-menu__item--danger">Remove</button>
+            </div>
+          </details>
+        </td>
+      </tr>
+      <tr class="table__row--down"><td>Grace</td><td class="n">0</td><td class="n">3</td><td class="table__actions"></td></tr>
+      <tr><td colspan="4" class="table__empty">An empty row uses <code>.table__empty</code>.</td></tr>
+    </tbody>
+  </table>
+</div>
+  {% end_kc_example %}
+
+  <h2>Rank list</h2>
+  {% kc_example themed %}
+<ol class="rank-list">
+  <li class="rank-row">
+    <span class="rank-row__rank rank-row__rank--top">1</span>
+    <div class="rank-row__body player"><span class="avatar avatar--sm">AB</span><span class="player__name">Ada Byron</span></div>
+    <span class="rank-row__value">1,920<small>RP</small></span>
+  </li>
+  <li class="rank-row rank-row--me">
+    <span class="rank-row__rank">2</span>
+    <div class="rank-row__body player"><span class="avatar avatar--sm">ME</span><span class="player__name">You</span></div>
+    <span class="rank-row__value">1,410<small>RP</small></span>
+  </li>
+</ol>
+  {% end_kc_example %}
+
+  <h2>List</h2>
+  {% kc_example themed %}
+<ul class="card list">
+  <li>
+    <a href="#" class="list__item">
+      <span class="date-tile"><span class="date-tile__month">Nov</span><span class="date-tile__day">21</span></span>
+      <span class="list__body">
+        <span class="list__title">Store Championship</span>
+        <span class="meta"><span>Archon</span><span>16 players</span></span>
+      </span>
+      {% include 'pmc/_icon.html' with name='chevron-right' class_name='list__chevron' %}
+    </a>
+  </li>
+  <li>
+    <div class="list__item">
+      <span class="list__body"><span class="list__title">Ada challenged Grace</span></span>
+      <span class="list__trail">Due 20 Nov</span>
+    </div>
+  </li>
+</ul>
+  {% end_kc_example %}
+
+  <h2>Pagination</h2>
+  <p class="muted">Include <code>pmc/_pagination.html</code> with <code>page_obj</code>. Other query parameters are kept.</p>
+  {% kc_example no_markup %}
+{% include 'pmc/_pagination.html' with page_obj=demo_page %}
+  {% end_kc_example %}
+{% endblock %}
