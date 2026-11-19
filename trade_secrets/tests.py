@@ -1522,6 +1522,83 @@ class WaveBadgeTests(SessionViewTestCase):
 
 
 @override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class FinishedEmphasisTests(HexadBo1Mixin, SessionViewTestCase):
+    def finished_triad_bo1(self):
+        session = self.start_session(self.system_template('triad-bo1'), self.alice, self.bob)
+        self.submit_both(session, self.alice_decks[:3], self.bob_decks[:3])
+        self.pick(session, HOST, self.bob_decks[2])
+        self.pick(session, GUEST, self.alice_decks[2])
+        self.pick(session, HOST, self.alice_decks[0])
+        self.pick(session, GUEST, self.bob_decks[0])
+        return session
+
+    def cards_by_deck_name(self, view):
+        return {card.deck.name: card for lineup in view.lineups for card in lineup.cards}
+
+    def featured_deck_names(self, game):
+        return [[card.deck.name for card in seat.cards] for seat in game.seats]
+
+    def test_finished_view_features_played_decks_and_sidelines_the_rest(self):
+        view = build_session_view(self.finished_triad_bo1(), self.alice)
+        cards = self.cards_by_deck_name(view)
+        self.assertFalse(cards['Alice Deck 1'].is_sidelined)
+        self.assertFalse(cards['Bob Deck 1'].is_sidelined)
+        self.assertTrue(cards['Alice Deck 1'].badges[0].is_featured)
+        self.assertTrue(cards['Alice Deck 2'].is_sidelined)
+        self.assertTrue(cards['Alice Deck 3'].is_sidelined)
+        self.assertEqual(view.featured_games_title, 'Games')
+        self.assertEqual([game.label for game in view.featured_games], ['Game 1'])
+        self.assertEqual(self.featured_deck_names(view.featured_games[0]), [['Alice Deck 1'], ['Bob Deck 1']])
+
+    def test_finished_page_renders_featured_games(self):
+        session = self.finished_triad_bo1()
+        session.record_result(self.alice, 2, HOST, 3, 1)
+        self.client.force_login(self.bob)
+        response = self.client.get(self.detail_url(session))
+        self.assertContains(response, 'ts-games__list')
+        self.assertContains(response, 'ts-status--featured')
+        self.assertContains(response, 'is-sidelined')
+        self.assertContains(response, '<strong>alice won</strong>')
+
+    def test_nothing_is_featured_or_sidelined_before_the_finish(self):
+        session = self.started_triad()
+        self.pick(session, HOST, self.bob_decks[2])
+        self.pick(session, GUEST, self.alice_decks[2])
+        self.pick(session, HOST, self.alice_decks[0])
+        self.pick(session, GUEST, self.bob_decks[0])
+        view = build_session_view(session, self.alice)
+        self.assertEqual(view.phase, Phase.AWAITING_RESULT)
+        self.assertEqual(view.featured_games, [])
+        cards = self.cards_by_deck_name(view)
+        self.assertFalse(any(card.is_sidelined for card in cards.values()))
+        self.assertFalse(any(badge.is_featured for card in cards.values() for badge in card.badges))
+
+    def test_banned_matchups_are_not_featured(self):
+        session = self.start_hexad_bo1()
+        self.ban_matchups(session, 4, 6)
+        view = build_session_view(session, self.alice)
+        cards = self.cards_by_deck_name(view)
+        self.assertEqual(view.featured_games_title, 'Matchups')
+        self.assertEqual([game.label for game in view.featured_games], ['Matchup 2'])
+        self.assertEqual(self.featured_deck_names(view.featured_games[0]), [['Alice Deck 5'], ['Bob Deck 5']])
+        self.assertTrue(cards['Alice Deck 4'].is_sidelined)
+        self.assertFalse(cards['Alice Deck 4'].badges[0].is_featured)
+        self.assertFalse(cards['Alice Deck 5'].is_sidelined)
+        self.assertTrue(cards['Alice Deck 5'].badges[0].is_featured)
+
+    def test_session_without_games_sidelines_nothing(self):
+        template = self.make_template(self.alice, 'submit:3', 'ban:1')
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks[:3], self.bob_decks[:3])
+        self.pick(session, HOST, self.bob_decks[0])
+        self.pick(session, GUEST, self.alice_decks[0])
+        view = build_session_view(session, self.alice)
+        self.assertTrue(view.is_finished)
+        self.assertEqual(view.featured_games, [])
+        self.assertFalse(any(card.is_sidelined for card in self.cards_by_deck_name(view).values()))
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
 class ExchangeFlowTests(TradeSecretsTestMixin, TestCase):
     def setUp(self):
         self.alice = self.make_user('alice')

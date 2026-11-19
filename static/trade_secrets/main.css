@@ -51,6 +51,13 @@
   text-decoration: line-through;
 }
 
+.ts-status--featured {
+  border-color: var(--color-accent);
+  border-style: solid;
+  background-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
 
 /* Template cards */
 .ts-template-list {
@@ -493,8 +500,9 @@
   text-decoration-thickness: 2px;
 }
 
-.ts-deck--ineligible {
-  opacity: 0.6;
+.ts-lineup--targetable .ts-deck--ineligible,
+.ts-deck.is-sidelined {
+  opacity: 0.55;
 }
 
 .ts-deck--safed {
@@ -584,6 +592,94 @@
   font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.09375rem;
+}
+
+.ts-games {
+  margin-bottom: var(--space-6);
+}
+
+.ts-games__list {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ts-game {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-accent) var(--tint-subtle), transparent);
+}
+
+.ts-game__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.ts-game__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-accent);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+.ts-game__result {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.ts-game__result > .icon {
+  color: var(--color-success);
+}
+
+.ts-game__seats {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ts-game__seat {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ts-game__who {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+.ts-game__versus {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  letter-spacing: 0.09375rem;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@media (min-width: 750px) {
+  .ts-game__seats {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .ts-game__versus {
+    align-self: center;
+  }
 }
 
 .ts-history__detail--banned {

@@ -65,6 +65,7 @@ class DeckBadge:
     icon: str
     label: str
     short_label: str = ''
+    is_featured: bool = False
 
 
 @dataclass
@@ -75,6 +76,22 @@ class DeckCard:
     badges: list = field(default_factory=list)
     is_selectable: bool = False
     is_selected: bool = False
+    is_sidelined: bool = False
+
+
+@dataclass
+class FeaturedSeat:
+    name: str
+    cards: list
+
+
+@dataclass
+class FeaturedGame:
+    label: str
+    seats: list
+    has_result: bool = False
+    winner_name: str = ''
+    score_line: str = ''
 
 
 @dataclass
@@ -196,6 +213,8 @@ class SessionView:
     summary_text: str
     games_won: list
     has_results: bool
+    featured_games: list
+    featured_games_title: str
 
     @property
     def is_player(self):
@@ -279,6 +298,8 @@ class SessionViewBuilder:
         self.submitted_seats = self.current_submitted_seats()
         self.pending_pick_ids = self.viewer_pending_pick_ids()
         self.picks_matchups = self.current_step is not None and self.current_step.is_matchup_ban
+        self.featured_play_orders = self.orders_of_plays_to_feature()
+        self.featured_deck_ids = self.ids_of_decks_in_featured_plays()
 
     def build(self):
         role = self.role()
@@ -315,7 +336,56 @@ class SessionViewBuilder:
             summary_text='\n'.join(self.summary_lines()),
             games_won=self.games_won(),
             has_results=bool(self.results),
+            featured_games=self.featured_games(),
+            featured_games_title=self.featured_games_title(),
         )
+
+    def orders_of_plays_to_feature(self):
+        if self.phase not in engine.FINISHED_PHASES:
+            return set()
+        return set(engine.unbanned_matchup_orders(self.state))
+
+    def ids_of_decks_in_featured_plays(self):
+        return {
+            deck_id
+            for revealed in self.featured_plays()
+            for deck_id in engine.all_picked_ids(revealed.picks_by_seat)
+        }
+
+    def featured_plays(self):
+        return [revealed for revealed in self.state.history if revealed.step.order in self.featured_play_orders]
+
+    def featured_games(self):
+        return [self.featured_game_for(revealed) for revealed in self.featured_plays()]
+
+    def featured_game_for(self, revealed):
+        result = self.results.get(revealed.step.order)
+        game = FeaturedGame(
+            label=engine.game_label(self.state.steps, revealed.step),
+            seats=[
+                FeaturedSeat(
+                    name=_('You') if seat == self.viewer_seat else self.seat_names[seat],
+                    cards=[self.featured_card(deck_id) for deck_id in revealed.picks_by_seat.get(seat, ())])
+                for seat in engine.SEATS
+            ],
+        )
+        if result is not None:
+            game.has_result = True
+            game.winner_name = self.seat_names[result.winner_seat]
+            game.score_line = engine.score_line(self.seat_names, result.host_score, result.guest_score)
+        return game
+
+    def featured_card(self, session_deck_id):
+        return DeckCard(
+            session_deck_id=None,
+            deck=self.session_decks[session_deck_id].deck,
+            status=DeckStatus.AVAILABLE,
+        )
+
+    def featured_games_title(self):
+        if any(engine.is_matchup(self.state.steps, revealed.step) for revealed in self.featured_plays()):
+            return _('Matchups')
+        return _('Games')
 
     def role(self):
         if self.viewer_seat:
@@ -546,6 +616,7 @@ class SessionViewBuilder:
             badges=self.badges_for(deck_state),
             is_selectable=deck_state.id in choice_ids,
             is_selected=not self.picks_matchups and deck_state.id in self.pending_pick_ids,
+            is_sidelined=bool(self.featured_deck_ids) and deck_state.id not in self.featured_deck_ids,
         )
 
     def badges_for(self, deck_state):
@@ -570,7 +641,8 @@ class SessionViewBuilder:
         short_label = _('{number}W').format(number=number) if deck_state.spent_by_winning else str(number)
         return DeckBadge(
             kind='ineligible', icon='play',
-            label=engine.ineligible_reason(self.state, deck_state), short_label=short_label)
+            label=engine.ineligible_reason(self.state, deck_state), short_label=short_label,
+            is_featured=deck_state.spent_at_order in self.featured_play_orders)
 
     def wave_badge(self, kind, icon, status_text, order):
         suffix = engine.wave_suffix(self.state.steps, order)
@@ -584,16 +656,17 @@ class SessionViewBuilder:
         number = engine.game_number_for_order(self.state.steps, order)
         tag = f"{_('M') if engine.is_matchup(self.state.steps, step) else _('G')}{number}"
         winner = self.state.winners.get(order)
+        is_featured = order in self.featured_play_orders
         if order in self.state.banned_matchup_orders:
             return DeckBadge(kind='game-banned', icon='play', label=_('{tag} Banned').format(tag=tag),
                              short_label=str(number))
         if winner is None:
-            return DeckBadge(kind='game', icon='play', label=tag, short_label=str(number))
+            return DeckBadge(kind='game', icon='play', label=tag, short_label=str(number), is_featured=is_featured)
         if self.played_by_winner(order, deck_state):
             return DeckBadge(kind='game', icon='play', label=_('{tag} Won').format(tag=tag),
-                             short_label=_('{number}W').format(number=number))
+                             short_label=_('{number}W').format(number=number), is_featured=is_featured)
         return DeckBadge(kind='game', icon='play', label=_('{tag} Lost').format(tag=tag),
-                         short_label=_('{number}L').format(number=number))
+                         short_label=_('{number}L').format(number=number), is_featured=is_featured)
 
     def played_by_winner(self, order, deck_state):
         revealed = next(entry for entry in self.state.history if entry.step.order == order)

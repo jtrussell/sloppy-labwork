@@ -3,7 +3,7 @@
     <h2 class="ts-lineup__title" id="ts-lineup-{{ lineup.seat }}">{% if lineup.is_mine %}Your lineup{% else %}{{ lineup.owner_name }}{% endif %}</h2>
     {% if lineup.is_targetable %}
     <span class="ts-lineup__cue">Choose from here</span>
-    {% elif lineup.cards and not lineup.is_hidden %}
+    {% elif lineup.cards and not lineup.is_hidden and not view.is_finished %}
     <span class="ts-lineup__count">{{ lineup.in_play_count }} in play{% if lineup.out_count %} · {{ lineup.out_count }} out{% endif %}</span>
     {% endif %}
   </header>

@@ -206,6 +206,38 @@
       {% endif %}{% endfor %}
     </div>
     {% endif %}
+    {% if view.featured_games %}
+    <section class="ts-games" aria-labelledby="ts-games-title">
+      <header class="ts-lineup__header">
+        <h2 class="ts-lineup__title" id="ts-games-title">{{ view.featured_games_title }}</h2>
+      </header>
+      <ol class="ts-games__list" role="list">
+        {% for game in view.featured_games %}
+        <li class="ts-game">
+          <div class="ts-game__header">
+            <span class="ts-game__label">{% include "components/icon.html" with name='play' %}{{ game.label }}</span>
+            <span class="ts-game__result">
+              {% if game.has_result %}
+              {% include "components/icon.html" with name='check' %}<strong>{{ game.winner_name }} won</strong>{% if game.score_line %} · {{ game.score_line }}{% endif %}
+              {% else %}
+              <span class="text-muted">No result yet</span>
+              {% endif %}
+            </span>
+          </div>
+          <div class="ts-game__seats">
+            {% for seat in game.seats %}
+            <div class="ts-game__seat">
+              <span class="ts-game__who">{{ seat.name }}</span>
+              {% for card in seat.cards %}{% include 'trade_secrets/partials/deck-card.html' with card=card selectable=False %}{% empty %}<span class="text-muted">No deck</span>{% endfor %}
+            </div>
+            {% if not forloop.last %}<span class="ts-game__versus">vs</span>{% endif %}
+            {% endfor %}
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+    {% endif %}
     {% for lineup in view.lineups %}{% include 'trade_secrets/partials/lineup.html' %}{% endfor %}
   {% endif %}
 
