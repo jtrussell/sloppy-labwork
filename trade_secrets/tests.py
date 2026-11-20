@@ -14,9 +14,9 @@ from decks.models import Deck
 from lineups.models import Lineup, LineupVersion, LineupVersionDeck
 
 from . import engine
-from .engine import Phase, Seat, StepSpec
+from .engine import AdaptiveReport, AdaptiveStage, GameType, Phase, Seat, StepSpec
 from .exports import SessionExporter
-from .models import PlayResult, PreloadedLineup, Session, SessionTemplate, StepSubmission
+from .models import AdaptiveSetup, PlayResult, PreloadedLineup, Session, SessionTemplate, StepSubmission
 from .session_view import build_session_view
 
 
@@ -1787,9 +1787,9 @@ class SessionExportTests(HexadBo1Mixin, SessionViewTestCase):
         self.assertEqual(row['TS Ban 1 (Player one)'], str(self.bob_decks[0].id))
         self.assertEqual(row['TS Safe (Player two)'], str(self.bob_decks[1].id))
         self.assertEqual(row['TS Ban 2 (Player two)'], str(self.alice_decks[2].id))
-        self.assertEqual(row['TS Matchup 1 deck (Player one)'], str(self.alice_decks[3].id))
+        self.assertEqual(row['TS Matchup 1 deck brought (Player one)'], str(self.alice_decks[3].id))
         self.assertEqual(row['TS Matchup 1 winner'], 'Banned')
-        self.assertEqual(row['TS Matchup 2 deck (Player two)'], str(self.bob_decks[4].id))
+        self.assertEqual(row['TS Matchup 2 deck brought (Player two)'], str(self.bob_decks[4].id))
         self.assertEqual(row['TS Matchup 2 winner'], 'Player two')
         self.assertEqual(row['TS Matchup 2 score (Player one)'], 3)
         self.assertEqual(row['TS Matchup 2 score (Player two)'], 2)
@@ -1817,7 +1817,7 @@ class SessionExportTests(HexadBo1Mixin, SessionViewTestCase):
 
         self.assertEqual(row['TS Submit 3 (Player one)'], self.joined_ids(self.alice_decks[:3]))
         self.assertEqual(row['TS Ban (Player one)'], '')
-        self.assertEqual(row['TS Game 1 deck (Player one)'], '')
+        self.assertEqual(row['TS Game 1 deck brought (Player one)'], '')
         self.assertEqual(row['TS Game 1 winner'], '')
 
     def test_decks_stay_blank_until_both_seats_have_submitted(self):
@@ -1830,9 +1830,250 @@ class SessionExportTests(HexadBo1Mixin, SessionViewTestCase):
 
     def test_query_count_does_not_grow_with_sessions(self):
         first_session = self.start_hexad_bo1()
-        with self.assertNumQueries(6):
+        with self.assertNumQueries(9):
             SessionExporter([first_session.template_id], [first_session], ';')
 
         sessions = [first_session, self.started_triad(), self.started_triad()]
-        with self.assertNumQueries(6):
+        with self.assertNumQueries(9):
             SessionExporter({session.template_id for session in sessions}, sessions, ';')
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class GameTypeTests(SessionViewTestCase):
+    def start_single_game(self, game_type, *later_steps):
+        specs = [
+            StepSpec(0, 'submit', 3),
+            StepSpec(1, 'play', 1, 'ineligible', game_type),
+            *later_steps,
+        ]
+        template = SessionTemplate.create_with_steps(self.alice, f'{game_type} game', '', specs)
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks[:3], self.bob_decks[:3])
+        self.pick(session, HOST, self.alice_decks[0])
+        self.pick(session, GUEST, self.bob_decks[0])
+        return session
+
+    def start_adaptive_game(self, *later_steps):
+        session = self.start_single_game(GameType.ADAPTIVE, *later_steps)
+        self.alice_deck_id = self.session_deck_id(session, self.alice_decks[0])
+        self.bob_deck_id = self.session_deck_id(session, self.bob_decks[0])
+        return session
+
+    def prefer(self, session, host_deck_id, guest_deck_id):
+        session.submit_adaptive_preference(HOST, self.alice, 1, host_deck_id)
+        session.submit_adaptive_preference(GUEST, self.bob, 1, guest_deck_id)
+
+    def plan(self, session):
+        return session.game_plans()[1]
+
+    def game_url(self, name, session):
+        return reverse(f'trade_secrets:{name}', args=[session.code, 1])
+
+    def featured_deck_names(self, game):
+        return [[card.deck.name for card in seat.cards] for seat in game.seats]
+
+    def test_seeded_play_steps_are_archon(self):
+        game_types = set(
+            SessionTemplate.objects.filter(owner__isnull=True).values_list('steps__game_type', flat=True))
+        self.assertEqual(game_types, {GameType.ARCHON})
+
+    def test_builder_saves_the_game_type_and_defaults_to_archon(self):
+        self.client.force_login(self.alice)
+        self.client.post(reverse('trade_secrets:template-create'), {
+            'name': 'Mixed', 'builder_action': 'save',
+            'steps-0-action': 'submit', 'steps-0-quantity': 3,
+            'steps-1-action': 'play', 'steps-1-rule': 'eligible', 'steps-1-type': 'adaptive',
+            'steps-2-action': 'play', 'steps-2-rule': 'eligible',
+        })
+        template = SessionTemplate.objects.get(owner=self.alice, name='Mixed')
+        self.assertEqual(
+            [step.game_type for step in template.steps.all()],
+            [GameType.ARCHON, GameType.ADAPTIVE, GameType.ARCHON])
+
+    def test_builder_offers_game_types(self):
+        self.client.force_login(self.alice)
+        response = self.client.get(reverse('trade_secrets:template-create'))
+        self.assertContains(response, 'name="steps-2-type" value="reversal"')
+
+    def test_reversal_swaps_the_decks_each_player_plays(self):
+        session = self.start_single_game(GameType.REVERSAL)
+        view = build_session_view(session, self.alice)
+        self.assertEqual(self.featured_deck_names(view.featured_games[0]), [['Bob Deck 1'], ['Alice Deck 1']])
+        self.assertIn('Game 1 (Reversal): Bob Deck 1 (alice) vs Alice Deck 1 (bob)', view.summary_text)
+
+    def test_reversal_win_counts_for_the_deck_the_winner_brought(self):
+        specs = [
+            StepSpec(0, 'submit', 3), StepSpec(1, 'play', 1, 'losing_only', GameType.REVERSAL),
+            StepSpec(2, 'play', 1, 'losing_only')]
+        template = SessionTemplate.create_with_steps(self.alice, 'Reversal series', '', specs)
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks[:3], self.bob_decks[:3])
+        self.pick(session, HOST, self.alice_decks[0])
+        self.pick(session, GUEST, self.bob_decks[0])
+        session.record_result(self.alice, 1, HOST)
+        state = session.build_engine_state()
+        self.assertTrue(state.decks[self.session_deck_id(session, self.alice_decks[0])].is_spent)
+        self.assertFalse(state.decks[self.session_deck_id(session, self.bob_decks[0])].is_spent)
+
+    def test_adaptive_game_decides_a_first_deck_when_revealed(self):
+        session = self.start_adaptive_game()
+        setup = AdaptiveSetup.objects.get(session=session)
+        self.assertIn(setup.first_deck_id, {self.alice_deck_id, self.bob_deck_id})
+        self.assertEqual(self.plan(session).stage, AdaptiveStage.PREFERENCE)
+        self.client.force_login(self.bob)
+        self.assertContains(self.client.get(self.detail_url(session)), 'Goes first')
+
+    def test_adaptive_preference_stays_secret_until_both_choose(self):
+        session = self.start_adaptive_game()
+        session.submit_adaptive_preference(HOST, self.alice, 1, self.alice_deck_id)
+        self.client.force_login(self.bob)
+        response = self.client.get(self.detail_url(session))
+        self.assertContains(response, 'Which deck do you want to play?')
+        self.assertNotContains(response, 'data-locked')
+        self.client.force_login(self.alice)
+        self.assertContains(self.client.get(self.detail_url(session)), 'data-locked')
+
+    def test_different_preferences_assign_decks_without_chains(self):
+        session = self.start_adaptive_game()
+        self.prefer(session, self.bob_deck_id, self.alice_deck_id)
+        plan = self.plan(session)
+        self.assertEqual(plan.played_by_seat, {HOST: self.bob_deck_id, GUEST: self.alice_deck_id})
+        self.assertIsNone(plan.chains)
+
+    def test_same_preference_opens_bidding_for_the_player_who_did_not_bring_it(self):
+        session = self.start_adaptive_game()
+        self.prefer(session, self.alice_deck_id, self.alice_deck_id)
+        plan = self.plan(session)
+        self.assertEqual(plan.stage, AdaptiveStage.BIDDING)
+        self.assertEqual((plan.high_bidder, plan.high_bid, plan.seat_to_bid), (HOST, 0, GUEST))
+        with self.assertRaises(ValidationError):
+            session.submit_chain_bid(HOST, self.alice, 1, 1)
+
+    def test_bids_must_increase_and_stay_within_the_limit(self):
+        session = self.start_adaptive_game()
+        self.prefer(session, self.alice_deck_id, self.alice_deck_id)
+        session.submit_chain_bid(GUEST, self.bob, 1, 2)
+        with self.assertRaises(ValidationError):
+            session.submit_chain_bid(HOST, self.alice, 1, 2)
+        with self.assertRaises(ValidationError):
+            session.submit_chain_bid(HOST, self.alice, 1, 100)
+        session.submit_chain_bid(HOST, self.alice, 1, 7)
+        self.assertEqual(self.plan(session).high_bid, 7)
+
+    def test_pass_gives_the_deck_and_chains_to_the_high_bidder(self):
+        session = self.start_adaptive_game()
+        self.prefer(session, self.alice_deck_id, self.alice_deck_id)
+        self.client.force_login(self.bob)
+        self.htmx_post(self.game_url('session-chain-bid', session), {'move': 'bid', 'chains': 2})
+        self.client.force_login(self.alice)
+        self.htmx_post(self.game_url('session-chain-bid', session), {'move': 'bid', 'chains': 5})
+        self.client.force_login(self.bob)
+        response = self.htmx_post(self.game_url('session-chain-bid', session), {'move': 'pass', 'chains': 6})
+        plan = self.plan(session)
+        self.assertEqual(plan.played_by_seat, {HOST: self.alice_deck_id, GUEST: self.bob_deck_id})
+        self.assertEqual((plan.chained_seat, plan.chains), (HOST, 5))
+        self.assertContains(response, '5 chains')
+        view = build_session_view(session, self.bob)
+        self.assertIn('Game 1 (Adaptive): Alice Deck 1 (alice, 5 chains) vs Bob Deck 1 (bob)', view.summary_text)
+
+    def test_immediate_pass_leaves_the_owner_with_no_chains(self):
+        session = self.start_adaptive_game()
+        self.prefer(session, self.bob_deck_id, self.bob_deck_id)
+        session.submit_chain_bid(HOST, self.alice, 1, None)
+        plan = self.plan(session)
+        self.assertEqual((plan.chained_seat, plan.chains), (GUEST, 0))
+        self.assertEqual(plan.played_by_seat[HOST], self.alice_deck_id)
+
+    def test_preference_view_locks_in_and_rejects_spectators(self):
+        session = self.start_adaptive_game()
+        self.client.force_login(self.carol)
+        response = self.client.post(
+            self.game_url('session-adaptive-preference', session), {'deck': self.alice_deck_id})
+        self.assertEqual(response.status_code, 403)
+        self.client.force_login(self.alice)
+        self.htmx_post(self.game_url('session-adaptive-preference', session), {'deck': self.bob_deck_id})
+        self.assertEqual(session.adaptive_preferences.get(seat=HOST).deck_id, self.bob_deck_id)
+        response = self.htmx_post(self.game_url('session-adaptive-preference', session), {'deck': 0})
+        self.assertContains(response, 'Choose one of the two decks brought to this game.')
+
+    def test_result_form_is_prefilled_from_the_finished_bidding(self):
+        session = self.start_adaptive_game()
+        self.prefer(session, self.alice_deck_id, self.alice_deck_id)
+        session.submit_chain_bid(GUEST, self.bob, 1, 4)
+        session.submit_chain_bid(HOST, self.alice, 1, None)
+        self.client.force_login(self.alice)
+        response = self.client.get(self.game_url('session-result', session))
+        self.assertContains(response, f'name="contested_deck" value="{self.alice_deck_id}" checked')
+        self.assertContains(response, f'name="host_played_deck" value="{self.bob_deck_id}" checked')
+        self.assertContains(response, 'name="chain_bid" id="id_chain_bid" value="4"')
+
+    def test_result_form_does_not_prefill_an_unfinished_bid(self):
+        session = self.start_adaptive_game()
+        self.prefer(session, self.alice_deck_id, self.alice_deck_id)
+        session.submit_chain_bid(GUEST, self.bob, 1, 4)
+        self.client.force_login(self.alice)
+        response = self.client.get(self.game_url('session-result', session))
+        self.assertContains(response, f'name="contested_deck" value="{self.alice_deck_id}" checked')
+        self.assertContains(response, 'name="chain_bid" id="id_chain_bid" value=""')
+
+    def test_result_can_report_a_game_settled_at_the_table(self):
+        session = self.start_adaptive_game()
+        self.client.force_login(self.alice)
+        response = self.htmx_post(self.game_url('session-result', session), {
+            'winner_seat': HOST, 'contested_deck': self.bob_deck_id, 'chain_bid': 3,
+            'host_played_deck': self.bob_deck_id, 'first_deck': '',
+        })
+        self.assertContains(response, '3 chains')
+        plan = self.plan(session)
+        self.assertEqual((plan.chained_seat, plan.chains), (HOST, 3))
+        self.assertIsNone(plan.first_deck_id)
+        with self.assertRaises(ValidationError):
+            session.submit_adaptive_preference(HOST, self.alice, 1, self.alice_deck_id)
+
+    def test_result_requires_the_adaptive_facts(self):
+        session = self.start_adaptive_game()
+        with self.assertRaises(ValidationError):
+            session.record_result(self.alice, 1, HOST)
+        self.client.force_login(self.alice)
+        response = self.htmx_post(self.game_url('session-result', session), {
+            'winner_seat': HOST, 'contested_deck': self.bob_deck_id, 'host_played_deck': self.bob_deck_id,
+        })
+        self.assertContains(response, 'Enter the final chain bid.')
+        self.assertFalse(session.results.exists())
+        self.htmx_post(self.game_url('session-result', session), {
+            'winner_seat': HOST, 'contested_deck': 'different', 'chain_bid': 9,
+            'host_played_deck': self.alice_deck_id,
+        })
+        result = session.results.get()
+        self.assertEqual((result.contested_deck_id, result.chain_bid), (None, None))
+
+    def test_unsettled_adaptive_game_does_not_block_later_steps(self):
+        session = self.start_adaptive_game(StepSpec(2, 'play', 1, 'ineligible'))
+        view = build_session_view(session, self.alice)
+        self.assertEqual(view.phase, Phase.SELECTING)
+        self.assertEqual([game.label for game in view.featured_games], ['Game 1'])
+        self.assertTrue(view.featured_games[0].adaptive.is_choosing)
+        self.pick(session, HOST, self.alice_decks[1])
+        self.pick(session, GUEST, self.bob_decks[1])
+        self.assertEqual(session.revealed_step_count, 3)
+
+    def test_archon_games_get_no_card_before_the_finish(self):
+        session = self.start_single_game(GameType.ARCHON, StepSpec(2, 'play', 1, 'ineligible'))
+        self.assertEqual(build_session_view(session, self.alice).featured_games, [])
+
+    def test_export_reports_type_played_decks_chains_and_first_deck(self):
+        session = self.start_adaptive_game()
+        setup = AdaptiveSetup.objects.select_related('first_deck').get(session=session)
+        session.record_result(self.alice, 1, GUEST, adaptive_report=AdaptiveReport(
+            host_played_deck_id=self.bob_deck_id, contested_deck_id=self.bob_deck_id, chain_bid=6,
+            first_deck_id=setup.first_deck_id))
+        exporter = SessionExporter([session.template_id], [session], ';')
+        headers = exporter.headers_for(session.template_id, 'TS', ('One', 'Two'))
+        row = dict(zip(headers, exporter.cells_for(session, (HOST, GUEST), {HOST: 'One', GUEST: 'Two'})))
+        self.assertEqual(row['TS Game 1 type'], 'Adaptive')
+        self.assertEqual(row['TS Game 1 deck brought (One)'], str(self.alice_decks[0].id))
+        self.assertEqual(row['TS Game 1 deck played (One)'], str(self.bob_decks[0].id))
+        self.assertEqual(row['TS Game 1 deck played (Two)'], str(self.alice_decks[0].id))
+        self.assertEqual((row['TS Game 1 chains (One)'], row['TS Game 1 chains (Two)']), (6, ''))
+        self.assertEqual(row['TS Game 1 first deck'], str(setup.first_deck.deck_id))
+        self.assertEqual(row['TS Game 1 winner'], 'Two')

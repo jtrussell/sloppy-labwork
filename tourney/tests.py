@@ -5867,8 +5867,8 @@ class MatchExportTestCase(LineupTournamentTestCase):
             row['TS Submit 3 (Player two)'], ';'.join(str(deck.id) for deck in self.beacon_decks))
         self.assertEqual(row['TS Ban (Player one)'], str(self.beacon_decks[0].id))
         self.assertEqual(row['TS Ban (Player two)'], str(self.anvil_decks[0].id))
-        self.assertEqual(row['TS Game 1 deck (Player one)'], str(self.anvil_decks[1].id))
-        self.assertEqual(row['TS Game 1 deck (Player two)'], str(self.beacon_decks[1].id))
+        self.assertEqual(row['TS Game 1 deck brought (Player one)'], str(self.anvil_decks[1].id))
+        self.assertEqual(row['TS Game 1 deck brought (Player two)'], str(self.beacon_decks[1].id))
         self.assertEqual(row['TS Game 1 winner'], 'Beacon')
         self.assertEqual(row['TS Game 1 score (Player one)'], '1')
         self.assertEqual(row['TS Game 1 score (Player two)'], '3')
@@ -5881,7 +5881,7 @@ class MatchExportTestCase(LineupTournamentTestCase):
         row = self.export_rows()[0]
 
         self.assertEqual(row['TS Ban (Player one)'], '')
-        self.assertEqual(row['TS Game 1 deck (Player one)'], '')
+        self.assertEqual(row['TS Game 1 deck brought (Player one)'], '')
         self.assertEqual(row['TS Game 1 winner'], '')
 
     def test_export_follows_players_when_their_seats_are_swapped(self):

@@ -1,6 +1,8 @@
 from django.test import SimpleTestCase
 
 from .engine import (
+    AdaptiveRecord, AdaptiveReport, AdaptiveStage, ChainBidEntry, GameType, plan_game,
+    validate_adaptive_report, validate_chain_bid,
     Action, DeckStatus, Phase, PlayedDeckRule, PoolDeck, Seat, StepSpec,
     choices_for, deck_status, game_label, games_won, step_label, wave_detail, ineligible_reason, missing_result_step, unbanned_matchup_orders,
     phase, replay, required_pick_count, results_summary_lines, seats_needing_picks,
@@ -453,7 +455,7 @@ class SummaryTests(SimpleTestCase):
             'Alice decks: Deck 1; Deck 2; Deck 3',
             'Bob decks: Deck 101; Deck 102; Deck 103',
             'Ban: Alice banned Deck 103; Bob banned Deck 3',
-            'Game 1: Deck 1 (Alice) vs Deck 101 (Bob) - Alice won, Alice 3 – 1 Bob',
+            'Game 1 (Archon): Deck 1 (Alice) vs Deck 101 (Bob) - Alice won, Alice 3 – 1 Bob',
             'Games won: Alice 1, Bob 0',
             'https://example.com/trade-secrets/ABC123/',
         ])
@@ -502,7 +504,7 @@ class ReviewRegressionTests(SimpleTestCase):
             match.state, 'Custom', 'XYZ789', {HOST: 'Alice', GUEST: 'Bob'}, deck_names, {}, 'url')
         self.assertIn('Safe: Alice safed Deck 1; Bob safed Deck 101', lines)
         self.assertIn('Steal: Alice stole Deck 102; Bob stole nothing', lines)
-        self.assertIn('Game 1: Deck 1 (Alice) vs Deck 101 (Bob) - result not recorded', lines)
+        self.assertIn('Game 1 (Archon): Deck 1 (Alice) vs Deck 101 (Bob) - result not recorded', lines)
         self.assertIn('Games won: Alice 0, Bob 0', lines)
 
     def test_losing_only_games_show_an_open_deck_range(self):
@@ -584,8 +586,8 @@ class MatchupBanTests(SimpleTestCase):
         deck_names = {deck.id: f'Deck {deck.id}' for deck in match.pool}
         lines = results_summary_lines(
             match.state, 'Hexad Bo1', 'ts_ABC123', {HOST: 'Alice', GUEST: 'Bob'}, deck_names, {}, 'url')
-        self.assertIn('Matchup 1: Deck 4 (Alice) vs Deck 104 (Bob) - banned', lines)
-        self.assertIn('Matchup 2: Deck 5 (Alice) vs Deck 105 (Bob) - Bob won', lines)
+        self.assertIn('Matchup 1 (Archon): Deck 4 (Alice) vs Deck 104 (Bob) - banned', lines)
+        self.assertIn('Matchup 2 (Archon): Deck 5 (Alice) vs Deck 105 (Bob) - Bob won', lines)
         self.assertIn('Ban matchup: Alice banned Matchup 1; Bob banned Matchup 3', lines)
         self.assertIn('Games won: Alice 0, Bob 1', lines)
 
@@ -656,3 +658,96 @@ class WaveLabelTests(SimpleTestCase):
         self.assertEqual(match.deck(guest_deck(1)).banned_at_order, 1)
         self.assertEqual(match.deck(guest_deck(3)).banned_at_order, 3)
         self.assertEqual(match.deck(host_deck(2)).safed_at_order, 2)
+
+
+class GamePlanTests(SimpleTestCase):
+    BROUGHT = {HOST: host_deck(1), GUEST: guest_deck(1)}
+
+    def plan(self, game_type, record=None, report=None):
+        step = StepSpec(1, Action.PLAY, 1, PlayedDeckRule.INELIGIBLE, game_type)
+        return plan_game(step, self.BROUGHT, record, report)
+
+    def bidding_plan(self, *bids):
+        record = AdaptiveRecord(
+            preferences={HOST: guest_deck(1), GUEST: guest_deck(1)},
+            bids=[ChainBidEntry(seat, chains) for seat, chains in bids])
+        return self.plan(GameType.ADAPTIVE, record)
+
+    def test_archon_players_keep_their_own_decks(self):
+        self.assertEqual(self.plan(GameType.ARCHON).played_by_seat, self.BROUGHT)
+
+    def test_reversal_players_swap_decks(self):
+        self.assertEqual(
+            self.plan(GameType.REVERSAL).played_by_seat, {HOST: guest_deck(1), GUEST: host_deck(1)})
+
+    def test_adaptive_waits_for_both_preferences(self):
+        plan = self.plan(GameType.ADAPTIVE, AdaptiveRecord(preferences={HOST: host_deck(1)}))
+        self.assertEqual(plan.stage, AdaptiveStage.PREFERENCE)
+        self.assertFalse(plan.is_assigned)
+
+    def test_adaptive_different_preferences_settle_immediately(self):
+        plan = self.plan(GameType.ADAPTIVE, AdaptiveRecord(
+            first_deck_id=guest_deck(1), preferences={HOST: guest_deck(1), GUEST: host_deck(1)}))
+        self.assertEqual(plan.stage, AdaptiveStage.SETTLED)
+        self.assertEqual(plan.played_by_seat, {HOST: guest_deck(1), GUEST: host_deck(1)})
+        self.assertEqual((plan.chains, plan.first_deck_id), (None, guest_deck(1)))
+
+    def test_bidding_opens_at_zero_for_the_player_who_brought_the_deck(self):
+        plan = self.bidding_plan()
+        self.assertEqual(plan.stage, AdaptiveStage.BIDDING)
+        self.assertEqual((plan.high_bidder, plan.high_bid, plan.seat_to_bid), (GUEST, 0, HOST))
+
+    def test_bidding_alternates_and_allows_gaps(self):
+        plan = self.bidding_plan((HOST, 1), (GUEST, 2), (HOST, 7))
+        self.assertEqual((plan.high_bidder, plan.high_bid, plan.seat_to_bid), (HOST, 7, GUEST))
+        self.assertEqual(validate_chain_bid(plan, GUEST, 9), [])
+        self.assertEqual(validate_chain_bid(plan, GUEST, None), [])
+
+    def test_bid_must_be_in_turn_and_strictly_higher(self):
+        plan = self.bidding_plan((HOST, 3))
+        self.assertTrue(validate_chain_bid(plan, HOST, 4))
+        self.assertTrue(validate_chain_bid(plan, GUEST, 3))
+        self.assertTrue(validate_chain_bid(plan, GUEST, 100))
+        self.assertEqual(validate_chain_bid(plan, GUEST, 99), [])
+
+    def test_only_a_pass_is_possible_at_the_limit(self):
+        plan = self.bidding_plan((HOST, 99))
+        self.assertFalse(plan.can_raise)
+        self.assertEqual(validate_chain_bid(plan, GUEST, None), [])
+
+    def test_pass_settles_for_the_high_bidder(self):
+        plan = self.bidding_plan((HOST, 2), (GUEST, None))
+        self.assertEqual(plan.stage, AdaptiveStage.SETTLED)
+        self.assertEqual(plan.played_by_seat, {HOST: guest_deck(1), GUEST: host_deck(1)})
+        self.assertEqual((plan.chained_seat, plan.chains), (HOST, 2))
+        self.assertTrue(validate_chain_bid(plan, HOST, 5))
+
+    def test_report_overrides_the_in_app_record(self):
+        record = AdaptiveRecord(preferences={HOST: host_deck(1), GUEST: guest_deck(1)})
+        report = AdaptiveReport(host_played_deck_id=guest_deck(1), contested_deck_id=guest_deck(1), chain_bid=4)
+        plan = self.plan(GameType.ADAPTIVE, record, report)
+        self.assertEqual(plan.played_by_seat, {HOST: guest_deck(1), GUEST: host_deck(1)})
+        self.assertEqual((plan.chained_seat, plan.chains), (HOST, 4))
+
+    def test_report_validation(self):
+        brought = self.BROUGHT.values()
+        self.assertEqual(validate_adaptive_report(brought, AdaptiveReport(host_played_deck_id=host_deck(1))), [])
+        self.assertTrue(validate_adaptive_report(brought, AdaptiveReport(host_played_deck_id=host_deck(2))))
+        self.assertTrue(validate_adaptive_report(
+            brought, AdaptiveReport(host_played_deck_id=host_deck(1), contested_deck_id=host_deck(1))))
+        self.assertTrue(validate_adaptive_report(
+            brought, AdaptiveReport(host_played_deck_id=host_deck(1), chain_bid=3)))
+
+    def test_summary_names_the_type_chains_and_first_deck(self):
+        steps = [
+            StepSpec(0, Action.SUBMIT, 2),
+            StepSpec(1, Action.PLAY, 1, PlayedDeckRule.INELIGIBLE, GameType.ADAPTIVE)]
+        state = replay(steps, make_pool(2), 2, {1: {HOST: (host_deck(1),), GUEST: (guest_deck(1),)}}, {1: GUEST})
+        plan = plan_game(steps[1], self.BROUGHT, report=AdaptiveReport(
+            host_played_deck_id=guest_deck(1), contested_deck_id=guest_deck(1), chain_bid=4,
+            first_deck_id=host_deck(1)))
+        lines = results_summary_lines(
+            state, 'Adaptive', 'ABC123', {HOST: 'Alice', GUEST: 'Bob'},
+            {deck.id: f'Deck {deck.id}' for deck in make_pool(2)}, {}, 'https://example.com/', {1: plan})
+        self.assertIn(
+            'Game 1 (Adaptive): Deck 101 (Alice, 4 chains) vs Deck 1 (Bob) - Bob won - Deck 1 goes first', lines)

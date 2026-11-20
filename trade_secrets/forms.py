@@ -1,5 +1,6 @@
 import re
 import uuid
+from dataclasses import replace
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -10,13 +11,14 @@ from decks.models import Deck, House, Set
 from lineups.models import Lineup, LineupVersion
 
 from . import engine
-from .engine import Action, PlayedDeckRule, StepSpec
+from .engine import Action, AdaptiveReport, GameType, PlayedDeckRule, Seat, StepSpec
 
 DECK_LINK_SEPARATORS = re.compile(r'[\s,;]+')
 HYDRATION_FAILURES = (
     ValueError, KeyError, IndexError, RequestException, Set.DoesNotExist, House.DoesNotExist)
 BUILDER_ACTION_PATTERN = re.compile(r'^(add|up|down|remove):(\w+)$')
 DEFAULT_SUBMIT_QUANTITY = 3
+DIFFERENT_DECKS_CHOSEN = 'different'
 
 
 def parse_deck_links(text):
@@ -128,16 +130,48 @@ class PlayResultForm(forms.Form):
     host_score = forms.IntegerField(min_value=0, required=False)
     guest_score = forms.IntegerField(min_value=0, required=False)
 
-    def __init__(self, *args, seat_names, **kwargs):
+    def __init__(self, *args, seat_names, adaptive_deck_choices=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.seat_names = seat_names
         self.fields['winner_seat'].choices = [(seat, seat_names[seat]) for seat in engine.SEATS]
+        self.is_adaptive = bool(adaptive_deck_choices)
+        if self.is_adaptive:
+            self.add_adaptive_fields([(str(deck_id), name) for deck_id, name in adaptive_deck_choices])
+
+    def add_adaptive_fields(self, deck_choices):
+        self.fields['contested_deck'] = forms.ChoiceField(
+            label=_('Which deck was bid on?'),
+            choices=deck_choices + [(DIFFERENT_DECKS_CHOSEN, _('We chose different decks'))])
+        self.fields['chain_bid'] = forms.IntegerField(
+            label=_('Final bid'), min_value=engine.OPENING_CHAIN_BID, max_value=engine.MAXIMUM_CHAIN_BID,
+            required=False)
+        self.fields['host_played_deck'] = forms.ChoiceField(
+            label=_('Which deck did {name} play?').format(name=self.seat_names[Seat.HOST]),
+            choices=deck_choices)
+        self.fields['first_deck'] = forms.ChoiceField(
+            label=_('Which deck went first?'),
+            choices=[('', _('Not recorded'))] + deck_choices, required=False)
 
     def clean(self):
         cleaned_data = super().clean()
         if (cleaned_data.get('host_score') is None) != (cleaned_data.get('guest_score') is None):
             raise ValidationError(_('Enter a score for both players, or leave both blank.'))
+        if self.is_adaptive and cleaned_data.get('contested_deck') == DIFFERENT_DECKS_CHOSEN:
+            cleaned_data['chain_bid'] = None
+        elif self.is_adaptive and cleaned_data.get('contested_deck') and cleaned_data.get('chain_bid') is None:
+            self.add_error('chain_bid', _('Enter the final chain bid.'))
         return cleaned_data
+
+    def adaptive_report(self):
+        if not self.is_adaptive:
+            return None
+        contested_deck = self.cleaned_data['contested_deck']
+        return AdaptiveReport(
+            host_played_deck_id=int(self.cleaned_data['host_played_deck']),
+            contested_deck_id=None if contested_deck == DIFFERENT_DECKS_CHOSEN else int(contested_deck),
+            chain_bid=self.cleaned_data['chain_bid'],
+            first_deck_id=int(self.cleaned_data['first_deck']) if self.cleaned_data['first_deck'] else None,
+        )
 
     def player_slots(self):
         selected_seat = self['winner_seat'].value()
@@ -150,6 +184,22 @@ class PlayResultForm(forms.Form):
             }
             for seat in engine.SEATS
         ]
+
+
+def adaptive_result_initial(plan):
+    initial = {'first_deck': plan.first_deck_id or ''}
+    if plan.contested_deck_id is not None:
+        initial['contested_deck'] = str(plan.contested_deck_id)
+    elif plan.is_assigned:
+        initial['contested_deck'] = DIFFERENT_DECKS_CHOSEN
+    if plan.is_assigned:
+        initial['host_played_deck'] = str(plan.played_by_seat[Seat.HOST])
+        initial['chain_bid'] = plan.chains
+    return initial
+
+
+class ChainBidForm(forms.Form):
+    chains = forms.IntegerField(min_value=engine.OPENING_CHAIN_BID, max_value=engine.MAXIMUM_CHAIN_BID)
 
 
 class TemplateDetailsForm(forms.Form):
@@ -184,7 +234,10 @@ def parse_builder_steps(data):
             rule = data.get(f'steps-{index}-rule', PlayedDeckRule.INELIGIBLE)
             if rule not in PlayedDeckRule.values:
                 rule = PlayedDeckRule.INELIGIBLE
-            steps.append(StepSpec(len(steps), action, quantity, rule))
+            game_type = data.get(f'steps-{index}-type', GameType.ARCHON)
+            if game_type not in GameType.values or action != Action.PLAY:
+                game_type = GameType.ARCHON
+            steps.append(StepSpec(len(steps), action, quantity, rule, game_type))
         index += 1
     if not steps or not steps[0].is_submit:
         steps.insert(0, StepSpec(0, Action.SUBMIT, DEFAULT_SUBMIT_QUANTITY))
@@ -192,8 +245,7 @@ def parse_builder_steps(data):
 
 
 def renumber(steps):
-    return [StepSpec(order, step.action, step.quantity, step.played_deck_rule)
-            for order, step in enumerate(steps)]
+    return [replace(step, order=order) for order, step in enumerate(steps)]
 
 
 def apply_builder_action(steps, builder_action):

@@ -1,5 +1,5 @@
 {% with deck=card.deck %}
-<{% if selectable %}label{% else %}div{% endif %} class="ts-deck ts-deck--{{ card.status }}{% if selectable %} ts-deck--selectable{% endif %}{% if card.is_selected %} is-locked is-selected{% endif %}{% if card.is_sidelined %} is-sidelined{% endif %}"{% if card.session_deck_id %} id="ts-deck-{{ card.session_deck_id }}"{% endif %}>
+<{% if selectable %}label{% else %}div{% endif %} class="ts-deck ts-deck--{{ card.status }}{% if selectable %} ts-deck--selectable{% endif %}{% if card.is_selected %} is-locked is-selected{% endif %}{% if card.is_sidelined %} is-sidelined{% endif %}"{% if card.session_deck_id and card.has_anchor %} id="ts-deck-{{ card.session_deck_id }}"{% endif %}>
   {% if selectable %}
   <input type="checkbox" class="ts-pick-input sr-only" name="deck" value="{{ card.session_deck_id }}"{% if card.is_selected %} checked data-locked{% endif %}>
   {% endif %}

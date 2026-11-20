@@ -40,6 +40,21 @@
     {% for error in form.host_score.errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
     {% for error in form.guest_score.errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
   </fieldset>
+  {% if form.is_adaptive %}
+  <details class="ts-result-form__details"{% if adaptive_details_open %} open{% endif %}>
+    <summary class="ts-result-form__summary">Adaptive details{% if not adaptive_details_open %} <span class="ts-result-form__optional">Filled in from your choices. Open to change.</span>{% endif %}</summary>
+  <div class="ts-result-form__adaptive">
+    {% include 'trade_secrets/partials/result-choice-field.html' with field=form.contested_deck %}
+    <div class="ts-result-form__question ts-result-form__bid">
+      <label for="{{ form.chain_bid.id_for_label }}">{{ form.chain_bid.label }}</label>
+      <input type="number" name="{{ form.chain_bid.html_name }}" id="{{ form.chain_bid.id_for_label }}" value="{{ form.chain_bid.value|default_if_none:'' }}" min="0" max="99" step="1" inputmode="numeric" placeholder="Chains">
+      {% for error in form.chain_bid.errors %}<p class="text-danger">{{ error }}</p>{% endfor %}
+    </div>
+    {% include 'trade_secrets/partials/result-choice-field.html' with field=form.host_played_deck help_text=other_player_note %}
+    {% include 'trade_secrets/partials/result-choice-field.html' with field=form.first_deck %}
+  </div>
+  </details>
+  {% endif %}
   {% if warns_about_eligibility %}
   <p class="ts-result-form__warning">{% include "components/icon.html" with name='alert' %}The winning deck can't be played again. {% if has_result %}Changing this result can change which decks are eligible and may clear a locked-in pick.{% endif %}</p>
   {% endif %}

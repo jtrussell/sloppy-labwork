@@ -9,6 +9,8 @@ MAXIMUM_DECKS_PER_PLAYER = 12
 MAXIMUM_STEP_QUANTITY = 12
 MINIMUM_MATCHUPS_FOR_BAN = 3
 MATCHUPS_REMOVED_BY_SEPARATE_BANS = 2
+OPENING_CHAIN_BID = 0
+MAXIMUM_CHAIN_BID = 99
 
 
 class Action(TextChoices):
@@ -24,6 +26,18 @@ class PlayedDeckRule(TextChoices):
     ELIGIBLE = 'eligible', _('Yes')
     INELIGIBLE = 'ineligible', _('No')
     LOSING_ONLY = 'losing_only', _('Only losing decks')
+
+
+class GameType(TextChoices):
+    ARCHON = 'archon', _('Archon')
+    REVERSAL = 'reversal', _('Reversal')
+    ADAPTIVE = 'adaptive', _('Adaptive')
+
+
+class AdaptiveStage(TextChoices):
+    PREFERENCE = 'preference', _('Choosing decks')
+    BIDDING = 'bidding', _('Bidding chains')
+    SETTLED = 'settled', _('Settled')
 
 
 class Seat(TextChoices):
@@ -63,10 +77,15 @@ class StepSpec:
     action: str
     quantity: int = 1
     played_deck_rule: str = PlayedDeckRule.INELIGIBLE
+    game_type: str = GameType.ARCHON
 
     @property
     def is_play(self):
         return self.action == Action.PLAY
+
+    @property
+    def is_adaptive_game(self):
+        return self.is_play and self.game_type == GameType.ADAPTIVE
 
     @property
     def is_submit(self):
@@ -137,6 +156,175 @@ class GameState:
 
     def decks_submitted_by(self, seat):
         return [deck for deck in self.decks.values() if deck.original_seat == seat]
+
+
+@dataclass(frozen=True)
+class ChainBidEntry:
+    seat: str
+    chains: int = None
+
+    @property
+    def is_pass(self):
+        return self.chains is None
+
+
+@dataclass
+class AdaptiveRecord:
+    first_deck_id: int = None
+    preferences: dict = field(default_factory=dict)
+    bids: list = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class AdaptiveReport:
+    host_played_deck_id: int
+    contested_deck_id: int = None
+    chain_bid: int = None
+    first_deck_id: int = None
+
+
+@dataclass
+class GamePlan:
+    game_type: str
+    brought_by_seat: dict
+    played_by_seat: dict = field(default_factory=dict)
+    stage: str = AdaptiveStage.SETTLED
+    first_deck_id: int = None
+    preferences: dict = field(default_factory=dict)
+    contested_deck_id: int = None
+    bids: list = field(default_factory=list)
+    high_bid: int = OPENING_CHAIN_BID
+    high_bidder: str = None
+    seat_to_bid: str = None
+    chains: int = None
+    chained_seat: str = None
+
+    @property
+    def is_assigned(self):
+        return bool(self.played_by_seat)
+
+    @property
+    def is_adaptive(self):
+        return self.game_type == GameType.ADAPTIVE
+
+    @property
+    def minimum_raise(self):
+        return self.high_bid + 1
+
+    @property
+    def can_raise(self):
+        return self.high_bid < MAXIMUM_CHAIN_BID
+
+    def seat_that_brought(self, deck_id):
+        return next(seat for seat, brought_id in self.brought_by_seat.items() if brought_id == deck_id)
+
+    def deck_other_than(self, deck_id):
+        return next(brought_id for brought_id in self.brought_by_seat.values() if brought_id != deck_id)
+
+    def chains_for(self, seat):
+        return self.chains if seat == self.chained_seat else None
+
+
+def plan_game(step, brought_by_seat, record=None, report=None):
+    plan = GamePlan(game_type=step.game_type, brought_by_seat=dict(brought_by_seat))
+    if step.game_type == GameType.REVERSAL:
+        plan.played_by_seat = {seat: plan.brought_by_seat[opponent_of(seat)] for seat in SEATS}
+    elif step.game_type == GameType.ADAPTIVE and report is not None:
+        apply_adaptive_report(plan, report)
+    elif step.game_type == GameType.ADAPTIVE:
+        apply_adaptive_record(plan, record or AdaptiveRecord())
+    else:
+        plan.played_by_seat = dict(plan.brought_by_seat)
+    return plan
+
+
+def apply_adaptive_report(plan, report):
+    plan.first_deck_id = report.first_deck_id
+    plan.played_by_seat = {
+        Seat.HOST: report.host_played_deck_id,
+        Seat.GUEST: plan.deck_other_than(report.host_played_deck_id),
+    }
+    if report.contested_deck_id is not None:
+        plan.contested_deck_id = report.contested_deck_id
+        plan.chains = report.chain_bid
+        plan.high_bid = report.chain_bid
+        plan.chained_seat = next(
+            seat for seat, deck_id in plan.played_by_seat.items() if deck_id == report.contested_deck_id)
+        plan.high_bidder = plan.chained_seat
+
+
+def apply_adaptive_record(plan, record):
+    plan.first_deck_id = record.first_deck_id
+    plan.preferences = dict(record.preferences)
+    if not set(SEATS) <= set(record.preferences):
+        plan.stage = AdaptiveStage.PREFERENCE
+        return
+    if record.preferences[Seat.HOST] != record.preferences[Seat.GUEST]:
+        plan.played_by_seat = dict(record.preferences)
+        return
+    plan.contested_deck_id = record.preferences[Seat.HOST]
+    plan.bids = list(record.bids)
+    plan.high_bidder = plan.seat_that_brought(plan.contested_deck_id)
+    for bid in record.bids:
+        if bid.is_pass:
+            settle_chain_bidding(plan)
+            return
+        plan.high_bid = bid.chains
+        plan.high_bidder = bid.seat
+    plan.stage = AdaptiveStage.BIDDING
+    plan.seat_to_bid = opponent_of(plan.high_bidder)
+
+
+def settle_chain_bidding(plan):
+    plan.chains = plan.high_bid
+    plan.chained_seat = plan.high_bidder
+    plan.played_by_seat = {
+        plan.high_bidder: plan.contested_deck_id,
+        opponent_of(plan.high_bidder): plan.deck_other_than(plan.contested_deck_id),
+    }
+
+
+def validate_adaptive_preference(plan, deck_id):
+    if not plan.is_adaptive or plan.stage != AdaptiveStage.PREFERENCE:
+        return [str(_('Deck choices for this game were already revealed.'))]
+    if deck_id not in plan.brought_by_seat.values():
+        return [str(_('Choose one of the two decks brought to this game.'))]
+    return []
+
+
+def validate_chain_bid(plan, seat, chains):
+    if not plan.is_adaptive or plan.stage != AdaptiveStage.BIDDING:
+        return [str(_('Bidding is not open for this game.'))]
+    if seat != plan.seat_to_bid:
+        return [str(_('It is not your turn to bid.'))]
+    if chains is not None and not plan.minimum_raise <= chains <= MAXIMUM_CHAIN_BID:
+        return [str(_('Bid at least {minimum} chains, or pass.').format(minimum=plan.minimum_raise))]
+    return []
+
+
+def validate_adaptive_report(brought_deck_ids, report):
+    errors = []
+    brought_deck_ids = set(brought_deck_ids)
+    if report.host_played_deck_id not in brought_deck_ids:
+        errors.append(str(_('Choose which deck each player played.')))
+    if report.contested_deck_id is not None and report.contested_deck_id not in brought_deck_ids:
+        errors.append(str(_('Choose which deck was bid on.')))
+    if report.first_deck_id is not None and report.first_deck_id not in brought_deck_ids:
+        errors.append(str(_('Choose one of the two decks as the deck that went first.')))
+    if report.contested_deck_id is None and report.chain_bid is not None:
+        errors.append(str(_('A chain bid only applies when both players chose the same deck.')))
+    if report.contested_deck_id is not None and (
+            report.chain_bid is None or not OPENING_CHAIN_BID <= report.chain_bid <= MAXIMUM_CHAIN_BID):
+        errors.append(str(_('Enter the final chain bid.')))
+    return errors
+
+
+def archon_plans(state):
+    return {
+        revealed.step.order: plan_game(
+            revealed.step, {seat: deck_ids[0] for seat, deck_ids in revealed.picks_by_seat.items() if deck_ids})
+        for revealed in state.history if revealed.step.is_play
+    }
 
 
 @dataclass(frozen=True)
@@ -517,6 +705,8 @@ def structural_errors_for_step(display_number, step):
             number=display_number, maximum=maximum)))
     if step.is_play and step.played_deck_rule not in PlayedDeckRule.values:
         errors.append(str(_('Step {number}: unknown played deck rule.').format(number=display_number)))
+    if step.is_play and step.game_type not in GameType.values:
+        errors.append(str(_('Step {number}: unknown game type.').format(number=display_number)))
     return errors
 
 
@@ -531,7 +721,10 @@ def games_won(state):
     return tally
 
 
-def results_summary_lines(state, format_name, session_code, seat_names, deck_names, scores, share_url):
+def results_summary_lines(
+        state, format_name, session_code, seat_names, deck_names, scores, share_url, game_plans=None):
+    game_plans = archon_plans(state) if game_plans is None else game_plans
+
     def names_for(deck_ids):
         return '; '.join(deck_names.get(deck_id, '?') for deck_id in deck_ids)
 
@@ -551,7 +744,7 @@ def results_summary_lines(state, format_name, session_code, seat_names, deck_nam
             for seat in SEATS:
                 lines.append(f'{seat_names[seat]} decks: {names_for(d.id for d in state.decks_submitted_by(seat))}')
         elif step.is_play:
-            lines.append(play_summary_line(state, step, picks, seat_names, deck_names, scores))
+            lines.append(play_summary_line(state, step, game_plans[step.order], seat_names, deck_names, scores))
         elif step.is_matchup_ban:
             fragments = [
                 f'{seat_names[seat]} banned '
@@ -584,10 +777,16 @@ def summary_heading(steps, step):
     return f'{label} ({detail})' if detail else label
 
 
-def play_summary_line(state, step, picks, seat_names, deck_names, scores):
-    matchup = ' vs '.join(
-        f'{deck_names.get(picks[seat][0], "?") if picks[seat] else "no deck"} ({seat_names[seat]})'
-        for seat in SEATS)
+def played_deck_fragment(plan, seat, seat_names, deck_names):
+    if not plan.is_assigned:
+        return f'{deck_names.get(plan.brought_by_seat.get(seat), "no deck")} (brought by {seat_names[seat]})'
+    chains = plan.chains_for(seat)
+    pilot = seat_names[seat] if chains is None else f'{seat_names[seat]}, {chains} chains'
+    return f'{deck_names.get(plan.played_by_seat.get(seat), "no deck")} ({pilot})'
+
+
+def play_summary_line(state, step, plan, seat_names, deck_names, scores):
+    matchup = ' vs '.join(played_deck_fragment(plan, seat, seat_names, deck_names) for seat in SEATS)
     winner = state.winners.get(step.order)
     if step.order in state.banned_matchup_orders:
         outcome = 'banned'
@@ -598,4 +797,7 @@ def play_summary_line(state, step, picks, seat_names, deck_names, scores):
         line = score_line(seat_names, *scores.get(step.order, (None, None)))
         if line:
             outcome += f', {line}'
-    return f'{game_label(state.steps, step)}: {matchup} - {outcome}'
+    summary = f'{game_label(state.steps, step)} ({GameType(plan.game_type).label}): {matchup} - {outcome}'
+    if plan.first_deck_id is not None:
+        summary += f' - {deck_names.get(plan.first_deck_id, "?")} goes first'
+    return summary

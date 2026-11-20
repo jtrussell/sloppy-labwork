@@ -671,6 +671,134 @@
   text-transform: uppercase;
 }
 
+.ts-game__type {
+  margin-left: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.ts-status--first {
+  color: var(--color-highlight);
+}
+
+.ts-status--contested,
+.ts-status--chains {
+  color: var(--color-warning);
+}
+
+.ts-status--chains {
+  background-color: color-mix(in srgb, currentColor var(--tint-strong), transparent);
+}
+
+.ts-adaptive {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ts-adaptive__prompt {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.ts-adaptive__hint,
+.ts-adaptive__status {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.ts-adaptive__hint strong {
+  color: var(--color-text);
+}
+
+.ts-adaptive__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.ts-adaptive__actions .button {
+  flex: none;
+  min-height: var(--tap-target);
+  margin: 0;
+}
+
+.ts-bid-trail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ts-bid-trail__bid {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.ts-bid-trail__chains {
+  color: var(--color-text);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+}
+
+.ts-bid-trail__bid:last-child {
+  border-color: var(--color-warning);
+}
+
+.ts-bid-trail__bid:last-child .ts-bid-trail__chains {
+  color: var(--color-warning);
+}
+
+.ts-bid-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.ts-bid-form__label,
+.ts-bid-form__outcome {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.ts-bid-form__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.ts-bid-form__outcome {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.ts-bid-form__chains {
+  width: 100%;
+  min-height: var(--tap-target);
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  text-align: center;
+}
+
+.ts-bid-form .button {
+  min-height: var(--tap-target);
+  margin: 0;
+}
+
 @media (min-width: 750px) {
   .ts-game__seats {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -685,6 +813,10 @@
 .ts-history__detail--banned {
   text-decoration: line-through;
   color: var(--color-text-muted);
+}
+
+.ts-builder-step__field .ts-builder-step__note {
+  margin-top: var(--space-3);
 }
 
 .ts-builder-step__note {
@@ -1020,6 +1152,66 @@
 .ts-result-form input[type='text'] {
   width: 100%;
   margin: 0;
+}
+
+.ts-result-form__details {
+  margin-top: var(--space-5);
+}
+
+.ts-result-form__summary {
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.ts-result-form__adaptive {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-4);
+}
+
+.ts-result-form__question {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ts-result-form__question label {
+  margin: 0;
+}
+
+.ts-result-form__options {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ts-result-form__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-weight: var(--weight-regular);
+  cursor: pointer;
+}
+
+.ts-result-form__option input {
+  margin: 0;
+}
+
+.ts-result-form__option:has(input:checked) {
+  border-color: var(--color-primary);
+  font-weight: var(--weight-semibold);
+}
+
+.ts-result-form__optional {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+}
+
+.ts-result-form:has(input[name="contested_deck"][value="different"]:checked) .ts-result-form__bid {
+  display: none;
 }
 
 .ts-result-form__warning {

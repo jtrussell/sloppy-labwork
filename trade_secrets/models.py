@@ -1,3 +1,5 @@
+import random
+from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass
 
@@ -11,7 +13,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 
 from . import engine
-from .engine import Action, PlayedDeckRule, Seat
+from .engine import Action, GameType, PlayedDeckRule, Seat
 
 
 CODE_CHARACTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -90,6 +92,7 @@ class SessionTemplate(models.Model):
                     action=spec.action,
                     quantity=spec.quantity,
                     played_deck_rule=spec.played_deck_rule,
+                    game_type=spec.game_type,
                 )
                 for order, spec in enumerate(step_specs)
             )
@@ -163,6 +166,7 @@ class TemplateStep(models.Model):
     quantity = models.PositiveSmallIntegerField(default=1)
     played_deck_rule = models.CharField(
         max_length=12, choices=PlayedDeckRule.choices, default=PlayedDeckRule.INELIGIBLE)
+    game_type = models.CharField(max_length=10, choices=GameType.choices, default=GameType.ARCHON)
 
     class Meta:
         ordering = ['order']
@@ -180,7 +184,7 @@ class TemplateStep(models.Model):
         return f'{self.template.name} #{self.order + 1}: {engine.step_label(self.template.step_specs, self.to_spec())}'
 
     def to_spec(self):
-        return engine.StepSpec(self.order, self.action, self.quantity, self.played_deck_rule)
+        return engine.StepSpec(self.order, self.action, self.quantity, self.played_deck_rule, self.game_type)
 
 
 class Session(models.Model):
@@ -280,6 +284,70 @@ class Session(models.Model):
             result.step.order: result.winner_seat
             for result in self.results.select_related('step')
         }
+
+    def decks_brought_to(self, step_order):
+        return {
+            seat: deck_ids[0]
+            for seat, deck_ids in self.revealed_picks().get(step_order, {}).items() if deck_ids
+        }
+
+    def adaptive_records(self):
+        records = defaultdict(engine.AdaptiveRecord)
+        for setup in self.adaptive_setups.select_related('step'):
+            records[setup.step.order].first_deck_id = setup.first_deck_id
+        for preference in self.adaptive_preferences.select_related('step'):
+            records[preference.step.order].preferences[preference.seat] = preference.deck_id
+        for bid in self.chain_bids.select_related('step').order_by('sequence'):
+            records[bid.step.order].bids.append(engine.ChainBidEntry(bid.seat, bid.chains))
+        return records
+
+    def adaptive_reports(self):
+        return {
+            result.step.order: result.adaptive_report()
+            for result in self.results.select_related('step') if result.has_adaptive_report
+        }
+
+    def game_plans(self):
+        picks = self.revealed_picks()
+        records = self.adaptive_records()
+        reports = self.adaptive_reports()
+        plans = {}
+        for spec in self.template.step_specs[:self.revealed_step_count]:
+            brought_by_seat = {seat: deck_ids[0] for seat, deck_ids in picks.get(spec.order, {}).items() if deck_ids}
+            if spec.is_play and set(engine.SEATS) <= set(brought_by_seat):
+                plans[spec.order] = engine.plan_game(
+                    spec, brought_by_seat, records.get(spec.order), reports.get(spec.order))
+        return plans
+
+    def open_adaptive_plan(self, step_order):
+        if not self.is_revealed_game(step_order):
+            raise ValidationError(_('That game is not ready yet.'))
+        if self.results.filter(step__order=step_order).exists():
+            raise ValidationError(_('This game already has a result. Edit the result to change it.'))
+        plan = self.game_plans().get(step_order)
+        if plan is None or not plan.is_adaptive:
+            raise ValidationError(_('That game is not an Adaptive game.'))
+        return plan
+
+    def submit_adaptive_preference(self, seat, user, step_order, session_deck_id):
+        with self._locked() as session:
+            plan = session.open_adaptive_plan(step_order)
+            errors = engine.validate_adaptive_preference(plan, session_deck_id)
+            if errors:
+                raise ValidationError(errors)
+            AdaptivePreference.objects.update_or_create(
+                session=session, step=session.step_at(step_order), seat=seat,
+                defaults={'deck_id': session_deck_id, 'submitted_by': user})
+
+    def submit_chain_bid(self, seat, user, step_order, chains):
+        with self._locked() as session:
+            plan = session.open_adaptive_plan(step_order)
+            errors = engine.validate_chain_bid(plan, seat, chains)
+            if errors:
+                raise ValidationError(errors)
+            ChainBid.objects.create(
+                session=session, step=session.step_at(step_order), seat=seat,
+                sequence=len(plan.bids), chains=chains, submitted_by=user)
 
     def pending_submission_for(self, seat):
         if self.revealed_step_count >= self.template.steps.count():
@@ -387,7 +455,8 @@ class Session(models.Model):
             and not self.is_result_locked(step_order)
         )
 
-    def record_result(self, user, step_order, winner_seat, host_score=None, guest_score=None):
+    def record_result(
+            self, user, step_order, winner_seat, host_score=None, guest_score=None, adaptive_report=None):
         if winner_seat not in Seat.values:
             raise ValidationError(_('Choose a winner.'))
         if (host_score is None) != (guest_score is None):
@@ -399,16 +468,33 @@ class Session(models.Model):
                 raise ValidationError(_('That game cannot have a result yet.'))
             if not session.can_record_result(step_order):
                 raise ValidationError(_('This result is locked because a later game has a result.'))
+            step = session.step_at(step_order)
             PlayResult.objects.update_or_create(
-                session=session, step=session.step_at(step_order),
+                session=session, step=step,
                 defaults={
                     'winner_seat': winner_seat,
                     'host_score': host_score,
                     'guest_score': guest_score,
                     'updated_by': user,
+                    **session.adaptive_result_fields(step, adaptive_report),
                 })
             session.discard_invalid_pending_picks()
             session.advance()
+
+    def adaptive_result_fields(self, step, adaptive_report):
+        if not step.to_spec().is_adaptive_game:
+            return {}
+        if adaptive_report is None:
+            raise ValidationError(_('Adaptive games need the deck each player played.'))
+        errors = engine.validate_adaptive_report(self.decks_brought_to(step.order).values(), adaptive_report)
+        if errors:
+            raise ValidationError(errors)
+        return {
+            'host_played_deck_id': adaptive_report.host_played_deck_id,
+            'contested_deck_id': adaptive_report.contested_deck_id,
+            'chain_bid': adaptive_report.chain_bid,
+            'first_deck_id': adaptive_report.first_deck_id,
+        }
 
     def reset_result(self, step_order):
         with self._locked() as session:
@@ -428,6 +514,20 @@ class Session(models.Model):
                 submission.delete()
 
     def advance(self):
+        self.reveal_ready_steps()
+        self.decide_first_decks_for_adaptive_games()
+
+    def decide_first_decks_for_adaptive_games(self):
+        decided_orders = set(self.adaptive_setups.values_list('step__order', flat=True))
+        for step in self.template_steps()[:self.revealed_step_count]:
+            if not step.to_spec().is_adaptive_game or step.order in decided_orders:
+                continue
+            brought_deck_ids = sorted(self.decks_brought_to(step.order).values())
+            if len(brought_deck_ids) == len(engine.SEATS):
+                AdaptiveSetup.objects.create(
+                    session=self, step=step, first_deck_id=random.choice(brought_deck_ids))
+
+    def reveal_ready_steps(self):
         if not self.has_guest:
             return
         while True:
@@ -497,6 +597,13 @@ class PlayResult(models.Model):
     winner_seat = models.CharField(max_length=5, choices=Seat.choices)
     host_score = models.PositiveIntegerField(null=True, blank=True)
     guest_score = models.PositiveIntegerField(null=True, blank=True)
+    host_played_deck = models.ForeignKey(
+        SessionDeck, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    contested_deck = models.ForeignKey(
+        SessionDeck, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    chain_bid = models.PositiveSmallIntegerField(null=True, blank=True)
+    first_deck = models.ForeignKey(
+        SessionDeck, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     updated_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     updated_on = models.DateTimeField(auto_now=True)
@@ -509,3 +616,74 @@ class PlayResult(models.Model):
 
     def __str__(self):
         return f'{self.session.code} step {self.step.order + 1}: {self.winner_seat}'
+
+    @property
+    def has_adaptive_report(self):
+        return self.host_played_deck_id is not None
+
+    def adaptive_report(self):
+        return engine.AdaptiveReport(
+            host_played_deck_id=self.host_played_deck_id,
+            contested_deck_id=self.contested_deck_id,
+            chain_bid=self.chain_bid,
+            first_deck_id=self.first_deck_id,
+        )
+
+
+class AdaptiveSetup(models.Model):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='adaptive_setups')
+    step = models.ForeignKey(TemplateStep, on_delete=models.RESTRICT, related_name='adaptive_setups')
+    first_deck = models.ForeignKey(SessionDeck, on_delete=models.CASCADE, related_name='+')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['session', 'step'], name='trade_secrets_unique_adaptive_setup'),
+        ]
+
+    def __str__(self):
+        return f'{self.session.code} step {self.step.order + 1} first deck'
+
+
+class AdaptivePreference(models.Model):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='adaptive_preferences')
+    step = models.ForeignKey(TemplateStep, on_delete=models.RESTRICT, related_name='adaptive_preferences')
+    seat = models.CharField(max_length=5, choices=Seat.choices)
+    deck = models.ForeignKey(SessionDeck, on_delete=models.CASCADE, related_name='+')
+    submitted_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='trade_secrets_adaptive_preferences')
+    updated_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['session', 'step', 'seat'], name='trade_secrets_unique_adaptive_preference'),
+        ]
+
+    def __str__(self):
+        return f'{self.session.code} step {self.step.order + 1} {self.seat} preference'
+
+
+class ChainBid(models.Model):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='chain_bids')
+    step = models.ForeignKey(TemplateStep, on_delete=models.RESTRICT, related_name='chain_bids')
+    seat = models.CharField(max_length=5, choices=Seat.choices)
+    sequence = models.PositiveSmallIntegerField()
+    chains = models.PositiveSmallIntegerField(null=True, blank=True)
+    submitted_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='trade_secrets_chain_bids')
+    created_on = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['sequence']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['session', 'step', 'sequence'], name='trade_secrets_unique_chain_bid_sequence'),
+            models.CheckConstraint(
+                condition=Q(chains__isnull=True) | Q(chains__lte=engine.MAXIMUM_CHAIN_BID),
+                name='trade_secrets_chain_bid_within_limit'),
+        ]
+
+    def __str__(self):
+        bid = 'pass' if self.chains is None else self.chains
+        return f'{self.session.code} step {self.step.order + 1} {self.seat}: {bid}'

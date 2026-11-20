@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from . import engine
-from .engine import Action, DeckStatus, Phase, PlayedDeckRule, Seat
+from .engine import Action, AdaptiveStage, DeckStatus, GameType, Phase, PlayedDeckRule, Seat
 
 ACTIVE_POLL_INTERVAL_MS = 2500
 FINISHED_POLL_INTERVAL_MS = 15000
@@ -22,6 +22,18 @@ PLAY_RULE_HINTS = {
     PlayedDeckRule.INELIGIBLE: 'Played decks cannot be played again.',
     PlayedDeckRule.ELIGIBLE: 'Played decks can be played again.',
     PlayedDeckRule.LOSING_ONLY: 'Decks that win cannot be played again.',
+}
+
+PLAY_INSTRUCTIONS = {
+    GameType.ARCHON: 'Pick your deck for {game}',
+    GameType.REVERSAL: 'Pick the deck {opponent} will play in {game}',
+    GameType.ADAPTIVE: 'Pick the deck you bring to {game}',
+}
+
+GAME_TYPE_HINTS = {
+    GameType.ARCHON: '',
+    GameType.REVERSAL: 'Reversal: you swap decks for this game. ',
+    GameType.ADAPTIVE: "Adaptive: you'll each choose which of the two decks to play, and bid chains if you agree. ",
 }
 
 PAST_TENSE = {
@@ -77,6 +89,7 @@ class DeckCard:
     is_selectable: bool = False
     is_selected: bool = False
     is_sidelined: bool = False
+    has_anchor: bool = True
 
 
 @dataclass
@@ -86,9 +99,44 @@ class FeaturedSeat:
 
 
 @dataclass
+class BidTrailEntry:
+    name: str
+    chains: int
+
+
+@dataclass
+class AdaptivePanel:
+    stage: str
+    can_act: bool
+    cards: list
+    has_locked_preference: bool = False
+    contested_deck_name: str = ''
+    leader_name: str = ''
+    is_viewer_leading: bool = False
+    high_bid: int = 0
+    bid_trail: list = field(default_factory=list)
+    is_viewer_turn: bool = False
+    waiting_on_name: str = ''
+    minimum_raise: int = 0
+    maximum_bid: int = engine.MAXIMUM_CHAIN_BID
+    can_raise: bool = True
+
+    @property
+    def is_choosing(self):
+        return self.stage == AdaptiveStage.PREFERENCE
+
+    @property
+    def is_bidding(self):
+        return self.stage == AdaptiveStage.BIDDING
+
+
+@dataclass
 class FeaturedGame:
+    order: int
     label: str
+    type_label: str
     seats: list
+    adaptive: object = None
     has_result: bool = False
     winner_name: str = ''
     score_line: str = ''
@@ -298,8 +346,10 @@ class SessionViewBuilder:
         self.submitted_seats = self.current_submitted_seats()
         self.pending_pick_ids = self.viewer_pending_pick_ids()
         self.picks_matchups = self.current_step is not None and self.current_step.is_matchup_ban
+        self.game_plans = session.game_plans()
         self.featured_play_orders = self.orders_of_plays_to_feature()
         self.featured_deck_ids = self.ids_of_decks_in_featured_plays()
+        self.game_card_orders = self.orders_of_games_with_cards()
 
     def build(self):
         role = self.role()
@@ -313,7 +363,7 @@ class SessionViewBuilder:
             action_state=self.action_state(role, required_pick_count),
             stage_key=self.stage_key(),
             version=self.session.version,
-            poll_interval_ms=FINISHED_POLL_INTERVAL_MS if self.phase in engine.FINISHED_PHASES else ACTIVE_POLL_INTERVAL_MS,
+            poll_interval_ms=self.poll_interval_ms(),
             share_url=self.share_url(),
             host_name=self.seat_names[Seat.HOST],
             guest_name=self.seat_names[Seat.GUEST],
@@ -340,6 +390,17 @@ class SessionViewBuilder:
             featured_games_title=self.featured_games_title(),
         )
 
+    def poll_interval_ms(self):
+        if self.phase in engine.FINISHED_PHASES and not self.labels_of_unsettled_adaptive_games():
+            return FINISHED_POLL_INTERVAL_MS
+        return ACTIVE_POLL_INTERVAL_MS
+
+    def labels_of_unsettled_adaptive_games(self):
+        return [
+            engine.game_label(self.state.steps, self.state.steps[order])
+            for order in self.game_card_orders if not self.game_plans[order].is_assigned
+        ]
+
     def orders_of_plays_to_feature(self):
         if self.phase not in engine.FINISHED_PHASES:
             return set()
@@ -355,37 +416,144 @@ class SessionViewBuilder:
     def featured_plays(self):
         return [revealed for revealed in self.state.history if revealed.step.order in self.featured_play_orders]
 
-    def featured_games(self):
-        return [self.featured_game_for(revealed) for revealed in self.featured_plays()]
+    def orders_of_games_with_cards(self):
+        if self.phase in engine.FINISHED_PHASES:
+            return sorted(self.featured_play_orders)
+        return [
+            order for order, plan in sorted(self.game_plans.items())
+            if plan.game_type != GameType.ARCHON and order not in self.results and self.is_playable_game(order)
+        ]
 
-    def featured_game_for(self, revealed):
-        result = self.results.get(revealed.step.order)
+    def is_playable_game(self, order):
+        return order not in self.state.banned_matchup_orders and not engine.is_awaiting_matchup_ban(
+            self.state.steps, self.state.steps[order], self.state.revealed_count)
+
+    def viewer_label(self, seat):
+        return _('You') if seat == self.viewer_seat else self.seat_names[seat]
+
+    def featured_games(self):
+        return [self.featured_game_for(order) for order in self.game_card_orders]
+
+    def featured_game_for(self, order):
+        plan = self.game_plans[order]
+        result = self.results.get(order)
         game = FeaturedGame(
-            label=engine.game_label(self.state.steps, revealed.step),
+            order=order,
+            label=engine.game_label(self.state.steps, self.state.steps[order]),
+            type_label=str(GameType(plan.game_type).label),
             seats=[
                 FeaturedSeat(
-                    name=_('You') if seat == self.viewer_seat else self.seat_names[seat],
-                    cards=[self.featured_card(deck_id) for deck_id in revealed.picks_by_seat.get(seat, ())])
-                for seat in engine.SEATS
+                    name=self.viewer_label(seat),
+                    cards=[self.game_card(plan, plan.played_by_seat[seat], pilot_seat=seat)])
+                for seat in engine.SEATS if plan.is_assigned
             ],
         )
+        if not plan.is_assigned:
+            game.adaptive = self.adaptive_panel(plan)
         if result is not None:
             game.has_result = True
             game.winner_name = self.seat_names[result.winner_seat]
             game.score_line = engine.score_line(self.seat_names, result.host_score, result.guest_score)
         return game
 
-    def featured_card(self, session_deck_id):
+    def game_card(self, plan, session_deck_id, pilot_seat=None, is_selectable=False, is_selected=False):
         return DeckCard(
-            session_deck_id=None,
+            session_deck_id=session_deck_id,
             deck=self.session_decks[session_deck_id].deck,
             status=DeckStatus.AVAILABLE,
+            badges=self.game_card_badges(plan, session_deck_id, pilot_seat),
+            is_selectable=is_selectable,
+            is_selected=is_selected,
+            has_anchor=False,
         )
 
+    def game_card_badges(self, plan, session_deck_id, pilot_seat):
+        badges = []
+        owner_seat = plan.seat_that_brought(session_deck_id)
+        if plan.game_type != GameType.ARCHON and owner_seat != pilot_seat:
+            owner_label = _('Your deck') if owner_seat == self.viewer_seat else _("{name}'s deck").format(
+                name=self.seat_names[owner_seat])
+            badges.append(DeckBadge(kind='owner', icon='deck', label=owner_label, short_label=owner_label))
+        if plan.first_deck_id == session_deck_id:
+            badges.append(DeckBadge(kind='first', icon='play', label=_('Goes first'), short_label=_('1st')))
+        if plan.stage == AdaptiveStage.BIDDING and plan.contested_deck_id == session_deck_id:
+            badges.append(DeckBadge(kind='contested', icon='swap', label=_('Both want this'), short_label=_('Both')))
+        chains = plan.chains_for(pilot_seat) if pilot_seat else None
+        if chains is not None:
+            chains_label = _('{count} chains').format(count=chains)
+            badges.append(DeckBadge(kind='chains', icon='lock', label=chains_label, short_label=str(chains)))
+        return badges
+
+    def adaptive_panel(self, plan):
+        can_act = bool(self.viewer_seat)
+        is_choosing = plan.stage == AdaptiveStage.PREFERENCE
+        own_preference = plan.preferences.get(self.viewer_seat) if is_choosing else None
+        panel = AdaptivePanel(
+            stage=plan.stage,
+            can_act=can_act,
+            cards=[
+                self.game_card(
+                    plan, plan.brought_by_seat[seat],
+                    is_selectable=can_act and is_choosing,
+                    is_selected=plan.brought_by_seat[seat] == own_preference)
+                for seat in engine.SEATS
+            ],
+            has_locked_preference=own_preference is not None,
+        )
+        if plan.stage == AdaptiveStage.BIDDING:
+            self.fill_bidding_panel(panel, plan)
+        return panel
+
+    def fill_bidding_panel(self, panel, plan):
+        opening_seat = plan.seat_that_brought(plan.contested_deck_id)
+        panel.contested_deck_name = self.deck_names()[plan.contested_deck_id]
+        panel.leader_name = self.viewer_label(plan.high_bidder)
+        panel.is_viewer_leading = plan.high_bidder == self.viewer_seat
+        panel.high_bid = plan.high_bid
+        panel.bid_trail = [BidTrailEntry(self.viewer_label(opening_seat), engine.OPENING_CHAIN_BID)] + [
+            BidTrailEntry(self.viewer_label(bid.seat), bid.chains) for bid in plan.bids]
+        panel.is_viewer_turn = plan.seat_to_bid == self.viewer_seat
+        panel.waiting_on_name = self.seat_names[plan.seat_to_bid]
+        panel.minimum_raise = plan.minimum_raise
+        panel.can_raise = plan.can_raise
+
     def featured_games_title(self):
-        if any(engine.is_matchup(self.state.steps, revealed.step) for revealed in self.featured_plays()):
+        if any(engine.is_matchup(self.state.steps, self.state.steps[order]) for order in self.game_card_orders):
             return _('Matchups')
         return _('Games')
+
+    def play_seat_picks(self, order):
+        plan = self.game_plans[order]
+        deck_names = self.deck_names()
+        if not plan.is_assigned:
+            return [
+                SeatPicks(
+                    name=_('{name} brought').format(name=self.viewer_label(seat)),
+                    decks=[deck_names[plan.brought_by_seat[seat]]])
+                for seat in engine.SEATS
+            ]
+        return [
+            SeatPicks(name=self.pilot_label(plan, seat), decks=[deck_names[plan.played_by_seat[seat]]])
+            for seat in engine.SEATS
+        ]
+
+    def pilot_label(self, plan, seat):
+        chains = plan.chains_for(seat)
+        if chains is None:
+            return self.viewer_label(seat)
+        return _('{name}, {count} chains').format(name=self.viewer_label(seat), count=chains)
+
+    def play_subtitle(self, order):
+        plan = self.game_plans[order]
+        type_label = str(GameType(plan.game_type).label)
+        if plan.first_deck_id is None:
+            return type_label
+        return _('{type} · {deck} goes first').format(type=type_label, deck=self.deck_names()[plan.first_deck_id])
+
+    def adaptive_signature(self):
+        return '.'.join(
+            f'{order}{plan.stage[0]}{len(plan.bids)}{int(self.viewer_seat in plan.preferences)}'
+            for order, plan in sorted(self.game_plans.items()) if plan.is_adaptive)
 
     def role(self):
         if self.viewer_seat:
@@ -441,7 +609,9 @@ class SessionViewBuilder:
         results_signature = '.'.join(
             f'{order}{result.winner_seat[0]}' for order, result in sorted(self.results.items()))
         own_pending = int(self.viewer_seat in self.submitted_seats)
-        return f'{phase}:{self.session.revealed_step_count}:{own_pending}:{results_signature}'
+        return (
+            f'{phase}:{self.session.revealed_step_count}:{own_pending}:{results_signature}'
+            f':{self.adaptive_signature()}')
 
     def share_url(self):
         path = reverse('trade_secrets:session-detail', args=[self.session.code])
@@ -470,6 +640,9 @@ class SessionViewBuilder:
         step = self.current_step
         if self.phase == Phase.WAITING_FOR_GUEST and role != Role.PLAYER:
             return _('Waiting for an opponent')
+        if self.phase in engine.FINISHED_PHASES and self.labels_of_unsettled_adaptive_games():
+            return _('Settle who plays which deck in {games}').format(
+                games=_(' and ').join(self.labels_of_unsettled_adaptive_games()).lower())
         if self.phase == Phase.COMPLETE and self.unplayed_matchup_labels():
             return _('Play {matchups} and record the result').format(
                 matchups=_(' or ').join(self.unplayed_matchup_labels()).lower())
@@ -490,7 +663,7 @@ class SessionViewBuilder:
             game = engine.game_label(self.state.steps, step).lower()
             if required_pick_count == 0:
                 return _('No deck left for {game}').format(game=game)
-            return _('Pick your deck for {game}').format(game=game)
+            return _(PLAY_INSTRUCTIONS[step.game_type]).format(game=game, opponent=opponent)
         if step.is_matchup_ban:
             return _('Ban 1 matchup')
         if required_pick_count == 0:
@@ -511,9 +684,11 @@ class SessionViewBuilder:
         if step.is_submit:
             return _('Hidden from your opponent until you both submit.')
         if step.is_play and engine.is_matchup(self.state.steps, step):
-            return _('This matchup is played after the matchup bans. ') + _(PLAY_RULE_HINTS[step.played_deck_rule])
+            return (
+                _(GAME_TYPE_HINTS[step.game_type]) + _('This matchup is played after the matchup bans. ')
+                + _(PLAY_RULE_HINTS[step.played_deck_rule]))
         if step.is_play:
-            return _(PLAY_RULE_HINTS[step.played_deck_rule])
+            return _(GAME_TYPE_HINTS[step.game_type]) + _(PLAY_RULE_HINTS[step.played_deck_rule])
         hints = {
             Action.BAN_MATCHUP: _("Banned matchups won't be played. You may both ban the same one."),
             Action.BAN: _('Banned decks are out for the rest of the match.'),
@@ -543,24 +718,14 @@ class SessionViewBuilder:
     def matchup_choices(self, required_pick_count):
         if not self.picks_matchups or not required_pick_count:
             return []
-        deck_names = self.deck_names()
         return [
             MatchupCard(
                 order=order,
                 label=engine.game_label(self.state.steps, self.state.steps[order]),
-                seat_decks=self.matchup_seat_decks(order, deck_names),
+                seat_decks=self.play_seat_picks(order),
                 is_selected=order in self.pending_pick_ids,
             )
             for order in engine.choices_for(self.state, self.current_step, self.viewer_seat)
-        ]
-
-    def matchup_seat_decks(self, order, deck_names):
-        revealed = next(entry for entry in self.state.history if entry.step.order == order)
-        return [
-            SeatPicks(
-                name=_('You') if seat == self.viewer_seat else self.seat_names[seat],
-                decks=[deck_names[deck_id] for deck_id in revealed.picks_by_seat.get(seat, ())])
-            for seat in engine.SEATS
         ]
 
     def unplayed_matchup_labels(self):
@@ -741,6 +906,8 @@ class SessionViewBuilder:
     def fill_play_entry(self, entry, step):
         result = self.results.get(step.order)
         entry.is_play = True
+        entry.seat_picks = self.play_seat_picks(step.order)
+        entry.subtitle = self.play_subtitle(step.order)
         entry.game_number = engine.game_number_for_order(self.state.steps, step.order)
         entry.has_result = result is not None
         entry.is_result_locked = result is not None and engine.is_result_locked(
@@ -773,6 +940,7 @@ class SessionViewBuilder:
             self.deck_names(),
             {order: (result.host_score, result.guest_score) for order, result in self.results.items()},
             self.share_url(),
+            self.game_plans,
         )
 
     def games_won(self):

@@ -23,4 +23,7 @@ urlpatterns = [
     path('<str:session_code>/games/<int:step_order>/result/', views.session_result, name='session-result'),
     path('<str:session_code>/games/<int:step_order>/result/reset/', views.session_result_reset,
          name='session-result-reset'),
+    path('<str:session_code>/games/<int:step_order>/preference/', views.session_adaptive_preference,
+         name='session-adaptive-preference'),
+    path('<str:session_code>/games/<int:step_order>/bid/', views.session_chain_bid, name='session-chain-bid'),
 ]

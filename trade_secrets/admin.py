@@ -6,7 +6,7 @@ from .models import PlayResult, Session, SessionDeck, SessionTemplate, StepSubmi
 class TemplateStepInline(admin.TabularInline):
     model = TemplateStep
     extra = 0
-    fields = ['order', 'action', 'quantity', 'played_deck_rule']
+    fields = ['order', 'action', 'quantity', 'played_deck_rule', 'game_type']
 
     def is_template_in_use(self, template):
         return template is not None and template.is_in_use()

@@ -42,6 +42,15 @@
       </div>
       {% if row.spec.is_play %}
       <fieldset class="ts-builder-step__field">
+        <legend>Game type</legend>
+        <div class="segmented">
+          {% for value, label in game_types %}
+          <label class="segmented__option" for="ts-step-{{ row.index }}-type-{{ value }}"><input type="radio" id="ts-step-{{ row.index }}-type-{{ value }}" name="steps-{{ row.index }}-type" value="{{ value }}"{% if row.spec.game_type == value %} checked{% endif %}><span>{{ label }}</span></label>
+          {% endfor %}
+        </div>
+        <p class="ts-builder-step__note">{{ row.game_type_note }}</p>
+      </fieldset>
+      <fieldset class="ts-builder-step__field">
         <legend>Can played decks be played again?</legend>
         <div class="segmented">
           {% for value, label in played_deck_rules %}
