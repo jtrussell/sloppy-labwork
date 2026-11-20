@@ -237,6 +237,7 @@
         <div class="ts-history__body">
           <p class="ts-history__title">{{ entry.title }}</p>
           {% if entry.subtitle %}<p class="ts-history__subtitle">{{ entry.subtitle }}</p>{% endif %}
+          {% if entry.automatic_note %}<p class="ts-history__subtitle ts-history__automatic">{% include "components/icon.html" with name='lock' %}{{ entry.automatic_note }}</p>{% endif %}
           {% if entry.action == 'submit' %}
           <p class="ts-history__detail">Both lineups are in.</p>
           {% elif entry.is_play %}

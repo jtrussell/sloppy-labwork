@@ -1,72 +1,14 @@
 <li class="ts-game" id="ts-game-{{ game.order }}">
   <div class="ts-game__header">
-    <span class="ts-game__label">{% include "components/icon.html" with name='play' %}{{ game.label }}<span class="badge badge--small ts-game__type">{{ game.type_label }}</span></span>
+    <span class="ts-game__label">{% include "components/icon.html" with name='play' %}{{ game.label }}{% if game.type_label %}<span class="badge badge--small ts-game__type">{{ game.type_label }}</span>{% endif %}</span>
     <span class="ts-game__result">
       {% if game.has_result %}
       {% include "components/icon.html" with name='check' %}<strong>{{ game.winner_name }} won</strong>{% if game.score_line %} · {{ game.score_line }}{% endif %}
-      {% elif game.adaptive.is_choosing %}
-      <span class="text-muted">Choosing decks</span>
-      {% elif game.adaptive.is_bidding %}
-      <span class="text-muted">Bidding chains</span>
       {% else %}
       <span class="text-muted">No result yet</span>
       {% endif %}
     </span>
   </div>
-  {% if game.adaptive %}
-  {% with panel=game.adaptive %}
-  {% if panel.is_choosing and panel.can_act %}
-  <form class="ts-pick-form ts-adaptive" method="post" action="{% url 'trade_secrets:session-adaptive-preference' session.code game.order %}"
-        data-pick-count="1" data-pick-noun="deck" data-opponent="{{ view.opponent_name }}"
-        hx-post="{% url 'trade_secrets:session-adaptive-preference' session.code game.order %}" hx-target="#ts-board" hx-swap="outerHTML"
-        hx-sync="#ts-board:replace" hx-disabled-elt="find button[type=submit]">
-    {% csrf_token %}
-    <p class="ts-adaptive__prompt">Which deck do you want to play?</p>
-    <p class="ts-adaptive__hint">Secret until you both lock in. Want the same deck? You'll bid chains for it.</p>
-    <ul class="ts-lineup__list" role="list">
-      {% for card in panel.cards %}<li>{% include 'trade_secrets/partials/deck-card.html' with card=card selectable=True %}</li>{% endfor %}
-    </ul>
-    <div class="ts-adaptive__actions">
-      <p class="action-bar__status" data-pick-status aria-live="polite">{% if panel.has_locked_preference %}Locked in. You can change until {{ view.opponent_name }} locks in.{% else %}Tap a deck to select it, tap again to lock in.{% endif %}</p>
-      <button type="submit" class="button button-primary" data-pick-submit>{% if panel.has_locked_preference %}Update pick{% else %}Lock in{% endif %}</button>
-    </div>
-  </form>
-  {% else %}
-  <ul class="ts-lineup__list" role="list">
-    {% for card in panel.cards %}<li>{% include 'trade_secrets/partials/deck-card.html' with card=card selectable=False %}</li>{% endfor %}
-  </ul>
-  {% if panel.is_choosing %}
-  <p class="ts-adaptive__status"><span class="ts-dots" aria-hidden="true"></span>Both players are secretly choosing which deck to play.</p>
-  {% else %}
-  <div class="ts-adaptive" aria-live="polite">
-    <p class="ts-adaptive__prompt">{% if panel.can_act %}You both want{% else %}Both players want{% endif %} {{ panel.contested_deck_name }}</p>
-    <p class="ts-adaptive__hint"><strong>{{ panel.leader_name }}</strong> {% if panel.is_opening_bid %}{% if panel.is_viewer_leading %}lead{% else %}leads{% endif %} with{% elif panel.is_viewer_leading %}bid{% else %}bids{% endif %} {{ panel.high_bid }} chain{{ panel.high_bid|pluralize }}. The highest bidder plays it with that many chains.</p>
-    <ol class="ts-bid-trail" role="list" aria-label="Bids so far">
-      {% for bid in panel.bid_trail %}
-      <li class="ts-bid-trail__bid"><span class="ts-bid-trail__chains">{{ bid.chains }}</span><span class="ts-bid-trail__who">{{ bid.name }}</span></li>
-      {% endfor %}
-    </ol>
-    {% if panel.can_act and panel.is_viewer_turn %}
-    <form class="ts-bid-form" method="post" action="{% url 'trade_secrets:session-chain-bid' session.code game.order %}"
-          hx-post="{% url 'trade_secrets:session-chain-bid' session.code game.order %}" hx-target="#ts-board" hx-swap="outerHTML"
-          hx-sync="#ts-board:replace" hx-disabled-elt="find button">
-      {% csrf_token %}
-      {% if panel.can_raise %}
-      <label class="ts-bid-form__label" for="ts-bid-{{ game.order }}">Your bid</label>
-      <input class="ts-bid-form__chains" type="number" id="ts-bid-{{ game.order }}" name="chains" value="{{ panel.minimum_raise }}" min="{{ panel.minimum_raise }}" max="{{ panel.maximum_bid }}" step="1" inputmode="numeric" required>
-      <button type="submit" name="move" value="bid" class="button button-primary">Bid</button>
-      {% endif %}
-      <button type="submit" name="move" value="pass" class="button" formnovalidate>Pass</button>
-      <p class="ts-bid-form__outcome">Pass and {{ panel.leader_name }} plays it with {{ panel.high_bid }} chain{{ panel.high_bid|pluralize }}.</p>
-    </form>
-    {% else %}
-    <p class="ts-adaptive__status"><span class="ts-dots" aria-hidden="true"></span>{% if panel.can_act %}Waiting for {{ panel.waiting_on_name }} to bid or pass{% else %}{{ panel.waiting_on_name }} to bid or pass{% endif %}</p>
-    {% endif %}
-  </div>
-  {% endif %}
-  {% endif %}
-  {% endwith %}
-  {% else %}
   <div class="ts-game__seats">
     {% for seat in game.seats %}
     <div class="ts-game__seat">
@@ -76,5 +18,4 @@
     {% if not forloop.last %}<span class="ts-game__versus">vs</span>{% endif %}
     {% endfor %}
   </div>
-  {% endif %}
 </li>

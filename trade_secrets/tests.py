@@ -14,9 +14,9 @@ from decks.models import Deck
 from lineups.models import Lineup, LineupVersion, LineupVersionDeck
 
 from . import engine
-from .engine import AdaptiveReport, AdaptiveStage, GameType, Phase, Seat, StepSpec
+from .engine import GameType, Phase, Seat, StepSpec
 from .exports import SessionExporter
-from .models import AdaptiveSetup, PlayResult, PreloadedLineup, Session, SessionTemplate, StepSubmission
+from .models import PlayResult, PreloadedLineup, Session, SessionTemplate, StepSubmission
 from .session_view import build_session_view
 
 
@@ -321,8 +321,6 @@ class SessionFlowTests(TradeSecretsTestMixin, TestCase):
         self.pick(session, GUEST, self.alice_decks[2])
         self.pick(session, HOST, self.alice_decks[1])
         self.pick(session, GUEST, self.bob_decks[1])
-        self.pick(session, HOST, self.alice_decks[3])
-        self.pick(session, GUEST, self.bob_decks[3])
         self.assertEqual(self.phase(session), Phase.COMPLETE)
 
     def test_step_nobody_can_act_on_auto_reveals(self):
@@ -333,11 +331,8 @@ class SessionFlowTests(TradeSecretsTestMixin, TestCase):
         self.pick(session, HOST, self.alice_decks[0])
         self.pick(session, GUEST, self.bob_decks[0])
         session.record_result(self.alice, 1, HOST)
-        self.pick(session, HOST, self.alice_decks[1])
         self.pick(session, GUEST, self.bob_decks[0])
         session.record_result(self.alice, 2, GUEST)
-        self.pick(session, HOST, self.alice_decks[1])
-        self.pick(session, GUEST, self.bob_decks[1])
         self.assertEqual(session.revealed_step_count, 5)
         self.assertEqual(self.phase(session), Phase.COMPLETE)
 
@@ -349,11 +344,9 @@ class SessionFlowTests(TradeSecretsTestMixin, TestCase):
         self.pick(session, HOST, self.alice_decks[0])
         self.pick(session, GUEST, self.bob_decks[0])
         session.record_result(self.alice, 1, HOST)
-        self.pick(session, HOST, self.alice_decks[1])
+        self.assertEqual(session.revealed_step_count, 2)
         self.pick(session, GUEST, self.bob_decks[0])
-        self.assertEqual(session.revealed_step_count, 3)
-        self.pick(session, HOST, self.bob_decks[1])
-        self.assertEqual(session.revealed_step_count, 4)
+        self.assertEqual(session.revealed_step_count, 5)
 
 
 @override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
@@ -416,22 +409,29 @@ class ResultTests(TradeSecretsTestMixin, TestCase):
             engine.phase(self.session.build_engine_state(), True), Phase.AWAITING_RESULT)
 
     def test_result_edit_keeps_locked_pick_that_is_still_legal(self):
-        self.play_game(self.alice_decks[0], self.bob_decks[0])
-        self.session.record_result(self.alice, 2, GUEST)
-        self.pick(self.session, GUEST, self.bob_decks[1])
-        self.assertTrue(self.session.pending_submission_for(GUEST))
-        self.session.record_result(self.alice, 2, HOST)
-        self.assertIsNotNone(self.session.pending_submission_for(GUEST))
-        self.pick(self.session, HOST, self.alice_decks[1])
-        self.assertEqual(self.session.revealed_step_count, 4)
+        template = self.make_template(self.alice, 'submit:3', 'play:losing_only', 'play:losing_only')
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks, self.bob_decks)
+        self.pick(session, HOST, self.alice_decks[0])
+        self.pick(session, GUEST, self.bob_decks[0])
+        session.record_result(self.alice, 1, GUEST)
+        self.pick(session, GUEST, self.bob_decks[1])
+        session.record_result(self.alice, 1, HOST)
+        self.assertIsNotNone(session.pending_submission_for(GUEST))
+        self.pick(session, HOST, self.alice_decks[1])
+        self.assertEqual(session.revealed_step_count, 3)
 
     def test_result_edit_clears_pick_of_deck_that_became_ineligible(self):
-        self.play_game(self.alice_decks[0], self.bob_decks[0])
-        self.session.record_result(self.alice, 2, GUEST)
-        self.pick(self.session, HOST, self.alice_decks[0])
-        self.session.record_result(self.bob, 2, HOST)
-        self.assertIsNone(self.session.pending_submission_for(HOST))
-        self.assertEqual(self.session.revealed_step_count, 3)
+        template = self.make_template(self.alice, 'submit:3', 'play:losing_only', 'play:losing_only')
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks, self.bob_decks)
+        self.pick(session, HOST, self.alice_decks[0])
+        self.pick(session, GUEST, self.bob_decks[0])
+        session.record_result(self.alice, 1, GUEST)
+        self.pick(session, HOST, self.alice_decks[0])
+        session.record_result(self.bob, 1, HOST)
+        self.assertIsNone(session.pending_submission_for(HOST))
+        self.assertEqual(session.revealed_step_count, 2)
 
 
 @override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
@@ -513,27 +513,26 @@ class ReviewRegressionModelTests(TradeSecretsTestMixin, TestCase):
         self.pick(session, HOST, self.alice_decks[0])
         self.pick(session, GUEST, self.bob_decks[0])
         session.record_result(self.alice, 2, HOST)
-        self.pick(session, HOST, self.alice_decks[1])
         self.pick(session, GUEST, self.bob_decks[0])
         session.record_result(self.alice, 3, HOST)
         self.assertEqual(self.phase(session), Phase.CONCLUDED)
         session.record_result(self.bob, 3, GUEST)
-        self.assertEqual(self.phase(session), Phase.SELECTING)
-        self.pick(session, GUEST, self.bob_decks[1])
+        self.assertEqual(session.revealed_step_count, 5)
+        self.assertEqual(self.phase(session), Phase.COMPLETE)
         session.record_result(self.alice, 3, HOST)
+        self.assertEqual(session.revealed_step_count, 4)
         self.assertEqual(self.phase(session), Phase.CONCLUDED)
+        self.assertFalse(session.submissions.filter(step__order=4).exists())
 
     def test_reset_that_reblocks_keeps_legal_pending_pick(self):
         session = self.start_triad()
         self.pick(session, HOST, self.alice_decks[0])
         self.pick(session, GUEST, self.bob_decks[0])
         session.record_result(self.alice, 2, GUEST)
-        self.pick(session, GUEST, self.bob_decks[1])
+        self.pick(session, HOST, self.alice_decks[1])
         session.reset_result(2)
         self.assertEqual(self.phase(session), Phase.AWAITING_RESULT)
-        self.assertIsNotNone(session.pending_submission_for(GUEST))
-        session.record_result(self.alice, 2, HOST)
-        self.assertIsNotNone(session.pending_submission_for(GUEST))
+        self.assertEqual(session.revealed_step_count, 4)
 
     def test_duplicate_deck_ids_are_a_validation_error(self):
         session = self.start_session(self.system_template('triad'), self.alice, self.bob)
@@ -1633,12 +1632,9 @@ class ExchangeFlowTests(TradeSecretsTestMixin, TestCase):
         self.pick(self.session, HOST, self.bob_decks[0])
         self.pick(self.session, GUEST, self.bob_decks[1])
         self.session.record_result(self.alice, 2, HOST)
-        self.pick(self.session, HOST, self.alice_decks[1])
         self.pick(self.session, GUEST, self.bob_decks[1])
         self.session.record_result(self.alice, 3, GUEST)
-        self.assertEqual(self.phase(), engine.Phase.SELECTING)
-        self.pick(self.session, HOST, self.alice_decks[1])
-        self.pick(self.session, GUEST, self.alice_decks[0])
+        self.assertEqual(self.session.revealed_step_count, 5)
         self.assertEqual(self.phase(), engine.Phase.COMPLETE)
 
 
@@ -1787,9 +1783,9 @@ class SessionExportTests(HexadBo1Mixin, SessionViewTestCase):
         self.assertEqual(row['TS Ban 1 (Player one)'], str(self.bob_decks[0].id))
         self.assertEqual(row['TS Safe (Player two)'], str(self.bob_decks[1].id))
         self.assertEqual(row['TS Ban 2 (Player two)'], str(self.alice_decks[2].id))
-        self.assertEqual(row['TS Matchup 1 deck brought (Player one)'], str(self.alice_decks[3].id))
+        self.assertEqual(row['TS Matchup 1 deck (Player one)'], str(self.alice_decks[3].id))
         self.assertEqual(row['TS Matchup 1 winner'], 'Banned')
-        self.assertEqual(row['TS Matchup 2 deck brought (Player two)'], str(self.bob_decks[4].id))
+        self.assertEqual(row['TS Matchup 2 deck (Player two)'], str(self.bob_decks[4].id))
         self.assertEqual(row['TS Matchup 2 winner'], 'Player two')
         self.assertEqual(row['TS Matchup 2 score (Player one)'], 3)
         self.assertEqual(row['TS Matchup 2 score (Player two)'], 2)
@@ -1817,7 +1813,7 @@ class SessionExportTests(HexadBo1Mixin, SessionViewTestCase):
 
         self.assertEqual(row['TS Submit 3 (Player one)'], self.joined_ids(self.alice_decks[:3]))
         self.assertEqual(row['TS Ban (Player one)'], '')
-        self.assertEqual(row['TS Game 1 deck brought (Player one)'], '')
+        self.assertEqual(row['TS Game 1 deck (Player one)'], '')
         self.assertEqual(row['TS Game 1 winner'], '')
 
     def test_decks_stay_blank_until_both_seats_have_submitted(self):
@@ -1830,11 +1826,11 @@ class SessionExportTests(HexadBo1Mixin, SessionViewTestCase):
 
     def test_query_count_does_not_grow_with_sessions(self):
         first_session = self.start_hexad_bo1()
-        with self.assertNumQueries(9):
+        with self.assertNumQueries(6):
             SessionExporter([first_session.template_id], [first_session], ';')
 
         sessions = [first_session, self.started_triad(), self.started_triad()]
-        with self.assertNumQueries(9):
+        with self.assertNumQueries(6):
             SessionExporter({session.template_id for session in sessions}, sessions, ';')
 
 
@@ -1852,19 +1848,6 @@ class GameTypeTests(SessionViewTestCase):
         self.pick(session, HOST, self.alice_decks[0])
         self.pick(session, GUEST, self.bob_decks[0])
         return session
-
-    def start_adaptive_game(self, *later_steps):
-        session = self.start_single_game(GameType.ADAPTIVE, *later_steps)
-        self.alice_deck_id = self.session_deck_id(session, self.alice_decks[0])
-        self.bob_deck_id = self.session_deck_id(session, self.bob_decks[0])
-        return session
-
-    def prefer(self, session, host_deck_id, guest_deck_id):
-        session.submit_adaptive_preference(HOST, self.alice, 1, host_deck_id)
-        session.submit_adaptive_preference(GUEST, self.bob, 1, guest_deck_id)
-
-    def plan(self, session):
-        return session.game_plans()[1]
 
     def game_url(self, name, session):
         return reverse(f'trade_secrets:{name}', args=[session.code, 1])
@@ -1893,13 +1876,17 @@ class GameTypeTests(SessionViewTestCase):
     def test_builder_offers_game_types(self):
         self.client.force_login(self.alice)
         response = self.client.get(reverse('trade_secrets:template-create'))
-        self.assertContains(response, 'name="steps-2-type" value="reversal"')
+        for game_type in GameType.values:
+            self.assertContains(response, f'name="steps-2-type" value="{game_type}"')
 
-    def test_reversal_swaps_the_decks_each_player_plays(self):
+    def test_reversal_game_shows_the_deck_each_player_brought_and_keeps_its_label(self):
         session = self.start_single_game(GameType.REVERSAL)
+        session.record_result(self.alice, 1, HOST)
         view = build_session_view(session, self.alice)
-        self.assertEqual(self.featured_deck_names(view.featured_games[0]), [['Bob Deck 1'], ['Alice Deck 1']])
-        self.assertIn('Game 1 (Reversal): Bob Deck 1 (alice) vs Alice Deck 1 (bob)', view.summary_text)
+        self.assertEqual(self.featured_deck_names(view.featured_games[0]), [['Alice Deck 1'], ['Bob Deck 1']])
+        self.assertEqual(view.featured_games[0].type_label, 'Reversal')
+        self.assertEqual([card.badges for seat in view.featured_games[0].seats for card in seat.cards], [[], []])
+        self.assertIn('Game 1 (Reversal): Alice Deck 1 (alice) vs Bob Deck 1 (bob) - alice won', view.summary_text)
 
     def test_reversal_win_counts_for_the_deck_the_winner_brought(self):
         specs = [
@@ -1915,170 +1902,156 @@ class GameTypeTests(SessionViewTestCase):
         self.assertTrue(state.decks[self.session_deck_id(session, self.alice_decks[0])].is_spent)
         self.assertFalse(state.decks[self.session_deck_id(session, self.bob_decks[0])].is_spent)
 
-    def test_adaptive_game_decides_a_first_deck_when_revealed(self):
-        session = self.start_adaptive_game()
-        setup = AdaptiveSetup.objects.get(session=session)
-        self.assertIn(setup.first_deck_id, {self.alice_deck_id, self.bob_deck_id})
-        self.assertEqual(self.plan(session).stage, AdaptiveStage.PREFERENCE)
-        self.client.force_login(self.bob)
-        self.assertContains(self.client.get(self.detail_url(session)), 'Goes first')
-
-    def test_adaptive_preference_stays_secret_until_both_choose(self):
-        session = self.start_adaptive_game()
-        session.submit_adaptive_preference(HOST, self.alice, 1, self.alice_deck_id)
-        self.client.force_login(self.bob)
-        response = self.client.get(self.detail_url(session))
-        self.assertContains(response, 'Which deck do you want to play?')
-        self.assertNotContains(response, 'data-locked')
-        self.client.force_login(self.alice)
-        self.assertContains(self.client.get(self.detail_url(session)), 'data-locked')
-
-    def test_different_preferences_assign_decks_without_chains(self):
-        session = self.start_adaptive_game()
-        self.prefer(session, self.bob_deck_id, self.alice_deck_id)
-        plan = self.plan(session)
-        self.assertEqual(plan.played_by_seat, {HOST: self.bob_deck_id, GUEST: self.alice_deck_id})
-        self.assertIsNone(plan.chains)
-
-    def test_same_preference_opens_bidding_for_the_player_who_did_not_bring_it(self):
-        session = self.start_adaptive_game()
-        self.prefer(session, self.alice_deck_id, self.alice_deck_id)
-        plan = self.plan(session)
-        self.assertEqual(plan.stage, AdaptiveStage.BIDDING)
-        self.assertEqual((plan.high_bidder, plan.high_bid, plan.seat_to_bid), (HOST, 0, GUEST))
-        with self.assertRaises(ValidationError):
-            session.submit_chain_bid(HOST, self.alice, 1, 1)
-
-    def test_bids_must_increase_and_stay_within_the_limit(self):
-        session = self.start_adaptive_game()
-        self.prefer(session, self.alice_deck_id, self.alice_deck_id)
-        self.client.force_login(self.bob)
-        self.assertContains(self.client.get(self.detail_url(session)), '<strong>alice</strong> leads with 0 chains.')
-        session.submit_chain_bid(GUEST, self.bob, 1, 2)
-        self.assertContains(self.client.get(self.detail_url(session)), '<strong>You</strong> bid 2 chains.')
-        self.client.force_login(self.alice)
-        self.assertContains(self.client.get(self.detail_url(session)), '<strong>bob</strong> bids 2 chains.')
-        with self.assertRaises(ValidationError):
-            session.submit_chain_bid(HOST, self.alice, 1, 2)
-        with self.assertRaises(ValidationError):
-            session.submit_chain_bid(HOST, self.alice, 1, 100)
-        session.submit_chain_bid(HOST, self.alice, 1, 7)
-        self.assertEqual(self.plan(session).high_bid, 7)
-
-    def test_pass_gives_the_deck_and_chains_to_the_high_bidder(self):
-        session = self.start_adaptive_game()
-        self.prefer(session, self.alice_deck_id, self.alice_deck_id)
-        self.client.force_login(self.bob)
-        self.htmx_post(self.game_url('session-chain-bid', session), {'move': 'bid', 'chains': 2})
-        self.client.force_login(self.alice)
-        self.htmx_post(self.game_url('session-chain-bid', session), {'move': 'bid', 'chains': 5})
-        self.client.force_login(self.bob)
-        response = self.htmx_post(self.game_url('session-chain-bid', session), {'move': 'pass', 'chains': 6})
-        plan = self.plan(session)
-        self.assertEqual(plan.played_by_seat, {HOST: self.alice_deck_id, GUEST: self.bob_deck_id})
-        self.assertEqual((plan.chained_seat, plan.chains), (HOST, 5))
-        self.assertContains(response, '5 chains')
-        view = build_session_view(session, self.bob)
-        self.assertIn('Game 1 (Adaptive): Alice Deck 1 (alice, 5 chains) vs Bob Deck 1 (bob)', view.summary_text)
-
-    def test_immediate_pass_leaves_the_owner_with_no_chains(self):
-        session = self.start_adaptive_game()
-        self.prefer(session, self.bob_deck_id, self.bob_deck_id)
-        session.submit_chain_bid(HOST, self.alice, 1, None)
-        plan = self.plan(session)
-        self.assertEqual((plan.chained_seat, plan.chains), (GUEST, 0))
-        self.assertEqual(plan.played_by_seat[HOST], self.alice_deck_id)
-
-    def test_preference_view_locks_in_and_rejects_spectators(self):
-        session = self.start_adaptive_game()
-        self.client.force_login(self.carol)
-        response = self.client.post(
-            self.game_url('session-adaptive-preference', session), {'deck': self.alice_deck_id})
-        self.assertEqual(response.status_code, 403)
-        self.client.force_login(self.alice)
-        self.htmx_post(self.game_url('session-adaptive-preference', session), {'deck': self.bob_deck_id})
-        self.assertEqual(session.adaptive_preferences.get(seat=HOST).deck_id, self.bob_deck_id)
-        response = self.htmx_post(self.game_url('session-adaptive-preference', session), {'deck': 0})
-        self.assertContains(response, 'Choose one of the two decks brought to this game.')
-
-    def test_result_form_is_prefilled_from_the_finished_bidding(self):
-        session = self.start_adaptive_game()
-        self.prefer(session, self.alice_deck_id, self.alice_deck_id)
-        session.submit_chain_bid(GUEST, self.bob, 1, 4)
-        session.submit_chain_bid(HOST, self.alice, 1, None)
-        self.client.force_login(self.alice)
-        response = self.client.get(self.game_url('session-result', session))
-        self.assertContains(response, f'name="contested_deck" value="{self.alice_deck_id}" checked')
-        self.assertContains(response, f'name="host_played_deck" value="{self.bob_deck_id}" checked')
-        self.assertContains(response, 'name="chain_bid" id="id_chain_bid" value="4"')
-
-    def test_result_form_does_not_prefill_an_unfinished_bid(self):
-        session = self.start_adaptive_game()
-        self.prefer(session, self.alice_deck_id, self.alice_deck_id)
-        session.submit_chain_bid(GUEST, self.bob, 1, 4)
-        self.client.force_login(self.alice)
-        response = self.client.get(self.game_url('session-result', session))
-        self.assertContains(response, f'name="contested_deck" value="{self.alice_deck_id}" checked')
-        self.assertContains(response, 'name="chain_bid" id="id_chain_bid" value=""')
-
-    def test_result_can_report_a_game_settled_at_the_table(self):
-        session = self.start_adaptive_game()
-        self.client.force_login(self.alice)
-        response = self.htmx_post(self.game_url('session-result', session), {
-            'winner_seat': HOST, 'contested_deck': self.bob_deck_id, 'chain_bid': 3,
-            'host_played_deck': self.bob_deck_id, 'first_deck': '',
-        })
-        self.assertContains(response, '3 chains')
-        plan = self.plan(session)
-        self.assertEqual((plan.chained_seat, plan.chains), (HOST, 3))
-        self.assertIsNone(plan.first_deck_id)
-        with self.assertRaises(ValidationError):
-            session.submit_adaptive_preference(HOST, self.alice, 1, self.alice_deck_id)
-
-    def test_result_requires_the_adaptive_facts(self):
-        session = self.start_adaptive_game()
-        with self.assertRaises(ValidationError):
-            session.record_result(self.alice, 1, HOST)
-        self.client.force_login(self.alice)
-        response = self.htmx_post(self.game_url('session-result', session), {
-            'winner_seat': HOST, 'contested_deck': self.bob_deck_id, 'host_played_deck': self.bob_deck_id,
-        })
-        self.assertContains(response, 'Enter the final chain bid.')
-        self.assertFalse(session.results.exists())
-        self.htmx_post(self.game_url('session-result', session), {
-            'winner_seat': HOST, 'contested_deck': 'different', 'chain_bid': 9,
-            'host_played_deck': self.alice_deck_id,
-        })
-        result = session.results.get()
-        self.assertEqual((result.contested_deck_id, result.chain_bid), (None, None))
-
-    def test_unsettled_adaptive_game_does_not_block_later_steps(self):
-        session = self.start_adaptive_game(StepSpec(2, 'play', 1, 'ineligible'))
+    def test_adaptive_game_is_played_like_archon_and_keeps_its_label(self):
+        session = self.start_single_game(GameType.ADAPTIVE)
+        session.record_result(self.alice, 1, HOST)
         view = build_session_view(session, self.alice)
-        self.assertEqual(view.phase, Phase.SELECTING)
-        self.assertEqual([game.label for game in view.featured_games], ['Game 1'])
-        self.assertTrue(view.featured_games[0].adaptive.is_choosing)
-        self.pick(session, HOST, self.alice_decks[1])
-        self.pick(session, GUEST, self.bob_decks[1])
-        self.assertEqual(session.revealed_step_count, 3)
+        self.assertEqual(view.phase, Phase.COMPLETE)
+        self.assertEqual(self.featured_deck_names(view.featured_games[0]), [['Alice Deck 1'], ['Bob Deck 1']])
+        self.assertEqual(view.featured_games[0].type_label, 'Adaptive')
+        self.assertIn('Game 1 (Adaptive): Alice Deck 1 (alice) vs Bob Deck 1 (bob) - alice won', view.summary_text)
 
-    def test_archon_games_get_no_card_before_the_finish(self):
-        session = self.start_single_game(GameType.ARCHON, StepSpec(2, 'play', 1, 'ineligible'))
-        self.assertEqual(build_session_view(session, self.alice).featured_games, [])
+    def test_adaptive_result_form_only_asks_for_the_winner_and_score(self):
+        session = self.start_single_game(GameType.ADAPTIVE)
+        self.client.force_login(self.alice)
+        response = self.client.get(self.game_url('session-result', session))
+        self.assertNotContains(response, 'Adaptive details')
+        self.htmx_post(self.game_url('session-result', session), {'winner_seat': GUEST})
+        self.assertEqual(session.results.get().winner_seat, GUEST)
 
-    def test_export_reports_type_played_decks_chains_and_first_deck(self):
-        session = self.start_adaptive_game()
-        setup = AdaptiveSetup.objects.select_related('first_deck').get(session=session)
-        session.record_result(self.alice, 1, GUEST, adaptive_report=AdaptiveReport(
-            host_played_deck_id=self.bob_deck_id, contested_deck_id=self.bob_deck_id, chain_bid=6,
-            first_deck_id=setup.first_deck_id))
+    def test_other_game_is_presented_without_a_type_label(self):
+        session = self.start_single_game(GameType.OTHER)
+        view = build_session_view(session, self.alice)
+        self.assertEqual(view.featured_games[0].type_label, '')
+        self.assertEqual(view.history[-1].subtitle, '')
+        self.assertIn('Game 1: Alice Deck 1 (alice) vs Bob Deck 1 (bob)', view.summary_text)
+        self.client.force_login(self.alice)
+        self.assertNotContains(self.client.get(self.detail_url(session)), 'ts-game__type')
+
+    def test_labelled_game_shows_its_type_on_the_game_card(self):
+        session = self.start_single_game(GameType.ADAPTIVE)
+        self.client.force_login(self.alice)
+        self.assertContains(self.client.get(self.detail_url(session)), 'ts-game__type">Adaptive<')
+
+    def test_template_detail_names_the_game_type_unless_it_is_other(self):
+        self.client.force_login(self.alice)
+        adaptive_session = self.start_single_game(GameType.ADAPTIVE)
+        other_session = self.start_single_game(GameType.OTHER)
+        template_url = 'trade_secrets:template-detail'
+        self.assertContains(
+            self.client.get(reverse(template_url, args=[adaptive_session.template.code])), 'Adaptive game · ')
+        self.assertNotContains(self.client.get(reverse(template_url, args=[other_session.template.code])), 'Other game')
+
+    def test_no_game_type_gets_a_card_before_the_finish(self):
+        for game_type in GameType.values:
+            with self.subTest(game_type=game_type):
+                session = self.start_single_game(game_type, StepSpec(2, 'play', 1, 'ineligible'))
+                self.assertEqual(build_session_view(session, self.alice).featured_games, [])
+
+    def test_export_adds_only_the_game_type_to_a_play_step(self):
+        session = self.start_single_game(GameType.ADAPTIVE)
+        session.record_result(self.alice, 1, GUEST)
         exporter = SessionExporter([session.template_id], [session], ';')
         headers = exporter.headers_for(session.template_id, 'TS', ('One', 'Two'))
         row = dict(zip(headers, exporter.cells_for(session, (HOST, GUEST), {HOST: 'One', GUEST: 'Two'})))
+        self.assertEqual(headers[2:], [
+            'TS Game 1 type', 'TS Game 1 deck (One)', 'TS Game 1 deck (Two)', 'TS Game 1 winner',
+            'TS Game 1 score (One)', 'TS Game 1 score (Two)'])
         self.assertEqual(row['TS Game 1 type'], 'Adaptive')
-        self.assertEqual(row['TS Game 1 deck brought (One)'], str(self.alice_decks[0].id))
-        self.assertEqual(row['TS Game 1 deck played (One)'], str(self.bob_decks[0].id))
-        self.assertEqual(row['TS Game 1 deck played (Two)'], str(self.alice_decks[0].id))
-        self.assertEqual((row['TS Game 1 chains (One)'], row['TS Game 1 chains (Two)']), (6, ''))
-        self.assertEqual(row['TS Game 1 first deck'], str(setup.first_deck.deck_id))
+        self.assertEqual(row['TS Game 1 deck (One)'], str(self.alice_decks[0].id))
+        self.assertEqual(row['TS Game 1 deck (Two)'], str(self.bob_decks[0].id))
         self.assertEqual(row['TS Game 1 winner'], 'Two')
+
+    def test_export_labels_other_games(self):
+        session = self.start_single_game(GameType.OTHER)
+        exporter = SessionExporter([session.template_id], [session], ';')
+        headers = exporter.headers_for(session.template_id, 'TS', ('One', 'Two'))
+        row = dict(zip(headers, exporter.cells_for(session, (HOST, GUEST), {HOST: 'One', GUEST: 'Two'})))
+        self.assertEqual(row['TS Game 1 type'], 'Other')
+
+
+@override_settings(STORAGES=SIMPLE_STORAGES, PASSWORD_HASHERS=FAST_PASSWORD_HASHERS)
+class AutomaticPickTests(SessionViewTestCase):
+    def start_tesla(self):
+        specs = [
+            StepSpec(0, 'submit', 1),
+            StepSpec(1, 'play', 1, 'eligible', GameType.ARCHON),
+            StepSpec(2, 'play', 1, 'eligible', GameType.REVERSAL),
+        ]
+        template = SessionTemplate.create_with_steps(self.alice, 'Tesla', '', specs)
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks[:1], self.bob_decks[:1])
+        return session
+
+    def automatic_seats(self, session, step_order):
+        return set(session.submissions.filter(
+            step__order=step_order, is_automatic=True).values_list('seat', flat=True))
+
+    def test_tesla_completes_as_soon_as_decks_are_in(self):
+        session = self.start_tesla()
+        view = build_session_view(session, self.alice)
+        self.assertEqual(session.revealed_step_count, 3)
+        self.assertEqual(view.phase, Phase.COMPLETE)
+        self.assertEqual([game.label for game in view.featured_games], ['Game 1', 'Game 2'])
+        self.assertEqual(self.automatic_seats(session, 1), {HOST, GUEST})
+        self.assertIn('Game 2 (Reversal): Alice Deck 1 (alice) vs Bob Deck 1 (bob)', view.summary_text)
+
+    def test_history_says_which_picks_were_automatic(self):
+        session = self.start_tesla()
+        self.client.force_login(self.alice)
+        response = self.client.get(self.detail_url(session))
+        self.assertContains(response, 'Only one choice each, so these were locked in automatically.', count=2)
+
+    def test_real_choices_are_never_made_automatically(self):
+        session = self.started_triad()
+        self.assertEqual(session.revealed_step_count, 1)
+        self.assertFalse(session.submissions.filter(is_automatic=True).exists())
+
+    def test_only_the_player_without_a_choice_is_locked_in(self):
+        template = self.make_template(self.alice, 'submit:2', 'play:losing_only', 'play:losing_only')
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks[:2], self.bob_decks[:2])
+        self.pick(session, HOST, self.alice_decks[0])
+        self.pick(session, GUEST, self.bob_decks[0])
+        session.record_result(self.alice, 1, HOST)
+        self.assertEqual(self.automatic_seats(session, 2), {HOST})
+        self.assertEqual(session.revealed_step_count, 2)
+        self.pick(session, GUEST, self.bob_decks[1])
+        self.assertEqual(session.revealed_step_count, 3)
+        view = build_session_view(session, self.bob)
+        self.assertEqual(
+            view.history[-1].automatic_note, 'Only one choice for alice, so it was locked in automatically.')
+
+    def test_automatic_pick_is_withdrawn_when_a_reset_restores_the_choice(self):
+        template = self.make_template(self.alice, 'submit:2', 'play:losing_only', 'play:losing_only')
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks[:2], self.bob_decks[:2])
+        self.pick(session, HOST, self.alice_decks[0])
+        self.pick(session, GUEST, self.bob_decks[0])
+        session.record_result(self.alice, 1, HOST)
+        self.assertEqual(self.automatic_seats(session, 2), {HOST})
+        session.reset_result(1)
+        self.assertFalse(session.submissions.filter(step__order=2).exists())
+
+    def test_forced_bans_are_automatic_too(self):
+        template = self.make_template(self.alice, 'submit:3', 'ban:1', 'ban:2')
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks[:3], self.bob_decks[:3])
+        self.pick(session, HOST, self.bob_decks[0])
+        self.pick(session, GUEST, self.alice_decks[0])
+        self.assertEqual(self.automatic_seats(session, 2), {HOST, GUEST})
+        self.assertEqual(session.revealed_step_count, 3)
+
+    def test_recording_a_result_keeps_later_automatic_games_that_still_stand(self):
+        session = self.start_tesla()
+        submission_ids = set(session.submissions.values_list('id', flat=True))
+        session.record_result(self.alice, 1, HOST)
+        self.assertEqual(session.revealed_step_count, 3)
+        self.assertEqual(set(session.submissions.values_list('id', flat=True)), submission_ids)
+
+    def test_automatic_picks_wait_for_a_blocking_result(self):
+        template = self.make_template(self.alice, 'submit:1', 'play:losing_only', 'play:eligible')
+        session = self.start_session(template, self.alice, self.bob)
+        self.submit_both(session, self.alice_decks[:1], self.bob_decks[:1])
+        self.assertEqual(session.revealed_step_count, 2)
+        self.assertEqual(build_session_view(session, self.alice).phase, Phase.AWAITING_RESULT)

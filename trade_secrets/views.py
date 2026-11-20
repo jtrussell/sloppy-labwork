@@ -16,8 +16,8 @@ from .deck_sources import (
     SOURCE_LINKS, build_deck_source_form, get_deck_source_errors, own_lineups, versions_with_deck_counts,
 )
 from .forms import (
-    ChainBidForm, DeckLinksForm, PickForm, PlayResultForm, TemplateDetailsForm,
-    adaptive_result_initial, apply_builder_action, default_builder_steps, parse_builder_steps,
+    DeckLinksForm, PickForm, PlayResultForm, TemplateDetailsForm,
+    apply_builder_action, default_builder_steps, parse_builder_steps,
 )
 from .models import Session, SessionTemplate
 from .session_view import ACTION_ICONS, ActionState, build_session_view, template_rail, template_summary
@@ -65,17 +65,17 @@ def step_detail(step):
     if step.is_matchup_ban:
         return 'Each player bans one matchup; banned matchups are not played'
     if step.is_play:
-        return (
-            f'{engine.GameType(step.game_type).label} game · '
-            f'Played decks eligible again: {engine.PlayedDeckRule(step.played_deck_rule).label}')
+        played_deck_detail = f'Played decks eligible again: {engine.PlayedDeckRule(step.played_deck_rule).label}'
+        type_label = engine.game_type_display_label(step.game_type)
+        return f'{type_label} game · {played_deck_detail}' if type_label else played_deck_detail
     return engine.wave_detail(step)
 
 
 GAME_TYPE_NOTES = {
     engine.GameType.ARCHON: 'Each player plays the deck they pick.',
-    engine.GameType.REVERSAL: "Players swap decks: each plays the deck their opponent picked.",
-    engine.GameType.ADAPTIVE: (
-        'Players secretly choose which of the two decks to play, and bid chains if they want the same one.'),
+    engine.GameType.REVERSAL: 'Each player picks a deck. Players swap decks when they sit down to play.',
+    engine.GameType.ADAPTIVE: 'Each player picks a deck. Players settle who plays which deck themselves.',
+    engine.GameType.OTHER: 'For the mavericks out there.',
 }
 
 
@@ -389,16 +389,6 @@ def session_pick(request, session_code):
     return respond_after_session_action(request, session)
 
 
-def adaptive_deck_choices(session, plan):
-    if plan is None or not plan.is_adaptive:
-        return []
-    names_by_id = {
-        session_deck.id: session_deck.deck.name or str(session_deck.deck_id)
-        for session_deck in session.decks.filter(id__in=plan.brought_by_seat.values()).select_related('deck')
-    }
-    return [(plan.brought_by_seat[seat], names_by_id[plan.brought_by_seat[seat]]) for seat in engine.SEATS]
-
-
 def result_form_context(session, step_order, form):
     step = get_object_or_404(session.template.steps, order=step_order, action=engine.Action.PLAY)
     result = session.results.filter(step=step).first()
@@ -410,8 +400,6 @@ def result_form_context(session, step_order, form):
         'game_label': engine.game_label(step_specs, step_specs[step_order]),
         'has_result': result is not None,
         'warns_about_eligibility': step.played_deck_rule == engine.PlayedDeckRule.LOSING_ONLY,
-        'other_player_note': f'{session.seat_names()[engine.Seat.GUEST]} played the other deck.',
-        'adaptive_details_open': form.is_bound or not form.initial.get('host_played_deck'),
     }
 
 
@@ -423,8 +411,6 @@ def session_result(request, session_code, step_order):
     if not session.is_revealed_game(step_order):
         raise Http404
     seat_names = session.seat_names()
-    plan = session.game_plans().get(step_order)
-    deck_choices = adaptive_deck_choices(session, plan)
 
     if request.method == 'GET':
         result = session.results.filter(step__order=step_order).first()
@@ -433,17 +419,15 @@ def session_result(request, session_code, step_order):
             'host_score': result.host_score,
             'guest_score': result.guest_score,
         } if result else {}
-        if deck_choices:
-            initial.update(adaptive_result_initial(plan))
-        form = PlayResultForm(initial=initial, seat_names=seat_names, adaptive_deck_choices=deck_choices)
+        form = PlayResultForm(initial=initial, seat_names=seat_names)
         return render_result_form(request, session, step_order, form)
 
-    form = PlayResultForm(request.POST, seat_names=seat_names, adaptive_deck_choices=deck_choices)
+    form = PlayResultForm(request.POST, seat_names=seat_names)
     if form.is_valid():
         try:
             session.record_result(
                 request.user, step_order, form.cleaned_data['winner_seat'],
-                form.cleaned_data['host_score'], form.cleaned_data['guest_score'], form.adaptive_report())
+                form.cleaned_data['host_score'], form.cleaned_data['guest_score'])
             return respond_after_session_action(request, session)
         except ValidationError as error:
             form.add_error(None, error)
@@ -467,34 +451,6 @@ def session_result_reset(request, session_code, step_order):
     require_seat(session, request.user)
     try:
         session.reset_result(step_order)
-    except ValidationError as error:
-        return respond_after_session_action(request, session, validation_messages(error))
-    return respond_after_session_action(request, session)
-
-
-@login_required
-@require_POST
-def session_adaptive_preference(request, session_code, step_order):
-    session = get_session(session_code)
-    seat = require_seat(session, request.user)
-    try:
-        session.submit_adaptive_preference(seat, request.user, step_order, parse_integer(request.POST.get('deck')))
-    except ValidationError as error:
-        return respond_after_session_action(request, session, validation_messages(error))
-    return respond_after_session_action(request, session)
-
-
-@login_required
-@require_POST
-def session_chain_bid(request, session_code, step_order):
-    session = get_session(session_code)
-    seat = require_seat(session, request.user)
-    is_passing = request.POST.get('move') == 'pass'
-    form = ChainBidForm(request.POST)
-    if not is_passing and not form.is_valid():
-        return respond_after_session_action(request, session, ['Enter a whole number of chains to bid.'])
-    try:
-        session.submit_chain_bid(seat, request.user, step_order, None if is_passing else form.cleaned_data['chains'])
     except ValidationError as error:
         return respond_after_session_action(request, session, validation_messages(error))
     return respond_after_session_action(request, session)
