@@ -1952,7 +1952,12 @@ class GameTypeTests(SessionViewTestCase):
     def test_bids_must_increase_and_stay_within_the_limit(self):
         session = self.start_adaptive_game()
         self.prefer(session, self.alice_deck_id, self.alice_deck_id)
+        self.client.force_login(self.bob)
+        self.assertContains(self.client.get(self.detail_url(session)), '<strong>alice</strong> leads with 0 chains.')
         session.submit_chain_bid(GUEST, self.bob, 1, 2)
+        self.assertContains(self.client.get(self.detail_url(session)), '<strong>You</strong> bid 2 chains.')
+        self.client.force_login(self.alice)
+        self.assertContains(self.client.get(self.detail_url(session)), '<strong>bob</strong> bids 2 chains.')
         with self.assertRaises(ValidationError):
             session.submit_chain_bid(HOST, self.alice, 1, 2)
         with self.assertRaises(ValidationError):

@@ -40,7 +40,7 @@
   {% else %}
   <div class="ts-adaptive" aria-live="polite">
     <p class="ts-adaptive__prompt">{% if panel.can_act %}You both want{% else %}Both players want{% endif %} {{ panel.contested_deck_name }}</p>
-    <p class="ts-adaptive__hint"><strong>{{ panel.leader_name }}</strong> {% if panel.is_viewer_leading %}lead{% else %}leads{% endif %} with {{ panel.high_bid }} chain{{ panel.high_bid|pluralize }}. The highest bidder plays it with that many chains.</p>
+    <p class="ts-adaptive__hint"><strong>{{ panel.leader_name }}</strong> {% if panel.is_opening_bid %}{% if panel.is_viewer_leading %}lead{% else %}leads{% endif %} with{% elif panel.is_viewer_leading %}bid{% else %}bids{% endif %} {{ panel.high_bid }} chain{{ panel.high_bid|pluralize }}. The highest bidder plays it with that many chains.</p>
     <ol class="ts-bid-trail" role="list" aria-label="Bids so far">
       {% for bid in panel.bid_trail %}
       <li class="ts-bid-trail__bid"><span class="ts-bid-trail__chains">{{ bid.chains }}</span><span class="ts-bid-trail__who">{{ bid.name }}</span></li>

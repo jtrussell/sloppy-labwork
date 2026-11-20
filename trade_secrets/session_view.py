@@ -113,6 +113,7 @@ class AdaptivePanel:
     contested_deck_name: str = ''
     leader_name: str = ''
     is_viewer_leading: bool = False
+    is_opening_bid: bool = True
     high_bid: int = 0
     bid_trail: list = field(default_factory=list)
     is_viewer_turn: bool = False
@@ -509,6 +510,7 @@ class SessionViewBuilder:
         panel.contested_deck_name = self.deck_names()[plan.contested_deck_id]
         panel.leader_name = self.viewer_label(plan.high_bidder)
         panel.is_viewer_leading = plan.high_bidder == self.viewer_seat
+        panel.is_opening_bid = not plan.bids
         panel.high_bid = plan.high_bid
         panel.bid_trail = [BidTrailEntry(self.viewer_label(opening_seat), engine.OPENING_CHAIN_BID)] + [
             BidTrailEntry(self.viewer_label(bid.seat), bid.chains) for bid in plan.bids]
