@@ -897,6 +897,92 @@
 }
 
 
+/* Tournament report */
+.ts-tournament {
+  min-height: 5.5rem;
+  margin-bottom: var(--space-5);
+}
+
+.ts-tournament__panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+}
+
+.ts-tournament__panel--differs {
+  border-color: var(--color-highlight);
+}
+
+.ts-tournament__body {
+  display: grid;
+  flex: 1 1 14rem;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ts-tournament__title,
+.ts-tournament__meta,
+.ts-tournament__status {
+  margin: 0;
+}
+
+.ts-tournament__title {
+  font-weight: var(--weight-semibold);
+}
+
+.ts-tournament__meta {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.ts-tournament__status {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.ts-tournament__status .icon {
+  flex: none;
+  align-self: center;
+  color: var(--color-success);
+}
+
+.ts-tournament__panel--differs .ts-tournament__status .icon {
+  color: var(--color-highlight);
+}
+
+.ts-tournament__panel .button {
+  flex: 1 1 auto;
+  min-height: var(--tap-target);
+  margin: 0;
+}
+
+.ts-tournament-report__context {
+  margin: 0;
+}
+
+.ts-tournament-report__note {
+  margin: var(--space-1) 0 var(--space-5);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.ts-tournament-report .dialog__footer .button {
+  flex: 1;
+  min-height: var(--tap-target);
+}
+
+@media (min-width: 550px) {
+  .ts-tournament__panel .button {
+    flex: none;
+  }
+}
+
+
 /* Copy results */
 .ts-copy {
   margin-bottom: var(--space-5);

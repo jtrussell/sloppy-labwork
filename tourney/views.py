@@ -28,8 +28,9 @@ from .forms import (
     PlayerRegistrationForm, AddMatchForm, SelectPlaygroupForm, TournamentExportForm
 )
 from .result_forms import (
-    build_report_dialog_context, build_result_form_picker_context, build_saved_result_response_form,
-    copy_result_form_for_tournament, RESULT_FORM_INLINE_ERROR_MESSAGE, get_result_report_error_message
+    build_report_dialog_context, build_result_form_picker_context, build_result_response_form,
+    build_saved_result_response_form, copy_result_form_for_tournament, get_active_result_form,
+    RESULT_FORM_INLINE_ERROR_MESSAGE, get_result_report_error_message
 )
 from .reporting import (
     ReportError, can_user_add_match, can_user_edit_match, describe_winner, is_user_in_match,
@@ -38,6 +39,11 @@ from .reporting import (
 from .exports import write_matches_csv
 from .lineups import build_registration_lineup_context
 from .match_sessions import get_or_create_match_session
+from .session_reports import (
+    TIE_WINNER_VALUE, build_player_slots, build_report_panel, can_user_report_from_session,
+    choose_prefilled_values, describe_prefill_source, describe_result, does_stage_report_scores,
+    get_reported_result, parse_submitted_values, summarize_session_outcome
+)
 from pmc.models import Playgroup, Event, EventResult, PlaygroupEvent, RankingPointsService
 from trade_secrets.deck_sources import build_deck_source_form, get_deck_source_errors
 
@@ -1154,6 +1160,95 @@ def open_match_session(request, tournament_code, match_id):
     if session is None:
         raise Http404
     return redirect_to(request, reverse('trade_secrets:session-detail', args=[session.code]))
+
+
+def get_session_linked_match(tournament_code, match_id):
+    return get_object_or_404(
+        Match.objects.select_related(
+            'round__stage__tournament', 'player_one__player__user', 'player_two__player__user',
+            'trade_secrets_session__template', 'result__winner__player'),
+        id=match_id, round__stage__tournament__code=tournament_code,
+        trade_secrets_session__isnull=False, player_two__isnull=False)
+
+
+def get_session_report_url(match):
+    return reverse('tourney:tourney-session-report', args=[match.round.stage.tournament.code, match.id])
+
+
+def render_session_report_panel(request, match):
+    tournament = match.round.stage.tournament
+    return render(request, 'tourney/partials/session-report-panel.html', {
+        'tournament': tournament,
+        'match': match,
+        'panel': build_report_panel(match, request.user),
+        'matches_url': reverse('tourney:tourney-detail-matches', kwargs={'tournament_code': tournament.code}),
+        'report_url': get_session_report_url(match),
+    })
+
+
+def render_session_report_form(request, match, values, outcome, response_form, error_messages=()):
+    tournament = match.round.stage.tournament
+    stage = match.round.stage
+    reported_result = get_reported_result(match)
+    template_name = 'tourney/session-report-form.html'
+    if request.htmx:
+        template_name += '#form'
+    return render(request, template_name, {
+        'tournament': tournament,
+        'match': match,
+        'session': match.trade_secrets_session,
+        'report_url': get_session_report_url(match),
+        'player_slots': build_player_slots(match, values),
+        'shows_scores': does_stage_report_scores(stage),
+        'allows_ties': stage.are_ties_allowed,
+        'is_tie_selected': values.is_tie,
+        'tie_winner_value': TIE_WINNER_VALUE,
+        'prefill_note': describe_prefill_source(match, outcome),
+        'reported_summary': describe_result(reported_result) if reported_result else '',
+        'error_messages': error_messages,
+        'is_admin': tournament.is_user_admin(request.user),
+        'active_result_form': get_active_result_form(tournament),
+        'response_form': response_form,
+    })
+
+
+@require_GET
+def session_report_panel(request, tournament_code, match_id):
+    return render_session_report_panel(request, get_session_linked_match(tournament_code, match_id))
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def session_report(request, tournament_code, match_id):
+    match = get_session_linked_match(tournament_code, match_id)
+    tournament = match.round.stage.tournament
+    if not can_user_report_from_session(match, request.user):
+        raise PermissionDenied
+    is_admin = tournament.is_user_admin(request.user)
+    outcome = summarize_session_outcome(match)
+
+    if request.method == 'GET':
+        return render_session_report_form(
+            request, match, choose_prefilled_values(match, outcome), outcome,
+            build_saved_result_response_form(tournament, request.user, is_admin, match))
+
+    try:
+        report_paired_match_result(match, request.user, request.POST)
+    except ReportError as report_error:
+        response_form = report_error.response_form or build_result_response_form(
+            tournament, request.user, is_admin, request.POST)
+        response = render_session_report_form(
+            request, match, parse_submitted_values(match, request.POST), outcome,
+            response_form, report_error.error_messages)
+        if request.htmx:
+            response['HX-Retarget'] = '#ts-dialog'
+            response['HX-Reswap'] = 'innerHTML'
+        return response
+
+    messages.success(request, f'Result reported to {tournament.name}.')
+    if request.htmx:
+        return render_session_report_panel(request, get_session_linked_match(tournament_code, match_id))
+    return HttpResponseRedirect(reverse('trade_secrets:session-detail', args=[match.trade_secrets_session.code]))
 
 
 @login_required

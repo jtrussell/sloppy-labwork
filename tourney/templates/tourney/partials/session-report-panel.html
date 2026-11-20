@@ -1,0 +1,23 @@
+<div class="ts-tournament__panel surface{% if panel.state == 'differs' %} ts-tournament__panel--differs{% endif %}">
+  <div class="ts-tournament__body">
+    <p class="ts-tournament__title"><a href="{{ matches_url }}">{{ tournament.name }}</a></p>
+    <p class="ts-tournament__meta">{{ match.round.stage.name }} · Round {{ match.round.order }}</p>
+    <p class="ts-tournament__status" aria-live="polite">
+      {% if panel.state == 'unreported' %}
+      <span class="text-muted">No result reported to the tournament yet.</span>
+      {% elif panel.state == 'reported' %}
+      {% include "components/icon.html" with name='check' %}<span>Reported: <strong>{{ panel.result_summary }}</strong></span>
+      {% else %}
+      {% include "components/icon.html" with name='alert' %}<span>Tournament result differs from this session. Reported: <strong>{{ panel.result_summary }}</strong></span>
+      {% endif %}
+    </p>
+    {% if panel.is_locked %}
+    <p class="ts-tournament__meta">This result can only be changed during its round. Ask an organizer to update it.</p>
+    {% endif %}
+  </div>
+  {% if panel.can_report %}
+  <button type="button" class="button{% if panel.state != 'reported' %} button-primary{% endif %}" hx-get="{{ report_url }}" hx-target="#ts-dialog">
+    {% if panel.state == 'unreported' %}Report result{% elif panel.state == 'reported' %}Edit{% else %}Update{% endif %}
+  </button>
+  {% endif %}
+</div>

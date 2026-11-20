@@ -5,9 +5,10 @@ from ghostform.exports import (
 )
 from ghostform.hooks import find_latest_linked_responses
 from ghostform.models import CSV_SELECTION_DELIMITER
-from trade_secrets.engine import Seat, opponent_of
+from trade_secrets.engine import opponent_of
 from trade_secrets.exports import SessionExporter
 
+from .match_sessions import get_player_one_seat
 from .models import Match
 from .result_forms import get_result_context_key
 
@@ -87,13 +88,6 @@ class ResultFormColumns:
             for question in self.questions
             for cell in get_question_cells(question, answers_by_question_id.get(question.id))
         ]
-
-
-def get_player_one_seat(match):
-    session = match.trade_secrets_session
-    if match.player_one.player.user_id == session.guest_id:
-        return Seat.GUEST
-    return Seat.HOST
 
 
 class TradeSecretsColumns:

@@ -5,6 +5,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'tourney/report-dialog.css' %}">
+<link rel="stylesheet" href="{% static 'ghostform/main.css' %}">
 <link rel="stylesheet" href="{% static 'trade_secrets/main.css' %}">
 {% endblock %}
 
@@ -220,6 +221,12 @@
     {% for lineup in view.lineups %}{% include 'trade_secrets/partials/lineup.html' %}{% endfor %}
   {% endif %}
 
+  {% with tourney_match=session.tourney_match %}{% if tourney_match %}
+  <div id="ts-tournament-report" class="ts-tournament"
+       hx-get="{% url 'tourney:tourney-session-report-panel' tourney_match.round.stage.tournament.code tourney_match.id %}"
+       hx-trigger="load" hx-swap="innerHTML"></div>
+  {% endif %}{% endwith %}
+
   {% if view.summary_text %}
   <div class="ts-copy{% if view.is_finished %} ts-copy--primary{% endif %}">
     <textarea id="ts-results-text" class="ts-copy__text" readonly hidden aria-label="Results">{{ view.summary_text }}</textarea>
@@ -283,4 +290,5 @@
 
 {% block extra_body %}
 <script src="{% static 'trade_secrets/trade-secrets.js' %}"></script>
+<script src="{% static 'ghostform/choice-group.js' %}"></script>
 {% endblock %}

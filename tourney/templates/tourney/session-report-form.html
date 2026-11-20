@@ -1,0 +1,61 @@
+{% extends 'page.html' %}
+{% load static %}
+
+{% block head_title %}Report result · {{ tournament.name }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'tourney/report-dialog.css' %}">
+<link rel="stylesheet" href="{% static 'ghostform/main.css' %}">
+<link rel="stylesheet" href="{% static 'trade_secrets/main.css' %}">
+{% endblock %}
+
+{% block content %}
+{% partialdef form inline %}
+<form class="ts-tournament-report report-dialog" method="post" action="{{ report_url }}"
+      hx-post="{{ report_url }}" hx-target="#ts-tournament-report" hx-swap="innerHTML"
+      hx-disabled-elt="find button[type=submit]">
+  {% csrf_token %}
+  {% include "components/dialog-header.html" with title="Report to tournament" title_id="ts-result-title" focus_title=True %}
+  <div class="dialog__body">
+  <p class="ts-tournament-report__context"><strong>{{ tournament.name }}</strong> · {{ match.round.stage.name }} · Round {{ match.round.order }}</p>
+  <p class="ts-tournament-report__note">{{ prefill_note }}{% if reported_summary %} Currently reported: {{ reported_summary }}.{% endif %}</p>
+  {% if error_messages %}
+  <div class="note note--danger" role="alert"><ul class="note__list">{% for error_message in error_messages %}<li>{{ error_message }}</li>{% endfor %}</ul></div>
+  {% endif %}
+  <fieldset class="report-outcome">
+    <legend class="report-outcome__legend">Who won the match? <span class="report-outcome__hint">Tap the winner</span></legend>
+    <div class="report-outcome__players">
+      {% for slot in player_slots %}
+      <div class="report-player">
+        <label class="report-player__pick">
+          <input type="radio" name="winner" value="{{ slot.stage_player.id }}" class="report-player__radio" required{% if slot.is_winner %} checked{% endif %}>
+          <span class="report-player__name">{{ slot.name }}</span>
+          <span class="report-player__winner" aria-hidden="true">Winner</span>
+        </label>
+        {% if shows_scores %}
+        <div class="report-player__score">
+          <input type="number" name="{{ slot.score_field_name }}" value="{{ slot.score|default_if_none:'' }}" min="0" step="1" inputmode="numeric" placeholder="Score" aria-label="{{ slot.name }} score">
+        </div>
+        {% endif %}
+      </div>
+      {% if forloop.first %}<span class="report-outcome__versus" aria-hidden="true">vs</span>{% endif %}
+      {% endfor %}
+    </div>
+    {% if allows_ties %}
+    <label class="report-outcome__tie">
+      <input type="radio" name="winner" value="{{ tie_winner_value }}" class="report-player__radio" required{% if is_tie_selected %} checked{% endif %}>
+      <span>It was a tie</span>
+    </label>
+    {% endif %}
+  </fieldset>
+  {% if response_form %}
+  {% include 'tourney/partials/result-form-fields.html' %}
+  {% endif %}
+  </div>
+  <div class="dialog__footer">
+    <a class="button" href="{% url 'trade_secrets:session-detail' session.code %}" data-dialog-close>Cancel</a>
+    <button type="submit" class="button button-primary">{% if reported_summary %}Update result{% else %}Submit result{% endif %}</button>
+  </div>
+</form>
+{% endpartialdef %}
+{% endblock %}

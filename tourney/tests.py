@@ -25,6 +25,7 @@ from .reporting import (
     ReportError, describe_winner, report_paired_match_result, report_self_scheduled_match_result,
     RESULT_LOCKED_MESSAGE, INVALID_WINNER_MESSAGE
 )
+from .session_reports import summarize_session_outcome
 from decks.models import Deck
 from ghostform.models import (
     Answer as GhostformAnswer, Form as GhostformForm, Question as GhostformQuestion,
@@ -5942,3 +5943,341 @@ class MatchExportTestCase(LineupTournamentTestCase):
         response = self.client.get(self._url('tourney-tournament-detail-admin'))
 
         self.assertContains(response, self._url('tourney-matches-export'))
+
+
+class SessionReportTestCase(LineupTournamentTestCase):
+    SINGLE_GAME_STEPS = [StepSpec(0, 'submit', 3), StepSpec(1, 'play', 1)]
+    THREE_GAME_STEPS = [
+        StepSpec(0, 'submit', 3),
+        StepSpec(1, 'play', 1, 'eligible'),
+        StepSpec(2, 'play', 1, 'eligible'),
+        StepSpec(3, 'play', 1, 'eligible'),
+    ]
+
+    def setUp(self):
+        super().setUp()
+        self.register_both_lineups()
+        self.match = self.create_match(self.anvil, self.beacon)
+        self.anvil_user = self.anvil.player.user
+        self.beacon_user = self.beacon.player.user
+        self.report_url = self._url('tourney-session-report', self.match.id)
+        self.panel_url = self._url('tourney-session-report-panel', self.match.id)
+
+    def use_template(self, steps):
+        self.tournament.trade_secrets_template = SessionTemplate.create_with_steps(
+            self.owner, 'Report Format', '', steps)
+        self.tournament.save()
+
+    def start_session(self, steps):
+        self.use_template(steps)
+        self.login_as(self.anvil)
+        self.open_session(self.match)
+        return self.match.trade_secrets_session
+
+    def start_session_with_beacon_hosting(self, steps):
+        self.use_template(steps)
+        self.match.trade_secrets_session = Session.create_for_players(
+            self.tournament.trade_secrets_template, host=self.beacon_user, guest=self.anvil_user,
+            lineups_by_seat={})
+        self.match.save()
+        session = self.match.trade_secrets_session
+        session.submit_decks(Seat.HOST, self.beacon_user, [deck.id for deck in self.beacon_decks])
+        session.submit_decks(Seat.GUEST, self.anvil_user, [deck.id for deck in self.anvil_decks])
+        return session
+
+    def play_game(self, session, step_order, winner_seat, host_score=None, guest_score=None):
+        for seat, user in ((Seat.HOST, session.host), (Seat.GUEST, session.guest)):
+            first_deck_of_seat = session.decks.filter(seat=seat).order_by('sort_order').first()
+            session.submit_picks(seat, user, step_order, [first_deck_of_seat.id])
+        session.record_result(session.host, step_order, winner_seat, host_score=host_score, guest_score=guest_score)
+
+    def session_values(self):
+        return summarize_session_outcome(Match.objects.get(pk=self.match.pk)).values
+
+    def report_as(self, stage_player, data, is_htmx=True):
+        self.login_as(stage_player)
+        if is_htmx:
+            return self.htmx_post(self.report_url, data)
+        return self.client.post(self.report_url, data)
+
+    def panel_for(self, user):
+        if user is None:
+            self.client.logout()
+        else:
+            self.client.force_login(user)
+        return self.htmx_get(self.panel_url)
+
+    def test_multi_game_session_prefills_the_leader_and_games_won(self):
+        session = self.start_session(self.THREE_GAME_STEPS)
+        self.play_game(session, 1, Seat.HOST, host_score=3, guest_score=0)
+        self.play_game(session, 2, Seat.GUEST, host_score=1, guest_score=3)
+        self.play_game(session, 3, Seat.HOST, host_score=3, guest_score=2)
+
+        values = self.session_values()
+
+        self.assertEqual(values.winner_id, self.anvil.id)
+        self.assertEqual((values.player_one_score, values.player_two_score), (2, 1))
+
+    def test_unfinished_session_prefills_what_is_recorded_so_far(self):
+        session = self.start_session(self.THREE_GAME_STEPS)
+        self.play_game(session, 1, Seat.GUEST)
+
+        values = self.session_values()
+
+        self.assertEqual(values.winner_id, self.beacon.id)
+        self.assertEqual((values.player_one_score, values.player_two_score), (0, 1))
+
+    def test_single_game_session_prefills_that_games_score(self):
+        session = self.start_session(self.SINGLE_GAME_STEPS)
+        self.play_game(session, 1, Seat.GUEST, host_score=1, guest_score=3)
+
+        values = self.session_values()
+
+        self.assertEqual(values.winner_id, self.beacon.id)
+        self.assertEqual((values.player_one_score, values.player_two_score), (1, 3))
+
+    def test_single_game_session_without_a_score_prefills_only_the_winner(self):
+        session = self.start_session(self.SINGLE_GAME_STEPS)
+        self.play_game(session, 1, Seat.HOST)
+
+        values = self.session_values()
+
+        self.assertEqual(values.winner_id, self.anvil.id)
+        self.assertFalse(values.has_scores)
+
+    def test_session_without_results_prefills_nothing(self):
+        self.start_session(self.THREE_GAME_STEPS)
+
+        values = self.session_values()
+
+        self.assertFalse(values.has_outcome)
+        self.assertFalse(values.has_scores)
+
+    def test_level_session_prefills_a_tie_only_when_the_stage_allows_ties(self):
+        session = self.start_session(self.THREE_GAME_STEPS)
+        self.play_game(session, 1, Seat.HOST)
+        self.play_game(session, 2, Seat.GUEST)
+
+        values_without_ties = self.session_values()
+        self.stage.are_ties_allowed = True
+        self.stage.save()
+        values_with_ties = self.session_values()
+
+        self.assertFalse(values_without_ties.has_outcome)
+        self.assertTrue(values_with_ties.is_tie)
+        self.assertEqual((values_with_ties.player_one_score, values_with_ties.player_two_score), (1, 1))
+
+    def test_scores_are_left_out_when_the_stage_does_not_report_them(self):
+        self.stage.report_full_scores = Stage.SCORE_REPORTING_DISABLED
+        self.stage.save()
+        session = self.start_session(self.THREE_GAME_STEPS)
+        self.play_game(session, 1, Seat.HOST)
+
+        values = self.session_values()
+
+        self.assertEqual(values.winner_id, self.anvil.id)
+        self.assertFalse(values.has_scores)
+
+    def test_prefill_follows_players_when_player_two_hosts_the_session(self):
+        session = self.start_session_with_beacon_hosting(self.SINGLE_GAME_STEPS)
+        self.play_game(session, 1, Seat.HOST, host_score=3, guest_score=2)
+
+        values = self.session_values()
+
+        self.assertEqual(values.winner_id, self.beacon.id)
+        self.assertEqual((values.player_one_score, values.player_two_score), (2, 3))
+
+    def test_session_page_loads_the_panel_only_for_tournament_sessions(self):
+        linked_session = self.start_session(self.SINGLE_GAME_STEPS)
+        casual_session = Session.create_for_players(
+            self.tournament.trade_secrets_template, host=self.anvil_user, guest=self.beacon_user,
+            lineups_by_seat={})
+
+        linked_page = self.client.get(reverse('trade_secrets:session-detail', args=[linked_session.code]))
+        casual_page = self.client.get(reverse('trade_secrets:session-detail', args=[casual_session.code]))
+
+        self.assertContains(linked_page, self.panel_url)
+        self.assertNotContains(casual_page, 'ts-tournament-report')
+
+    def test_panel_offers_reporting_before_any_game_is_recorded(self):
+        self.start_session(self.THREE_GAME_STEPS)
+
+        panel = self.panel_for(self.anvil_user)
+
+        self.assertContains(panel, 'No result reported to the tournament yet.')
+        self.assertContains(panel, 'Report result')
+        self.assertContains(panel, self.report_url)
+        self.assertContains(panel, self._url('tourney-detail-matches'))
+
+    def test_panel_shows_a_reported_result_that_matches_the_session(self):
+        session = self.start_session(self.THREE_GAME_STEPS)
+        self.play_game(session, 1, Seat.GUEST)
+        MatchResult.objects.create(match=self.match, winner=self.beacon, player_one_score=0, player_two_score=1)
+
+        panel = self.panel_for(self.anvil_user)
+
+        self.assertContains(panel, 'Reported: <strong>Beacon won 1–0</strong>')
+        self.assertContains(panel, 'Edit')
+        self.assertNotContains(panel, 'differs')
+
+    def test_panel_flags_a_reported_result_the_session_has_moved_past(self):
+        session = self.start_session(self.THREE_GAME_STEPS)
+        self.play_game(session, 1, Seat.GUEST)
+        MatchResult.objects.create(match=self.match, winner=self.beacon, player_one_score=0, player_two_score=1)
+        self.play_game(session, 2, Seat.HOST)
+        self.play_game(session, 3, Seat.HOST)
+
+        panel = self.panel_for(self.anvil_user)
+
+        self.assertContains(panel, 'Tournament result differs from this session.')
+        self.assertContains(panel, 'Update')
+        self.assertEqual(MatchResult.objects.get(match=self.match).winner, self.beacon)
+
+    def test_panel_is_read_only_for_people_outside_the_match(self):
+        self.start_session(self.SINGLE_GAME_STEPS)
+
+        outsider_panel = self.panel_for(self.comet.player.user)
+        anonymous_panel = self.panel_for(None)
+        organizer_panel = self.panel_for(self.owner)
+
+        self.assertNotContains(outsider_panel, self.report_url)
+        self.assertNotContains(anonymous_panel, self.report_url)
+        self.assertContains(organizer_panel, self.report_url)
+
+    def test_panel_locks_a_result_from_an_earlier_round_for_players(self):
+        self.start_session(self.SINGLE_GAME_STEPS)
+        MatchResult.objects.create(match=self.match, winner=self.anvil)
+        Round.objects.create(stage=self.stage, order=2)
+
+        player_panel = self.panel_for(self.anvil_user)
+        organizer_panel = self.panel_for(self.owner)
+        self.login_as(self.anvil)
+        player_form_response = self.htmx_get(self.report_url)
+
+        self.assertContains(player_panel, 'Ask an organizer to update it.')
+        self.assertNotContains(player_panel, self.report_url)
+        self.assertContains(organizer_panel, self.report_url)
+        self.assertEqual(player_form_response.status_code, 403)
+
+    def test_panel_is_read_only_for_players_once_the_tournament_is_closed(self):
+        self.start_session(self.SINGLE_GAME_STEPS)
+        self.tournament.is_closed = True
+        self.tournament.save()
+
+        self.assertNotContains(self.panel_for(self.anvil_user), self.report_url)
+        self.assertContains(self.panel_for(self.owner), self.report_url)
+
+    def test_report_form_is_prefilled_from_the_session(self):
+        session = self.start_session(self.THREE_GAME_STEPS)
+        self.play_game(session, 1, Seat.HOST)
+        self.play_game(session, 2, Seat.HOST)
+        self.login_as(self.beacon)
+
+        form_response = self.htmx_get(self.report_url)
+
+        self.assertContains(
+            form_response, f'value="{self.anvil.id}" class="report-player__radio" required checked')
+        self.assertContains(form_response, 'name="player_one_score" value="2"')
+        self.assertContains(form_response, 'name="player_two_score" value="0"')
+        self.assertContains(form_response, 'Filled in from this session: 2 games recorded.')
+        self.assertNotContains(form_response, 'It was a tie')
+
+    def test_report_form_shows_the_reported_result_when_the_session_has_no_games(self):
+        self.start_session(self.THREE_GAME_STEPS)
+        MatchResult.objects.create(match=self.match, winner=self.beacon, player_one_score=1, player_two_score=2)
+        self.login_as(self.anvil)
+
+        form_response = self.htmx_get(self.report_url)
+
+        self.assertContains(
+            form_response, f'value="{self.beacon.id}" class="report-player__radio" required checked')
+        self.assertContains(form_response, 'name="player_two_score" value="2"')
+        self.assertContains(form_response, 'Showing the result already reported to the tournament.')
+
+    def test_report_form_hides_scores_and_offers_ties_as_the_stage_allows(self):
+        self.stage.report_full_scores = Stage.SCORE_REPORTING_DISABLED
+        self.stage.are_ties_allowed = True
+        self.stage.save()
+        self.start_session(self.SINGLE_GAME_STEPS)
+        self.login_as(self.anvil)
+
+        form_response = self.htmx_get(self.report_url)
+
+        self.assertNotContains(form_response, 'player_one_score')
+        self.assertContains(form_response, 'It was a tie')
+
+    def test_report_form_is_refused_to_people_outside_the_match(self):
+        self.start_session(self.SINGLE_GAME_STEPS)
+        self.login_as(self.comet)
+
+        self.assertEqual(self.htmx_get(self.report_url).status_code, 403)
+        self.assertEqual(self.htmx_post(self.report_url, {'winner': self.anvil.id}).status_code, 403)
+        self.assertFalse(MatchResult.objects.exists())
+
+    def test_reporting_from_the_session_records_the_confirmed_result(self):
+        session = self.start_session(self.THREE_GAME_STEPS)
+        self.play_game(session, 1, Seat.HOST)
+
+        response = self.report_as(self.anvil, {
+            'winner': self.beacon.id, 'player_one_score': '1', 'player_two_score': '2'})
+
+        result = MatchResult.objects.get(match=self.match)
+        self.assertEqual(result.winner, self.beacon)
+        self.assertEqual((result.player_one_score, result.player_two_score), (1, 2))
+        self.assertContains(response, 'Tournament result differs from this session.')
+        self.assertContains(response, 'Reported: <strong>Beacon won 2–1</strong>')
+        self.assertTrue(TournamentActionLog.objects.filter(
+            tournament=self.tournament, action_type=TournamentActionLog.ActionType.REPORT_RESULT).exists())
+
+    def test_reporting_again_updates_the_same_result(self):
+        self.start_session(self.SINGLE_GAME_STEPS)
+        self.report_as(self.anvil, {'winner': self.anvil.id})
+
+        self.report_as(self.beacon, {'winner': self.beacon.id})
+
+        self.assertEqual(MatchResult.objects.get(match=self.match).winner, self.beacon)
+
+    def test_reporting_without_htmx_returns_to_the_session(self):
+        session = self.start_session(self.SINGLE_GAME_STEPS)
+
+        response = self.report_as(self.anvil, {'winner': self.anvil.id}, is_htmx=False)
+
+        self.assertRedirects(
+            response, reverse('trade_secrets:session-detail', args=[session.code]),
+            fetch_redirect_response=False)
+
+    def test_rejected_report_stays_in_the_dialog_with_the_submitted_answers(self):
+        self.stage.report_full_scores = Stage.SCORE_REPORTING_REQUIRED
+        self.stage.save()
+        self.start_session(self.SINGLE_GAME_STEPS)
+
+        response = self.report_as(self.anvil, {'winner': self.anvil.id, 'player_one_score': '3'})
+
+        self.assertFalse(MatchResult.objects.exists())
+        self.assertEqual(response['HX-Retarget'], '#ts-dialog')
+        self.assertContains(response, 'Scores are required for this stage.')
+        self.assertContains(response, 'name="player_one_score" value="3"')
+        self.assertContains(
+            response, f'value="{self.anvil.id}" class="report-player__radio" required checked')
+
+    def test_result_form_questions_are_asked_and_saved_with_the_report(self):
+        result_form = GhostformForm.objects.create(
+            owner=self.owner, title='Match Notes', status=GhostformForm.Status.PUBLISHED)
+        notes_question = GhostformQuestion.objects.create(
+            form=result_form, label='Notes', order=1, is_required=True)
+        self.tournament.result_form = result_form
+        self.tournament.save()
+        self.start_session(self.SINGLE_GAME_STEPS)
+        notes_field_name = f'ghostform-{notes_question.get_field_name()}'
+        self.login_as(self.anvil)
+
+        form_response = self.htmx_get(self.report_url)
+        rejected_response = self.report_as(self.anvil, {'winner': self.anvil.id})
+        has_result_after_rejection = MatchResult.objects.exists()
+        self.report_as(self.anvil, {'winner': self.anvil.id, notes_field_name: 'Close game'})
+
+        self.assertContains(form_response, 'Match Notes')
+        self.assertContains(form_response, notes_field_name)
+        self.assertEqual(rejected_response['HX-Retarget'], '#ts-dialog')
+        self.assertFalse(has_result_after_rejection)
+        self.assertEqual(GhostformAnswer.objects.get(question=notes_question).value, 'Close game')

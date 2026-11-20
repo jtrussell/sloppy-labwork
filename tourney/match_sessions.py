@@ -15,6 +15,13 @@ def can_match_have_session(tournament, match):
     )
 
 
+def get_player_one_seat(match):
+    session = match.trade_secrets_session
+    if match.player_one.player.user_id == session.guest_id:
+        return Seat.GUEST
+    return Seat.HOST
+
+
 def get_preloaded_lineup(player, required_deck_count):
     player_decks = list(player.lineup_decks.select_related('source_version'))
     if len(player_decks) != required_deck_count:
