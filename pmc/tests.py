@@ -2471,6 +2471,26 @@ class LadderViewTests(LadderTestBase):
         self.assertContains(response, 'name="defender_id"', count=3)
         self.assertContains(response, "You're #5")
 
+    def test_next_step_offers_nearer_players_when_the_farthest_is_in_a_challenge(self):
+        self.ladder.issue_challenge(self.player(3), self.player(1))
+        self.client.force_login(self.player(6).user)
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertEqual(
+            [standing.rank for standing in response.context['challengeable_standings']], [4, 5])
+        self.assertContains(response, 'data-dialog-open="challenge-dialog"')
+        self.assertNotContains(response, 'reached their limit')
+
+    def test_next_step_asks_players_to_hang_tight_when_nobody_in_reach_can_be_challenged(self):
+        self.ladder.issue_challenge(self.player(4), self.player(3))
+        withdrawn_challenge = self.ladder.issue_challenge(self.player(6), self.player(5))
+        self.ladder.withdraw_challenge(withdrawn_challenge, self.player(6).user)
+        self.client.force_login(self.player(6).user)
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertEqual(response.context['challengeable_standings'], [])
+        self.assertContains(response, 'Hang tight, a new challenge will open up soon!')
+        self.assertNotContains(response, 'reached their limit')
+        self.assertNotContains(response, 'again in')
+
     def test_next_step_pulses_only_while_a_challenge_is_open(self):
         self.client.force_login(self.player(3).user)
         response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))

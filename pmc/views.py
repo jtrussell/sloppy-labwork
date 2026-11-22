@@ -497,8 +497,6 @@ def playgroup_ladder_detail(request, slug, ladder_id):
         'viewer_entry': viewer_standing.entry if viewer_standing else None,
         'viewer_challenge': viewer_challenges[0] if viewer_challenges else None,
         'challengeable_standings': challengeable_standings,
-        'challenge_block_reason': next(
-            (standing.challenge_block_reason for standing in standings if standing.challenge_block_reason), None),
         'open_challenges': open_challenges,
         'recent_results': ladder.get_recent_results(),
         'viewer_can_ascend_as_madlad': bool(viewer_standing) and ladder.can_ascend_as_madlad(viewer_standing.entry),
