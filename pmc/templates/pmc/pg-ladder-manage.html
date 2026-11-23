@@ -14,7 +14,7 @@
             <tr>
               <td>
                 {{ challenge.challenger }} challenged {{ challenge.defender }}
-                <div class="muted text-sm">Due {{ challenge.respond_by|date:"SHORT_DATE_FORMAT" }}</div>
+                <div class="muted text-sm">{% include 'pmc/_ladder-challenge-due.html' %}</div>
               </td>
               <td class="table__actions">
                 <details class="action-menu" data-menu>

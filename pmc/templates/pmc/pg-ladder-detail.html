@@ -1,5 +1,5 @@
 {% extends "pmc/_base.html" %}
-{% load pmc_extras %}
+{% load humanize pmc_extras %}
 
 {% block content %}
   <div class="page-header">
@@ -27,7 +27,7 @@
 
   {% if playgroup_member %}
     <div class="card card--glow next-step">
-      {% include 'pmc/_next-step-label.html' with is_due=viewer_challenge %}
+      {% include 'pmc/_next-step-label.html' with is_due=viewer_owes_result %}
       {% if not viewer_standing %}
         <div class="next-step__body">
           <p>
@@ -50,7 +50,11 @@
               {% else %}
                 <strong>You challenged {{ viewer_challenge.defender }}.</strong>
               {% endif %}
-              Play your game and record the result by {{ viewer_challenge.respond_by|date:"SHORT_DATE_FORMAT" }} ({{ viewer_challenge.respond_by|timeuntil }} left).
+              {% if viewer_challenge.is_overdue %}
+                The response window has passed, so {{ viewer_challenge.challenger }} wins by forfeit.
+              {% else %}
+                Play your game and record the result by {{ viewer_challenge.respond_by|date:"SHORT_DATE_FORMAT" }} ({{ viewer_challenge.respond_by|timeuntil }} left).
+              {% endif %}
             {% elif challengeable_standings %}
               <strong>You're #{{ viewer_standing.rank }}.</strong>
               Challenge someone up to {{ ladder.challenge_range }} place{{ ladder.challenge_range|pluralize }} above you.
@@ -62,6 +66,8 @@
               Go Mad Mab: drop to the bottom of the ladder and climb it again.
             {% elif viewer_standing.rank == 1 %}
               <strong>You're #1.</strong> Hold on to that top spot!
+            {% elif viewer_next_available_place %}
+              <strong>You're #{{ viewer_standing.rank }}</strong> and will challenge the highest player you can reach as soon as one opens up.
             {% else %}
               <strong>You're #{{ viewer_standing.rank }}.</strong>
               Hang tight, a new challenge will open up soon!
@@ -69,7 +75,9 @@
           </p>
           <div class="next-step__actions">
             {% if viewer_challenge %}
-              <a class="btn btn--solid" href="{% url 'pmc-pg-ladder-challenge-result' playgroup.slug ladder.pk viewer_challenge.pk %}">Record Result</a>
+              {% if not viewer_challenge.is_overdue %}
+                <a class="btn btn--solid" href="{% url 'pmc-pg-ladder-challenge-result' playgroup.slug ladder.pk viewer_challenge.pk %}">Record Result</a>
+              {% endif %}
             {% elif challengeable_standings %}
               <button class="btn btn--solid" type="button" data-dialog-open="challenge-dialog">Challenge</button>
             {% elif viewer_can_ascend_as_madlad %}
@@ -79,6 +87,11 @@
                 hx-post="{% url 'pmc-pg-ladder-madlad' playgroup.slug ladder.pk %}"
                 hx-confirm="Go Mad Mab? You give up #1 and move to the bottom of {{ ladder.name }}."
               >Go Mad Mab</button>
+            {% elif ladder.challenges_enabled and ladder.next_available_enabled and viewer_standing.rank != 1 and not viewer_next_available_place %}
+              <form method="POST" action="{% url 'pmc-pg-ladder-next-available-join' playgroup.slug ladder.pk %}">
+                {% csrf_token %}
+                <button class="btn btn--solid" type="submit">Challenge Next Available</button>
+              </form>
             {% endif %}
             <details class="action-menu" data-menu>
               <summary class="action-menu__trigger" aria-label="More ladder actions">{% include 'pmc/_icon.html' with name='more' %}</summary>
@@ -101,6 +114,14 @@
                     hx-post="{% url 'pmc-pg-ladder-challenge-withdraw' playgroup.slug ladder.pk viewer_challenge.pk %}"
                     hx-confirm="Withdraw your challenge to {{ viewer_challenge.defender }}?"
                   >Withdraw challenge</button>
+                {% endif %}
+                {% if viewer_next_available_place %}
+                  <button
+                    type="button"
+                    class="action-menu__item"
+                    hx-post="{% url 'pmc-pg-ladder-next-available-leave' playgroup.slug ladder.pk %}"
+                    hx-confirm="Stop waiting for the next available challenge? You will lose your place in line."
+                  >Cancel Next Available</button>
                 {% endif %}
                 <button
                   type="button"
@@ -166,7 +187,7 @@
             <a class="list__item" href="{% url 'pmc-pg-ladder-challenge-result' playgroup.slug ladder.pk challenge.pk %}">
               <span class="list__body">
                 <span class="list__title">{{ challenge.challenger }} challenged {{ challenge.defender }}</span>
-                <span class="muted text-sm">Due {{ challenge.respond_by|date:"SHORT_DATE_FORMAT" }}</span>
+                <span class="muted text-sm">{% include 'pmc/_ladder-challenge-due.html' %}</span>
               </span>
               <span class="list__hint">Record result</span>
             </a>
@@ -174,13 +195,41 @@
             <div class="list__item">
               <span class="list__body">
                 <span class="list__title">{{ challenge.challenger }} challenged {{ challenge.defender }}</span>
-                <span class="muted text-sm">Due {{ challenge.respond_by|date:"SHORT_DATE_FORMAT" }}</span>
+                <span class="muted text-sm">{% include 'pmc/_ladder-challenge-due.html' %}</span>
               </span>
             </div>
           {% endif %}
         </li>
       {% endfor %}
     </ul>
+  {% endif %}
+
+  {% if ladder.next_available_enabled and next_available_queue %}
+    <h2>Next Available</h2>
+    <ol class="card list">
+      {% for entry in next_available_queue %}
+        <li>
+          <div class="list__item">
+            <span class="list__body">
+              <span class="list__title">{{ entry.member }}</span>
+              <span class="muted text-sm">#{{ entry.position }} · joined {{ entry.next_available_requested_on|naturaltime }}</span>
+            </span>
+            <span class="list__trail">
+              <span>{{ forloop.counter|ordinal }} in line</span>
+              {% if entry.member_id == playgroup_member.pk %}
+                <button
+                  type="button"
+                  class="text-button"
+                  hx-post="{% url 'pmc-pg-ladder-next-available-leave' playgroup.slug ladder.pk %}"
+                  hx-confirm="Stop waiting for the next available challenge? You will lose your place in line."
+                  data-preserve-scroll
+                >Cancel</button>
+              {% endif %}
+            </span>
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
   {% endif %}
 
   <h2>Standings</h2>

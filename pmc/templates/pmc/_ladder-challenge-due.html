@@ -1,0 +1,1 @@
+{% if challenge.is_overdue %}Overdue, {{ challenge.challenger }} wins by forfeit{% else %}Due {{ challenge.respond_by|date:"SHORT_DATE_FORMAT" }}{% endif %}

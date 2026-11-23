@@ -22,7 +22,9 @@ from .forms import PmcProfileForm, PmcProfilePrivacyForm
 from .templatetags.pmc_extras import markdown_sanitized, relative_event_day
 from django.urls import reverse
 from decks.models import House, Set, Deck
+import os
 import uuid
+from unittest import mock
 
 
 class TopNPerMonthRankingTest(TestCase):
@@ -1952,6 +1954,10 @@ class LadderTestBase(TestCase):
         self.ladder.allow_ties = True
         self.ladder.save()
 
+    def enable_next_available(self):
+        self.ladder.next_available_enabled = True
+        self.ladder.save()
+
 
 class LadderMembershipTests(LadderTestBase):
     def test_joining_places_member_at_the_bottom(self):
@@ -2133,7 +2139,7 @@ class LadderChallengeEligibilityTests(LadderTestBase):
         self.ladder.save()
         challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
         self.make_overdue(challenge, days_overdue=1)
-        self.ladder.resolve_overdue_challenges()
+        self.ladder.bring_up_to_date()
         self.assert_challenge_rejected(
             self.player(3), self.player(4), 'You can challenge player4 again in')
 
@@ -2182,6 +2188,148 @@ class LadderChallengeEligibilityTests(LadderTestBase):
         self.assertFalse(standings[2].can_be_challenged)
         self.assertIn('again in', str(standings[2].challenge_block_reason))
         self.assertTrue(standings[1].can_be_challenged)
+
+
+class LadderNextAvailableTests(LadderTestBase):
+    def setUp(self):
+        super().setUp()
+        self.enable_next_available()
+        self.top_challenge = self.ladder.issue_challenge(self.player(2), self.player(1))
+        self.middle_challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        cooled_down_challenge = self.ladder.issue_challenge(self.player(6), self.player(5))
+        self.ladder.withdraw_challenge(cooled_down_challenge, self.player(6).user)
+        self.cooled_down_challenge = cooled_down_challenge
+
+    def queued_usernames(self):
+        return [entry.member.user.username for entry in self.ladder.get_next_available_queue()]
+
+    def open_challenge_pairs(self):
+        return {
+            (challenge.challenger.user.username, challenge.defender.user.username)
+            for challenge in self.ladder.get_open_challenges()
+        }
+
+    def test_players_with_nobody_free_in_reach_can_join_the_queue(self):
+        self.ladder.join_next_available_queue(self.player(6))
+        self.ladder.join_next_available_queue(self.player(5))
+        self.assertEqual(self.queued_usernames(), self.usernames_for(6, 5))
+
+    def test_joining_while_a_challenge_is_available_issues_it_immediately(self):
+        self.ladder.withdraw_challenge(self.middle_challenge, self.player(4).user)
+        challenge = self.ladder.join_next_available_queue(self.player(6))
+        self.assertEqual((challenge.challenger, challenge.defender), (self.player(6), self.player(3)))
+        self.assertEqual(self.queued_usernames(), [])
+
+    def test_joining_is_refused_for_the_top_player_queued_players_and_players_at_their_limit(self):
+        with self.assertRaisesMessage(LadderRuleViolation, 'nobody above you'):
+            self.ladder.join_next_available_queue(self.player(1))
+        with self.assertRaisesMessage(LadderRuleViolation, 'limit of open challenges'):
+            self.ladder.join_next_available_queue(self.player(4))
+        self.ladder.join_next_available_queue(self.player(6))
+        with self.assertRaisesMessage(LadderRuleViolation, 'already in line for the next available challenge'):
+            self.ladder.join_next_available_queue(self.player(6))
+
+    def test_the_first_player_in_line_challenges_the_farthest_player_that_opens_up(self):
+        self.ladder.join_next_available_queue(self.player(5))
+        self.ladder.join_next_available_queue(self.player(6))
+        self.ladder.record_result(self.middle_challenge, self.player(3), self.player(3).user)
+        self.assertEqual(
+            self.open_challenge_pairs(),
+            {('player2', 'player1'), ('player5', 'player3'), ('player6', 'player4')})
+        self.assertEqual(self.queued_usernames(), [])
+
+    def test_a_request_with_nobody_free_in_reach_keeps_its_place(self):
+        self.ladder.join_next_available_queue(self.player(6))
+        self.ladder.join_next_available_queue(self.player(5))
+        self.ladder.record_result(self.top_challenge, self.player(1), self.player(1).user)
+        self.assertIn(('player5', 'player2'), self.open_challenge_pairs())
+        self.assertEqual(self.queued_usernames(), self.usernames_for(6))
+
+    def test_being_challenged_removes_a_player_from_the_queue(self):
+        LadderChallenge.objects.filter(pk=self.cooled_down_challenge.pk).update(
+            resolved_on=timezone.now() - timedelta(days=2))
+        self.ladder.join_next_available_queue(self.player(5))
+        self.ladder.issue_challenge(self.player(6), self.player(5))
+        self.assertEqual(self.queued_usernames(), [])
+
+    def test_bringing_the_ladder_up_to_date_fulfills_requests_once_a_cooldown_ends(self):
+        self.ladder.join_next_available_queue(self.player(6))
+        LadderChallenge.objects.filter(pk=self.cooled_down_challenge.pk).update(
+            resolved_on=timezone.now() - timedelta(days=2))
+        self.ladder.bring_up_to_date()
+        self.assertIn(('player6', 'player5'), self.open_challenge_pairs())
+        self.assertEqual(self.queued_usernames(), [])
+
+    def test_forfeits_fulfill_requests(self):
+        self.ladder.join_next_available_queue(self.player(6))
+        self.make_overdue(self.middle_challenge)
+        self.ladder.bring_up_to_date()
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 4, 3, 5, 6))
+        self.assertIn(('player6', 'player4'), self.open_challenge_pairs())
+
+    def test_players_can_leave_the_queue(self):
+        self.ladder.join_next_available_queue(self.player(6))
+        self.ladder.leave_next_available_queue(self.player(6))
+        self.assertEqual(self.queued_usernames(), [])
+        with self.assertRaisesMessage(LadderRuleViolation, 'not in line for the next available challenge'):
+            self.ladder.leave_next_available_queue(self.player(6))
+
+    def test_joining_is_refused_and_requests_wait_while_the_setting_is_off(self):
+        self.ladder.join_next_available_queue(self.player(6))
+        self.ladder.next_available_enabled = False
+        self.ladder.save()
+        with self.assertRaisesMessage(LadderRuleViolation, 'turned off for this ladder'):
+            self.ladder.join_next_available_queue(self.player(5))
+        self.ladder.record_result(self.middle_challenge, self.player(3), self.player(3).user)
+        self.assertNotIn(('player6', 'player4'), self.open_challenge_pairs())
+
+    def test_leaving_the_ladder_or_clearing_the_queue_removes_requests(self):
+        self.ladder.join_next_available_queue(self.player(6))
+        self.ladder.join_next_available_queue(self.player(5))
+        self.ladder.remove_member(self.player(6))
+        self.assertEqual(self.queued_usernames(), self.usernames_for(5))
+        self.ladder.clear_next_available_queue()
+        self.assertEqual(self.queued_usernames(), [])
+
+
+@mock.patch.dict(os.environ, {'PMC_RATINGS_API_KEY': 'test-key'})
+@override_settings(STORAGES={
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+})
+class RefreshLaddersEndpointTests(LadderTestBase):
+    def refresh(self, **headers):
+        return self.client.post(reverse('pmc-refresh-ladders'), **headers)
+
+    def test_requires_the_api_key(self):
+        self.assertEqual(self.refresh().status_code, 403)
+        self.assertEqual(self.refresh(HTTP_X_API_KEY='wrong').status_code, 403)
+
+    def test_forfeits_overdue_challenges_then_fulfills_queued_requests(self):
+        self.enable_next_available()
+        self.ladder.issue_challenge(self.player(2), self.player(1))
+        overdue_challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        cooled_down_challenge = self.ladder.issue_challenge(self.player(6), self.player(5))
+        self.ladder.withdraw_challenge(cooled_down_challenge, self.player(6).user)
+        self.ladder.join_next_available_queue(self.player(6))
+        self.make_overdue(overdue_challenge)
+
+        response = self.refresh(HTTP_X_API_KEY='test-key')
+
+        self.assertEqual(response.status_code, 200)
+        overdue_challenge.refresh_from_db()
+        self.assertEqual(overdue_challenge.status, LadderChallenge.ChallengeStatuses.FORFEITED)
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 4, 3, 5, 6))
+        self.assertTrue(self.ladder.get_open_challenges().filter(
+            match__player_one=self.player(6), match__player_two=self.player(4)).exists())
+
+    def test_skips_ladders_whose_playgroup_has_ladders_turned_off(self):
+        challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        self.make_overdue(challenge)
+        PlaygroupFeature.objects.filter(playgroup=self.playgroup).update(is_enabled=False)
+        self.refresh(HTTP_X_API_KEY='test-key')
+        challenge.refresh_from_db()
+        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.PENDING)
 
 
 class LadderResultTests(LadderTestBase):
@@ -2270,7 +2418,7 @@ class LadderForfeitTests(LadderTestBase):
         self.make_overdue(challenge, days_overdue=3)
         deadline = LadderChallenge.objects.get(pk=challenge.pk).respond_by
 
-        self.ladder.resolve_overdue_challenges()
+        self.ladder.bring_up_to_date()
 
         challenge.refresh_from_db()
         self.assertEqual(challenge.resolved_on, deadline)
@@ -2281,7 +2429,7 @@ class LadderForfeitTests(LadderTestBase):
         upcoming = self.ladder.issue_challenge(self.player(6), self.player(5))
         self.make_overdue(overdue)
 
-        self.ladder.resolve_overdue_challenges()
+        self.ladder.bring_up_to_date()
 
         overdue.refresh_from_db()
         upcoming.refresh_from_db()
@@ -2296,7 +2444,7 @@ class LadderForfeitTests(LadderTestBase):
         self.make_overdue(earlier, days_overdue=2)
         self.make_overdue(later, days_overdue=1)
 
-        self.ladder.resolve_overdue_challenges()
+        self.ladder.bring_up_to_date()
 
         self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 6, 4, 3, 5))
         self.assert_positions_contiguous()
@@ -2304,8 +2452,8 @@ class LadderForfeitTests(LadderTestBase):
     def test_resolving_twice_changes_nothing(self):
         challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
         self.make_overdue(challenge)
-        self.ladder.resolve_overdue_challenges()
-        self.ladder.resolve_overdue_challenges()
+        self.ladder.bring_up_to_date()
+        self.ladder.bring_up_to_date()
         self.assertEqual(LadderChallenge.objects.get(pk=challenge.pk).match.result.is_forfeit, True)
         self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 4, 3, 5, 6))
 
@@ -2488,8 +2636,43 @@ class LadderViewTests(LadderTestBase):
         response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
         self.assertEqual(response.context['challengeable_standings'], [])
         self.assertContains(response, 'Hang tight, a new challenge will open up soon!')
+        self.assertNotContains(response, 'Challenge Next Available')
         self.assertNotContains(response, 'reached their limit')
         self.assertNotContains(response, 'again in')
+
+        self.enable_next_available()
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertContains(response, 'Challenge Next Available')
+
+    def test_players_join_and_leave_the_next_available_queue_from_the_ladder_page(self):
+        self.enable_next_available()
+        self.ladder.issue_challenge(self.player(4), self.player(3))
+        withdrawn_challenge = self.ladder.issue_challenge(self.player(6), self.player(5))
+        self.ladder.withdraw_challenge(withdrawn_challenge, self.player(6).user)
+        self.client.force_login(self.player(6).user)
+
+        response = self.client.post(self.ladder_url('pmc-pg-ladder-next-available-join'), follow=True)
+        self.assertIn("You're in line for the next available challenge.", self.message_texts(response))
+        self.assertContains(response, "<strong>You're #6</strong> and will challenge the highest player")
+        self.assertContains(response, '<h2>Next Available</h2>', html=True)
+        self.assertContains(response, 'Cancel Next Available')
+        self.assertContains(
+            response, f'hx-post="{self.ladder_url("pmc-pg-ladder-next-available-leave")}"', count=2)
+        self.assertNotContains(response, 'Challenge Next Available')
+
+        response = self.client.post(self.ladder_url('pmc-pg-ladder-next-available-leave'), follow=True)
+        self.assertIn("You're no longer waiting for the next available challenge.", self.message_texts(response))
+        self.assertNotContains(response, '<h2>Next Available</h2>', html=True)
+        self.assertContains(response, 'Challenge Next Available')
+
+    def test_challenge_next_available_issues_an_available_challenge_immediately(self):
+        self.enable_next_available()
+        self.client.force_login(self.player(6).user)
+        response = self.client.post(self.ladder_url('pmc-pg-ladder-next-available-join'), follow=True)
+        self.assertIn('Challenge issued to player3.', self.message_texts(response))
+        self.assertEqual(self.ladder.get_next_available_queue(), [])
+        self.assertTrue(self.ladder.get_open_challenges().filter(
+            match__player_one=self.player(6), match__player_two=self.player(3)).exists())
 
     def test_next_step_pulses_only_while_a_challenge_is_open(self):
         self.client.force_login(self.player(3).user)
@@ -2502,13 +2685,38 @@ class LadderViewTests(LadderTestBase):
         self.assertContains(response, 'Your move')
         self.assertContains(response, 'pulse-dot')
 
-    def test_detail_resolves_overdue_challenges(self):
+    def test_detail_labels_overdue_challenges_without_resolving_them(self):
         challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
         self.make_overdue(challenge)
-        self.client.force_login(self.player(1).user)
-        self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.client.force_login(self.player(3).user)
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
         challenge.refresh_from_db()
-        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.FORFEITED)
+        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.PENDING)
+        self.assertContains(response, 'Overdue, player4 wins by forfeit')
+        self.assertContains(response, 'The response window has passed, so player4 wins by forfeit.')
+        self.assertNotContains(response, 'Record Result')
+        self.assertNotContains(response, 'Your move')
+
+    def test_detail_leaves_queued_requests_for_the_scheduled_refresh(self):
+        self.enable_next_available()
+        self.ladder.issue_challenge(self.player(4), self.player(3))
+        cooled_down_challenge = self.ladder.issue_challenge(self.player(6), self.player(5))
+        self.ladder.withdraw_challenge(cooled_down_challenge, self.player(6).user)
+        self.ladder.join_next_available_queue(self.player(6))
+        LadderChallenge.objects.filter(pk=cooled_down_challenge.pk).update(
+            resolved_on=timezone.now() - timedelta(days=2))
+        self.client.force_login(self.player(6).user)
+        self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertEqual(len(self.ladder.get_next_available_queue()), 1)
+
+    def test_overdue_result_page_explains_the_forfeit(self):
+        challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
+        self.make_overdue(challenge)
+        self.client.force_login(self.player(3).user)
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-challenge-result', challenge.pk))
+        self.assertRedirects(response, self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertIn('The response window has passed, so the challenger won by forfeit.',
+                      self.message_texts(response))
 
     def test_staff_pages_forbidden_for_players(self):
         self.client.force_login(self.player(1).user)
@@ -2669,8 +2877,27 @@ class LadderViewTests(LadderTestBase):
         challenge.refresh_from_db()
         self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.VOIDED)
         self.make_overdue(challenge)
-        self.ladder.resolve_overdue_challenges()
+        self.ladder.bring_up_to_date()
         self.assertEqual(self.ranked_usernames(), self.usernames_for(1, 2, 3, 4, 5, 6))
+
+    def test_turning_off_next_available_clears_the_queue(self):
+        self.enable_next_available()
+        self.ladder.issue_challenge(self.player(4), self.player(3))
+        cooled_down_challenge = self.ladder.issue_challenge(self.player(6), self.player(5))
+        self.ladder.withdraw_challenge(cooled_down_challenge, self.player(6).user)
+        self.ladder.join_next_available_queue(self.player(6))
+        self.client.force_login(self.organizer.user)
+        self.client.post(self.ladder_url('pmc-pg-ladder-edit'), {
+            'name': 'Main Ladder',
+            'challenges_enabled': 'on',
+            'challenge_range': 3,
+            'open_challenge_limit': 1,
+            'response_window_days': 7,
+            'rematch_cooldown_days': 1,
+        })
+        self.ladder.refresh_from_db()
+        self.assertFalse(self.ladder.next_available_enabled)
+        self.assertEqual(self.ladder.get_next_available_queue(), [])
 
     def test_late_result_view_explains_the_forfeit(self):
         challenge = self.ladder.issue_challenge(self.player(5), self.player(3))

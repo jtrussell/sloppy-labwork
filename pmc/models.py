@@ -2283,6 +2283,10 @@ class Ladder(models.Model):
     allow_ties = models.BooleanField(
         default=False,
         help_text=_('When enabled, players can report a game as a tie.'))
+    next_available_enabled = models.BooleanField(
+        default=False,
+        verbose_name=_('Allow Next Available challenges'),
+        help_text=_('When enabled, players with nobody free to challenge can get in line to challenge the next player who becomes available.'))
     description = models.TextField(
         default=None, null=True, blank=True,
         help_text=_('Optional. Instructions or other info for players. Markdown supported.'))
@@ -2479,21 +2483,109 @@ class Ladder(models.Model):
             )
             if reason:
                 raise LadderRuleViolation(reason)
-            match = Match.objects.create(
-                playgroup_id=self.playgroup_id, player_one=challenger, player_two=defender)
-            challenge = LadderChallenge.objects.create(
-                ladder=self,
-                match=match,
-                respond_by=timezone.now() + timedelta(days=self.response_window_days),
-            )
-            ranked_member_ids = [entry.member_id for entry in entries]
-            ladder_notifications.notify_after_commit(
-                ladder_notifications.notify_challenge_issued,
-                challenge.pk,
-                ranked_member_ids.index(challenger.pk) + 1,
-                ranked_member_ids.index(defender.pk) + 1,
-            )
-            return challenge
+            return self._create_challenge(entries, challenger, defender)
+
+    def get_next_available_queue(self):
+        return list(self.entries.filter(
+            next_available_requested_on__isnull=False
+        ).select_related('member__user').order_by('next_available_requested_on', 'pk'))
+
+    def join_next_available_queue(self, member):
+        with self._ordered_entries_for_update() as entries:
+            entry = self._require_entry(entries, member)
+            reason = self._next_available_ineligibility_reason(entries, entry)
+            if reason:
+                raise LadderRuleViolation(reason)
+            available_defender = self._find_farthest_challengeable_member(entries, member)
+            if available_defender is not None:
+                return self._create_challenge(entries, member, available_defender)
+            entry.next_available_requested_on = timezone.now()
+            entry.save(update_fields=['next_available_requested_on'])
+            return None
+
+    def leave_next_available_queue(self, member):
+        with self._ordered_entries_for_update() as entries:
+            entry = self._require_entry(entries, member)
+            if entry.next_available_requested_on is None:
+                raise LadderRuleViolation(_("You're not in line for the next available challenge."))
+            self._remove_from_next_available_queue(entry)
+
+    def clear_next_available_queue(self):
+        self.entries.update(next_available_requested_on=None)
+
+    def _next_available_ineligibility_reason(self, entries, entry):
+        if not self.challenges_enabled:
+            return _('Challenges are disabled on this ladder.')
+        if not self.next_available_enabled:
+            return _('Next Available challenges are turned off for this ladder.')
+        if entry.next_available_requested_on is not None:
+            return _("You're already in line for the next available challenge.")
+        if entries[0] is entry:
+            return _('You are #1, so there is nobody above you to challenge.')
+        open_challenges = list(self.get_open_challenges())
+        open_challenges_involving_member = sum(
+            1 for challenge in open_challenges if challenge.match.involves(entry.member))
+        if open_challenges_involving_member >= self.open_challenge_limit:
+            return _('You have reached your limit of open challenges.')
+        return None
+
+    def _fulfill_next_available_requests(self, entries):
+        if not self.next_available_enabled:
+            return
+        for requesting_entry in self._next_available_queue_in(entries):
+            if requesting_entry.next_available_requested_on is None:
+                continue
+            defender = self._find_farthest_challengeable_member(entries, requesting_entry.member)
+            if defender is not None:
+                self._create_challenge(
+                    entries, requesting_entry.member, defender, is_from_next_available_queue=True)
+
+    @staticmethod
+    def _next_available_queue_in(entries):
+        return sorted(
+            (entry for entry in entries if entry.next_available_requested_on is not None),
+            key=lambda entry: (entry.next_available_requested_on, entry.pk),
+        )
+
+    def _find_farthest_challengeable_member(self, entries, challenger):
+        ranked_member_ids = [entry.member_id for entry in entries]
+        open_challenges = list(self.get_open_challenges())
+        last_contact_on_by_opponent_id = self._get_last_contact_on_by_opponent_id(challenger)
+        challenger_index = ranked_member_ids.index(challenger.pk)
+        farthest_reachable_index = max(challenger_index - self.challenge_range, 0)
+        for entry in entries[farthest_reachable_index:challenger_index]:
+            reason = self._challenge_ineligibility_reason(
+                ranked_member_ids, open_challenges, last_contact_on_by_opponent_id, challenger, entry.member)
+            if reason is None:
+                return entry.member
+        return None
+
+    def _create_challenge(self, entries, challenger, defender, is_from_next_available_queue=False):
+        match = Match.objects.create(
+            playgroup_id=self.playgroup_id, player_one=challenger, player_two=defender)
+        challenge = LadderChallenge.objects.create(
+            ladder=self,
+            match=match,
+            respond_by=timezone.now() + timedelta(days=self.response_window_days),
+        )
+        for participant in (challenger, defender):
+            participant_entry = self._find_entry(entries, participant)
+            if participant_entry is not None and participant_entry.next_available_requested_on is not None:
+                self._remove_from_next_available_queue(participant_entry)
+        ranked_member_ids = [entry.member_id for entry in entries]
+        ladder_notifications.notify_after_commit(
+            ladder_notifications.notify_challenge_issued,
+            challenge.pk,
+            ranked_member_ids.index(challenger.pk) + 1,
+            ranked_member_ids.index(defender.pk) + 1,
+            is_from_next_available_queue,
+        )
+        return challenge
+
+    @staticmethod
+    def _remove_from_next_available_queue(entry):
+        entry.next_available_requested_on = None
+        entry.save(update_fields=['next_available_requested_on'])
 
     def record_result(self, challenge, winner, recorded_by):
         self._ensure_participant_or_organizer(challenge, recorded_by)
@@ -2600,23 +2692,27 @@ class Ladder(models.Model):
             status=LadderChallenge.ChallengeStatuses.PENDING
         ).update(status=LadderChallenge.ChallengeStatuses.VOIDED, resolved_on=timezone.now())
 
-    def resolve_overdue_challenges(self):
-        if not self._get_overdue_challenges().exists():
+    def bring_up_to_date(self):
+        has_waiting_requests = self.entries.filter(next_available_requested_on__isnull=False).exists()
+        if not has_waiting_requests and not self._get_overdue_challenges().exists():
             return
-        with transaction.atomic():
-            Ladder.objects.select_for_update().get(pk=self.pk)
-            entries = self.get_ordered_entries()
-            self._forfeit_overdue_challenges(entries)
-            self._save_positions(entries)
+        with self._locked_entries():
+            pass
 
     @contextmanager
     def _ordered_entries_for_update(self):
-        self.resolve_overdue_challenges()
+        self.bring_up_to_date()
+        with self._locked_entries() as entries:
+            yield entries
+
+    @contextmanager
+    def _locked_entries(self):
         with transaction.atomic():
             Ladder.objects.select_for_update().get(pk=self.pk)
             entries = self.get_ordered_entries()
             self._forfeit_overdue_challenges(entries)
             yield entries
+            self._fulfill_next_available_requests(entries)
             self._save_positions(entries)
 
     def _forfeit_overdue_challenges(self, entries):
@@ -2765,6 +2861,9 @@ class LadderEntry(models.Model):
     joined_on = models.DateTimeField(auto_now_add=True)
     email_on_challenge = models.BooleanField(default=False)
     madlad_count = models.PositiveIntegerField(default=0)
+    next_available_requested_on = models.DateTimeField(
+        default=None, null=True, blank=True,
+        help_text=_('When the player got in line for a Next Available challenge. Empty when they are not in line.'))
 
     class Meta:
         verbose_name_plural = 'Ladder entries'

@@ -74,7 +74,7 @@ class HunterOfLegendTests(LadderHonorTestBase):
     def test_ignores_forfeit_wins(self):
         challenge = self.ladder.issue_challenge(self.player(6), self.player(5))
         self.make_overdue(challenge)
-        self.ladder.resolve_overdue_challenges()
+        self.ladder.bring_up_to_date()
         self.assertEqual(self.members_honored_as('Hunter of Legend'), [])
 
     def test_ignores_voided_results(self):
@@ -128,7 +128,7 @@ class RelentlessCreeperTests(LadderHonorTestBase):
         LadderEntry.objects.filter(ladder=self.ladder).update(joined_on=timezone.now() - timedelta(days=7))
         challenge = self.ladder.issue_challenge(self.player(6), self.player(1))
         self.make_overdue(challenge)
-        self.ladder.resolve_overdue_challenges()
+        self.ladder.bring_up_to_date()
         self.assertEqual(self.members_honored_as('Relentless Creeper'), [self.player(6)])
 
     def test_counts_gross_climb_after_being_moved_down(self):

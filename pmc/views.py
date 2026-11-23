@@ -464,6 +464,8 @@ def edit_playgroup_ladder(request, slug, ladder_id):
         ladder = form.save()
         if 'challenges_enabled' in form.changed_data and not ladder.challenges_enabled:
             ladder.void_open_challenges()
+        if not ladder.challenges_enabled or not ladder.next_available_enabled:
+            ladder.clear_next_available_queue()
         messages.success(request, _('Ladder settings saved.'))
         return HttpResponseRedirect(ladder_manage_url(ladder))
     return render(request, 'pmc/pg-ladder-form.html', {
@@ -478,7 +480,6 @@ def edit_playgroup_ladder(request, slug, ladder_id):
 @is_pg_member_or_redirect_to_playgroup(LADDERS_NON_MEMBER_MESSAGE)
 def playgroup_ladder_detail(request, slug, ladder_id):
     ladder = get_ladder_or_404(slug, ladder_id)
-    ladder.resolve_overdue_challenges()
     viewer_member = PlaygroupMember.objects.filter(
         playgroup=ladder.playgroup, user=request.user).first()
     standings = ladder.get_standings_for(viewer_member)
@@ -490,14 +491,24 @@ def playgroup_ladder_detail(request, slug, ladder_id):
         if viewer_member and challenge.match.involves(viewer_member)
     ]
     challengeable_standings = [standing for standing in standings if standing.can_be_challenged]
+    viewer_challenge = viewer_challenges[0] if viewer_challenges else None
+    next_available_queue = ladder.get_next_available_queue()
+    viewer_next_available_place = next(
+        (place for place, entry in enumerate(next_available_queue, start=1)
+         if viewer_member and entry.member_id == viewer_member.pk),
+        None,
+    )
     return render(request, 'pmc/pg-ladder-detail.html', {
         'ladder': ladder,
         'standings': standings,
         'viewer_standing': viewer_standing,
         'viewer_entry': viewer_standing.entry if viewer_standing else None,
-        'viewer_challenge': viewer_challenges[0] if viewer_challenges else None,
+        'viewer_challenge': viewer_challenge,
+        'viewer_owes_result': viewer_challenge is not None and not viewer_challenge.is_overdue(),
         'challengeable_standings': challengeable_standings,
         'open_challenges': open_challenges,
+        'next_available_queue': next_available_queue,
+        'viewer_next_available_place': viewer_next_available_place,
         'recent_results': ladder.get_recent_results(),
         'viewer_can_ascend_as_madlad': bool(viewer_standing) and ladder.can_ascend_as_madlad(viewer_standing.entry),
         'honor_explanations': HONOR_EXPLANATIONS,
@@ -509,7 +520,6 @@ def playgroup_ladder_detail(request, slug, ladder_id):
 @is_pg_member_or_redirect_to_playgroup(LADDERS_NON_MEMBER_MESSAGE)
 def playgroup_ladder_results(request, slug, ladder_id):
     ladder = get_ladder_or_404(slug, ladder_id)
-    ladder.resolve_overdue_challenges()
     paginator = Paginator(ladder.get_results(), LADDER_RESULTS_PAGE_SIZE)
     return render(request, 'pmc/pg-ladder-results.html', {
         'ladder': ladder,
@@ -598,7 +608,6 @@ def test_ladder_discord_webhook(request, slug, ladder_id):
 @is_pg_staff
 def manage_playgroup_ladder(request, slug, ladder_id):
     ladder = get_ladder_or_404(slug, ladder_id)
-    ladder.resolve_overdue_challenges()
     return render(request, 'pmc/pg-ladder-manage.html', {
         'ladder': ladder,
         'active_tab': 'challenges' if request.GET.get('tab') == 'challenges' else 'roster',
@@ -661,16 +670,50 @@ def issue_ladder_challenge(request, slug, ladder_id):
 
 @login_required
 @requires_pg_feature(Feature.Keys.LADDERS)
+@require_POST
+@is_pg_member
+def join_ladder_next_available_queue(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    viewer_member = get_viewer_member_or_403(request, ladder.playgroup)
+    try:
+        issued_challenge = ladder.join_next_available_queue(viewer_member)
+    except LadderRuleViolation as violation:
+        messages.error(request, str(violation))
+    else:
+        if issued_challenge is None:
+            messages.success(request, _("You're in line for the next available challenge."))
+        else:
+            messages.success(request, _('Challenge issued to %(name)s.') % {'name': issued_challenge.defender})
+    return redirect_to(request, ladder_detail_url(ladder))
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
+@require_POST
+@is_pg_member
+def leave_ladder_next_available_queue(request, slug, ladder_id):
+    ladder = get_ladder_or_404(slug, ladder_id)
+    viewer_member = get_viewer_member_or_403(request, ladder.playgroup)
+    return run_competition_action(
+        request,
+        lambda: ladder.leave_next_available_queue(viewer_member),
+        _("You're no longer waiting for the next available challenge."),
+        ladder_detail_url(ladder),
+    )
+
+
+@login_required
+@requires_pg_feature(Feature.Keys.LADDERS)
 @is_pg_member
 def record_ladder_challenge_result(request, slug, ladder_id, challenge_id):
     ladder = get_ladder_or_404(slug, ladder_id)
-    ladder.resolve_overdue_challenges()
     challenge = get_ladder_challenge_or_404(ladder, challenge_id)
     is_participant = request.user.pk in (
         challenge.match.player_one.user_id, challenge.match.player_two.user_id)
     if not is_participant and not ladder.is_organizer(request.user):
         raise PermissionDenied
-    if challenge.status == LadderChallenge.ChallengeStatuses.FORFEITED:
+    is_awaiting_forfeit = challenge.is_overdue() and request.method != 'POST'
+    if challenge.status == LadderChallenge.ChallengeStatuses.FORFEITED or is_awaiting_forfeit:
         messages.error(request, _(
             'The response window has passed, so the challenger won by forfeit.'))
         return HttpResponseRedirect(ladder_detail_url(ladder))
@@ -2427,6 +2470,16 @@ def refresh_achievements(request):
 @transaction.atomic
 def refresh_badges(request):
     AwardAssignmentService.refresh_user_badges()
+    return HttpResponse('Done.', content_type='text/plain')
+
+
+@csrf_exempt
+@require_POST
+@api_key_required
+def refresh_ladders(request):
+    for ladder in Ladder.objects.select_related('playgroup'):
+        if ladder.playgroup.has_feature(Feature.Keys.LADDERS):
+            ladder.bring_up_to_date()
     return HttpResponse('Done.', content_type='text/plain')
 
 

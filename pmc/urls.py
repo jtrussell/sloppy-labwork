@@ -52,6 +52,10 @@ urlpatterns = [
          views.remove_ladder_member, name='pmc-pg-ladder-member-remove'),
     path('pg/<slug:slug>/ladders/<int:ladder_id>/challenges/new/',
          views.issue_ladder_challenge, name='pmc-pg-ladder-challenge-new'),
+    path('pg/<slug:slug>/ladders/<int:ladder_id>/next-available/join/',
+         views.join_ladder_next_available_queue, name='pmc-pg-ladder-next-available-join'),
+    path('pg/<slug:slug>/ladders/<int:ladder_id>/next-available/leave/',
+         views.leave_ladder_next_available_queue, name='pmc-pg-ladder-next-available-leave'),
     path('pg/<slug:slug>/ladders/<int:ladder_id>/challenges/<int:challenge_id>/result/',
          views.record_ladder_challenge_result, name='pmc-pg-ladder-challenge-result'),
     path('pg/<slug:slug>/ladders/<int:ladder_id>/challenges/<int:challenge_id>/withdraw/',
@@ -173,6 +177,7 @@ urlpatterns = [
     path('refresh-trophies/', views.refresh_trophies),
     path('refresh-achievements/', views.refresh_achievements),
     path('refresh-badges/', views.refresh_badges),
+    path('refresh-ladders/', views.refresh_ladders, name='pmc-refresh-ladders'),
     path('hydrate-result-decks/', views.hydrate_result_decks),
 
     # Common to all hosts

@@ -255,6 +255,27 @@ class LadderDiscordWebhookTests(LadderTestBase):
         self.assertEqual(message['content'], '<@987654321>')
         self.assertEqual(message['allowed_mentions'], {'parse': [], 'users': ['987654321']})
 
+    def test_next_available_challenge_message_mentions_both_players(self):
+        self.enable_next_available()
+        SocialAccount.objects.create(user=self.player(6).user, provider='discord', uid='111')
+        SocialAccount.objects.create(user=self.player(3).user, provider='discord', uid='333')
+        self.ladder.issue_challenge(self.player(2), self.player(1))
+        blocking_challenge = self.ladder.issue_challenge(self.player(4), self.player(3))
+        cooled_down_challenge = self.ladder.issue_challenge(self.player(6), self.player(5))
+        self.ladder.withdraw_challenge(cooled_down_challenge, self.player(6).user)
+        self.ladder.join_next_available_queue(self.player(6))
+        self.post.reset_mock()
+
+        with self.captureOnCommitCallbacks(execute=True):
+            self.ladder.withdraw_challenge(blocking_challenge, self.player(4).user)
+
+        message = self.posted_messages()[0]
+        embed = message['embeds'][0]
+        self.assertEqual(embed['description'], self.with_ladder_link('**player6** (#6) challenged **player3** (#3)'))
+        self.assertIn({'name': 'Issued by', 'value': 'Next Available', 'inline': True}, embed['fields'])
+        self.assertEqual(message['content'], '<@111> <@333>')
+        self.assertEqual(message['allowed_mentions'], {'parse': [], 'users': ['111', '333']})
+
     def test_result_message_includes_the_move(self):
         challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
         with self.captureOnCommitCallbacks(execute=True):
@@ -268,7 +289,7 @@ class LadderDiscordWebhookTests(LadderTestBase):
         challenge = self.ladder.issue_challenge(self.player(5), self.player(3))
         self.make_overdue(challenge)
         with self.captureOnCommitCallbacks(execute=True):
-            self.ladder.resolve_overdue_challenges()
+            self.ladder.bring_up_to_date()
         self.assertEqual(
             self.posted_messages()[-1]['embeds'][0]['description'],
             self.with_ladder_link('**player5** won by forfeit over **player3**'))

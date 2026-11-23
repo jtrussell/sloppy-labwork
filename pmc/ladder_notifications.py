@@ -46,12 +46,12 @@ def discord_id_for(member):
         user_id=member.user_id, provider='discord').values_list('uid', flat=True).first()
 
 
-def notify_challenge_issued(challenge_id, challenger_rank, defender_rank):
+def notify_challenge_issued(challenge_id, challenger_rank, defender_rank, is_from_next_available_queue=False):
     challenge = load_challenge(challenge_id)
     email_challenged_player(challenge, challenger_rank, defender_rank)
     discord_webhooks.post_message_in_background(
         challenge.ladder.discord_webhook_url,
-        challenge_issued_message(challenge, challenger_rank, defender_rank),
+        challenge_issued_message(challenge, challenger_rank, defender_rank, is_from_next_available_queue),
     )
 
 
@@ -152,8 +152,13 @@ def with_ladder_link(description, ladder):
     return '%s\n\n[%s](%s)' % (description, _('View the ladder'), url)
 
 
-def challenge_issued_message(challenge, challenger_rank, defender_rank):
+def challenge_issued_message(challenge, challenger_rank, defender_rank, is_from_next_available_queue=False):
     escape = discord_webhooks.escape_markdown
+    fields = [(_('Result due'), discord_webhooks.discord_timestamp(challenge.respond_by))]
+    mentioned_members = [challenge.defender]
+    if is_from_next_available_queue:
+        fields.append((_('Issued by'), _('Next Available')))
+        mentioned_members.insert(0, challenge.challenger)
     embed = ladder_embed(
         challenge.ladder,
         title=_('⚔️ New challenge on %(ladder)s') % {'ladder': challenge.ladder.name},
@@ -164,9 +169,9 @@ def challenge_issued_message(challenge, challenger_rank, defender_rank):
             'defender_rank': defender_rank,
         }, challenge.ladder),
         color=CHALLENGE_ISSUED_COLOR,
-        fields=[(_('Result due'), discord_webhooks.discord_timestamp(challenge.respond_by))],
+        fields=fields,
     )
-    return discord_webhooks.build_message(embed, [discord_id_for(challenge.defender)])
+    return discord_webhooks.build_message(embed, [discord_id_for(member) for member in mentioned_members])
 
 
 def result_description(challenge):
