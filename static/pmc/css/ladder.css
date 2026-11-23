@@ -1,0 +1,32 @@
+.ladder-board {
+  margin-top: var(--space-6);
+}
+
+@media (min-width: 720px) {
+  .ladder-board {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    gap: var(--space-6) var(--space-5);
+    align-items: start;
+  }
+
+  .ladder-board > * + * {
+    margin-top: 0;
+  }
+
+  .ladder-board__standings {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+
+  .ladder-board__activity,
+  .ladder-board__history {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .ladder-board__activity ~ .ladder-board__history {
+    grid-row: 2;
+  }
+}

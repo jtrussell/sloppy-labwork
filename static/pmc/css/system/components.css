@@ -424,6 +424,10 @@
   overflow-wrap: anywhere;
 }
 
+.prose > * {
+  max-width: var(--measure);
+}
+
 .prose > * + * {
   margin-top: var(--space-3);
 }

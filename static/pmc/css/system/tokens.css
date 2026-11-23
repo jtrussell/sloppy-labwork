@@ -58,7 +58,8 @@
   --tap-min: 44px;
   --control-height: 44px;
   --control-height-sm: 36px;
-  --page-width: 52rem;
+  --page-width: 64rem;
+  --measure: 70ch;
   --page-gutter: var(--space-4);
   --tab-bar-height: 64px;
 
