@@ -4,7 +4,9 @@ from django.core.exceptions import NON_FIELD_ERRORS, PermissionDenied
 from django.db import transaction
 from django.db.models import Q
 
-from .forms import MatchResultForm
+from .forms import (
+    TIES_NOT_ALLOWED_MESSAGE, MatchResultForm, describe_missing_winner, infer_winner_from_scores
+)
 from .models import Match, MatchResult, StagePlayer, TournamentActionLog
 from .result_forms import build_result_response_form, is_result_response_form_valid, record_result_response
 
@@ -20,8 +22,6 @@ OPPONENT_REQUIRED_MESSAGE = 'Please select an opponent.'
 INVALID_OPPONENT_MESSAGE = 'Invalid opponent selected.'
 OPPONENT_OUTSIDE_POD_MESSAGE = 'You can only report matches against players in your pod.'
 DUPLICATE_MATCH_MESSAGE = 'You already have a match against this opponent in this round.'
-WINNER_REQUIRED_MESSAGE = 'Please select a winner.'
-TIES_NOT_ALLOWED_MESSAGE = 'Ties are not allowed in this stage.'
 INVALID_WINNER_MESSAGE = 'Invalid winner selection.'
 INVALID_SCORE_MESSAGE = 'Invalid score entered.'
 
@@ -172,9 +172,12 @@ def parse_self_reported_score(raw_score):
     return score
 
 
-def find_self_reported_winner(winner_choice, stage, reporter, opponent):
+def find_self_reported_winner(winner_choice, stage, reporter, opponent, reporter_score, opponent_score):
     if not winner_choice:
-        raise ReportError([WINNER_REQUIRED_MESSAGE])
+        inferred_winner = infer_winner_from_scores(reporter, reporter_score, opponent, opponent_score)
+        if inferred_winner is None:
+            raise ReportError([describe_missing_winner(stage, reporter_score, opponent_score)])
+        return inferred_winner
     if winner_choice == SELF_REPORTED_WINNER_ME:
         return reporter
     if winner_choice == SELF_REPORTED_WINNER_THEM:
@@ -223,13 +226,14 @@ def report_self_scheduled_match_result(tournament, user, result_data):
     if has_existing_match:
         raise ReportError([DUPLICATE_MATCH_MESSAGE])
 
-    winner = find_self_reported_winner(result_data.get('winner'), current_stage, reporter, opponent)
-
     player_one_score = None
     player_two_score = None
     if current_stage.report_full_scores > 0:
         player_one_score = parse_self_reported_score(result_data.get('my_score', '').strip())
         player_two_score = parse_self_reported_score(result_data.get('their_score', '').strip())
+
+    winner = find_self_reported_winner(
+        result_data.get('winner'), current_stage, reporter, opponent, player_one_score, player_two_score)
 
     is_reporter_admin = tournament.is_user_admin(user)
     response_form = build_result_response_form(tournament, user, is_reporter_admin, result_data)

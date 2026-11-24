@@ -1,5 +1,5 @@
 {% if is_admin %}
-<details class="ghostform-result-form" data-result-form>
+<details class="ghostform-result-form" data-result-form{% if response_form.errors %} open{% endif %}>
     <summary>{{ active_result_form.title }} (optional)</summary>
     <div id="reportResultFormFields" class="stack stack--md">
         {% include 'ghostform/partials/response-fields.html' %}

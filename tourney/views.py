@@ -148,11 +148,13 @@ def get_selected_pod(request, stage, default_pod=None):
     return stage.pods.filter(slug=requested_pod_slug).first() or default_pod
 
 
+def has_response_form_errors(response_form):
+    return response_form is not None and response_form.is_bound and bool(response_form.errors)
+
+
 def render_report_error(request, tournament, error_messages, response_form=None, redirect_url=None):
-    has_response_form_errors = (
-        response_form is not None and response_form.is_bound and bool(response_form.errors))
     if request.htmx:
-        if has_response_form_errors:
+        if has_response_form_errors(response_form):
             error_messages = [*error_messages, RESULT_FORM_INLINE_ERROR_MESSAGE]
         response = render(request, 'tourney/partials/report-dialog-errors.html', {
             'error_messages': error_messages,
@@ -161,7 +163,7 @@ def render_report_error(request, tournament, error_messages, response_form=None,
         response['HX-Retarget'] = '#reportFeedback'
         response['HX-Reswap'] = 'innerHTML'
         return response
-    if has_response_form_errors:
+    if has_response_form_errors(response_form):
         error_messages = [*error_messages, get_result_report_error_message(response_form)]
     for error_message in error_messages:
         messages.error(request, error_message)
@@ -1237,9 +1239,12 @@ def session_report(request, tournament_code, match_id):
     except ReportError as report_error:
         response_form = report_error.response_form or build_result_response_form(
             tournament, request.user, is_admin, request.POST)
+        error_messages = report_error.error_messages
+        if has_response_form_errors(response_form):
+            error_messages = [*error_messages, RESULT_FORM_INLINE_ERROR_MESSAGE]
         response = render_session_report_form(
             request, match, parse_submitted_values(match, request.POST), outcome,
-            response_form, report_error.error_messages)
+            response_form, error_messages)
         if request.htmx:
             response['HX-Retarget'] = '#ts-dialog'
             response['HX-Reswap'] = 'innerHTML'

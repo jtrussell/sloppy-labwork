@@ -25,6 +25,11 @@ from .reporting import (
     ReportError, describe_winner, report_paired_match_result, report_self_scheduled_match_result,
     RESULT_LOCKED_MESSAGE, INVALID_WINNER_MESSAGE
 )
+from .forms import (
+    LEVEL_SCORES_MESSAGE, MISSING_BOTH_SCORES_MESSAGE, MISSING_WINNER_MESSAGE, MISSING_WINNER_OR_SCORES_MESSAGE,
+    TIES_NOT_ALLOWED_MESSAGE
+)
+from .result_forms import RESULT_FORM_INLINE_ERROR_MESSAGE
 from .session_reports import summarize_session_outcome
 from decks.models import Deck
 from ghostform.models import (
@@ -4385,7 +4390,7 @@ class TournamentResultFormTestCase(TestCase):
             HTTP_HX_REQUEST='true', HTTP_HX_CURRENT_URL=self._url('tourney-detail-matches'))
 
         self.assertEqual(response['HX-Retarget'], '#reportFeedback')
-        self.assertContains(response, 'Please select a winner.')
+        self.assertContains(response, MISSING_WINNER_OR_SCORES_MESSAGE)
 
     def test_player_report_rejects_invalid_deck_link(self):
         self._report('user1', {'winner': self.anvil.id, **self._answers('https://example.com')})
@@ -5159,8 +5164,99 @@ class ReportingServiceTest(TestCase):
             report_paired_match_result(self.match, self.users[0], {'winner': ''})
 
         self.assertFalse(raised.exception.is_final)
-        self.assertTrue(raised.exception.error_messages)
+        self.assertEqual(raised.exception.error_messages, [TIES_NOT_ALLOWED_MESSAGE])
         self.assertFalse(MatchResult.objects.exists())
+
+    def test_paired_report_without_a_winner_goes_to_the_higher_score(self):
+        outcome = report_paired_match_result(self.match, self.users[0], {
+            'player_one_score': '1', 'player_two_score': '3'})
+
+        self.assertEqual(outcome.result.winner, self.beacon)
+        self.assertEqual((outcome.result.player_one_score, outcome.result.player_two_score), (1, 3))
+
+    def test_paired_report_keeps_a_winner_with_the_lower_score(self):
+        outcome = report_paired_match_result(self.match, self.users[0], {
+            'winner': self.anvil.id, 'player_one_score': '1', 'player_two_score': '3'})
+
+        self.assertEqual(outcome.result.winner, self.anvil)
+
+    def test_paired_report_keeps_an_explicit_tie_over_the_scores(self):
+        self.stage.are_ties_allowed = True
+        self.stage.save()
+
+        outcome = report_paired_match_result(self.match, self.users[0], {
+            'winner': '', 'player_one_score': '3', 'player_two_score': '1'})
+
+        self.assertIsNone(outcome.result.winner)
+
+    def test_paired_report_without_a_winner_or_scores_asks_for_either(self):
+        self.stage.are_ties_allowed = True
+        self.stage.save()
+
+        with self.assertRaises(ReportError) as raised:
+            report_paired_match_result(self.match, self.users[0], {'player_one_score': '3'})
+
+        self.assertEqual(raised.exception.error_messages, [MISSING_WINNER_OR_SCORES_MESSAGE])
+        self.assertFalse(MatchResult.objects.exists())
+
+    def test_paired_report_with_level_scores_asks_for_the_winner(self):
+        self.stage.are_ties_allowed = True
+        self.stage.save()
+
+        with self.assertRaises(ReportError) as raised:
+            report_paired_match_result(self.match, self.users[0], {
+                'player_one_score': '2', 'player_two_score': '2'})
+
+        self.assertEqual(raised.exception.error_messages, [LEVEL_SCORES_MESSAGE])
+
+    def test_paired_report_without_scores_in_stage_asks_for_the_winner(self):
+        self.stage.report_full_scores = Stage.SCORE_REPORTING_DISABLED
+        self.stage.save()
+
+        with self.assertRaises(ReportError) as raised:
+            report_paired_match_result(self.match, self.users[0], {})
+
+        self.assertEqual(raised.exception.error_messages, [MISSING_WINNER_MESSAGE])
+
+    def test_paired_report_names_the_player_missing_a_required_score(self):
+        self.stage.report_full_scores = Stage.SCORE_REPORTING_REQUIRED
+        self.stage.save()
+
+        with self.assertRaises(ReportError) as raised:
+            report_paired_match_result(self.match, self.users[0], {
+                'winner': self.anvil.id, 'player_one_score': '3'})
+
+        self.assertEqual(raised.exception.error_messages, ['Enter a score for Beacon.'])
+
+    def test_paired_report_missing_both_required_scores_asks_for_both(self):
+        self.stage.report_full_scores = Stage.SCORE_REPORTING_REQUIRED
+        self.stage.save()
+
+        with self.assertRaises(ReportError) as raised:
+            report_paired_match_result(self.match, self.users[0], {'winner': self.anvil.id})
+
+        self.assertEqual(raised.exception.error_messages, [MISSING_BOTH_SCORES_MESSAGE])
+
+    def test_self_scheduled_report_without_a_winner_goes_to_the_higher_score(self):
+        self.stage.pairing_strategy = 'round_robin'
+        self.stage.save()
+        Round.objects.create(stage=self.stage, order=2)
+
+        outcome = report_self_scheduled_match_result(self.tournament, self.users[0], {
+            'opponent': str(self.comet.id), 'my_score': '3', 'their_score': '2'})
+
+        self.assertEqual(outcome.result.winner, self.anvil)
+
+    def test_self_scheduled_report_without_a_winner_or_scores_asks_for_either(self):
+        self.stage.pairing_strategy = 'round_robin'
+        self.stage.save()
+        Round.objects.create(stage=self.stage, order=2)
+
+        with self.assertRaises(ReportError) as raised:
+            report_self_scheduled_match_result(self.tournament, self.users[0], {
+                'opponent': str(self.comet.id)})
+
+        self.assertEqual(raised.exception.error_messages, [MISSING_WINNER_OR_SCORES_MESSAGE])
 
     def test_self_scheduled_report_creates_match_and_result(self):
         self.stage.pairing_strategy = 'round_robin'
@@ -6176,7 +6272,7 @@ class SessionReportTestCase(LineupTournamentTestCase):
         form_response = self.htmx_get(self.report_url)
 
         self.assertContains(
-            form_response, f'value="{self.anvil.id}" class="report-player__radio" required checked')
+            form_response, f'value="{self.anvil.id}" class="report-player__radio" checked')
         self.assertContains(form_response, 'name="player_one_score" value="2"')
         self.assertContains(form_response, 'name="player_two_score" value="0"')
         self.assertContains(form_response, 'Filled in from this session: 2 games recorded.')
@@ -6190,7 +6286,7 @@ class SessionReportTestCase(LineupTournamentTestCase):
         form_response = self.htmx_get(self.report_url)
 
         self.assertContains(
-            form_response, f'value="{self.beacon.id}" class="report-player__radio" required checked')
+            form_response, f'value="{self.beacon.id}" class="report-player__radio" checked')
         self.assertContains(form_response, 'name="player_two_score" value="2"')
         self.assertContains(form_response, 'Showing the result already reported to the tournament.')
 
@@ -6255,10 +6351,18 @@ class SessionReportTestCase(LineupTournamentTestCase):
 
         self.assertFalse(MatchResult.objects.exists())
         self.assertEqual(response['HX-Retarget'], '#ts-dialog')
-        self.assertContains(response, 'Scores are required for this stage.')
+        self.assertContains(response, 'Enter a score for Beacon.')
         self.assertContains(response, 'name="player_one_score" value="3"')
-        self.assertContains(
-            response, f'value="{self.anvil.id}" class="report-player__radio" required checked')
+        self.assertContains(response, f'value="{self.anvil.id}" class="report-player__radio" checked')
+
+    def test_report_without_a_winner_goes_to_the_higher_score(self):
+        self.stage.report_full_scores = Stage.SCORE_REPORTING_OPTIONAL
+        self.stage.save()
+        self.start_session(self.SINGLE_GAME_STEPS)
+
+        self.report_as(self.anvil, {'player_one_score': '2', 'player_two_score': '3'})
+
+        self.assertEqual(MatchResult.objects.get(match=self.match).winner, self.beacon)
 
     def test_result_form_questions_are_asked_and_saved_with_the_report(self):
         result_form = GhostformForm.objects.create(
@@ -6279,5 +6383,6 @@ class SessionReportTestCase(LineupTournamentTestCase):
         self.assertContains(form_response, 'Match Notes')
         self.assertContains(form_response, notes_field_name)
         self.assertEqual(rejected_response['HX-Retarget'], '#ts-dialog')
+        self.assertContains(rejected_response, RESULT_FORM_INLINE_ERROR_MESSAGE)
         self.assertFalse(has_result_after_rejection)
         self.assertEqual(GhostformAnswer.objects.get(question=notes_question).value, 'Close game')

@@ -446,6 +446,33 @@ class StageForm(forms.ModelForm):
         }
 
 
+TIES_NOT_ALLOWED_MESSAGE = 'Ties are not allowed in this stage, so tap the winner.'
+MISSING_WINNER_MESSAGE = 'Tap the winner.'
+MISSING_WINNER_OR_SCORES_MESSAGE = 'Tap the winner, or enter both scores.'
+LEVEL_SCORES_MESSAGE = 'The scores are level, so tap the winner.'
+MISSING_BOTH_SCORES_MESSAGE = 'Enter both scores.'
+
+
+def infer_winner_from_scores(first_player, first_score, second_player, second_score):
+    if first_score is None or second_score is None or first_score == second_score:
+        return None
+    return first_player if first_score > second_score else second_player
+
+
+def describe_missing_winner(stage, first_score, second_score):
+    if stage.report_full_scores == Stage.SCORE_REPORTING_DISABLED:
+        return MISSING_WINNER_MESSAGE
+    if first_score is not None and second_score is not None:
+        return LEVEL_SCORES_MESSAGE
+    return MISSING_WINNER_OR_SCORES_MESSAGE
+
+
+def describe_missing_scores(players_missing_scores):
+    if len(players_missing_scores) > 1:
+        return MISSING_BOTH_SCORES_MESSAGE
+    return f'Enter a score for {players_missing_scores[0].player.get_display_name()}.'
+
+
 class MatchResultForm(forms.ModelForm):
     class Meta:
         model = MatchResult
@@ -470,25 +497,36 @@ class MatchResultForm(forms.ModelForm):
             return None
         return score
 
+    def is_winner_unpicked(self):
+        return 'winner' not in self.data
+
     def clean(self):
         cleaned_data = super().clean()
-        winner = cleaned_data.get('winner')
-        player_one_score = cleaned_data.get('player_one_score')
-        player_two_score = cleaned_data.get('player_two_score')
-
         if not hasattr(self, 'match') or not self.match:
             return cleaned_data
 
         stage = self.match.round.stage
+        player_one_score = cleaned_data.get('player_one_score')
+        player_two_score = cleaned_data.get('player_two_score')
 
-        if not stage.are_ties_allowed and not winner:
-            raise forms.ValidationError(
-                "A winner must be selected - ties are not allowed in this stage.")
+        if self.is_winner_unpicked():
+            cleaned_data['winner'] = infer_winner_from_scores(
+                self.match.player_one, player_one_score, self.match.player_two, player_two_score)
+            if cleaned_data['winner'] is None:
+                self.add_error(None, describe_missing_winner(stage, player_one_score, player_two_score))
+        elif cleaned_data.get('winner') is None and 'winner' not in self.errors and not stage.are_ties_allowed:
+            self.add_error(None, TIES_NOT_ALLOWED_MESSAGE)
 
         if stage.report_full_scores == Stage.SCORE_REPORTING_REQUIRED:
-            if player_one_score is None or player_two_score is None:
-                raise forms.ValidationError(
-                    "Scores are required for this stage.")
+            players_missing_scores = [
+                stage_player for stage_player, score_field_name in (
+                    (self.match.player_one, 'player_one_score'),
+                    (self.match.player_two, 'player_two_score'),
+                )
+                if cleaned_data.get(score_field_name) is None and score_field_name not in self.errors
+            ]
+            if players_missing_scores:
+                self.add_error(None, describe_missing_scores(players_missing_scores))
 
         return cleaned_data
 
@@ -514,16 +552,13 @@ class MatchResultForm(forms.ModelForm):
 
             self.fields['winner'] = forms.ChoiceField(
                 choices=choices,
-                required=True if not stage.are_ties_allowed else False,
+                required=False,
                 widget=forms.Select(attrs={'class': 'form-select'})
             )
 
             if stage.report_full_scores == Stage.SCORE_REPORTING_DISABLED:
                 del self.fields['player_one_score']
                 del self.fields['player_two_score']
-            elif stage.report_full_scores == Stage.SCORE_REPORTING_REQUIRED:
-                self.fields['player_one_score'].required = True
-                self.fields['player_two_score'].required = True
 
 
 class PlayerRegistrationForm(forms.Form):

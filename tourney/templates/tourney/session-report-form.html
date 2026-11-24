@@ -28,7 +28,7 @@
       {% for slot in player_slots %}
       <div class="report-player">
         <label class="report-player__pick">
-          <input type="radio" name="winner" value="{{ slot.stage_player.id }}" class="report-player__radio" required{% if slot.is_winner %} checked{% endif %}>
+          <input type="radio" name="winner" value="{{ slot.stage_player.id }}" class="report-player__radio"{% if slot.is_winner %} checked{% endif %}>
           <span class="report-player__name">{{ slot.name }}</span>
           <span class="report-player__winner" aria-hidden="true">Winner</span>
         </label>
@@ -43,7 +43,7 @@
     </div>
     {% if allows_ties %}
     <label class="report-outcome__tie">
-      <input type="radio" name="winner" value="{{ tie_winner_value }}" class="report-player__radio" required{% if is_tie_selected %} checked{% endif %}>
+      <input type="radio" name="winner" value="{{ tie_winner_value }}" class="report-player__radio"{% if is_tie_selected %} checked{% endif %}>
       <span>It was a tie</span>
     </label>
     {% endif %}
