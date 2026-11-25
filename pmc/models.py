@@ -2191,6 +2191,9 @@ class Match(models.Model):
     def involves(self, member):
         return member.pk in self.player_ids
 
+    def get_opponent(self, member):
+        return self.player_two if member.pk == self.player_one_id else self.player_one
+
 
 class MatchResult(models.Model):
     match = models.OneToOneField(

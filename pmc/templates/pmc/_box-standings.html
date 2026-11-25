@@ -36,8 +36,9 @@
             <td class="table__rank">{{ standing.rank }}</td>
             <td class="table__player">
               <div class="player">
+                <img class="avatar avatar--sm" src="{{ standing.member.user.pmc_profile.get_avatar.src }}" alt="">
                 <div class="player__body">
-                  <span class="player__name">{{ standing.member }}</span>
+                  <a class="player__name" href="{% url 'pmc-pg-member-detail' playgroup.slug standing.member.user.username %}">{{ standing.member }}</a>
                   {% if standing.is_promoted %}<span class="player__note">Moving up</span>{% endif %}
                   {% if standing.is_relegated %}<span class="player__note">Moving down</span>{% endif %}
                   {% if not session.is_proposed %}
@@ -68,31 +69,11 @@
     </table>
   </div>
 
-  {% if summary.box_matches %}
-    <details class="disclosure"{% if summary.is_viewer_box %} open{% endif %}>
+  {% if summary.box_matches and not summary.is_viewer_box %}
+    <details class="disclosure">
       <summary>Matches</summary>
       <ul class="list">
-        {% for box_match in summary.box_matches %}
-          {% with match=box_match.match %}
-            <li>
-              {% if session.is_active and playgroup_member.is_staff %}
-                <a class="list__item" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk box_match.pk %}">
-                  {% include 'pmc/_box-match-summary.html' %}
-                  <span class="list__hint">{% if match.has_result %}Change{% else %}Record{% endif %}</span>
-                </a>
-              {% elif session.is_active and not match.has_result and playgroup_member.pk in match.player_ids %}
-                <a class="list__item" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk box_match.pk %}">
-                  {% include 'pmc/_box-match-summary.html' %}
-                  <span class="list__hint">Record result</span>
-                </a>
-              {% else %}
-                <div class="list__item">
-                  {% include 'pmc/_box-match-summary.html' %}
-                </div>
-              {% endif %}
-            </li>
-          {% endwith %}
-        {% endfor %}
+        {% include 'pmc/_box-matches.html' %}
       </ul>
     </details>
   {% endif %}

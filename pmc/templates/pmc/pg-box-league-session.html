@@ -1,7 +1,8 @@
 {% extends "pmc/_base.html" %}
-{% load static %}
+{% load humanize static %}
 
 {% block extra_head %}
+  <link rel="stylesheet" href="{% static 'pmc/css/box-league.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -19,19 +20,6 @@
       {% endif %}
       {% if session.is_completed %}<li>Completed</li>{% endif %}
     </ul>
-
-    {% if previous_session or next_session %}
-      <nav class="cluster cluster--between" aria-label="Sessions">
-        {% if previous_session %}
-          <a class="btn btn--sm btn--ghost" href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk previous_session.number %}" rel="prev">{% include 'pmc/_icon.html' with name='chevron-left' class_name='icon--sm' %}Session {{ previous_session.number }}</a>
-        {% else %}
-          <span></span>
-        {% endif %}
-        {% if next_session %}
-          <a class="btn btn--sm btn--ghost" href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk next_session.number %}" rel="next">Session {{ next_session.number }}{% if next_session.is_proposed %} (Proposed){% endif %}{% include 'pmc/_icon.html' with name='chevron-right' class_name='icon--sm' %}</a>
-        {% endif %}
-      </nav>
-    {% endif %}
   {% endif %}
 
   {% if playgroup_member %}
@@ -56,19 +44,37 @@
                 <strong>Playing in session {{ session.number }}?</strong> Confirm to keep your spot.
               {% endif %}
             {% elif session.is_active and viewer_summary %}
-              {% if viewer_next_match %}
-                <strong>You're in {{ viewer_summary.name }}.</strong>
-                {{ viewer_games_left }} game{{ viewer_games_left|pluralize }} left to record.
+              {% if viewer_standing.played %}
+                <strong>You're {{ viewer_standing.rank|ordinal }} in {{ viewer_summary.name }}.</strong>
               {% else %}
-                <strong>You're in {{ viewer_summary.name }}.</strong> All your games are recorded. Nice work!
+                <strong>You're in {{ viewer_summary.name }}.</strong>
               {% endif %}
+              {% if viewer_next_match %}
+                Next up: {{ viewer_next_opponent }}.
+                {{ viewer_games_left }} game{{ viewer_games_left|pluralize }} left to record{% if session.ends_on %} by {{ session.ends_on|date:"SHORT_DATE_FORMAT" }}{% if session_days_left > 0 %} ({{ session_days_left }} day{{ session_days_left|pluralize }} left){% elif session_days_left == 0 %} (last day){% endif %}{% endif %}.
+              {% else %}
+                All your games are recorded. Nice work!
+              {% endif %}
+            {% elif session.is_completed and viewer_summary %}
+              <strong>You finished {{ viewer_standing.rank|ordinal }} in {{ viewer_summary.name }}</strong>{% if viewer_standing.is_promoted %} and moved up{% elif viewer_standing.is_relegated %} and moved down{% endif %}.
             {% elif session.is_completed %}
               <strong>This session is complete.</strong>
             {% else %}
               <strong>You're in the league.</strong> You'll be placed in a box when the next session starts.
             {% endif %}
             {% if proposal and not session.is_proposed %}
-              <a href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk proposal.number %}">Session {{ proposal.number }} is being planned. Confirm you're in.</a>
+              <br>
+              {% if viewer_has_confirmed_proposal %}
+                You're confirmed for session {{ proposal.number }}.
+                <a class="text-link" href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk proposal.number %}">See the proposed boxes</a>
+              {% else %}
+                Session {{ proposal.number }} is being planned.
+                <button
+                  type="button"
+                  class="text-link"
+                  hx-post="{% url 'pmc-pg-box-league-confirm' playgroup.slug league.pk %}"
+                >Confirm I'm in</button>
+              {% endif %}
             {% endif %}
           </p>
           <div class="next-step__actions">
@@ -83,6 +89,13 @@
             <details class="action-menu" data-menu>
               <summary class="action-menu__trigger" aria-label="More league actions">{% include 'pmc/_icon.html' with name='more' %}</summary>
               <div class="action-menu__list">
+                {% if proposal and not session.is_proposed and not viewer_has_confirmed_proposal %}
+                  <button
+                    type="button"
+                    class="action-menu__item"
+                    hx-post="{% url 'pmc-pg-box-league-confirm' playgroup.slug league.pk %}"
+                  >Confirm for session {{ proposal.number }}</button>
+                {% endif %}
                 {% if session.is_proposed and viewer_has_confirmed %}
                   <form method="POST" action="{% url 'pmc-pg-box-league-sit-out' playgroup.slug league.pk %}">
                     {% csrf_token %}
@@ -206,33 +219,65 @@
   {% endif %}
 
   {% if session %}
-    {% if viewer_summary %}
-      <h2>Your Box</h2>
-      {% include 'pmc/_box-standings.html' with summary=viewer_summary %}
+    {% if previous_session or next_session %}
+      <nav class="cluster cluster--between" aria-label="Sessions">
+        {% if previous_session %}
+          <a class="btn btn--sm btn--ghost" href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk previous_session.number %}" rel="prev">{% include 'pmc/_icon.html' with name='chevron-left' class_name='icon--sm' %}Session {{ previous_session.number }}</a>
+        {% else %}
+          <span></span>
+        {% endif %}
+        {% if next_session %}
+          <a class="btn btn--sm btn--ghost" href="{% url 'pmc-pg-box-league-session' playgroup.slug league.pk next_session.number %}" rel="next">Session {{ next_session.number }}{% if next_session.is_proposed %} (Proposed){% endif %}{% include 'pmc/_icon.html' with name='chevron-right' class_name='icon--sm' %}</a>
+        {% endif %}
+      </nav>
     {% endif %}
 
-    <h2>{% if viewer_summary %}Other Boxes{% elif session.is_proposed %}Proposed Boxes{% else %}Boxes{% endif %}</h2>
-    <div class="grid grid--wide">
-      {% for summary in box_summaries %}
-        {% if not summary.is_viewer_box %}
-          {% include 'pmc/_box-standings.html' %}
+    <div class="box-board stack--lg{% if viewer_summary.box_matches or viewer_summary and waiting_members %} box-board--split{% endif %}">
+      {% if viewer_summary %}
+        <section class="box-board__mine stack">
+          <h2>Your Box</h2>
+          {% include 'pmc/_box-standings.html' with summary=viewer_summary %}
+        </section>
+
+        {% if viewer_summary.box_matches or waiting_members %}
+          <div class="box-board__side stack--lg">
+            {% if viewer_summary.box_matches %}
+              <section class="stack">
+                <h2>Matches</h2>
+                <ul class="card list">
+                  {% include 'pmc/_box-matches.html' with summary=viewer_summary %}
+                </ul>
+              </section>
+            {% endif %}
+            {% if waiting_members %}
+              {% include 'pmc/_box-waiting-members.html' %}
+            {% endif %}
+          </div>
         {% endif %}
-      {% empty %}
-        <div class="card muted">No boxes in this session.</div>
-      {% endfor %}
+      {% endif %}
+
+      <section class="box-board__others stack">
+        <h2>{% if viewer_summary %}Other Boxes{% elif session.is_proposed %}Proposed Boxes{% else %}Boxes{% endif %}</h2>
+        <div class="grid grid--wide">
+          {% for summary in box_summaries %}
+            {% if not summary.is_viewer_box %}
+              {% include 'pmc/_box-standings.html' %}
+            {% endif %}
+          {% empty %}
+            <div class="card muted">No boxes in this session.</div>
+          {% endfor %}
+        </div>
+      </section>
+
+      {% if waiting_members and not viewer_summary %}
+        {% include 'pmc/_box-waiting-members.html' %}
+      {% endif %}
     </div>
   {% else %}
     <div class="card muted">No sessions yet. Once organizers plan the first session, boxes will show up here.</div>
-  {% endif %}
 
-  {% if waiting_members %}
-    <h2>Waiting for the Next Session</h2>
-    <div class="card">
-      <ul class="chip-row">
-        {% for waiting_member in waiting_members %}
-          <li class="chip">{{ waiting_member }}</li>
-        {% endfor %}
-      </ul>
-    </div>
+    {% if waiting_members %}
+      {% include 'pmc/_box-waiting-members.html' %}
+    {% endif %}
   {% endif %}
 {% endblock %}

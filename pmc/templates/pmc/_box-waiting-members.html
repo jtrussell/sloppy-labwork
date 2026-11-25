@@ -1,0 +1,10 @@
+<section class="stack">
+  <h2>Waiting for the Next Session</h2>
+  <div class="card">
+    <ul class="chip-row">
+      {% for waiting_member in waiting_members %}
+        <li class="chip">{{ waiting_member }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>

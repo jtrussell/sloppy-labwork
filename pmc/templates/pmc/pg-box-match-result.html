@@ -6,7 +6,10 @@
 
   <div class="card">
     <h2 class="card__title">{{ box_match.match.player_one }} vs {{ box_match.match.player_two }}</h2>
-    <p>Standings update as soon as the result is saved.</p>
+    <p>
+      {% if box_match.box.session.ends_on %}Result due {{ box_match.box.session.ends_on|date:"SHORT_DATE_FORMAT" }}.{% endif %}
+      Standings update as soon as the result is saved.
+    </p>
     <form method="POST" class="stack">
       {% csrf_token %}
       {% include 'pmc/_form-fields.html' with form=form %}

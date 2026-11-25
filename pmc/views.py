@@ -16,6 +16,7 @@ from django.views import generic
 from django.template import loader
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.translation import gettext_lazy as _
@@ -945,6 +946,13 @@ def playgroup_box_league_session(request, slug, league_id, number):
         request, league, get_box_league_session_or_404(league, number))
 
 
+def find_viewer_box_standing(viewer_summary, viewer_member):
+    if viewer_summary is None:
+        return None
+    return next(
+        (standing for standing in viewer_summary.standings if standing.member.pk == viewer_member.pk), None)
+
+
 def render_box_league_session(request, league, session):
     viewer_member = PlaygroupMember.objects.filter(
         playgroup=league.playgroup, user=request.user).first()
@@ -970,11 +978,21 @@ def render_box_league_session(request, league, session):
     viewer_has_confirmed = viewer_member is not None and viewer_member.pk in confirmed_member_ids
     awaiting_confirmation = session is not None and session.is_proposed() and is_on_roster and not viewer_has_confirmed
     awaiting_results = session is not None and session.is_active() and bool(viewer_unplayed_matches)
+    viewer_next_match = viewer_unplayed_matches[0] if viewer_unplayed_matches else None
+    proposal = league.get_proposed_session()
     return render(request, 'pmc/pg-box-league-session.html', {
         'next_step_is_due': awaiting_confirmation or awaiting_results,
-        'viewer_next_match': viewer_unplayed_matches[0] if viewer_unplayed_matches else None,
+        'viewer_next_match': viewer_next_match,
+        'viewer_next_opponent': viewer_next_match.match.get_opponent(viewer_member) if viewer_next_match else None,
         'viewer_games_left': len(viewer_unplayed_matches),
-        'proposal': league.get_proposed_session(),
+        'session_days_left': (
+            (session.ends_on - timezone.localdate()).days
+            if session is not None and session.is_active() and session.ends_on else None),
+        'viewer_standing': find_viewer_box_standing(viewer_summary, viewer_member),
+        'viewer_has_confirmed_proposal': (
+            proposal is not None and viewer_member is not None
+            and viewer_member.pk in proposal.get_confirmed_member_ids()),
+        'proposal': proposal,
         'placed_player_count': placed_player_count,
         'suggested_box_count': league.suggested_box_count(placed_player_count),
         'resize_form': BoxProposalResizeForm(

@@ -1,0 +1,21 @@
+{% for box_match in summary.box_matches %}
+  {% with match=box_match.match %}
+    <li>
+      {% if session.is_active and playgroup_member.is_staff %}
+        <a class="list__item" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk box_match.pk %}">
+          {% include 'pmc/_box-match-summary.html' %}
+          <span class="list__hint">{% if match.has_result %}Change result{% else %}Record result{% endif %}</span>
+        </a>
+      {% elif session.is_active and not match.has_result and playgroup_member.pk in match.player_ids %}
+        <a class="list__item" href="{% url 'pmc-pg-box-league-match-result' playgroup.slug league.pk box_match.pk %}">
+          {% include 'pmc/_box-match-summary.html' %}
+          <span class="list__hint">Record result</span>
+        </a>
+      {% else %}
+        <div class="list__item">
+          {% include 'pmc/_box-match-summary.html' %}
+        </div>
+      {% endif %}
+    </li>
+  {% endwith %}
+{% endfor %}

@@ -573,6 +573,64 @@ class BoxLeagueViewTests(BoxLeagueTestBase):
         response = self.client.get(self.league_url('pmc-pg-box-league-session', session.number))
         self.assertFalse(response.context['next_step_is_due'])
 
+    def test_next_step_names_the_next_opponent_and_when_results_are_due(self):
+        session = self.start_next_session()
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(self.league_url('pmc-pg-box-league-session', session.number))
+        opponent = response.context['viewer_next_match'].match.get_opponent(self.player(1))
+        self.assertEqual(response.context['viewer_next_opponent'], opponent)
+        self.assertContains(response, f'Next up: {opponent}.')
+        self.assertContains(response, 'left to record by')
+        self.assertContains(response, "<strong>You're in Gold.</strong>", html=True)
+
+    def test_next_step_shows_the_viewers_rank_once_they_have_played(self):
+        session = self.start_next_session()
+        self.record(session, self.player(1), self.player(2))
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(self.league_url('pmc-pg-box-league-session', session.number))
+        self.assertContains(response, "<strong>You're 1st in Gold.</strong>", html=True)
+
+    def test_completed_session_tells_players_where_they_finished(self):
+        first_session = self.start_next_session()
+        self.play_out(first_session, [self.player(4), self.player(5), self.player(6)])
+        self.start_next_session()
+        self.client.force_login(self.player(4).user)
+        response = self.client.get(self.league_url('pmc-pg-box-league-session', first_session.number))
+        self.assertContains(response, 'You finished 1st in Silver</strong> and moved up.')
+
+    def test_players_confirm_for_the_planned_session_from_the_active_session(self):
+        session = self.start_next_session()
+        proposal = self.league.plan_next_session()
+        confirm_url = self.league_url('pmc-pg-box-league-confirm')
+        active_session_url = self.league_url('pmc-pg-box-league-session', session.number)
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(active_session_url)
+        self.assertContains(response, f'Session {proposal.number} is being planned.')
+        self.assertContains(response, f'Confirm for session {proposal.number}')
+        self.assertContains(response, f'hx-post="{confirm_url}"', count=2)
+
+        response = self.client.post(confirm_url, HTTP_HX_REQUEST='true')
+        self.assertRedirects(self.client.get(response['HX-Redirect']), active_session_url)
+        response = self.client.get(active_session_url)
+        self.assertContains(response, f"You're confirmed for session {proposal.number}.")
+        self.assertNotContains(response, f'hx-post="{confirm_url}"')
+
+    def test_your_box_matches_sit_beside_your_box(self):
+        session = self.start_next_session()
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(self.league_url('pmc-pg-box-league-session', session.number))
+        self.assertContains(response, 'box-board--split')
+        self.assertContains(response, '<h2>Matches</h2>', html=True)
+        self.assertContains(response, reverse(
+            'pmc-pg-member-detail', args=[self.playgroup.slug, self.player(2).user.username]))
+
+    def test_match_result_page_shows_when_the_result_is_due(self):
+        session = self.start_next_session()
+        box_match = self.box_match_between(session, self.player(1), self.player(2))
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(self.league_url('pmc-pg-box-league-match-result', box_match.pk))
+        self.assertContains(response, 'Result due')
+
     def test_manage_tabs(self):
         self.start_next_session()
         self.client.force_login(self.organizer.user)
