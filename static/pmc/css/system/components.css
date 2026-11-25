@@ -734,6 +734,13 @@
   text-decoration: none;
 }
 
+button.text-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
 .text-link:hover {
   color: var(--color-primary-bright);
   text-decoration: underline;

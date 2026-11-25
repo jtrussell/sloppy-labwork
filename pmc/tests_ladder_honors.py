@@ -186,12 +186,12 @@ class MadladTests(LadderHonorTestBase):
         self.defend_top_spot(1)
         self.assertTrue(self.ladder.can_ascend_as_madlad(self.entry_for(self.player(1))))
 
-    def test_can_ascend_with_an_open_challenge_against_them(self):
+    def test_ascending_voids_an_open_challenge_against_them(self):
         self.defend_top_spot(3)
         challenge = self.ladder.issue_challenge(self.player(2), self.player(1))
         self.ladder.ascend_as_madlad(self.player(1))
         challenge.refresh_from_db()
-        self.assertTrue(challenge.is_pending())
+        self.assertEqual(challenge.status, LadderChallenge.ChallengeStatuses.VOIDED)
         self.assertEqual(self.ranked_usernames()[-1], 'player1')
 
     def test_leaving_the_ladder_abandons_madlad_status(self):
@@ -263,6 +263,14 @@ class LadderHonorViewTests(LadderHonorTestBase):
         self.defend_top_spot(3)
         response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
         self.assertContains(response, self.ladder_url('pmc-pg-ladder-madlad'))
+
+    def test_go_madlad_with_a_pending_challenge_explains_the_challenge_is_cancelled(self):
+        self.defend_top_spot(3)
+        self.ladder.issue_challenge(self.player(2), self.player(1))
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(self.ladder_url('pmc-pg-ladder-detail'))
+        self.assertContains(response, "You've also earned Mad Mab, which cancels this challenge.")
+        self.assertContains(response, 'and cancel your open challenge.')
 
     def test_posting_madlad_moves_the_champion_to_the_bottom(self):
         self.defend_top_spot(3)

@@ -2453,7 +2453,7 @@ class Ladder(models.Model):
     def remove_member(self, member):
         with self._ordered_entries_for_update() as entries:
             entry = self._require_entry(entries, member)
-            self._close_open_challenges_for_departing(member)
+            self._close_open_challenges_involving(member)
             entries.remove(entry)
             entry.delete()
 
@@ -2464,6 +2464,7 @@ class Ladder(models.Model):
                 raise LadderRuleViolation(
                     _('Mad Mab status takes %(count)s wins in a row defending the #1 spot.') % {
                         'count': ladder_honors.MADLAD_REQUIRED_TOP_SPOT_DEFENSES})
+            self._close_open_challenges_involving(member)
             entry.madlad_count += 1
             entry.save(update_fields=['madlad_count'])
             entries.remove(entry)
@@ -2761,7 +2762,7 @@ class Ladder(models.Model):
             rank_before=challenger_index + 1, rank_after=defender_index + 1)
         return defender_index + 1
 
-    def _close_open_challenges_for_departing(self, member):
+    def _close_open_challenges_involving(self, member):
         open_challenges = self.challenges.filter(
             status=LadderChallenge.ChallengeStatuses.PENDING)
         now = timezone.now()

@@ -58,6 +58,15 @@
                 The response window has passed, so {{ viewer_challenge.challenger }} wins by forfeit.
               {% else %}
                 Play your game and record the result by {{ viewer_challenge.respond_by|date:"SHORT_DATE_FORMAT" }} ({{ viewer_challenge.respond_by|timeuntil }} left).
+                {% if viewer_can_ascend_as_madlad %}
+                  <br>You've also earned Mad Mab, which cancels this challenge.
+                  <button
+                    type="button"
+                    class="text-link"
+                    hx-post="{% url 'pmc-pg-ladder-madlad' playgroup.slug ladder.pk %}"
+                    hx-confirm="Go Mad Mab? You give up #1, move to the bottom of {{ ladder.name }} and cancel your open challenge."
+                  >Go Mad Mab</button>
+                {% endif %}
               {% endif %}
             {% elif challengeable_standings %}
               <strong>You're #{{ viewer_standing.rank }}.</strong>
@@ -108,7 +117,7 @@
                     type="button"
                     class="action-menu__item"
                     hx-post="{% url 'pmc-pg-ladder-madlad' playgroup.slug ladder.pk %}"
-                    hx-confirm="Go Mad Mab? You give up #1 and move to the bottom of {{ ladder.name }}."
+                    hx-confirm="Go Mad Mab? You give up #1, move to the bottom of {{ ladder.name }} and cancel your open challenge."
                   >Go Mad Mab</button>
                 {% endif %}
                 {% if viewer_challenge and viewer_challenge.match.player_one_id == playgroup_member.pk %}
