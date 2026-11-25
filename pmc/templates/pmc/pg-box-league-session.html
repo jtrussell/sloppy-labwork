@@ -1,5 +1,5 @@
 {% extends "pmc/_base.html" %}
-{% load humanize static %}
+{% load humanize pmc_extras static %}
 
 {% block extra_head %}
   <link rel="stylesheet" href="{% static 'pmc/css/box-league.css' %}">
@@ -10,8 +10,8 @@
     <h1>{{ league.name }}</h1>
     <a class="staff-link staff-only" href="{% url 'pmc-pg-box-league-manage' playgroup.slug league.pk %}">{% include 'pmc/_icon.html' with name='shield' class_name='icon--sm' %}Manage</a>
   </div>
-  {% if session %}
-    <ul class="meta">
+  <ul class="meta">
+    {% if session %}
       <li>Session {{ session.number }}</li>
       {% if session.is_proposed %}
         <li>Proposed</li>
@@ -19,7 +19,21 @@
         <li>{{ session.starts_on|date:"SHORT_DATE_FORMAT" }} – {{ session.ends_on|date:"SHORT_DATE_FORMAT" }}</li>
       {% endif %}
       {% if session.is_completed %}<li>Completed</li>{% endif %}
-    </ul>
+    {% endif %}
+    <li>{{ league.target_box_size }} per box</li>
+    {% if league.promotion_count %}
+      <li>Top {{ league.promotion_count }} move{{ league.promotion_count|pluralize:"s," }} up</li>
+    {% endif %}
+    {% if league.relegation_count %}
+      <li>Bottom {{ league.relegation_count }} move{{ league.relegation_count|pluralize:"s," }} down</li>
+    {% endif %}
+    <li>{{ league.session_length_months }}-month sessions</li>
+  </ul>
+
+  {% if league.description %}
+    <div class="card prose">
+      {{ league.description|markdown_sanitized }}
+    </div>
   {% endif %}
 
   {% if playgroup_member %}

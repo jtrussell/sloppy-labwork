@@ -2973,6 +2973,9 @@ class BoxLeague(models.Model):
     playgroup = models.ForeignKey(
         Playgroup, on_delete=models.CASCADE, related_name='box_leagues')
     name = models.CharField(max_length=100)
+    description = models.TextField(
+        default=None, null=True, blank=True,
+        help_text=_('Optional. Instructions or other info for players. Markdown supported.'))
     layout = models.CharField(
         max_length=10, choices=Layouts.choices, default=Layouts.LINEAR)
     target_box_size = models.PositiveSmallIntegerField(

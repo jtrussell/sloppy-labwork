@@ -467,8 +467,11 @@ class BoxLeagueForm(UniqueNameInPlaygroupForm):
 
     class Meta:
         model = BoxLeague
-        fields = ('name', 'layout', 'target_box_size', 'promotion_count',
+        fields = ('name', 'description', 'layout', 'target_box_size', 'promotion_count',
                   'relegation_count', 'session_length_months')
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+        }
         labels = {
             'target_box_size': _('Players per box'),
             'promotion_count': _('Moving up'),

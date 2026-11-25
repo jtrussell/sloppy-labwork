@@ -631,6 +631,44 @@ class BoxLeagueViewTests(BoxLeagueTestBase):
         response = self.client.get(self.league_url('pmc-pg-box-league-match-result', box_match.pk))
         self.assertContains(response, 'Result due')
 
+    def test_session_page_explains_how_the_league_works(self):
+        self.league.promotion_count = 2
+        self.league.save()
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(self.league_url('pmc-pg-box-league-detail'))
+        self.assertContains(response, '<li>3 per box</li>', html=True)
+        self.assertContains(response, '<li>Top 2 move up</li>', html=True)
+        self.assertContains(response, '<li>Bottom 1 moves down</li>', html=True)
+        self.assertContains(response, '<li>1-month sessions</li>', html=True)
+
+    def test_session_page_hides_movement_nobody_makes(self):
+        self.league.relegation_count = 0
+        self.league.save()
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(self.league_url('pmc-pg-box-league-detail'))
+        self.assertNotContains(response, 'down</li>')
+
+    def test_session_page_shows_the_league_description_as_markdown(self):
+        self.league.description = 'Meet **Thursdays** at 6pm.'
+        self.league.save()
+        session = self.start_next_session()
+        self.client.force_login(self.player(1).user)
+        response = self.client.get(self.league_url('pmc-pg-box-league-session', session.number))
+        self.assertContains(response, '<strong>Thursdays</strong>')
+
+    def test_organizers_set_the_league_description(self):
+        self.client.force_login(self.organizer.user)
+        self.client.post(reverse('pmc-pg-box-league-new', args=[self.playgroup.slug]), {
+            'name': 'Spring League',
+            'description': 'Bring two decks.',
+            'layout': 'linear',
+            'target_box_size': 4,
+            'promotion_count': 1,
+            'relegation_count': 1,
+            'session_length_months': 1,
+        })
+        self.assertEqual(BoxLeague.objects.get(name='Spring League').description, 'Bring two decks.')
+
     def test_manage_tabs(self):
         self.start_next_session()
         self.client.force_login(self.organizer.user)
