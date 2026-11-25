@@ -2583,6 +2583,10 @@ class Ladder(models.Model):
         )
         return challenge
 
+    def _remove_top_player_from_next_available_queue(self, entries):
+        if entries and entries[0].next_available_requested_on is not None:
+            self._remove_from_next_available_queue(entries[0])
+
     @staticmethod
     def _remove_from_next_available_queue(entry):
         entry.next_available_requested_on = None
@@ -2713,6 +2717,7 @@ class Ladder(models.Model):
             entries = self.get_ordered_entries()
             self._forfeit_overdue_challenges(entries)
             yield entries
+            self._remove_top_player_from_next_available_queue(entries)
             self._fulfill_next_available_requests(entries)
             self._save_positions(entries)
 

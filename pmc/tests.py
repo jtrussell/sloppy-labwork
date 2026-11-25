@@ -2292,6 +2292,80 @@ class LadderNextAvailableTests(LadderTestBase):
         self.assertEqual(self.queued_usernames(), [])
 
 
+class LadderNewTopPlayerTests(LadderTestBase):
+    def setUp(self):
+        super().setUp()
+        self.enable_next_available()
+        self.ladder.rematch_cooldown_days = 0
+        self.ladder.save()
+
+    def queued_usernames(self):
+        return [entry.member.user.username for entry in self.ladder.get_next_available_queue()]
+
+    def challenge_status(self, challenge):
+        challenge.refresh_from_db()
+        return challenge.status
+
+    def queue_second_player_behind_a_busy_top_player(self):
+        challenge_against_top_player = self.ladder.issue_challenge(self.player(3), self.player(1))
+        self.ladder.join_next_available_queue(self.player(2))
+        self.assertEqual(self.queued_usernames(), self.usernames_for(2))
+        return challenge_against_top_player
+
+    def queue_second_player_while_challenging_the_top_player(self):
+        self.allow_open_challenges(2)
+        challenge_for_top_spot = self.ladder.issue_challenge(self.player(2), self.player(1))
+        self.ladder.join_next_available_queue(self.player(2))
+        self.assertEqual(self.queued_usernames(), self.usernames_for(2))
+        return challenge_for_top_spot
+
+    def test_going_mad_mab_voids_the_champions_challenges_and_clears_the_new_top_players_request(self):
+        challenge_against_top_player = self.queue_second_player_behind_a_busy_top_player()
+        for _ in range(3):
+            self.ladder.record_played_result(self.player(2), self.player(1), self.player(1), self.player(1).user)
+        self.ladder.ascend_as_madlad(self.player(1))
+        self.assertEqual(self.ranked_usernames(), self.usernames_for(2, 3, 4, 5, 6, 1))
+        self.assertEqual(self.queued_usernames(), [])
+        self.assertEqual(self.challenge_status(challenge_against_top_player), LadderChallenge.ChallengeStatuses.VOIDED)
+
+    def test_the_top_player_leaving_voids_their_challenges_and_clears_the_new_top_players_request(self):
+        challenge_against_top_player = self.queue_second_player_behind_a_busy_top_player()
+        self.ladder.remove_member(self.player(1))
+        self.assertEqual(self.ranked_usernames()[0], 'player2')
+        self.assertEqual(self.queued_usernames(), [])
+        self.assertEqual(self.challenge_status(challenge_against_top_player), LadderChallenge.ChallengeStatuses.VOIDED)
+
+    def test_an_organizer_moving_a_player_to_the_top_clears_their_request(self):
+        challenge_against_former_top_player = self.queue_second_player_behind_a_busy_top_player()
+        self.ladder.move_member(self.player(2), 1)
+        self.assertEqual(self.ranked_usernames()[0], 'player2')
+        self.assertEqual(self.queued_usernames(), [])
+        self.assertEqual(
+            self.challenge_status(challenge_against_former_top_player), LadderChallenge.ChallengeStatuses.PENDING)
+
+    def test_winning_a_played_game_to_the_top_clears_the_winners_request(self):
+        challenge_against_former_top_player = self.queue_second_player_behind_a_busy_top_player()
+        self.ladder.record_played_result(self.player(2), self.player(1), self.player(2), self.player(2).user)
+        self.assertEqual(self.ranked_usernames()[0], 'player2')
+        self.assertEqual(self.queued_usernames(), [])
+        self.assertEqual(
+            self.challenge_status(challenge_against_former_top_player), LadderChallenge.ChallengeStatuses.PENDING)
+
+    def test_winning_a_challenge_for_the_top_spot_clears_the_winners_request(self):
+        challenge_for_top_spot = self.queue_second_player_while_challenging_the_top_player()
+        self.ladder.record_result(challenge_for_top_spot, self.player(2), self.player(2).user)
+        self.assertEqual(self.ranked_usernames()[0], 'player2')
+        self.assertEqual(self.queued_usernames(), [])
+
+    def test_winning_the_top_spot_by_forfeit_clears_the_winners_request(self):
+        challenge_for_top_spot = self.queue_second_player_while_challenging_the_top_player()
+        self.make_overdue(challenge_for_top_spot)
+        self.ladder.bring_up_to_date()
+        self.assertEqual(self.ranked_usernames()[0], 'player2')
+        self.assertEqual(self.queued_usernames(), [])
+        self.assertEqual(self.challenge_status(challenge_for_top_spot), LadderChallenge.ChallengeStatuses.FORFEITED)
+
+
 @mock.patch.dict(os.environ, {'PMC_RATINGS_API_KEY': 'test-key'})
 @override_settings(STORAGES={
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
